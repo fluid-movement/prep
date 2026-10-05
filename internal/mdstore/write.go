@@ -146,8 +146,46 @@ func (s *Store) Apply(c *domain.Change) ([]string, error) {
 			return touched, err
 		}
 	}
+	// current reads a record under compare-and-swap, so an edit never builds
+	// on content that changed since load.
+	current := func(name string) (string, error) {
+		rel := dir + "/" + name
+		if err := s.cas(rel); err != nil {
+			return "", err
+		}
+		raw, _, err := s.read(rel)
+		return raw, err
+	}
+	if c.Context != nil {
+		if err := w("context.md", fileText(*c.Context)); err != nil {
+			return touched, err
+		}
+	}
+	if c.Findings != nil {
+		if err := w("findings.md", fileText(*c.Findings)); err != nil {
+			return touched, err
+		}
+	}
+	if c.Decision != nil {
+		raw, err := current("decisions.md")
+		if err != nil {
+			return touched, err
+		}
+		if err := w("decisions.md", fileText(normalize(raw)+"\n\n"+renderDecision(c.Decision))); err != nil {
+			return touched, err
+		}
+	}
+	if len(c.Acceptance) > 0 {
+		raw, err := current("acceptance.md")
+		if err != nil {
+			return touched, err
+		}
+		if err := w("acceptance.md", fileText(applyAcceptance(raw, c.Acceptance))); err != nil {
+			return touched, err
+		}
+	}
 	if c.History != "" {
-		raw, _, err := s.read(dir + "/history.md")
+		raw, err := current("history.md")
 		if err != nil {
 			return touched, err
 		}

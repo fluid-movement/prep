@@ -242,12 +242,12 @@ func cmdShow(a *app, args []string) error {
 	}
 	if len(i.Criteria) > 0 {
 		a.printf("\n## Acceptance\n\n")
-		for _, c := range i.Criteria {
+		for k, c := range i.Criteria {
 			mark := " "
 			if c.Checked {
 				mark = "x"
 			}
-			a.printf("- [%s] %s\n", mark, c.Text)
+			a.printf("%d. [%s] %s\n", k+1, mark, c.Text)
 		}
 	}
 	if len(dod) > 0 {
@@ -397,7 +397,11 @@ func cmdGuide(a *app, args []string) error {
 	if len(g.Outputs) > 0 {
 		a.printf("\nWrite:\n")
 		for _, p := range g.Outputs {
-			a.printf("  %s — %s\n", p.Path, p.What)
+			if p.Command != "" {
+				a.printf("  %s — %s (%s)\n", p.Command, p.What, p.Path)
+			} else {
+				a.printf("  %s — %s\n", p.Path, p.What)
+			}
 		}
 	}
 	if len(g.DoD) > 0 {

@@ -9,14 +9,14 @@ This repository tracks its work with prep. Issues live in `.prep/issues/<id>/`; 
 
 1. At session start, run `prep prime` for a short briefing.
 2. For the issue you work on, run `prep guide <id>`. It tells you the current step, what to read, which gates are unmet, where outputs go, and the exact command for the next transition. Follow it; it always matches the installed binary.
-3. Use `--json` when you parse output. Reads (`prime`, `guide`, `list`, `next`, `show`, `check`) never change anything; writes (`new`, `edit`, `define`, `ack`, `ready`, `claim`, `release`, `complete`, `drop`, `fmt`, `fix`, `migrate`) each perform one change.
-4. Change an issue's title, kind, parent, dependencies or requirement with `prep edit <id>` rather than editing `issue.md` frontmatter. `--depends-on` replaces the whole list (`--depends-on ''` clears it); `--body` or `--body-file` replaces the requirement including its `## Open questions` section.
+3. Use `--json` when you parse output. Reads (`prime`, `guide`, `list`, `next`, `show`, `check`) never change anything; writes (`new`, `edit`, `context`, `decide`, `criterion`, `dod`, `findings`, `log`, `define`, `ack`, `ready`, `claim`, `release`, `complete`, `drop`, `fmt`, `fix`, `migrate`) each perform one change.
+4. Write through commands, not files. `prep edit <id>` changes title, kind, parent, dependencies or requirement (`--depends-on` replaces the whole list, `--depends-on ''` clears it; `--body`/`--body-file` replaces the requirement including its `## Open questions` section). Records: `prep context` and `prep findings` replace their text, `prep decide` appends a decision, `prep criterion` adds and checks criteria by the numbers `prep show` prints, `prep dod` changes Definition of Done additions and opt-outs, `prep log` appends to the work log. Long text goes through `--body-file -` (stdin).
 5. Never invent issue IDs; `prep new` creates them. Never write `baselines/`, `ready.md`, `claim.md` or `resolution.md` by hand.
 6. Pass `--by <harness>/<version>` (or set `PREP_ACTOR`) so records name the agent.
 
 ## Without the binary
 
-If `prep` is not installed (for example in a cloud session), the files are the database:
+If `prep` is not installed (for example in a cloud session), the files are the database and you edit them directly; this is the only case for hand edits:
 
 - Lifecycle: open (`issue.md`) → defined (`baselines/<timestamp>.md`) → ready (`ready.md`, references the newest baseline) → in progress (`claim.md`) → done or dropped (`resolution.md`). State is derived from which records exist.
 - Define: the requirement is the prose in `issue.md`; an issue can only be defined when its `## Open questions` section is empty.

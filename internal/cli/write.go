@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/fluid-movement/prep/internal/domain"
@@ -366,4 +367,127 @@ func openAt(dir string) *mdstore.Store {
 		abs = dir
 	}
 	return mdstore.Open(abs)
+}
+
+// intList is a repeatable integer flag.
+type intList []int
+
+func (l *intList) String() string { return fmt.Sprint(*l) }
+func (l *intList) Set(v string) error {
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return fmt.Errorf("%q is not a number", v)
+	}
+	*l = append(*l, n)
+	return nil
+}
+
+// recordCmd builds the write commands for an issue's records. They share
+// the pipeline of every write and never change the issue's state.
+func recordCmd(op domain.Op) func(*app, []string) error {
+	return func(a *app, args []string) error {
+		fs := flag.NewFlagSet(string(op), flag.ContinueOnError)
+		in := domain.RecordInput{}
+		var body, bodyFile, reason string
+		var adds, dodAdds, optOuts, dodRemoves multi
+		var checks, unchecks, removes intList
+		switch op {
+		case domain.OpContext, domain.OpFindings, domain.OpDecide:
+			fs.StringVar(&body, "body", "", "text")
+			fs.StringVar(&bodyFile, "body-file", "", "read the text from a file (- for stdin)")
+		}
+		switch op {
+		case domain.OpDecide:
+			fs.StringVar(&in.Title, "title", "", "decision title")
+			fs.StringVar(&in.Supersedes, "supersedes", "", "ID of the decision this one replaces")
+			fs.BoolVar(&in.Outcome, "outcome", false, "the decision answers a decision issue")
+		case domain.OpCriterion:
+			fs.Var(&adds, "add", "add a criterion (repeatable)")
+			fs.Var(&checks, "check", "check criterion n (repeatable)")
+			fs.Var(&unchecks, "uncheck", "uncheck criterion n (repeatable)")
+			fs.Var(&removes, "remove", "remove criterion n (repeatable)")
+		case domain.OpDoD:
+			fs.Var(&dodAdds, "add", "add a Definition of Done item (repeatable)")
+			fs.Var(&optOuts, "opt-out", "opt out of an inherited item; needs --reason")
+			fs.StringVar(&reason, "reason", "", "why the opt-out applies")
+			fs.Var(&dodRemoves, "remove", "remove an addition or opt-out by its item (repeatable)")
+		}
+		pos, err := parse(fs, args)
+		if err != nil {
+			return err
+		}
+		if len(pos) == 0 {
+			return usageErr("%s needs an issue id", op)
+		}
+		ref := pos[0]
+		if op == domain.OpLog {
+			in.Text = strings.Join(pos[1:], " ")
+		} else if len(pos) > 1 {
+			return usageErr("unexpected arguments: %s", strings.Join(pos[1:], " "))
+		}
+		set := map[string]bool{}
+		fs.Visit(func(f *flag.Flag) { set[f.Name] = true })
+		if set["body"] && set["body-file"] {
+			return usageErr("pass --body or --body-file, not both")
+		}
+		if (op == domain.OpContext || op == domain.OpFindings) && !set["body"] && !set["body-file"] {
+			return usageErr("%s replaces the whole record: pass --body or --body-file", op)
+		}
+		if op == domain.OpContext || op == domain.OpFindings || op == domain.OpDecide {
+			if in.Text, err = a.readBody(body, bodyFile); err != nil {
+				return err
+			}
+		}
+		for _, n := range checks {
+			in.Acceptance = append(in.Acceptance, domain.AcceptanceOp{Op: "check", Index: n})
+		}
+		for _, n := range unchecks {
+			in.Acceptance = append(in.Acceptance, domain.AcceptanceOp{Op: "uncheck", Index: n})
+		}
+		for _, n := range removes {
+			in.Acceptance = append(in.Acceptance, domain.AcceptanceOp{Op: "remove", Index: n})
+		}
+		for _, s := range adds {
+			in.Acceptance = append(in.Acceptance, domain.AcceptanceOp{Op: "add", Text: s})
+		}
+		for _, s := range dodAdds {
+			in.Acceptance = append(in.Acceptance, domain.AcceptanceOp{Op: "dod-add", Text: s})
+		}
+		for _, s := range optOuts {
+			in.Acceptance = append(in.Acceptance, domain.AcceptanceOp{Op: "dod-opt-out", Text: s, Reason: reason})
+		}
+		for _, s := range dodRemoves {
+			in.Acceptance = append(in.Acceptance, domain.AcceptanceOp{Op: "dod-remove", Text: s})
+		}
+		if reason != "" && len(optOuts) == 0 {
+			return usageErr("--reason only applies to --opt-out")
+		}
+		t, err := a.load(false)
+		if err != nil {
+			return err
+		}
+		id, err := t.Resolve(ref)
+		if err != nil {
+			return err
+		}
+		in.Actor, in.Now = a.actor, a.now()
+		c, err := t.PlanRecord(id, op, in)
+		if err != nil {
+			return err
+		}
+		if err := t.CheckWrite(c); err != nil {
+			return err
+		}
+		files, err := a.store.Apply(c)
+		if err != nil {
+			return err
+		}
+		msg := fmt.Sprintf("prep: %s %s", op, id)
+		if c.Decision != nil {
+			msg += fmt.Sprintf(" %s %s", c.Decision.ID, c.Decision.Title)
+		}
+		a.afterWrite(t, msg, files)
+		a.reportWrite(writeResult{OK: true, Op: string(op), ID: id, Files: files})
+		return nil
+	}
 }

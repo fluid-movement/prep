@@ -123,8 +123,9 @@ func globRegexp(pattern string) *regexp.Regexp {
 
 // Pointer is an input the agent may read, by path.
 type Pointer struct {
-	Path string `json:"path"`
-	What string `json:"what"`
+	Path    string `json:"path"`
+	What    string `json:"what"`
+	Command string `json:"command,omitempty"` // the write command for this record
 }
 
 // Guide is the step contract for an issue: where it is, what can happen
@@ -171,20 +172,20 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 	}
 
 	// Inputs: the issue's own records first, then upstream outputs.
-	g.Inputs = append(g.Inputs, Pointer{f("issue.md"), "requirement and open questions"})
+	g.Inputs = append(g.Inputs, Pointer{f("issue.md"), "requirement and open questions", ""})
 	if s != StateOpen {
-		for _, p := range []Pointer{{f("acceptance.md"), "acceptance criteria and Definition of Done additions"}, {f("context.md"), "implementation context"}, {f("decisions.md"), "decision records"}} {
+		for _, p := range []Pointer{{f("acceptance.md"), "acceptance criteria and Definition of Done additions", ""}, {f("context.md"), "implementation context", ""}, {f("decisions.md"), "decision records", ""}} {
 			if i.HasFile(path.Base(p.Path)) {
 				g.Inputs = append(g.Inputs, p)
 			}
 		}
 		if i.HasFile("history.md") && (s == StateInProgress || s.Terminal()) {
-			g.Inputs = append(g.Inputs, Pointer{f("history.md"), "work log"})
+			g.Inputs = append(g.Inputs, Pointer{f("history.md"), "work log", ""})
 		}
 	}
 	for _, a := range t.Ancestors(id) {
 		if ai := t.Issues[a]; ai != nil && ai.HasFile("context.md") && strings.TrimSpace(ai.Context) != "" {
-			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(a), "context.md"), "parent context: " + ai.Title})
+			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(a), "context.md"), "parent context: " + ai.Title, ""})
 		}
 	}
 	for _, d := range i.DependsOn {
@@ -194,11 +195,11 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 		}
 		switch {
 		case di.Kind == KindResearch && di.Findings != nil:
-			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(d), "findings.md"), "findings of dependency: " + di.Title})
+			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(d), "findings.md"), "findings of dependency: " + di.Title, ""})
 		case di.Kind == KindDecision && len(di.Decisions) > 0:
-			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(d), "decisions.md"), "outcome of dependency: " + di.Title})
+			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(d), "decisions.md"), "outcome of dependency: " + di.Title, ""})
 		case t.State(d) == StateDone:
-			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(d), "resolution.md"), "resolution of dependency: " + di.Title})
+			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(d), "resolution.md"), "resolution of dependency: " + di.Title, ""})
 		}
 	}
 	g.Knowledge = t.Candidates(id, touched)
@@ -219,24 +220,24 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		return "resolve-drift", []string{
 			"The requirement or kind changed since the newest baseline (" + i.LatestBaseline().Name + "). Compare issue.md with " + f("baselines/"+i.LatestBaseline().Name+".md") + ".",
 			"Trivial change (typo, rewording): run prep ack " + i.ID + ". A new baseline is written; enrichment stays valid.",
-			"Real change: run prep define " + i.ID + ", then re-enrich: update context.md and acceptance.md, append new decisions and mark superseded ones with supersedes: <id>. Never delete decisions. Finish with prep ready " + i.ID + ".",
+			"Real change: run prep define " + i.ID + ", then re-enrich: update the context (prep context) and criteria (prep criterion), and record new decisions with prep decide --supersedes <id> for the ones they replace. Never delete decisions. Finish with prep ready " + i.ID + ".",
 			"An issue in progress must be released (prep release) before it can be re-defined.",
-		}, []Pointer{{f("baselines/"), "new baseline, written by prep ack or prep define"}}
+		}, []Pointer{{f("baselines/"), "new baseline, written by prep ack or prep define", ""}}
 	}
 	switch s {
 	case StateOpen:
 		return "define", []string{
 			"Settle what and why with the user; the user has authority over the requirement.",
-			"Write the requirement as prose in issue.md. List anything unresolved under '## Open questions'.",
+			"Write the requirement as prose with prep edit " + i.ID + " --body-file - (stdin). List anything unresolved under '## Open questions'.",
 			"Checking code is fine when it tests whether a requirement makes sense; do not plan the implementation yet.",
 			"When the Open questions section is empty, run prep define " + i.ID + " to write the baseline.",
-		}, []Pointer{{f("issue.md"), "requirement prose, empty Open questions section"}}
+		}, []Pointer{{f("issue.md"), "requirement prose, empty Open questions section", "prep edit " + i.ID + " --body-file -"}}
 	case StateDefined:
 		ins := []string{
 			"Enrich: settle how. The agent drafts, the user agrees.",
-			"context.md: implementation context derived from the requirement. Link relevant knowledge entries with bundle-relative links such as [Export](/components/export.md); mention code paths in backticks.",
-			"decisions.md: append dated entries (## D<n>: <title>, date:, optional supersedes:) with rationale and alternatives considered.",
-			"acceptance.md: checkable criteria as - [ ] items; optional '## Definition of Done' additions or '- opt-out: <item> — <reason>'.",
+			"Context: implementation context derived from the requirement, with prep context " + i.ID + " --body-file -. Link relevant knowledge entries with bundle-relative links such as [Export](/components/export.md); mention code paths in backticks.",
+			"Decisions: prep decide " + i.ID + " --title <title> --body-file - appends a dated entry with rationale and alternatives considered; --supersedes D<n> replaces an earlier one.",
+			"Acceptance: prep criterion " + i.ID + " --add <text> (repeatable) for checkable criteria; prep dod " + i.ID + " --add <item> or --opt-out <item> --reason <text> for the Definition of Done.",
 		}
 		switch {
 		case parent:
@@ -251,24 +252,28 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 			ins = append(ins, "Code: context from the codebase is required.")
 		}
 		ins = append(ins, "Then run prep ready "+i.ID+" to sign off against the current baseline.")
-		return "enrich", ins, []Pointer{{f("context.md"), "implementation context"}, {f("decisions.md"), "decision records"}, {f("acceptance.md"), "acceptance criteria"}}
+		return "enrich", ins, []Pointer{
+			{f("context.md"), "implementation context", "prep context " + i.ID + " --body-file -"},
+			{f("decisions.md"), "decision records", "prep decide " + i.ID + " --title <title> --body-file -"},
+			{f("acceptance.md"), "acceptance criteria", "prep criterion " + i.ID + " --add <text>"},
+		}
 	case StateReady:
 		if parent {
 			return "complete-parent", []string{
 				"Work happens in the children; use prep next --under " + i.ID + ".",
 				"When all children are done or dropped and the criteria in acceptance.md are checked, run prep complete " + i.ID + " with a documentation decision.",
-			}, []Pointer{{f("acceptance.md"), "check criteria"}}
+			}, []Pointer{{f("acceptance.md"), "check criteria", "prep criterion " + i.ID + " --check <n>"}}
 		}
 		if deps := t.UnresolvedDeps(i.ID); len(deps) > 0 {
 			return "wait", []string{"Blocked by unresolved dependencies: " + strings.Join(deps, ", ") + "."}, nil
 		}
 		return "claim", []string{
 			"Claim the issue before implementing: prep claim " + i.ID + ".",
-		}, []Pointer{{f("claim.md"), "written by prep claim"}}
+		}, []Pointer{{f("claim.md"), "written by prep claim", ""}}
 	case StateInProgress:
 		ins := []string{
-			"Implement against context.md and acceptance.md. Log notable steps in history.md.",
-			"Check criteria in acceptance.md (- [x]) as they are met. Writes during implementation are reviewed as a batch at completion.",
+			"Implement against the context and acceptance criteria. Log notable steps with prep log " + i.ID + " <text>.",
+			"Check criteria as they are met with prep criterion " + i.ID + " --check <n> (numbers as prep show lists them). Writes during implementation are reviewed as a batch at completion.",
 			"Documentation step: update or create knowledge entries in .prep/knowledge for what is now true, or decide there is no impact.",
 		}
 		var outs []Pointer
@@ -277,15 +282,15 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		case i.Kind == KindCode:
 			ins = append(ins, "Commit the code, then run prep complete "+i.ID+" --commit <hash> --docs <entry>... (or --no-impact <reason>).")
 		case i.Kind == KindResearch:
-			ins = append(ins, "Write the answer to findings.md, then run prep complete "+i.ID+" --docs <entry>... (or --no-impact <reason>).")
-			outs = append(outs, Pointer{f("findings.md"), "research findings"})
+			ins = append(ins, "Write the answer with prep findings "+i.ID+" --body-file -, then run prep complete "+i.ID+" --docs <entry>... (or --no-impact <reason>).")
+			outs = append(outs, Pointer{f("findings.md"), "research findings", "prep findings " + i.ID + " --body-file -"})
 		case i.Kind == KindDecision:
-			ins = append(ins, "After agreement, append the decision with outcome: true to decisions.md, then run prep complete "+i.ID+" --docs <entry>... (or --no-impact <reason>).")
+			ins = append(ins, "After agreement, record the decision with prep decide "+i.ID+" --title <title> --body-file - --outcome, then run prep complete "+i.ID+" --docs <entry>... (or --no-impact <reason>).")
 		case i.Kind == KindManual:
 			ins = append(ins, "Manual issues are completed by the user, usually in the TUI; with the CLI: prep complete "+i.ID+" --no-impact <reason> or --docs <entry>.")
 		}
 		ins = append(ins, "Stopping without finishing: prep release "+i.ID+" --reason <why>.")
-		outs = append(outs, Pointer{f("history.md"), "work log"}, Pointer{f("acceptance.md"), "checked criteria"}, Pointer{".prep/knowledge/", "knowledge entries changed by this issue"}, Pointer{f("resolution.md"), "written by prep complete"})
+		outs = append(outs, Pointer{f("history.md"), "work log", "prep log " + i.ID + " <text>"}, Pointer{f("acceptance.md"), "checked criteria", "prep criterion " + i.ID + " --check <n>"}, Pointer{".prep/knowledge/", "knowledge entries changed by this issue", ""}, Pointer{f("resolution.md"), "written by prep complete", ""})
 		return "implement", ins, outs
 	case StateDone, StateDropped:
 		return "resolved", []string{"The issue is resolved; its records are history. Create a new issue for further change."}, nil

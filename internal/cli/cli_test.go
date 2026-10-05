@@ -458,3 +458,94 @@ func TestNewKeepsOneOpenQuestionsSection(t *testing.T) {
 		t.Fatalf("prep new duplicated the section:\n%s", got)
 	}
 }
+
+func TestRecordCommands(t *testing.T) {
+	h := newHarness(t)
+	a := h.newIssue("--title", "Export", "--kind", "code", "--body", "Export rows as CSV.")
+	q := h.newIssue("--title", "Which format", "--kind", "decision", "--body", "Pick a format.")
+	r := h.newIssue("--title", "Survey", "--kind", "research", "--body", "Survey formats.")
+
+	// context and findings replace their record; findings only on research.
+	h.fails("E_USAGE", "context", a, "--json")
+	h.ok("context", a, "--body", "Change `internal/export.go`.")
+	h.ok("context", a, "--body", "Change `internal/csv.go`.")
+	if got := h.read(a, "context.md"); got != "Change `internal/csv.go`.\n" {
+		t.Fatalf("context.md = %q", got)
+	}
+	h.fails("G_KIND", "findings", a, "--body", "x", "--json")
+	h.ok("findings", r, "--body", "CSV is enough.")
+	if got := h.read(r, "findings.md"); got != "CSV is enough.\n" {
+		t.Fatalf("findings.md = %q", got)
+	}
+
+	// decide appends numbered, dated entries the parser reads back.
+	h.ok("decide", a, "--title", "Use encoding/csv", "--body", "Standard library.")
+	h.ok("decide", a, "--title", "Stream rows", "--supersedes", "D1")
+	h.fails("G_DECISION", "decide", a, "--title", "x", "--supersedes", "D9", "--json")
+	h.fails("G_KIND", "decide", a, "--title", "x", "--outcome", "--json")
+	h.fails("G_TITLE", "decide", a, "--json")
+	dec := h.read(a, "decisions.md")
+	for _, want := range []string{"## D1: Use encoding/csv\ndate: 2026-10-05\n\nStandard library.", "## D2: Stream rows\ndate: 2026-10-05\nsupersedes: D1"} {
+		if !strings.Contains(dec, want) {
+			t.Fatalf("decisions.md lacks %q:\n%s", want, dec)
+		}
+	}
+	h.ok("decide", q, "--title", "CSV", "--outcome")
+	if !strings.Contains(h.read(q, "decisions.md"), "outcome: true") {
+		t.Fatalf("outcome not written")
+	}
+
+	// criterion keeps text a human wrote and numbers like prep show.
+	h.write(a, "acceptance.md", "Criteria for the export:\n\n- [ ] writes a header\n- [ ] quotes fields\n\n## Definition of Done\n\n- benchmarks run\n")
+	h.ok("criterion", a, "--check", "2", "--add", "handles empty input")
+	got := h.read(a, "acceptance.md")
+	want := "Criteria for the export:\n\n- [ ] writes a header\n- [x] quotes fields\n- [ ] handles empty input\n\n## Definition of Done\n\n- benchmarks run\n"
+	if got != want {
+		t.Fatalf("acceptance.md =\n%s\nwant\n%s", got, want)
+	}
+	if out := h.ok("show", a); !strings.Contains(out, "2. [x] quotes fields") {
+		t.Fatalf("show does not number criteria:\n%s", out)
+	}
+	h.fails("G_CRITERION", "criterion", a, "--check", "4", "--json")
+	h.ok("criterion", a, "--remove", "1", "--uncheck", "2")
+	if got := h.read(a, "acceptance.md"); strings.Contains(got, "writes a header") || !strings.Contains(got, "- [ ] quotes fields") {
+		t.Fatalf("remove/uncheck failed:\n%s", got)
+	}
+
+	// dod adds, opts out with a reason and removes by item.
+	h.fails("G_DOD", "dod", a, "--opt-out", "prep fmt --check passes", "--json")
+	h.ok("dod", a, "--add", "docs updated", "--opt-out", "prep fmt --check passes", "--reason", "generated files")
+	got = h.read(a, "acceptance.md")
+	if !strings.Contains(got, "- benchmarks run\n- docs updated\n- opt-out: prep fmt --check passes — generated files\n") {
+		t.Fatalf("dod lines missing:\n%s", got)
+	}
+	h.ok("dod", a, "--remove", "benchmarks run", "--remove", "prep fmt --check passes")
+	got = h.read(a, "acceptance.md")
+	if strings.Contains(got, "benchmarks run") || strings.Contains(got, "opt-out") || !strings.Contains(got, "- docs updated") {
+		t.Fatalf("dod remove failed:\n%s", got)
+	}
+	h.fails("G_DOD", "dod", a, "--remove", "nothing like this", "--json")
+
+	// A new issue without acceptance text gets criteria and a DoD section.
+	h.ok("criterion", r, "--add", "formats compared")
+	h.ok("dod", r, "--add", "sources linked")
+	if got := h.read(r, "acceptance.md"); got != "- [ ] formats compared\n\n## Definition of Done\n\n- sources linked\n" {
+		t.Fatalf("acceptance.md from empty = %q", got)
+	}
+
+	// log appends a line naming the actor.
+	h.ok("log", a, "tried", "encoding/csv", "--by", "claude-code/2.0")
+	if !strings.Contains(h.read(a, "history.md"), "claude-code/2.0: tried encoding/csv") {
+		t.Fatalf("log line missing:\n%s", h.read(a, "history.md"))
+	}
+
+	// The records satisfy the lifecycle and every file stays canonical.
+	h.ok("define", a)
+	h.ok("ready", a)
+	h.ok("fmt", "--check")
+	h.ok("check")
+
+	// Resolved issues are refused.
+	h.ok("drop", r, "--reason", "not needed")
+	h.fails("G_STATE", "log", r, "late note", "--json")
+}

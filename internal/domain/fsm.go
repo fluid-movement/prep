@@ -67,16 +67,20 @@ type Input struct {
 
 // Change is the set of records a transition writes. Storage adapters render it.
 type Change struct {
-	Op          Op          `json:"op"`
-	IssueID     string      `json:"id"`
-	NewIssue    *Issue      `json:"-"`
-	Baseline    *Baseline   `json:"-"`
-	Ready       *Ready      `json:"-"`
-	Claim       *Claim      `json:"-"`
-	RemoveClaim bool        `json:"-"`
-	Resolution  *Resolution `json:"-"`
-	Edit        *IssueEdit  `json:"-"`
-	History     string      `json:"-"`
+	Op          Op             `json:"op"`
+	IssueID     string         `json:"id"`
+	NewIssue    *Issue         `json:"-"`
+	Baseline    *Baseline      `json:"-"`
+	Ready       *Ready         `json:"-"`
+	Claim       *Claim         `json:"-"`
+	RemoveClaim bool           `json:"-"`
+	Resolution  *Resolution    `json:"-"`
+	Edit        *IssueEdit     `json:"-"`
+	Context     *string        `json:"-"`
+	Findings    *string        `json:"-"`
+	Decision    *Decision      `json:"-"`
+	Acceptance  []AcceptanceOp `json:"-"`
+	History     string         `json:"-"`
 }
 
 // IssueEdit is the new content of an issue's requirement record after
@@ -498,6 +502,22 @@ func (t *Tree) Apply(c *Change) *Tree {
 				if e.Body != nil {
 					cp.Body = *e.Body
 				}
+			}
+			if c.Context != nil {
+				cp.Context = *c.Context
+			}
+			if c.Findings != nil {
+				f := *c.Findings
+				cp.Findings = &f
+				if !cp.HasFile("findings.md") {
+					cp.Files = append(append([]string(nil), cp.Files...), "findings.md")
+				}
+			}
+			if c.Decision != nil {
+				cp.Decisions = append(append([]Decision(nil), i.Decisions...), *c.Decision)
+			}
+			if len(c.Acceptance) > 0 {
+				cp.Criteria, cp.DoDAdd, cp.DoDOptOuts = ApplyAcceptance(i, c.Acceptance)
 			}
 			i = &cp
 		}

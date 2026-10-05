@@ -164,6 +164,144 @@ func parseAcceptance(raw string, i *domain.Issue) {
 	}
 }
 
+// applyAcceptance applies criterion and Definition of Done operations to
+// acceptance.md line by line, keeping every other line as written. It uses
+// the same rules as parseAcceptance: criteria are checkboxes outside the
+// Definition of Done section.
+func applyAcceptance(raw string, ops []domain.AcceptanceOp) string {
+	set := map[int]string{}
+	removed := map[int]bool{}
+	dodRemove := map[string]bool{}
+	var adds, dodLines []string
+	for _, o := range ops {
+		switch o.Op {
+		case "check":
+			set[o.Index] = "x"
+		case "uncheck":
+			set[o.Index] = " "
+		case "remove":
+			removed[o.Index] = true
+		case "add":
+			adds = append(adds, "- [ ] "+strings.TrimSpace(o.Text))
+		case "dod-add":
+			dodLines = append(dodLines, "- "+strings.TrimSpace(o.Text))
+		case "dod-opt-out":
+			dodLines = append(dodLines, "- opt-out: "+strings.TrimSpace(o.Text)+" — "+strings.TrimSpace(o.Reason))
+		case "dod-remove":
+			dodRemove[o.Text] = true
+		}
+	}
+	lines := strings.Split(normalize(raw), "\n")
+	if len(lines) == 1 && lines[0] == "" {
+		lines = nil
+	}
+	var out []string
+	inDoD, sawDoD := false, false
+	n := 0
+	addAt, dodEnd := -1, -1
+	for _, l := range lines {
+		if h2Re.MatchString(l) {
+			if inDoD {
+				dodEnd = len(out)
+			}
+			inDoD = dodHeadingRe.MatchString(l)
+			if inDoD {
+				sawDoD = true
+				if addAt < 0 {
+					addAt = len(out)
+				}
+			}
+			out = append(out, l)
+			continue
+		}
+		if !inDoD {
+			if m := checkboxRe.FindStringSubmatch(l); m != nil {
+				n++
+				if removed[n] {
+					addAt = len(out)
+					continue
+				}
+				if mark, ok := set[n]; ok {
+					l = m[1] + "- [" + mark + "] " + m[3]
+				}
+				out = append(out, l)
+				addAt = len(out)
+				continue
+			}
+			out = append(out, l)
+			continue
+		}
+		if m := bulletRe.FindStringSubmatch(l); m != nil {
+			item := strings.TrimSpace(m[1])
+			if o := optOutRe.FindStringSubmatch(item); o != nil {
+				item = strings.TrimSpace(o[1])
+			}
+			if dodRemove[item] {
+				continue
+			}
+		}
+		out = append(out, l)
+	}
+	if inDoD {
+		dodEnd = len(out)
+	}
+	// Criteria go in before Definition of Done lines, which always sit at
+	// or after the DoD heading, so inserting them first keeps dodEnd valid
+	// only when it lies before addAt; otherwise shift it.
+	if len(adds) > 0 {
+		if addAt < 0 {
+			addAt = len(out)
+		}
+		before := len(out)
+		out = insertLines(out, addAt, adds)
+		if dodEnd >= addAt {
+			dodEnd += len(out) - before
+		}
+	}
+	if len(dodLines) > 0 {
+		if !sawDoD {
+			out = append(out, "", "## Definition of Done")
+			dodEnd = len(out)
+		}
+		out = insertLines(out, dodEnd, dodLines)
+	}
+	return normalize(strings.Join(out, "\n"))
+}
+
+// insertLines inserts ins at position at, joining the list that ends there:
+// blank lines before the position are skipped, a blank line separates the
+// inserted lines from preceding non-list text and from what follows.
+func insertLines(lines []string, at int, ins []string) []string {
+	for at > 0 && strings.TrimSpace(lines[at-1]) == "" {
+		at--
+	}
+	out := append([]string(nil), lines[:at]...)
+	if at > 0 && !bulletRe.MatchString(lines[at-1]) {
+		out = append(out, "")
+	}
+	out = append(out, ins...)
+	if at < len(lines) {
+		out = append(out, "")
+	}
+	return append(out, lines[at:]...)
+}
+
+// renderDecision renders one decisions.md entry.
+func renderDecision(d *domain.Decision) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "## %s: %s\ndate: %s\n", d.ID, d.Title, d.Date)
+	if d.Supersedes != "" {
+		fmt.Fprintf(&b, "supersedes: %s\n", d.Supersedes)
+	}
+	if d.Outcome {
+		b.WriteString("outcome: true\n")
+	}
+	if d.Body != "" {
+		b.WriteString("\n" + d.Body + "\n")
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
 // --- context.md ---
 
 var bundleLinkRe = regexp.MustCompile(`\]\((?:\.prep/knowledge)?(/[^)\s#]+\.md)(?:#[^)]*)?\)`)
