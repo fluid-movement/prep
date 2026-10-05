@@ -1,13 +1,13 @@
 ---
-title: Commands to edit title, kind and parent
+title: Write commands for enrichment and work records
 kind: code
+depends_on:
+  - 20261005-184730
 ---
 
-The CLI is prep's API: every change to the data has a command. Title, kind and parent of an existing issue can only be changed by editing issue.md frontmatter today, although the design allows changing kind later and lists reparenting as a transition for all kinds. Write commands change each of them with validation before writing (valid kind, parent exists, no cycle) and --json output. A kind change alters the baselined requirement, so it makes a defined issue stale like a requirement edit does.
+The CLI is prep's API: every change to the data goes through a command that carries content, and the storage adapter decides the representation. Agents today write context, decisions, acceptance criteria, history and findings by editing files, and prep guide lists file paths under Write. Each of these records gets a write command with --json and validation before writing, prep guide lists those commands instead of paths, and the skill tells agents to use them. Hand edits of the markdown stay possible for humans and remain caught by prep check.
 
 ## Open questions
 
-- One command with flags (prep edit <id> --title/--kind/--parent) or one command per field (prep retitle, prep rekind, prep reparent)? Should dependencies from the dependency command share the same shape?
-- Should editing the requirement prose itself get a command (for example from a file or stdin), or stay a file edit as the define step describes?
-
-## Open questions
+- Granular commands that match each record's semantics (decisions append-only, criteria added and checked one by one, history appended) or one generic write per record with the content from a file or stdin?
+- Does the skill's "Without the binary" path for cloud sessions keep file editing as the fallback?
