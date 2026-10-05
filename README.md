@@ -6,6 +6,9 @@ prep is a workflow engine and memory for coding agents, with a human supervising
 
 ```sh
 go install github.com/fluid-movement/prep/cmd/prep@latest
+# or, from a checkout (needs just): builds with the version stamped in and
+# copies the binary to ~/.local/bin (override with PREP_BINDIR or bindir=...)
+just install
 ```
 
 ## Quick start
@@ -41,9 +44,11 @@ An issue is **stale** when its requirement or kind differs from the newest basel
 ## Development
 
 ```sh
-go test ./...          # includes the contract corpus in testdata/contract
-go run ./cmd/prep check
-go run ./cmd/prep fmt --check
+just test      # go test ./..., including the contract corpus in testdata/contract
+just check     # prep check and prep fmt --check on this repository's .project
+just ci        # lint, test and check: everything CI runs
 ```
+
+Run `just` to list all recipes.
 
 The agent skill lives in `.claude/skills/prep/SKILL.md` (also served by `prep skill`); a test keeps it identical to the copy embedded in the binary.
