@@ -1,8 +1,8 @@
-- [ ] `prep edit <id>` changes title, kind, parent, dependencies and requirement; flags not given leave their field unchanged; no flag is a usage error
-- [ ] `--parent ''` removes the parent and `--depends-on ''` clears the dependencies; repeated `--depends-on` replaces the list
-- [ ] Self-dependency, missing targets, cycles and depending on an ancestor are rejected before writing; depending on a done issue is allowed and on a dropped issue is rejected
-- [ ] Editing a done or dropped issue is rejected
-- [ ] A changed requirement or kind on a defined issue is reported as stale in text and `--json` output
-- [ ] Each edit appends a history line naming the actor and the changed fields
-- [ ] `prep new --body` and `prep edit --body` with their own Open questions section write exactly one such section
-- [ ] The skill lists `prep edit` and its uses
+- [x] `prep edit <id>` changes title, kind, parent, dependencies and requirement; flags not given leave their field unchanged; no flag is a usage error
+- [x] `--parent ''` removes the parent and `--depends-on ''` clears the dependencies; repeated `--depends-on` replaces the list
+- [x] Self-dependency, missing targets, cycles and depending on an ancestor are rejected before writing; depending on a done issue is allowed and on a dropped issue is rejected
+- [x] Editing a done or dropped issue is rejected
+- [x] A changed requirement or kind on a defined issue is reported as stale in text and `--json` output
+- [x] Each edit appends a history line naming the actor and the changed fields
+- [x] `prep new --body` and `prep edit --body` with their own Open questions section write exactly one such section
+- [x] The skill lists `prep edit` and its uses

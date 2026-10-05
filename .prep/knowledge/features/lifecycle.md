@@ -28,6 +28,7 @@ States (never stored): resolution.md → done/dropped; claim.md with valid ready
 | complete | in progress (parents: ready or in progress) | not stale; all criteria checked; documentation decision; parents: children resolved; code: commit evidence and non-human actor; research: findings.md; decision: an outcome: true entry |
 | drop | any unresolved state | reason |
 
+- **Edit** is not a transition: `prep edit` changes title, kind, parent, dependencies or requirement of any unresolved issue and appends a history line; it never changes state, but a requirement or kind edit makes a defined issue stale.
 - **Stale**: requirement (issue.md body) or kind differs from the newest baseline. Ack for trivial changes; define plus re-enrichment for real ones.
 - **Actionable**: ready, not stale, dependencies done, unclaimed, not a parent. **Blocked**: unresolved dependencies.
 - **Definition of Done** cascades project → ancestors → issue with opt-outs and is snapshotted into resolution.md.

@@ -16,5 +16,6 @@ Applies when changing file formats or write behavior. Format details: [Storage f
 
 - `Load` reads every file on every run (no cache) and records a SHA-256 per file. Format-level problems become diagnostics (unknown files, frontmatter errors, non-canonical files, missing schema files).
 - Writes go through a temp file plus rename; before writing, the current content hash must equal the one read at load (absent for new files), else `E_CONFLICT`.
+- `requirementBody` builds the issue.md body from requirement text for `prep new` and `prep edit`: it keeps the text's own `## Open questions` section and appends an empty one only when missing. An edit rewrites issue.md from the edited fields under the same compare-and-swap.
 - `Fmt` re-renders every parseable file canonically (`--check` reports only); `Fix` adds missing empty schema files and removes duplicate dependencies.
 - The contract corpus in `testdata/contract` (valid and broken trees with an `expect` file of diagnostic codes) runs in `contract_test.go` and is the test suite for any future adapter.

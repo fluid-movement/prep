@@ -1,0 +1,3 @@
+- 2026-10-05: Enrichment found the root cause of the duplicate Open questions headings: newIssueBody appended the section unconditionally. Fixed in the shared requirementBody; the three affected issues were repaired by hand.
+- 2026-10-05: Work moved to main at the user's request; the feature branch was merged with a merge commit so earlier evidence hashes stay reachable.
+- 2026-10-05: TestEdit covers every flag, clearing, replace semantics, cycles, self and ancestor dependencies, dropped targets, resolved issues, staleness and history; TestNewKeepsOneOpenQuestionsSection covers the regression.

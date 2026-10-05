@@ -9,9 +9,10 @@ This repository tracks its work with prep. Issues live in `.prep/issues/<id>/`; 
 
 1. At session start, run `prep prime` for a short briefing.
 2. For the issue you work on, run `prep guide <id>`. It tells you the current step, what to read, which gates are unmet, where outputs go, and the exact command for the next transition. Follow it; it always matches the installed binary.
-3. Use `--json` when you parse output. Reads (`prime`, `guide`, `list`, `next`, `show`, `check`) never change anything; writes (`new`, `define`, `ack`, `ready`, `claim`, `release`, `complete`, `drop`, `fmt`, `fix`, `migrate`) each perform one transition.
-4. Never invent issue IDs; `prep new` creates them. Never write `baselines/`, `ready.md`, `claim.md` or `resolution.md` by hand.
-5. Pass `--by <harness>/<version>` (or set `PREP_ACTOR`) so records name the agent.
+3. Use `--json` when you parse output. Reads (`prime`, `guide`, `list`, `next`, `show`, `check`) never change anything; writes (`new`, `edit`, `define`, `ack`, `ready`, `claim`, `release`, `complete`, `drop`, `fmt`, `fix`, `migrate`) each perform one change.
+4. Change an issue's title, kind, parent, dependencies or requirement with `prep edit <id>` rather than editing `issue.md` frontmatter. `--depends-on` replaces the whole list (`--depends-on ''` clears it); `--body` or `--body-file` replaces the requirement including its `## Open questions` section.
+5. Never invent issue IDs; `prep new` creates them. Never write `baselines/`, `ready.md`, `claim.md` or `resolution.md` by hand.
+6. Pass `--by <harness>/<version>` (or set `PREP_ACTOR`) so records name the agent.
 
 ## Without the binary
 

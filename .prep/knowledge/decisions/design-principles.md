@@ -21,3 +21,4 @@ Applies to every change. Decided in the original design (`DESIGN.md`).
 7. **Domain and storage are separate layers.** Markdown is the first storage adapter, see [Architecture](/components/architecture.md).
 8. **Keep it simple.** Scan all files on every run; no index or cache until proven necessary.
 9. **Issues record change, the knowledge base records state.** See [Knowledge base conventions](/conventions/knowledge-base.md).
+10. **The CLI is the API.** Every change to the data goes through a command, and commands carry content, not files; the storage adapter decides the representation. Hand edits stay possible and `prep check` catches them, but agents and clients never need them.

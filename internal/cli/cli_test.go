@@ -367,3 +367,94 @@ func TestStaticSkillMatchesBinary(t *testing.T) {
 		t.Fatal(".claude/skills/prep/SKILL.md differs from internal/cli/skill.md; copy it over")
 	}
 }
+
+func TestEdit(t *testing.T) {
+	h := newHarness(t)
+	a := h.newIssue("--title", "Export", "--kind", "code", "--body", "Export rows as CSV.")
+	b := h.newIssue("--title", "Import", "--kind", "code", "--body", "Import rows.")
+	c := h.newIssue("--title", "Parse", "--kind", "code", "--body", "Parse rows.")
+
+	h.fails("E_USAGE", "edit", a, "--json")
+	h.fails("G_KIND", "edit", a, "--kind", "story", "--json")
+	h.fails("G_TITLE", "edit", a, "--title", " ", "--json")
+
+	// Flags not given keep their field; the edit is recorded in history.
+	h.ok("edit", a, "--title", "Export rows", "--by", "claude-code/2.0")
+	issue := h.read(a, "issue.md")
+	for _, want := range []string{"title: Export rows", "kind: code", "Export rows as CSV."} {
+		if !strings.Contains(issue, want) {
+			t.Fatalf("issue.md lacks %q:\n%s", want, issue)
+		}
+	}
+	if hist := h.read(a, "history.md"); !strings.Contains(hist, "edited by claude-code/2.0: title") {
+		t.Fatalf("edit not recorded in history.md:\n%s", hist)
+	}
+
+	// Dependencies: repeated flags replace the list, '' clears it.
+	h.ok("edit", a, "--depends-on", b, "--depends-on", c[len(c)-4:])
+	if got := h.read(a, "issue.md"); !strings.Contains(got, "  - "+b+"\n  - "+c+"\n") {
+		t.Fatalf("depends_on not written:\n%s", got)
+	}
+	h.ok("edit", a, "--depends-on", c)
+	if got := h.read(a, "issue.md"); strings.Contains(got, b) {
+		t.Fatalf("depends_on not replaced:\n%s", got)
+	}
+	h.fails("E_USAGE", "edit", a, "--depends-on", "", "--depends-on", b, "--json")
+	h.fails("E_INVALID", "edit", a, "--depends-on", a, "--json")
+	h.fails("E_INVALID", "edit", c, "--depends-on", a, "--json")
+	h.fails("E_NOT_FOUND", "edit", a, "--depends-on", "19990101-000000", "--json")
+	h.ok("edit", a, "--depends-on", "")
+	if got := h.read(a, "issue.md"); strings.Contains(got, "depends_on") {
+		t.Fatalf("depends_on not cleared:\n%s", got)
+	}
+
+	// Parent: set, reject cycles, remove.
+	h.ok("edit", b, "--parent", a)
+	if got := h.read(b, "issue.md"); !strings.Contains(got, "parent: "+a) {
+		t.Fatalf("parent not written:\n%s", got)
+	}
+	h.fails("E_INVALID", "edit", a, "--parent", b, "--json")
+	h.fails("E_INVALID", "edit", b, "--depends-on", a, "--json")
+	h.ok("edit", b, "--parent", "")
+	if got := h.read(b, "issue.md"); strings.Contains(got, "parent:") {
+		t.Fatalf("parent not removed:\n%s", got)
+	}
+
+	// A requirement with its own Open questions section keeps exactly one.
+	h.ok("edit", a, "--body", "Export rows as CSV and JSON.\n\n## Open questions\n\n- which delimiter?")
+	if got := h.read(a, "issue.md"); strings.Count(got, "## Open questions") != 1 || !strings.Contains(got, "- which delimiter?") {
+		t.Fatalf("open questions not kept once:\n%s", got)
+	}
+	h.fails("G_OPEN_QUESTIONS", "define", a, "--json")
+	h.ok("edit", a, "--body", "Export rows as CSV and JSON.")
+	if got := h.read(a, "issue.md"); strings.Count(got, "## Open questions") != 1 {
+		t.Fatalf("empty open questions section missing:\n%s", got)
+	}
+
+	// Requirement and kind edits make a defined issue stale.
+	h.ok("define", a)
+	var r writeResult
+	h.jsonOf(&r, "edit", a, "--body", "Export rows as CSV, JSON and XML.")
+	if r.State != "defined" || !r.Stale {
+		t.Fatalf("edit result = %+v, want defined and stale", r)
+	}
+	h.ok("ack", a)
+	if out := h.ok("edit", a, "--kind", "manual"); !strings.Contains(out, "stale") {
+		t.Fatalf("kind edit not reported as stale:\n%s", out)
+	}
+	h.ok("edit", a, "--title", "Export formats")
+	h.expectState(a, "defined", true)
+
+	// Dropped targets and resolved issues are refused.
+	h.ok("drop", c, "--reason", "not needed")
+	h.fails("G_DEPS", "edit", b, "--depends-on", c, "--json")
+	h.fails("G_STATE", "edit", c, "--title", "Parse rows", "--json")
+}
+
+func TestNewKeepsOneOpenQuestionsSection(t *testing.T) {
+	h := newHarness(t)
+	a := h.newIssue("--title", "Export", "--kind", "code", "--body", "Export rows.\n\n## Open questions\n\n- which format?")
+	if got := h.read(a, "issue.md"); strings.Count(got, "## Open questions") != 1 {
+		t.Fatalf("prep new duplicated the section:\n%s", got)
+	}
+}
