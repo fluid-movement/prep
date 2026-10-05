@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/cli
   - cmd/prep
-confirmed_commit: db27d6b1996f239fe8e18dc951b950ad5cab77ec
+confirmed_commit: 160865e19bec4140a8d8517e071e8358afee2419
 ---
 
 # CLI
