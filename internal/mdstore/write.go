@@ -94,7 +94,7 @@ func (s *Store) Apply(c *domain.Change) ([]string, error) {
 			return nil, &domain.Error{Code: domain.ErrConflict, Message: fmt.Sprintf("issue directory %s already exists", dir)}
 		}
 		i := *c.NewIssue
-		i.Body = newIssueBody(i.Prose)
+		i.Body = requirementBody(i.Prose)
 		if err := w("issue.md", renderIssue(&i)); err != nil {
 			return touched, err
 		}
@@ -102,6 +102,27 @@ func (s *Store) Apply(c *domain.Change) ([]string, error) {
 			if err := w(n, ""); err != nil {
 				return touched, err
 			}
+		}
+	}
+	if e := c.Edit; e != nil {
+		rel := dir + "/issue.md"
+		if err := s.cas(rel); err != nil {
+			return touched, err
+		}
+		raw, _, err := s.read(rel)
+		if err != nil {
+			return touched, err
+		}
+		var i domain.Issue
+		if err := parseIssue(raw, &i); err != nil {
+			return touched, fmt.Errorf("%s: %w", rel, err)
+		}
+		i.Title, i.Kind, i.Parent, i.DependsOn = e.Title, e.Kind, e.Parent, e.DependsOn
+		if e.Body != nil {
+			i.Body = requirementBody(*e.Body)
+		}
+		if err := w("issue.md", renderIssue(&i)); err != nil {
+			return touched, err
 		}
 	}
 	if c.Baseline != nil {

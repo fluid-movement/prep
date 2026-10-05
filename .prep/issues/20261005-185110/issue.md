@@ -11,5 +11,3 @@ The CLI is prep's API, and the knowledge base sits behind its own store port (th
 
 - Command shape: one prep knowledge subcommand group (new, update, confirm) or top-level commands?
 - Should confirming an entry against the current commit (setting confirmed_commit) be its own command?
-
-## Open questions

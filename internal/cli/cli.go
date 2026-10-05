@@ -66,6 +66,7 @@ func init() {
 		{"check", false, "check [--no-drift]         validate the whole tree", cmdCheck},
 		{"views", false, "views                      saved views from config.yaml", cmdViews},
 		{"new", true, "new --title T --kind K     create an issue [--parent id] [--depends-on id]... [--body text | --body-file path|-]", cmdNew},
+		{"edit", true, "edit <id>                  change [--title T] [--kind K] [--parent id|''] [--depends-on id|'']... [--body text | --body-file path|-]", cmdEdit},
 		{"define", true, "define <id>                write a requirement baseline (open questions must be empty)", opCmd(domain.OpDefine)},
 		{"ack", true, "ack <id>                   acknowledge a trivial requirement change: new baseline, enrichment stays valid", opCmd(domain.OpAck)},
 		{"ready", true, "ready <id> [--note]        sign off enrichment against the newest baseline", opCmd(domain.OpReady)},

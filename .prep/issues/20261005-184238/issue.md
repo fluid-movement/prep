@@ -11,5 +11,3 @@ Users of prep get the Claude Code integration in their own projects without copy
 
 - Ship as a Claude Code plugin through a marketplace, have prep init (or a prep command) write the files into the project, or both?
 - How does the plugin detect a binary that is too old or too new for its skill and commands?
-
-## Open questions
