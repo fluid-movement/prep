@@ -83,6 +83,7 @@ func init() {
 		{"fmt", true, "fmt [--check]              rewrite files in canonical format (--check: report only, exit 1 on changes)", cmdFmt},
 		{"fix", true, "fix                        safe auto-fixes from check", cmdFix},
 		{"migrate", true, "migrate                    migrate .prep to this binary's schema", cmdMigrate},
+		{"tui", false, "tui [--gallery]            terminal UI next to the harness (--gallery: the design system's components)", cmdTUI},
 		{"skill", false, "skill                      print the agent skill (static copy for environments without the binary)", cmdSkill},
 		{"version", false, "version                    print the version", cmdVersion},
 	}

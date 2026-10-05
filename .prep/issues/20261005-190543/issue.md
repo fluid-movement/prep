@@ -1,0 +1,16 @@
+---
+title: 'TUI design system: tokens, styles, components, gallery'
+kind: code
+parent: 20261005-152616
+---
+
+The TUI gets a small design system before any screen is built, the way a frontend team works: screens compose components and never style text themselves, so visual changes happen in one place and UI iterations stay fast.
+
+- Tokens: semantic colors (text, muted, subtle, accent, border, focused border, selection, success, warning, error) plus one color per issue state and per kind; adaptive to light and dark terminals and degrading cleanly to 256 and 16 colors. Spacing and border tokens.
+- Text styles: title, heading, body, muted, code, key hint.
+- Components: state badge, kind tag, progress (n/m), tabs bar, selectable list row, titled pane with focus state, key help footer, empty, loading and error states, and markdown rendering through Glamour with a style derived from the tokens.
+- Layout helpers for splitting the screen into panes that adapt to the terminal size, down to 80×24.
+- A gallery (prep tui --gallery) renders every component in every variant, without project data, so a visual tweak can be checked in seconds.
+- Snapshot tests render components to text and compare them with golden files, so unintended visual changes fail the build.
+
+## Open questions

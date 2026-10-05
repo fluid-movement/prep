@@ -12,8 +12,8 @@ generated:
 
 Applies when adding dependencies or new interfaces.
 
-- **Go**, one static binary holding core, CLI and (later) TUI: near-instant startup for frequent agent calls, simple install. The only dependency so far is `gopkg.in/yaml.v3`.
-- **TUI** (not built yet): Bubble Tea app structure, Bubbles components, Lip Gloss layout, Glamour markdown rendering.
+- **Go**, one static binary holding core, CLI and TUI: near-instant startup for frequent agent calls, simple install. Dependencies: `gopkg.in/yaml.v3`, the Charm libraries below and `fsnotify`. The TUI libraries grew the binary from about 3 MB to about 15 MB; CLI startup stays around 10–20 ms.
+- **TUI**: Bubble Tea app structure, Bubbles components, Lip Gloss layout, Glamour markdown rendering. Glamour v1.0.0 pins Lip Gloss to a v1.1.1 pseudo-version. Looks come from the [TUI design system](/components/tui-design-system.md).
 - **Third-party storage adapters**: JSON-RPC over stdio, like LSP and MCP, so the core stays a closed, tested binary.
 - **Harness adapters**: thin TypeScript only where a harness requires it (Claude Code mod, Pi extension).
 

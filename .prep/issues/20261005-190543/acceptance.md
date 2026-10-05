@@ -1,0 +1,7 @@
+- [x] Tokens cover text, muted, subtle, accent, border, focus, selection, success, warning, error, every issue state and every kind, adaptive to light and dark backgrounds with 256 and 16 color fallbacks
+- [x] Text styles: title, heading, body, muted, code, key hint
+- [x] Components: state badge, kind tag, progress, tabs bar, list row (normal and selected), titled pane (focused and not), key help footer, empty, loading and error states, markdown rendering
+- [x] Layout helpers split width and height into panes with minimums; the gallery renders without overflow at 80 columns
+- [x] prep tui --gallery shows every component in every variant without project data and reflows on resize
+- [x] Golden snapshot tests at 80 and 120 columns for dark and light, with -update to rewrite them
+- [x] Knowledge: a TUI design system entry describing tokens, components and how to add one

@@ -23,11 +23,12 @@ internal/domain     model, derived state, FSM and gates, validation, query engin
 internal/mdstore    issue store adapter: .prep/issues as markdown
 internal/okf        knowledge store adapter: .prep/knowledge as an OKF v0.2 bundle
 internal/gitx       the few git calls (staging, commits, drift, commit evidence)
+internal/tui        human interface: screens (Bubble Tea); theme and ui hold the design system
 ```
 
 - Ports are defined in `internal/domain/ports.go`: `IssueStore` (transactional records: `Load`, `Apply`) and `KnowledgeStore` (retrieval: `Load`). They are separate because access patterns differ.
 - Adapters contain no FSM logic. The domain plans a write as a `domain.Change`; `Tree.CheckWrite` validates the tree with the change applied in memory and rejects writes that introduce errors; the adapter renders and writes it.
-- The CLI and the future TUI share `domain.Filter` and `Tree.Query`, so both agree on derived states.
+- The CLI and the TUI share `domain.Filter` and `Tree.Query`, so both agree on derived states.
 - Git is versioning, not the system of record; every git call tolerates git being absent.
 
-Details: [domain](/components/domain.md), [markdown store](/components/markdown-store.md), [OKF store](/components/okf-store.md), [CLI](/components/cli.md).
+Details: [domain](/components/domain.md), [markdown store](/components/markdown-store.md), [OKF store](/components/okf-store.md), [CLI](/components/cli.md), [TUI design system](/components/tui-design-system.md).

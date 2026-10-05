@@ -20,7 +20,7 @@ Applies always; start here and follow links.
 - [Architecture](/components/architecture.md): domain layer, ports, adapters, interfaces.
 - [Stack](/decisions/stack.md): Go, Charm, JSON-RPC for third-party adapters.
 - [Issue lifecycle](/features/lifecycle.md): states, transitions, gates, drift.
-- [Domain package](/components/domain.md), [markdown store](/components/markdown-store.md), [OKF store](/components/okf-store.md), [CLI](/components/cli.md), [Claude Code integration](/components/claude-code.md).
+- [Domain package](/components/domain.md), [markdown store](/components/markdown-store.md), [OKF store](/components/okf-store.md), [CLI](/components/cli.md), [Claude Code integration](/components/claude-code.md), [TUI design system](/components/tui-design-system.md).
 - [Storage format](/conventions/storage-format.md): files, frontmatter, canonical form.
 - [Knowledge base conventions](/conventions/knowledge-base.md): how entries are written.
 - [Out of scope](/decisions/out-of-scope.md): what prep deliberately does not do.
