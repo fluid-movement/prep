@@ -9,6 +9,7 @@ generated:
 scope:
   - .claude/settings.json
   - .claude/commands
+confirmed_commit: dd33488db82aca8560c7f10963dabb81716c637f
 ---
 
 # Claude Code integration
