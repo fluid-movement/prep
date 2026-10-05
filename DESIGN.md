@@ -2,6 +2,8 @@
 
 As of 2026-10-05 · Andre
 
+> **Frozen historical snapshot.** This document was imported into prep when the first implementation slice ran: decisions, stack and architecture now live as knowledge entries in `.project/knowledge/` (start at `overview.md`), and the remaining work and open points are open issues in `.project/issues/` (`prep list`). Do not update this file; change the knowledge base instead.
+
 ## Purpose
 
 prep is a workflow engine and memory for coding agents, with a human supervising: it enforces the steps an issue goes through and holds the context agents need to implement it. It is not a traditional project planning tool.
