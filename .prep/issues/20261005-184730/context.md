@@ -1,0 +1,1 @@
+Documentation step: add the principle "the CLI is the API: every change to the data has a command" to [Design principles](/decisions/design-principles.md), and the new command to [CLI](/components/cli.md).
