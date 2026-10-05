@@ -33,12 +33,12 @@ lint:
     test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
     go vet ./...
 
-# Format Go code and .project files
+# Format Go code and .prep files
 fmt:
     gofmt -w .
     go run ./cmd/prep fmt
 
-# Validate this repository's own .project tree
+# Validate this repository's own .prep tree
 check:
     go run ./cmd/prep check
     go run ./cmd/prep fmt --check

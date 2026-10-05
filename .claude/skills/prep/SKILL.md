@@ -1,11 +1,11 @@
 ---
 name: prep
-description: Work on issues tracked by prep (.project/ in the repository). Use when the user mentions an issue ID, asks what to work on next, or asks to define, enrich, implement or complete an issue.
+description: Work on issues tracked by prep (.prep/ in the repository). Use when the user mentions an issue ID, asks what to work on next, or asks to define, enrich, implement or complete an issue.
 ---
 
 # prep
 
-This repository tracks its work with prep. Issues live in `.project/issues/<id>/`; the knowledge base lives in `.project/knowledge/`.
+This repository tracks its work with prep. Issues live in `.prep/issues/<id>/`; the knowledge base lives in `.prep/knowledge/`.
 
 1. At session start, run `prep prime` for a short briefing.
 2. For the issue you work on, run `prep guide <id>`. It tells you the current step, what to read, which gates are unmet, where outputs go, and the exact command for the next transition. Follow it; it always matches the installed binary.

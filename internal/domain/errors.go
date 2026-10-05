@@ -10,7 +10,7 @@ const (
 	ErrGate      = "E_GATE"       // a transition's gate conditions are unmet
 	ErrInvalid   = "E_INVALID"    // the write would produce invalid state
 	ErrConflict  = "E_CONFLICT"   // a file changed since it was read
-	ErrNoProject = "E_NO_PROJECT" // no .project directory found
+	ErrNoProject = "E_NO_PROJECT" // no .prep directory found
 	ErrSchema    = "E_SCHEMA"
 	ErrIO        = "E_IO"
 	ErrCheck     = "E_CHECK" // prep check found errors

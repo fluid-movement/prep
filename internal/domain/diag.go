@@ -36,7 +36,7 @@ const (
 	CodeProjectMissing  = "P001" // project.md missing or unreadable
 	CodeSchemaMismatch  = "P002" // schema version differs from the binary
 	CodeConfigInvalid   = "P003" // config.yaml invalid
-	CodeProjectUnknown  = "P004" // unknown file in .project
+	CodeProjectUnknown  = "P004" // unknown file in .prep
 	CodeDoDOptOutUnused = "P005"
 
 	// Issue structure.

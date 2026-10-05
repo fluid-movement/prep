@@ -57,7 +57,7 @@ var commands []command
 
 func init() {
 	commands = []command{
-		{"init", true, "init                       create .project in the current directory", cmdInit},
+		{"init", true, "init                       create .prep in the current directory", cmdInit},
 		{"prime", false, "prime [--max N]            session-start briefing: parents, actionable count, alerts", cmdPrime},
 		{"guide", false, "guide <id>                 step contract: state, transitions, unmet gates, inputs, outputs", cmdGuide},
 		{"list", false, "list [query flags]         query issues: --state --kind --under --stale --actionable --blocked --parent --leaf --top --text --tree --view", cmdList},
@@ -75,7 +75,7 @@ func init() {
 		{"drop", true, "drop <id> --reason <text>  drop an issue in any unresolved state", opCmd(domain.OpDrop)},
 		{"fmt", true, "fmt [--check]              rewrite files in canonical format (--check: report only, exit 1 on changes)", cmdFmt},
 		{"fix", true, "fix                        safe auto-fixes from check", cmdFix},
-		{"migrate", true, "migrate                    migrate .project to this binary's schema", cmdMigrate},
+		{"migrate", true, "migrate                    migrate .prep to this binary's schema", cmdMigrate},
 		{"skill", false, "skill                      print the agent skill (static copy for environments without the binary)", cmdSkill},
 		{"version", false, "version                    print the version", cmdVersion},
 	}

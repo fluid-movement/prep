@@ -1,5 +1,5 @@
 // Package okf is the knowledge store adapter: an Open Knowledge Format
-// (OKF v0.2) bundle of markdown entries in .project/knowledge.
+// (OKF v0.2) bundle of markdown entries in .prep/knowledge.
 package okf
 
 import (
@@ -19,7 +19,7 @@ import (
 )
 
 // Dir is the bundle location relative to the repository root.
-const Dir = ".project/knowledge"
+const Dir = ".prep/knowledge"
 
 // Store reads the knowledge bundle.
 type Store struct {

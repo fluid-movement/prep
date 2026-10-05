@@ -161,7 +161,7 @@ func parseAcceptance(raw string, i *domain.Issue) {
 
 // --- context.md ---
 
-var bundleLinkRe = regexp.MustCompile(`\]\((?:\.project/knowledge)?(/[^)\s#]+\.md)(?:#[^)]*)?\)`)
+var bundleLinkRe = regexp.MustCompile(`\]\((?:\.prep/knowledge)?(/[^)\s#]+\.md)(?:#[^)]*)?\)`)
 var codeSpanRe = regexp.MustCompile("`([^`\\s]+)`")
 var pathLikeRe = regexp.MustCompile(`^[A-Za-z0-9_.][A-Za-z0-9_./*-]*$`)
 

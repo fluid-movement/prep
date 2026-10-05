@@ -254,7 +254,7 @@ func cmdMigrate(a *app, args []string) error {
 		if err := a.store.SetSchema(v + 1); err != nil {
 			return err
 		}
-		files = append(files, ".project/project.md")
+		files = append(files, ".prep/project.md")
 	}
 	a.afterWrite(t, fmt.Sprintf("prep: migrate schema %d to %d", from, domain.SchemaVersion), files)
 	a.reportWrite(writeResult{OK: true, Op: "migrate", Files: files})

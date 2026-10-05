@@ -269,7 +269,7 @@ var commitPattern = regexp.MustCompile(`^[0-9a-fA-F]{7,64}$`)
 // NormalizeEntryPath turns a knowledge reference into a bundle-relative path.
 func NormalizeEntryPath(p string) string {
 	p = strings.TrimSpace(p)
-	p = strings.TrimPrefix(p, ".project/knowledge")
+	p = strings.TrimPrefix(p, ".prep/knowledge")
 	if !strings.HasPrefix(p, "/") {
 		p = "/" + p
 	}
