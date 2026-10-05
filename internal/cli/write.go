@@ -18,6 +18,7 @@ type writeResult struct {
 	Op    string       `json:"op"`
 	ID    string       `json:"id,omitempty"`
 	State domain.State `json:"state,omitempty"`
+	Stale bool         `json:"stale,omitempty"`
 	Files []string     `json:"files"`
 }
 
@@ -30,6 +31,8 @@ func (a *app) reportWrite(r writeResult) {
 		return
 	}
 	switch {
+	case r.ID != "" && r.State != "" && r.Stale:
+		a.printf("%s %s: now %s, stale: the requirement or kind differs from the newest baseline; run prep define (re-enrich) or prep ack (trivial change)\n", r.Op, r.ID, r.State)
 	case r.ID != "" && r.State != "":
 		a.printf("%s %s: now %s\n", r.Op, r.ID, r.State)
 	case r.ID != "":
@@ -78,18 +81,9 @@ func cmdNew(a *app, args []string) error {
 	} else if len(pos) > 0 {
 		return usageErr("unexpected arguments: %s", strings.Join(pos, " "))
 	}
-	text := *body
-	if *bodyFile != "" {
-		var b []byte
-		if *bodyFile == "-" {
-			b, err = io.ReadAll(a.stdin)
-		} else {
-			b, err = os.ReadFile(*bodyFile)
-		}
-		if err != nil {
-			return err
-		}
-		text = string(b)
+	text, err := a.readBody(*body, *bodyFile)
+	if err != nil {
+		return err
 	}
 	t, err := a.load(false)
 	if err != nil {
@@ -121,6 +115,111 @@ func cmdNew(a *app, args []string) error {
 	}
 	a.afterWrite(t, fmt.Sprintf("prep: new %s %s", c.IssueID, in.Title), files)
 	a.reportWrite(writeResult{OK: true, Op: "new", ID: c.IssueID, State: domain.StateOpen, Files: files})
+	return nil
+}
+
+// readBody returns the requirement from --body-file (- for stdin) or --body.
+func (a *app) readBody(body, file string) (string, error) {
+	if file == "" {
+		return body, nil
+	}
+	var b []byte
+	var err error
+	if file == "-" {
+		b, err = io.ReadAll(a.stdin)
+	} else {
+		b, err = os.ReadFile(file)
+	}
+	return string(b), err
+}
+
+func cmdEdit(a *app, args []string) error {
+	fs := flag.NewFlagSet("edit", flag.ContinueOnError)
+	title := fs.String("title", "", "new title")
+	kind := fs.String("kind", "", "code, manual, research or decision")
+	parent := fs.String("parent", "", "parent issue id ('' removes the parent)")
+	body := fs.String("body", "", "new requirement, including its Open questions section")
+	bodyFile := fs.String("body-file", "", "read the new requirement from a file (- for stdin)")
+	var deps multi
+	fs.Var(&deps, "depends-on", "dependency id (repeatable, replaces the list; '' clears it)")
+	pos, err := parse(fs, args)
+	if err != nil {
+		return err
+	}
+	ref, err := one("edit", pos)
+	if err != nil {
+		return err
+	}
+	set := map[string]bool{}
+	fs.Visit(func(f *flag.Flag) { set[f.Name] = true })
+	if set["body"] && set["body-file"] {
+		return usageErr("pass --body or --body-file, not both")
+	}
+	t, err := a.load(false)
+	if err != nil {
+		return err
+	}
+	id, err := t.Resolve(ref)
+	if err != nil {
+		return err
+	}
+	in := domain.EditInput{Actor: a.actor, Now: a.now()}
+	if set["title"] {
+		in.Title = title
+	}
+	if set["kind"] {
+		k := domain.Kind(*kind)
+		in.Kind = &k
+	}
+	if set["parent"] {
+		p := ""
+		if *parent != "" {
+			if p, err = t.Resolve(*parent); err != nil {
+				return err
+			}
+		}
+		in.Parent = &p
+	}
+	if set["depends-on"] {
+		list := []string{}
+		if !(len(deps) == 1 && deps[0] == "") {
+			for _, d := range deps {
+				if d == "" {
+					return usageErr("--depends-on '' clears the list and cannot be combined with IDs")
+				}
+				did, err := t.Resolve(d)
+				if err != nil {
+					return err
+				}
+				list = append(list, did)
+			}
+		}
+		in.DependsOn = &list
+	}
+	if set["body"] || set["body-file"] {
+		text, err := a.readBody(*body, *bodyFile)
+		if err != nil {
+			return err
+		}
+		in.Body = &text
+	}
+	c, err := t.PlanEdit(id, in)
+	if err != nil {
+		return err
+	}
+	if err := t.CheckWrite(c); err != nil {
+		return err
+	}
+	files, err := a.store.Apply(c)
+	if err != nil {
+		return err
+	}
+	a.afterWrite(t, fmt.Sprintf("prep: edit %s (%s)", id, strings.Join(c.Edit.Fields, ", ")), files)
+	after, err := a.load(false)
+	if err != nil {
+		return err
+	}
+	a.reportWrite(writeResult{OK: true, Op: "edit", ID: id, State: after.State(id), Stale: after.Stale(id), Files: files})
 	return nil
 }
 

@@ -117,13 +117,18 @@ func renderIssue(i *domain.Issue) string {
 	return withFrontmatter(encodeYAML(issueFM{Title: i.Title, Kind: string(i.Kind), Parent: i.Parent, DependsOn: i.DependsOn}), i.Body)
 }
 
-// newIssueBody is the body of a freshly created issue.
-func newIssueBody(prose string) string {
-	prose = normalize(prose)
-	if prose == "" {
+// requirementBody is the body of issue.md for a requirement given as text.
+// It keeps the text's own Open questions section and adds an empty one only
+// when the text has none.
+func requirementBody(text string) string {
+	text = normalize(text)
+	if openQuestionsRe.MatchString(text) {
+		return text
+	}
+	if text == "" {
 		return "## Open questions"
 	}
-	return prose + "\n\n## Open questions"
+	return text + "\n\n## Open questions"
 }
 
 // --- acceptance.md ---

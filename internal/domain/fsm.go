@@ -75,7 +75,19 @@ type Change struct {
 	Claim       *Claim      `json:"-"`
 	RemoveClaim bool        `json:"-"`
 	Resolution  *Resolution `json:"-"`
+	Edit        *IssueEdit  `json:"-"`
 	History     string      `json:"-"`
+}
+
+// IssueEdit is the new content of an issue's requirement record after
+// prep edit. Fields not edited keep their current values.
+type IssueEdit struct {
+	Title     string
+	Kind      Kind
+	Parent    string
+	DependsOn []string
+	Body      *string // new requirement text; nil keeps the current one
+	Fields    []string
 }
 
 // Transition describes one possible transition for guide output.
@@ -384,6 +396,75 @@ func (t *Tree) PlanNew(in NewIssueInput, now time.Time) (*Change, error) {
 	return &Change{Op: "new", IssueID: id, NewIssue: issue}, nil
 }
 
+// EditInput holds the fields prep edit changes. Nil means unchanged.
+type EditInput struct {
+	Actor     string
+	Now       time.Time
+	Title     *string
+	Kind      *Kind
+	Parent    *string
+	DependsOn *[]string
+	Body      *string // requirement text, including its Open questions section
+}
+
+// PlanEdit validates an edit of an unresolved issue's title, kind, parent,
+// dependencies or requirement and returns the change. Existence, cycles and
+// self-dependencies are left to CheckWrite, which validates the edited tree.
+func (t *Tree) PlanEdit(id string, in EditInput) (*Change, error) {
+	i := t.Issues[id]
+	if s := t.State(id); s.Terminal() {
+		return nil, &Error{Code: ErrGate, Message: fmt.Sprintf("cannot edit %s", id),
+			Unmet: []Unmet{{GateState, fmt.Sprintf("edit requires an unresolved issue, issue is %s", s)}}}
+	}
+	e := &IssueEdit{Title: i.Title, Kind: i.Kind, Parent: i.Parent, DependsOn: i.DependsOn}
+	var unmet []Unmet
+	if in.Title != nil {
+		e.Title = strings.TrimSpace(*in.Title)
+		e.Fields = append(e.Fields, "title")
+		if e.Title == "" {
+			unmet = append(unmet, Unmet{GateTitle, "--title must not be empty"})
+		}
+	}
+	if in.Kind != nil {
+		e.Kind = *in.Kind
+		e.Fields = append(e.Fields, "kind")
+		if !e.Kind.Valid() {
+			unmet = append(unmet, Unmet{GateKind, fmt.Sprintf("--kind must be one of %s", joinKinds())})
+		}
+	}
+	if in.Parent != nil {
+		e.Parent = *in.Parent
+		e.Fields = append(e.Fields, "parent")
+	}
+	if in.DependsOn != nil {
+		e.DependsOn = nil
+		for _, d := range *in.DependsOn {
+			if contains(e.DependsOn, d) {
+				continue
+			}
+			if t.State(d) == StateDropped {
+				unmet = append(unmet, Unmet{GateDeps, fmt.Sprintf("cannot depend on dropped issue %s", d)})
+			}
+			e.DependsOn = append(e.DependsOn, d)
+		}
+		e.Fields = append(e.Fields, "depends_on")
+	}
+	if in.Body != nil {
+		b := *in.Body
+		e.Body = &b
+		e.Fields = append(e.Fields, "requirement")
+	}
+	if len(e.Fields) == 0 {
+		unmet = append(unmet, Unmet{GateRequirement, "nothing to edit: pass --title, --kind, --parent, --depends-on, --body or --body-file"})
+	}
+	if len(unmet) > 0 {
+		return nil, &Error{Code: ErrUsage, Message: fmt.Sprintf("cannot edit %s", id), Unmet: unmet}
+	}
+	now := in.Now.UTC().Truncate(time.Second)
+	return &Change{Op: "edit", IssueID: id, Edit: e,
+		History: fmt.Sprintf("- %s edited by %s: %s", now.Format(time.RFC3339), in.Actor, strings.Join(e.Fields, ", "))}, nil
+}
+
 // Apply returns a new tree with the change applied in memory, used to
 // validate a write before it reaches storage.
 func (t *Tree) Apply(c *Change) *Tree {
@@ -411,6 +492,12 @@ func (t *Tree) Apply(c *Change) *Tree {
 			if c.Resolution != nil {
 				r := *c.Resolution
 				cp.Resolution = &r
+			}
+			if e := c.Edit; e != nil {
+				cp.Title, cp.Kind, cp.Parent, cp.DependsOn = e.Title, e.Kind, e.Parent, e.DependsOn
+				if e.Body != nil {
+					cp.Body = *e.Body
+				}
 			}
 			i = &cp
 		}
