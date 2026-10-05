@@ -1,0 +1,448 @@
+package domain
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+	"time"
+)
+
+// Op is a lifecycle transition, one write command each.
+type Op string
+
+const (
+	OpDefine   Op = "define"
+	OpAck      Op = "ack"
+	OpReady    Op = "ready"
+	OpClaim    Op = "claim"
+	OpRelease  Op = "release"
+	OpComplete Op = "complete"
+	OpDrop     Op = "drop"
+)
+
+// Ops lists transitions in lifecycle order.
+var Ops = []Op{OpDefine, OpAck, OpReady, OpClaim, OpRelease, OpComplete, OpDrop}
+
+// Unmet is one gate condition that blocks a transition.
+type Unmet struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+// Gate condition codes.
+const (
+	GateState         = "G_STATE"
+	GateStale         = "G_STALE"
+	GateNotStale      = "G_NOT_STALE"
+	GateOpenQuestions = "G_OPEN_QUESTIONS"
+	GateRequirement   = "G_REQUIREMENT"
+	GateTitle         = "G_TITLE"
+	GateKind          = "G_KIND"
+	GateCriteria      = "G_CRITERIA"
+	GateContext       = "G_CONTEXT"
+	GateParent        = "G_PARENT"
+	GateDeps          = "G_DEPS"
+	GateUnchecked     = "G_UNCHECKED"
+	GateChildren      = "G_CHILDREN"
+	GateEvidence      = "G_EVIDENCE"
+	GateFindings      = "G_FINDINGS"
+	GateOutcome       = "G_OUTCOME"
+	GateDocs          = "G_DOCS"
+	GateDocEntry      = "G_DOC_ENTRY"
+	GateReason        = "G_REASON"
+	GateActor         = "G_ACTOR"
+)
+
+// Input carries the arguments of a transition. Nil fields in guide mode mean
+// "not provided yet"; gates that depend on them are reported as needs.
+type Input struct {
+	Actor    string
+	Now      time.Time
+	Note     string
+	Reason   string
+	Commit   string
+	Docs     []string
+	NoImpact string
+}
+
+// Change is the set of records a transition writes. Storage adapters render it.
+type Change struct {
+	Op          Op          `json:"op"`
+	IssueID     string      `json:"id"`
+	NewIssue    *Issue      `json:"-"`
+	Baseline    *Baseline   `json:"-"`
+	Ready       *Ready      `json:"-"`
+	Claim       *Claim      `json:"-"`
+	RemoveClaim bool        `json:"-"`
+	Resolution  *Resolution `json:"-"`
+	History     string      `json:"-"`
+}
+
+// Transition describes one possible transition for guide output.
+type Transition struct {
+	Op      Op       `json:"op"`
+	Command string   `json:"command"`
+	Allowed bool     `json:"allowed"`
+	Unmet   []Unmet  `json:"unmet,omitempty"`
+	Needs   []string `json:"needs,omitempty"`
+}
+
+// fromStates lists the states each transition leaves from.
+func fromStates(op Op) []State {
+	switch op {
+	case OpDefine:
+		return []State{StateOpen, StateDefined, StateReady}
+	case OpAck:
+		return []State{StateDefined, StateReady, StateInProgress}
+	case OpReady:
+		return []State{StateDefined}
+	case OpClaim:
+		return []State{StateReady}
+	case OpRelease:
+		return []State{StateInProgress}
+	case OpComplete:
+		return []State{StateInProgress}
+	case OpDrop:
+		return []State{StateOpen, StateDefined, StateReady, StateInProgress}
+	}
+	return nil
+}
+
+func hasState(ss []State, s State) bool {
+	for _, x := range ss {
+		if x == s {
+			return true
+		}
+	}
+	return false
+}
+
+// Applicable reports whether op can leave the issue's current state at all.
+func (t *Tree) Applicable(id string, op Op) bool {
+	s := t.State(id)
+	if op == OpComplete && t.IsParent(id) {
+		return s == StateReady || s == StateInProgress
+	}
+	return hasState(fromStates(op), s)
+}
+
+// Gates evaluates every gate condition for a transition. With in == nil,
+// conditions that depend on command arguments are returned as needs.
+func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string) {
+	i := t.Issues[id]
+	s := t.State(id)
+	stale := t.Stale(id)
+	parent := t.IsParent(id)
+	add := func(code, format string, a ...any) {
+		unmet = append(unmet, Unmet{Code: code, Message: fmt.Sprintf(format, a...)})
+	}
+	if !t.Applicable(id, op) {
+		from := fromStates(op)
+		if op == OpComplete && parent {
+			from = []State{StateReady, StateInProgress}
+		}
+		add(GateState, "%s requires state %s, issue is %s", op, joinStates(from), s)
+	}
+	switch op {
+	case OpDefine:
+		if (s == StateDefined || s == StateReady) && !stale {
+			add(GateNotStale, "already defined and the requirement is unchanged since the newest baseline")
+		}
+		if strings.TrimSpace(i.Title) == "" {
+			add(GateTitle, "title is empty")
+		}
+		if !i.Kind.Valid() {
+			add(GateKind, "kind %q is not one of %s", i.Kind, joinKinds())
+		}
+		if strings.TrimSpace(i.Prose) == "" {
+			add(GateRequirement, "requirement prose in issue.md is empty")
+		}
+		if strings.TrimSpace(i.OpenQuestions) != "" {
+			add(GateOpenQuestions, "the Open questions section in issue.md is not empty")
+		}
+	case OpAck:
+		if !stale {
+			add(GateStale, "nothing to acknowledge: the requirement and kind match the newest baseline")
+		}
+		if !i.Kind.Valid() {
+			add(GateKind, "kind %q is not one of %s", i.Kind, joinKinds())
+		}
+		if strings.TrimSpace(i.OpenQuestions) != "" {
+			add(GateOpenQuestions, "the Open questions section in issue.md is not empty")
+		}
+	case OpReady:
+		if stale {
+			add(GateStale, "the requirement changed since the newest baseline; run prep define (re-enrich) or prep ack (trivial change)")
+		}
+		if len(i.Criteria) == 0 {
+			add(GateCriteria, "acceptance.md has no checkable criteria (- [ ] ...)")
+		}
+		if !parent && i.Kind != KindManual && strings.TrimSpace(i.Context) == "" {
+			add(GateContext, "context.md is empty; %s issues require enrichment context", i.Kind)
+		}
+	case OpClaim:
+		if stale {
+			add(GateStale, "the issue is stale; resolve with prep ack or prep define")
+		}
+		if parent {
+			add(GateParent, "parents are not implemented themselves; claim a child instead")
+		}
+		if deps := t.UnresolvedDeps(id); len(deps) > 0 {
+			add(GateDeps, "dependencies not done: %s", strings.Join(deps, ", "))
+		}
+	case OpRelease:
+	case OpComplete:
+		if stale {
+			add(GateStale, "the issue is stale; resolve with prep ack or prep define before completing")
+		}
+		if !CheckedAll(i.Criteria) {
+			n := 0
+			for _, c := range i.Criteria {
+				if !c.Checked {
+					n++
+				}
+			}
+			add(GateUnchecked, "%d acceptance criteria unchecked in acceptance.md", n)
+		}
+		if parent {
+			var open []string
+			for _, c := range t.Children(id) {
+				if !t.State(c).Terminal() {
+					open = append(open, c)
+				}
+			}
+			if len(open) > 0 {
+				add(GateChildren, "children not done or dropped: %s", strings.Join(open, ", "))
+			}
+		} else {
+			switch i.Kind {
+			case KindCode:
+				if in == nil {
+					needs = append(needs, "--commit <ref>")
+				} else {
+					if in.Commit == "" {
+						add(GateEvidence, "code issues need commit evidence: --commit <ref>")
+					} else if !commitPattern.MatchString(in.Commit) {
+						add(GateEvidence, "commit reference %q is not a hex commit hash", in.Commit)
+					}
+					if strings.HasPrefix(in.Actor, "human:") {
+						add(GateActor, "code issues are completed by an agent, with commit evidence")
+					}
+				}
+			case KindResearch:
+				if i.Findings == nil || strings.TrimSpace(*i.Findings) == "" {
+					add(GateFindings, "research issues need findings in findings.md")
+				}
+			case KindDecision:
+				if !HasOutcome(i.Decisions) {
+					add(GateOutcome, "decision issues need an outcome entry in decisions.md (outcome: true)")
+				}
+			}
+		}
+		if in == nil {
+			needs = append(needs, "--docs <entry>... or --no-impact <reason>")
+		} else {
+			switch {
+			case len(in.Docs) == 0 && strings.TrimSpace(in.NoImpact) == "":
+				add(GateDocs, "a documentation decision is required: --docs <entry> (repeatable) or --no-impact <reason>")
+			case len(in.Docs) > 0 && strings.TrimSpace(in.NoImpact) != "":
+				add(GateDocs, "use either --docs or --no-impact, not both")
+			}
+			for _, d := range in.Docs {
+				if t.Knowledge[NormalizeEntryPath(d)] == nil {
+					add(GateDocEntry, "knowledge entry %s does not exist", NormalizeEntryPath(d))
+				}
+			}
+		}
+	case OpDrop:
+		if in == nil {
+			needs = append(needs, "--reason <text>")
+		} else if strings.TrimSpace(in.Reason) == "" {
+			add(GateReason, "dropping requires --reason")
+		}
+	}
+	return unmet, needs
+}
+
+var commitPattern = regexp.MustCompile(`^[0-9a-fA-F]{7,64}$`)
+
+// NormalizeEntryPath turns a knowledge reference into a bundle-relative path.
+func NormalizeEntryPath(p string) string {
+	p = strings.TrimSpace(p)
+	p = strings.TrimPrefix(p, ".project/knowledge")
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	if !strings.HasSuffix(p, ".md") {
+		p += ".md"
+	}
+	return p
+}
+
+func joinStates(ss []State) string {
+	parts := make([]string, len(ss))
+	for k, s := range ss {
+		parts[k] = string(s)
+	}
+	return strings.Join(parts, " or ")
+}
+
+func joinKinds() string {
+	parts := make([]string, len(Kinds))
+	for k, s := range Kinds {
+		parts[k] = string(s)
+	}
+	return strings.Join(parts, ", ")
+}
+
+// Stamp formats a time as an ID-style timestamp.
+func Stamp(t time.Time) string { return t.UTC().Format("20060102-150405") }
+
+// nextStamp returns a timestamp after `after`, starting from now.
+func nextStamp(now time.Time, taken func(string) bool) string {
+	ts := now.UTC().Truncate(time.Second)
+	for taken(Stamp(ts)) {
+		ts = ts.Add(time.Second)
+	}
+	return Stamp(ts)
+}
+
+// Plan checks the gates for a transition and returns the records to write.
+func (t *Tree) Plan(id string, op Op, in Input) (*Change, error) {
+	if unmet, _ := t.Gates(id, op, &in); len(unmet) > 0 {
+		return nil, &Error{Code: ErrGate, Message: fmt.Sprintf("cannot %s %s", op, id), Unmet: unmet}
+	}
+	i := t.Issues[id]
+	now := in.Now.UTC().Truncate(time.Second)
+	c := &Change{Op: op, IssueID: id}
+	switch op {
+	case OpDefine, OpAck:
+		latest := ""
+		if b := i.LatestBaseline(); b != nil {
+			latest = b.Name
+		}
+		name := nextStamp(now, func(s string) bool { return s <= latest })
+		c.Baseline = &Baseline{Name: name, By: in.Actor, At: now, Kind: i.Kind, Ack: op == OpAck, Requirement: i.Body}
+		if op == OpAck && t.ReadyValid(i) {
+			r := *i.Ready
+			r.Baseline = name
+			c.Ready = &r
+		}
+	case OpReady:
+		c.Ready = &Ready{By: in.Actor, At: now, Baseline: i.LatestBaseline().Name, Note: in.Note}
+	case OpClaim:
+		c.Claim = &Claim{By: in.Actor, At: now, Note: in.Note}
+	case OpRelease:
+		c.RemoveClaim = true
+		line := fmt.Sprintf("- %s released by %s (claimed by %s at %s)", now.Format(time.RFC3339), in.Actor, i.Claim.By, i.Claim.At.UTC().Format(time.RFC3339))
+		if r := strings.TrimSpace(in.Reason); r != "" {
+			line += ": " + r
+		}
+		c.History = line
+	case OpComplete:
+		dod, opt := t.EffectiveDoD(id)
+		res := &Resolution{Outcome: OutcomeDone, By: in.Actor, At: now, DoD: dod, DoDOptOuts: opt, Note: in.Note}
+		if !t.IsParent(id) && i.Kind == KindCode {
+			res.Evidence = strings.ToLower(in.Commit)
+		}
+		doc := &Documentation{NoImpact: strings.TrimSpace(in.NoImpact)}
+		for _, d := range in.Docs {
+			doc.Entries = append(doc.Entries, NormalizeEntryPath(d))
+		}
+		res.Documentation = doc
+		c.Resolution = res
+	case OpDrop:
+		c.Resolution = &Resolution{Outcome: OutcomeDropped, By: in.Actor, At: now, Reason: strings.TrimSpace(in.Reason), Note: in.Note}
+	}
+	return c, nil
+}
+
+// NewIssueInput holds the fields for creating an issue.
+type NewIssueInput struct {
+	Title     string
+	Kind      Kind
+	Parent    string
+	DependsOn []string
+	Body      string // requirement prose
+}
+
+// PlanNew validates a new issue and returns its creation change. The ID is
+// generated from the clock; agents never invent IDs.
+func (t *Tree) PlanNew(in NewIssueInput, now time.Time) (*Change, error) {
+	var unmet []Unmet
+	if strings.TrimSpace(in.Title) == "" {
+		unmet = append(unmet, Unmet{GateTitle, "--title is required"})
+	}
+	if !in.Kind.Valid() {
+		unmet = append(unmet, Unmet{GateKind, fmt.Sprintf("--kind must be one of %s", joinKinds())})
+	}
+	if len(unmet) > 0 {
+		return nil, &Error{Code: ErrUsage, Message: "cannot create issue", Unmet: unmet}
+	}
+	id := nextStamp(now, func(s string) bool { return t.Issues[s] != nil })
+	issue := &Issue{ID: id, Title: strings.TrimSpace(in.Title), Kind: in.Kind, Parent: in.Parent, DependsOn: in.DependsOn, Prose: strings.TrimSpace(in.Body)}
+	return &Change{Op: "new", IssueID: id, NewIssue: issue}, nil
+}
+
+// Apply returns a new tree with the change applied in memory, used to
+// validate a write before it reaches storage.
+func (t *Tree) Apply(c *Change) *Tree {
+	issues := make([]*Issue, 0, len(t.Issues)+1)
+	for _, id := range t.IDs() {
+		i := t.Issues[id]
+		if id == c.IssueID {
+			cp := *i
+			cp.Baselines = append([]Baseline(nil), i.Baselines...)
+			if c.Baseline != nil {
+				cp.Baselines = append(cp.Baselines, *c.Baseline)
+				cp.SortBaselines()
+			}
+			if c.Ready != nil {
+				r := *c.Ready
+				cp.Ready = &r
+			}
+			if c.Claim != nil {
+				cl := *c.Claim
+				cp.Claim = &cl
+			}
+			if c.RemoveClaim {
+				cp.Claim = nil
+			}
+			if c.Resolution != nil {
+				r := *c.Resolution
+				cp.Resolution = &r
+			}
+			i = &cp
+		}
+		issues = append(issues, i)
+	}
+	if c.NewIssue != nil {
+		issues = append(issues, c.NewIssue)
+	}
+	entries := make([]*Entry, 0, len(t.Knowledge))
+	for _, e := range t.Knowledge {
+		entries = append(entries, e)
+	}
+	return NewTree(t.Project, issues, entries, nil)
+}
+
+// CheckWrite validates the tree after a change and rejects the write when it
+// introduces new errors.
+func (t *Tree) CheckWrite(c *Change) error {
+	before := map[string]bool{}
+	for _, d := range Validate(t) {
+		if d.Severity == SevError {
+			before[d.Code+"|"+d.Issue+"|"+d.Message] = true
+		}
+	}
+	var introduced []Diagnostic
+	for _, d := range Validate(t.Apply(c)) {
+		if d.Severity == SevError && !before[d.Code+"|"+d.Issue+"|"+d.Message] {
+			introduced = append(introduced, d)
+		}
+	}
+	if len(introduced) > 0 {
+		return &Error{Code: ErrInvalid, Message: "the write would produce invalid state", Diags: introduced}
+	}
+	return nil
+}
