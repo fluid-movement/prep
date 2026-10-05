@@ -78,7 +78,7 @@ func (h *harness) state(id string) (string, bool) {
 }
 
 func (h *harness) path(id, name string) string {
-	return filepath.Join(h.dir, ".project", "issues", id, name)
+	return filepath.Join(h.dir, ".prep", "issues", id, name)
 }
 
 func (h *harness) write(id, name, content string) {
@@ -337,7 +337,7 @@ func TestGuideJSONAndPrime(t *testing.T) {
 
 func TestKnowledgeRetrievalByScope(t *testing.T) {
 	h := newHarness(t)
-	kdir := filepath.Join(h.dir, ".project", "knowledge", "components")
+	kdir := filepath.Join(h.dir, ".prep", "knowledge", "components")
 	if err := os.MkdirAll(kdir, 0o755); err != nil {
 		t.Fatal(err)
 	}

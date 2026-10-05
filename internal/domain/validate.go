@@ -181,7 +181,7 @@ func validateKnowledge(t *Tree) []Diagnostic {
 	var ds []Diagnostic
 	for _, p := range sortedKeys(t.Knowledge) {
 		k := t.Knowledge[p]
-		file := ".project/knowledge" + p
+		file := ".prep/knowledge" + p
 		e := func(code string, sev Severity, class Class, fix, format string, a ...any) {
 			ds = append(ds, Diagnostic{Code: code, Severity: sev, Class: class, File: file, Message: fmt.Sprintf(format, a...), Fix: fix})
 		}

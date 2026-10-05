@@ -2,7 +2,7 @@
 
 As of 2026-10-05 · Andre
 
-> **Frozen historical snapshot.** This document was imported into prep when the first implementation slice ran: decisions, stack and architecture now live as knowledge entries in `.project/knowledge/` (start at `overview.md`), and the remaining work and open points are open issues in `.project/issues/` (`prep list`). Do not update this file; change the knowledge base instead.
+> **Frozen historical snapshot.** This document was imported into prep when the first implementation slice ran: decisions, stack and architecture now live as knowledge entries in `.prep/knowledge/` (start at `overview.md`), and the remaining work and open points are open issues in `.prep/issues/` (`prep list`). The data directory was later renamed from `.project/` to `.prep/`; paths below predate that. Do not update this file; change the knowledge base instead.
 
 ## Purpose
 

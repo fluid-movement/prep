@@ -1,5 +1,5 @@
 // Package mdstore is the markdown storage adapter: one directory per issue
-// under .project/issues, records as markdown files with YAML frontmatter.
+// under .prep/issues, records as markdown files with YAML frontmatter.
 package mdstore
 
 import (
@@ -17,9 +17,9 @@ import (
 )
 
 // Dir is the project data directory inside the repository.
-const Dir = ".project"
+const Dir = ".prep"
 
-// Store reads and writes a .project tree rooted at Root (the repository root).
+// Store reads and writes a .prep tree rooted at Root (the repository root).
 type Store struct {
 	Root   string
 	hashes map[string]string // relative path -> sha256 of content at load; "" = absent
@@ -28,7 +28,7 @@ type Store struct {
 // Open returns a store for the repository root.
 func Open(root string) *Store { return &Store{Root: root, hashes: map[string]string{}} }
 
-// Find walks up from dir to the directory containing .project.
+// Find walks up from dir to the directory containing .prep.
 func Find(dir string) (string, error) {
 	dir, err := filepath.Abs(dir)
 	if err != nil {
@@ -40,7 +40,7 @@ func Find(dir string) (string, error) {
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", &domain.Error{Code: domain.ErrNoProject, Message: "no .project directory found; run prep init"}
+			return "", &domain.Error{Code: domain.ErrNoProject, Message: "no .prep directory found; run prep init"}
 		}
 		dir = parent
 	}
@@ -121,7 +121,7 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 	}
 	for _, e := range entries {
 		if !projectFiles[e.Name()] {
-			diag(domain.CodeProjectUnknown, domain.SevError, domain.ClassManual, "", e.Name(), "remove the file; schema files are fixed", "unknown entry in .project: %s", e.Name())
+			diag(domain.CodeProjectUnknown, domain.SevError, domain.ClassManual, "", e.Name(), "remove the file; schema files are fixed", "unknown entry in .prep: %s", e.Name())
 		}
 	}
 
@@ -328,7 +328,7 @@ func (s *Store) LoadConfig() (domain.Config, error) {
 
 // DefaultConfig is written by prep init.
 const DefaultConfig = `# prep project configuration (project-level only).
-# commit_mode: off stages .project changes; all commits each tool operation.
+# commit_mode: off stages .prep changes; all commits each tool operation.
 commit_mode: off
 views:
   Attention: --stale
@@ -344,10 +344,10 @@ func DefaultProject() string {
 	return renderProject(domain.SchemaVersion, "# Project\n\n## Definition of Done\n\n- prep check passes")
 }
 
-// Init creates the .project skeleton.
+// Init creates the .prep skeleton.
 func (s *Store) Init() ([]string, error) {
 	if _, err := os.Stat(s.abs(Dir + "/project.md")); err == nil {
-		return nil, &domain.Error{Code: domain.ErrUsage, Message: "already initialized: .project/project.md exists"}
+		return nil, &domain.Error{Code: domain.ErrUsage, Message: "already initialized: .prep/project.md exists"}
 	}
 	var written []string
 	files := []struct{ rel, content string }{

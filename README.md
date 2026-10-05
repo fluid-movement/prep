@@ -1,6 +1,6 @@
 # prep
 
-prep is a workflow engine and memory for coding agents, with a human supervising. It enforces the steps an issue goes through (define → enrich → implement → resolve) and keeps the context agents need in the repository, versioned with the code. See [DESIGN.md](DESIGN.md) for the original design; the current state is documented in `.project/knowledge/`.
+prep is a workflow engine and memory for coding agents, with a human supervising. It enforces the steps an issue goes through (define → enrich → implement → resolve) and keeps the context agents need in the repository, versioned with the code. See [DESIGN.md](DESIGN.md) for the original design; the current state is documented in `.prep/knowledge/`.
 
 ## Install
 
@@ -14,7 +14,7 @@ just install
 ## Quick start
 
 ```sh
-prep init                                    # create .project/
+prep init                                    # create .prep/
 prep new --title "CSV export" --kind code --body "Users can export their data as CSV."
 prep guide <id>                              # what to do next, what blocks it, where outputs go
 prep define <id>                             # requirement settled: write a baseline
@@ -29,7 +29,7 @@ Every read command (`prime`, `guide`, `list`, `next`, `show`, `check`, `views`) 
 
 ## Lifecycle
 
-State is derived from which records exist in `.project/issues/<id>/`, never stored:
+State is derived from which records exist in `.prep/issues/<id>/`, never stored:
 
 | State | Record | Written by |
 | --- | --- | --- |
@@ -45,7 +45,7 @@ An issue is **stale** when its requirement or kind differs from the newest basel
 
 ```sh
 just test      # go test ./..., including the contract corpus in testdata/contract
-just check     # prep check and prep fmt --check on this repository's .project
+just check     # prep check and prep fmt --check on this repository's .prep
 just ci        # lint, test and check: everything CI runs
 ```
 
