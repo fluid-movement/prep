@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fluid-movement/prep/internal/domain"
+	"github.com/fluid-movement/prep/internal/okf"
 )
 
 // Frontmatter shapes. Field order is the canonical key order.
@@ -167,7 +168,7 @@ var pathLikeRe = regexp.MustCompile(`^[A-Za-z0-9_.][A-Za-z0-9_./*-]*$`)
 func parseContext(raw string, i *domain.Issue) {
 	i.Context = normalize(raw)
 	seen := map[string]bool{}
-	for _, m := range bundleLinkRe.FindAllStringSubmatch(raw, -1) {
+	for _, m := range bundleLinkRe.FindAllStringSubmatch(okf.StripCode(raw), -1) {
 		if !seen[m[1]] {
 			seen[m[1]] = true
 			i.ContextLinks = append(i.ContextLinks, m[1])

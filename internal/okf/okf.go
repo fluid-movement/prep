@@ -73,6 +73,15 @@ func (s *Store) Load(drift bool) ([]*domain.Entry, []domain.Diagnostic, error) {
 
 var linkRe = regexp.MustCompile(`\]\(([^)\s]+)\)`)
 
+var fencedRe = regexp.MustCompile("(?ms)^\\s*(```|~~~).*?^\\s*(```|~~~)\\s*$")
+var codeSpanRe = regexp.MustCompile("`[^`\n]*`")
+
+// StripCode removes fenced blocks and inline code so examples are not
+// mistaken for links.
+func StripCode(s string) string {
+	return codeSpanRe.ReplaceAllString(fencedRe.ReplaceAllString(s, ""), "")
+}
+
 func parseEntry(bpath, raw string) (*domain.Entry, error) {
 	raw = strings.ReplaceAll(raw, "\r\n", "\n")
 	if !strings.HasPrefix(raw, "---\n") {
@@ -104,7 +113,7 @@ func parseEntry(bpath, raw string) (*domain.Entry, error) {
 		}
 	}
 	seen := map[string]bool{}
-	for _, l := range linkRe.FindAllStringSubmatch(body, -1) {
+	for _, l := range linkRe.FindAllStringSubmatch(StripCode(body), -1) {
 		t := l[1]
 		if k := strings.IndexByte(t, '#'); k >= 0 {
 			t = t[:k]

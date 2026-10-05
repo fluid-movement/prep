@@ -31,7 +31,7 @@ func TestDriftAgainstConfirmedCommit(t *testing.T) {
 	git("add", ".")
 	git("commit", "-qm", "init")
 	head := git("rev-parse", "HEAD")
-	write(".project/knowledge/components/export.md", "---\ntype: component\ntitle: Export\ndescription: CSV.\nscope:\n  - internal/export/**\nconfirmed_commit: "+head+"\n---\n\nBody with [link](../overview.md).\n")
+	write(".project/knowledge/components/export.md", "---\ntype: component\ntitle: Export\ndescription: CSV.\nscope:\n  - internal/export/**\nconfirmed_commit: "+head+"\n---\n\nBody with [link](../overview.md) and `[example](/nope.md)`.\n\n```\n[block](/nope2.md)\n```\n")
 
 	s := &Store{Root: root}
 	entries, diags, err := s.Load(true)
