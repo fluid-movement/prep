@@ -1,0 +1,3 @@
+- [x] No purple remains in the palette: accent, focus, selection and the code kind
+- [x] The accent stays distinguishable from every state, kind, warning and error color on dark and light backgrounds
+- [x] Goldens are rewritten and the gallery renders

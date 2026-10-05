@@ -27,12 +27,12 @@ var (
 	text      = c("#E4E4EA", "254", "15", "#1E1E26", "235", "0")
 	muted     = c("#A0A0AE", "247", "7", "#5C5C6A", "241", "8")
 	subtle    = c("#5E5E6C", "240", "8", "#A4A4B2", "248", "7")
-	accent    = c("#9D8CFF", "141", "13", "#5B46D6", "62", "5")
+	accent    = c("#FF9E5E", "215", "11", "#C2410C", "166", "3")
 	border    = c("#3A3A48", "237", "8", "#D2D2DC", "252", "7")
-	selection = c("#2B2744", "236", "0", "#ECE8FF", "255", "15")
+	selection = c("#2A2F3A", "236", "0", "#E8ECF2", "255", "15")
 	success   = c("#5BD68A", "78", "10", "#167A3E", "28", "2")
 	warning   = c("#F2C14E", "221", "11", "#9A5B00", "130", "3")
-	errorC    = c("#FF7A7A", "210", "9", "#B3261E", "124", "1")
+	errorC    = c("#FF6B81", "204", "9", "#BE123C", "161", "1")
 
 	stateColors = map[domain.State]color{
 		domain.StateOpen:       c("#A0A0AE", "247", "7", "#5C5C6A", "241", "8"),
@@ -43,10 +43,10 @@ var (
 		domain.StateDropped:    c("#6E6E7C", "242", "8", "#9A9AA8", "247", "7"),
 	}
 	kindColors = map[domain.Kind]color{
-		domain.KindCode:     c("#B4A6FF", "147", "13", "#5B46D6", "62", "5"),
+		domain.KindCode:     c("#8AB4F8", "111", "12", "#1D5FBF", "26", "4"),
 		domain.KindManual:   c("#F58FC6", "211", "13", "#A3246C", "125", "5"),
 		domain.KindResearch: c("#62C7F5", "81", "14", "#0F6A99", "24", "6"),
-		domain.KindDecision: c("#F7A85E", "215", "11", "#A14F0A", "130", "3"),
+		domain.KindDecision: c("#E3C58E", "180", "11", "#7A5A12", "94", "3"),
 	}
 )
 

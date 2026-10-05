@@ -1,0 +1,1 @@
+- 2026-10-05T19:16:29Z claude-code/2.1.289: Moved error from coral to rose (#FF6B81 / #BE123C) so it sits further from the tangerine accent; amber in-progress and sand decision stay clearly apart from it.
