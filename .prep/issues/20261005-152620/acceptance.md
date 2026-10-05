@@ -1,0 +1,6 @@
+- [x] `.claude/settings.json` has a SessionStart hook that runs `prep prime` when `prep` is on PATH
+- [x] Without `prep` on PATH the hook command exits 0 with no output
+- [ ] `/prep-status` shows every issue with its state and the prime summary
+- [ ] `/prep-next` shows the actionable issues
+- [ ] `/prep-guide <id>` shows the guide for the issue and works from it
+- [x] Each command says the binary is missing and points at the skill when `prep` is not installed
