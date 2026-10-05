@@ -1,0 +1,8 @@
+- [ ] `prep context` and `prep findings` replace their record from `--body` or `--body-file`; findings only on research issues
+- [ ] `prep decide` appends the next `D<n>` dated today with optional `--body`, `--supersedes` (must exist) and `--outcome` (decision issues only)
+- [ ] `prep criterion` adds, checks, unchecks and removes criteria by the numbers `prep show` prints, keeping other text in acceptance.md
+- [ ] `prep dod` adds Definition of Done items, opts out with a required reason, and removes an addition or opt-out by its item
+- [ ] `prep log` appends a timestamped history line naming the actor
+- [ ] All six refuse done and dropped issues, validate before writing and support `--json`
+- [ ] `prep guide` names the commands in its instructions and Write list; the define step points at `prep edit`
+- [ ] The skill tells agents to use the commands and keeps file editing as the fallback without the binary
