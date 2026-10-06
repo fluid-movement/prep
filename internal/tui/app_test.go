@@ -450,7 +450,7 @@ func TestFilterBar(t *testing.T) {
 	}
 
 	// Bare words match titles; the filter narrows the tab, never widens it.
-	keys(m, "/")
+	keys(m, "f")
 	m.input.SetValue("")
 	typeText(m, "writer")
 	keys(m, "enter")
@@ -458,7 +458,7 @@ func TestFilterBar(t *testing.T) {
 		t.Fatalf("text filter rows = %v", got)
 	}
 	keys(m, "3")
-	keys(m, "/")
+	keys(m, "f")
 	typeText(m, "--state defined")
 	keys(m, "enter")
 	if got := rowIDs(m); len(got) != 0 {

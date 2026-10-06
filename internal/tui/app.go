@@ -571,7 +571,7 @@ func (m *Model) listKey(s string) tea.Cmd {
 			m.setFilter(tb.name, "")
 		}
 		return nil
-	case "/":
+	case "f", "/": // f is the melody; / stays for US-keyboard habits
 		if tb != nil {
 			m.filtering, m.filterErr = true, ""
 			m.input.SetValue(m.filters[tb.name])
@@ -908,7 +908,7 @@ var (
 		bind("Issue", "p", "go to the parent", false),
 	}
 	viewBindings = []binding{
-		bind("Views", "/", "filter (prep list flags; words match titles)", true),
+		bind("Views", "f", "filter (prep list flags; words match titles)", true),
 		bind("Views", "tab 1-9", "switch view", false),
 		bind("Views", "t", "tree or flat", false),
 	}
