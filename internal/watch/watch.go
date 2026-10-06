@@ -1,4 +1,4 @@
-package tui
+package watch
 
 import (
 	"io/fs"
@@ -14,10 +14,10 @@ import (
 // asks for a reload; a transition writes several files at once.
 const debounce = 150 * time.Millisecond
 
-// watch reports changes anywhere under dir on the returned channel, at most
+// Dir reports changes anywhere under dir on the returned channel, at most
 // one pending signal at a time. fsnotify is not recursive, so every
 // directory is watched and new ones are added as they appear.
-func watch(dir string) (<-chan struct{}, func(), error) {
+func Dir(dir string) (<-chan struct{}, func(), error) {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, nil, err

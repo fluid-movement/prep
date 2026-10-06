@@ -220,7 +220,7 @@ func cmdShow(a *app, args []string) error {
 			"issue": i, "dir": mdstore.IssueDir(id), "state": s.State, "stale": s.Stale, "blocked": s.Blocked,
 			"actionable": s.Actionable, "children": nonNil(t.Children(id)), "blocks": nonNil(t.Blocks(id)),
 			"progress": s.Progress, "definition_of_done": nonNil(dod), "dod_opt_outs": opt,
-			"context": i.Context, "findings": i.Findings,
+			"context": i.Context, "findings": i.Findings, "history": i.History,
 		})
 		return nil
 	}

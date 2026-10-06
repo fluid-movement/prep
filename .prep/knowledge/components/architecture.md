@@ -23,6 +23,7 @@ internal/domain     model, derived state, FSM and gates, validation, query engin
 internal/mdstore    issue store adapter: .prep/issues as markdown
 internal/okf        knowledge store adapter: .prep/knowledge as an OKF v0.2 bundle
 internal/gitx       the few git calls (staging, commits, drift, commit evidence)
+internal/watch      fsnotify watcher over .prep (recursive, debounced), shared by prep watch and the TUI
 internal/tui        human interface: screens (Bubble Tea) loading through an injected loader; theme and ui hold the design system
 ```
 

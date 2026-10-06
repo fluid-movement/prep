@@ -15,6 +15,7 @@ import (
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/tui/theme"
 	"github.com/fluid-movement/prep/internal/tui/ui"
+	"github.com/fluid-movement/prep/internal/watch"
 )
 
 // Options connect the TUI to a project without importing storage adapters.
@@ -38,7 +39,7 @@ type Options struct {
 func Run(opts Options, in io.Reader, out io.Writer) error {
 	m := NewModel(theme.New(lipgloss.NewRenderer(out)), opts)
 	if opts.Watch != "" {
-		ch, stop, err := watch(opts.Watch)
+		ch, stop, err := watch.Dir(opts.Watch)
 		if err != nil {
 			m.err = fmt.Errorf("live reload is off: %v", err)
 		} else {

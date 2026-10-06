@@ -74,6 +74,7 @@ func init() {
 		{"next", false, "next [--under <id>]        actionable issues: ready, not stale, dependencies done, unclaimed", cmdNext},
 		{"show", false, "show <id>                  read one issue with its derived state", cmdShow},
 		{"check", false, "check [--no-drift]         validate the whole tree", cmdCheck},
+		{"watch", false, "watch                      stream a line per change under .prep until killed (for harness integrations)", cmdWatch},
 		{"views", false, "views                      saved views from config.yaml", cmdViews},
 		{"new", true, "new --title T --kind K     create an issue [--parent id] [--depends-on id]... [--tag t]... [--body text | --body-file path|-]", cmdNew},
 		{"edit", true, "edit <id>                  change [--title T] [--kind K] [--parent id|''] [--depends-on id|'']... [--tag t|'']... [--body text | --body-file path|-]", cmdEdit},

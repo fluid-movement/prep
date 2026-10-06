@@ -30,6 +30,8 @@ Applies when adding or changing commands.
 - `prep init [--no-bootstrap]` creates `.prep` (no placeholder overview) and, unless skipped, the bootstrap issues via `Tree.PlanBootstrap`, written change by change; `prep knowledge bootstrap` does the same later when the knowledge base is not bootstrapped and no bootstrap issue is open. `prep prime` (JSON `bootstrap`) and `prep guide` (`alerts`) print the bootstrap alert first.
 - `prep setup [--harness h,...|--remove h|--refresh]` installs harness integrations; see [Harness setup](/components/setup.md).
 - `prep update [--check]` replaces the binary with the latest release; see [Release, install and update](/components/release.md).
+- `prep watch` (`watch.go`) is a read command for harness integrations: it watches `.prep` with `internal/watch` and prints one line per debounced change (`changed`, or `{"event":"changed"}` with `--json`) until SIGINT/SIGTERM or until its output closes; tests stop it by replacing `watchContext`. The [Claude Code integration](/components/claude-code.md)'s panel refreshes on each line.
+- `prep show --json` carries the issue's fields plus `history` (the work log text), `context`, `findings`, derived state, relations, progress and the effective Definition of Done.
 - `prep tui` is a read command that needs a terminal (stdin and stdout); it opens the [TUI](/components/tui.md), and `--gallery` shows the [TUI design system](/components/tui-design-system.md). `prep views` lists saved views in config order.
 - `prep skill` prints the embedded `internal/cli/skill.md`; `.claude/skills/prep/SKILL.md` must stay identical (tested).
 - Tests in `cli_test.go` drive whole lifecycles through `Main` with a fake clock.
