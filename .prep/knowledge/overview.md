@@ -10,7 +10,7 @@ generated:
 
 # prep
 
-prep is a workflow engine and memory for coding agents, with a human supervising. It enforces the steps an issue goes through and holds the context agents need to implement it. It is change management for agent-built projects: issues record what should change and what changed; this knowledge base records what is true now. Completing an issue requires a documentation decision, so every completed issue moves this knowledge base forward.
+prep is a workflow engine and memory for coding agents, with a human supervising. The name comes from cooking: like mise en place, everything an agent needs is prepared before the work starts. It exists because personal projects sit in different states of done and agents implement poorly when requirements, decisions and context are scattered; prep keeps all of it in the repository, versioned with the code. It enforces the steps an issue goes through and holds the context agents need to implement it. It is change management for agent-built projects: issues record what should change and what changed; this knowledge base records what is true now. Completing an issue requires a documentation decision, so every completed issue moves this knowledge base forward.
 
 Applies always; start here and follow links.
 
@@ -24,5 +24,7 @@ Applies always; start here and follow links.
 - [Storage format](/conventions/storage-format.md): files, frontmatter, canonical form.
 - [Knowledge base conventions](/conventions/knowledge-base.md): how entries are written.
 - [Out of scope](/decisions/out-of-scope.md): what prep deliberately does not do.
+- [Agent context](/features/agent-context.md): how agents get context, from prime to guide to files.
+- [Prior art](/decisions/prior-art.md): what prep took from and avoided in similar tools.
 
-The original design is frozen in `DESIGN.md` as a historical snapshot; open work lives in `.prep/issues`.
+The original design document was broken down into these entries and into issues; open work lives in `.prep/issues`.

@@ -6,7 +6,7 @@ tags:
   - tui
 ---
 
-Editing issues in the TUI works but is not yet pleasant to use: dialogs replace the screen instead of appearing over it, the action menu is long, and text fields are single-line inputs or a round trip through $EDITOR. Editing by hand is not a priority while agents do most writing; this issue collects the improvements for when it becomes one.
+Editing issues in the TUI works but is not yet pleasant to use: dialogs replace the screen instead of appearing over it, the action menu is long, and text fields are single-line inputs or a round trip through $EDITOR. The settings screen is read-only today, although the design meant the project configuration (commit mode, saved views) to be editable there. Editing by hand is not a priority while agents do most writing; this issue collects the improvements for when it becomes one.
 
 ## Open questions
 

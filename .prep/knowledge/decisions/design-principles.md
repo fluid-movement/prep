@@ -10,7 +10,7 @@ generated:
 
 # Design principles
 
-Applies to every change. Decided in the original design (`DESIGN.md`).
+Applies to every change. Decided in the original design, which has since been broken down into this knowledge base and issues.
 
 1. **The system enforces steps, not how work happens.** It defines what each step must produce and the gates between steps.
 2. **Write permissions belong to the harness.** No approval mechanism of prep's own; reads and writes are separate commands so harness rules can tell them apart.
