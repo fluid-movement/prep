@@ -1,0 +1,4 @@
+- [ ] prep init writes a config.yaml whose views are exactly Unresolved (--state open,defined,ready,in_progress) and All (""), in that order
+- [ ] prep tui in a freshly initialized project shows the tabs Unresolved and All
+- [ ] The gallery's sample tab bar and the TUI goldens show the new views
+- [ ] The README and the knowledge entries that describe the default views match

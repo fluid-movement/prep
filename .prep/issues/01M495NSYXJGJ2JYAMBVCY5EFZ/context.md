@@ -1,0 +1,5 @@
+- The default config is the literal in `internal/mdstore/store.go` (`views:` around line 413), written by `prep init`.
+- TUI goldens render the tab bar from a test config: `internal/tui/app_test.go` and `internal/tui/mouse_test.go` build it, and most files in `internal/tui/testdata/` show the tabs. Tests that rely on a particular tab (index, name, `1`-`9` switching, mouse clicks on the tab bar) need their view picked again; regenerate goldens with `go test ./internal/tui/... -update` and say in `prep log` why they changed.
+- `internal/tui/ui/gallery.go` and its goldens show a sample tab bar; update it to the new names so the gallery matches what users see.
+- The contract corpus (`testdata/contract/*/.prep/config.yaml`) carries copies of the old default. They test the store, not the defaults: leave them unless a test compares them with the default.
+- The README's Views section already describes the two views as this repository's config; mention them as what `prep init` writes. Check the knowledge entries that describe the config or the TUI tabs (`prep knowledge` search for views) and update them.
