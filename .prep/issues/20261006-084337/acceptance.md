@@ -5,6 +5,5 @@
 - [ ] Knowledge screen rows and settings rows select on click and activate on a click on the selected row; the wheel scrolls the entry and page viewports
 - [ ] In dialogs, menu entries run on click (an unavailable one shows its reason), reparent picks and kind options select, criteria toggle, form fields take focus; clicks outside a dialog do nothing and the help dialog closes on click
 - [ ] Mouse capture defaults to on, is stored per user as tui.mouse in the user configuration, can be toggled from a user-level row on the settings screen, and applies immediately and on the next start; a missing user config or key means on
-- [ ] The ? keymap lists the mouse interactions and how to select text while capture is on (shift-drag, option-drag in iTerm2 and Terminal.app)
 - [ ] Keyboard behavior is unchanged: existing key tests and goldens pass unchanged apart from the settings goldens gaining the mouse row
 - [ ] Tests drive tea.MouseMsg through Update for tabs, rows, relations, pane focus, wheel, knowledge and settings rows, and each dialog kind, at 110x28 and 80x24
