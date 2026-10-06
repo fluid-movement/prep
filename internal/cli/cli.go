@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -19,8 +20,18 @@ import (
 	"github.com/fluid-movement/prep/internal/okf"
 )
 
-// Version is set at build time.
+// Version is set at build time; go install builds fall back to the module
+// version Go records in the binary.
 var Version = "dev"
+
+func init() {
+	if Version != "dev" {
+		return
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		Version = bi.Main.Version
+	}
+}
 
 //go:embed skill.md
 var skillText string
@@ -84,6 +95,7 @@ func init() {
 		{"fix", true, "fix                        safe auto-fixes from check", cmdFix},
 		{"migrate", true, "migrate                    migrate .prep to this binary's schema", cmdMigrate},
 		{"tui", false, "tui [--gallery]            terminal UI next to the harness (--gallery: the design system's components)", cmdTUI},
+		{"update", true, "update [--check]           replace this binary with the latest release (verifies its checksum)", cmdUpdate},
 		{"skill", false, "skill                      print the agent skill (static copy for environments without the binary)", cmdSkill},
 		{"version", false, "version                    print the version", cmdVersion},
 	}

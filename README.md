@@ -5,11 +5,28 @@ prep is a workflow engine and memory for coding agents, with a human supervising
 ## Install
 
 ```sh
+curl -fsSL https://raw.githubusercontent.com/fluid-movement/prep/main/install.sh | sh
+```
+
+The script downloads the release for your machine (macOS or Linux, amd64 or arm64), verifies it against the release checksums and installs `prep` into `~/.local/bin`. `PREP_VERSION=v0.1.0` picks a version, `PREP_BINDIR` another directory. Windows builds are on the [releases page](https://github.com/fluid-movement/prep/releases).
+
+Other ways:
+
+```sh
 go install github.com/fluid-movement/prep/cmd/prep@latest
 # or, from a checkout (needs just): builds with the version stamped in and
 # copies the binary to ~/.local/bin (override with PREP_BINDIR or bindir=...)
 just install
 ```
+
+## Update
+
+```sh
+prep update          # replace prep with the latest release, checksum verified
+prep update --check  # only report whether a newer release exists
+```
+
+When prep was installed with Homebrew or `go install`, `prep update` names the command that updates it instead. Releases are cut by pushing a version tag (`git tag v0.1.0 && git push origin v0.1.0`); the release workflow builds and publishes them with GoReleaser.
 
 ## Quick start
 

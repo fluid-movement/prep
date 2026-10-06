@@ -1,0 +1,45 @@
+# Release builds for prep. A pushed v* tag runs this through
+# .github/workflows/release.yml. Archive names must match
+# internal/update.ArchiveName, which prep update looks for.
+version: 2
+project_name: prep
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: prep
+    main: ./cmd/prep
+    binary: prep
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/fluid-movement/prep/internal/cli.Version={{ .Tag }}
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: prep
+    name_template: "prep_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  use: github
+  sort: asc
+
+release:
+  github:
+    owner: fluid-movement
+    name: prep

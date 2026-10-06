@@ -1,0 +1,5 @@
+- [x] Pushing a v* tag builds macOS, Linux and Windows archives for amd64 and arm64 with checksums and publishes a GitHub Release; the binary reports the tag as its version
+- [x] install.sh installs the latest or a given version with checksum verification into ~/.local/bin or PREP_BINDIR and hints about PATH
+- [x] prep update replaces the binary with the newer release after verifying the checksum; --check only reports; Homebrew, go install and development builds get the right command instead
+- [x] Tests cover update against a fake release server, including checksum mismatch and up-to-date cases; the GoReleaser configuration is validated
+- [x] README and knowledge describe installing and updating

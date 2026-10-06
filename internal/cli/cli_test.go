@@ -743,3 +743,11 @@ func newHarnessNoBootstrap(t *testing.T) *harness {
 	h.ok("init", "--no-bootstrap")
 	return h
 }
+
+func TestUpdateRefusesDevelopmentBuilds(t *testing.T) {
+	h := newHarness(t)
+	old := Version
+	Version = "6449764-dirty"
+	t.Cleanup(func() { Version = old })
+	h.fails("development build", "update", "--json")
+}
