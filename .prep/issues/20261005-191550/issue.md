@@ -1,7 +1,7 @@
 ---
 title: 'TUI theming: choose and customize themes'
 kind: code
-parent: 20261005-152616
+parent: 20261006-123443
 tags:
   - tui
   - theming
