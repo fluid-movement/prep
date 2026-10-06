@@ -7,8 +7,6 @@ tags:
   - release
 ---
 
-The release after 0.1.0. Its children are the work that must ship with it; its scope is settled as issues move here from the backlog.
+The release after 0.1.0: prep reaches beyond one developer's machine, and the TUI gets its remaining polish. Cloud sessions install the binary themselves, adopting projects can guard hand edits in CI, macOS and Linux users can install with Homebrew, and the TUI gains themes and direct selection of linked issues. Its children are the work that must ship with it.
 
 ## Open questions
-
-- What is the theme of 0.2.0, and which backlog issues ship with it?

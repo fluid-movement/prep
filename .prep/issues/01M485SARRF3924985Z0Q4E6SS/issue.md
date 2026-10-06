@@ -1,6 +1,7 @@
 ---
 title: Record human review of knowledge entries
 kind: code
+parent: 01M498VPZAAQJKHXGZZ3PWJH2F
 tags:
   - knowledge
   - okf

@@ -1,6 +1,7 @@
 ---
 title: Optional MCP wrapper
 kind: code
+parent: 01M498VPZAAQJKHXGZZ3PWJH2F
 tags:
   - integration
 priority: low

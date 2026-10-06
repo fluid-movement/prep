@@ -1,6 +1,7 @@
 ---
 title: JSON-RPC protocol for third-party storage adapters
 kind: code
+parent: 01M498VQD4Q85CZYK965WW3H9Q
 tags:
   - storage
 ---
