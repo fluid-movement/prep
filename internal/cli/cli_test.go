@@ -792,6 +792,10 @@ func TestSetup(t *testing.T) {
 	var log []string
 	alpha := &fakeHarness{name: "alpha", detected: true, log: &log}
 	beta := &fakeHarness{name: "beta", detected: false, log: &log}
+	if cc, ok := setup.Get("claude-code"); ok {
+		setup.Unregister("claude-code")
+		t.Cleanup(func() { setup.Register(cc) })
+	}
 	setup.Register(alpha)
 	setup.Register(beta)
 	t.Cleanup(func() { setup.Unregister("alpha"); setup.Unregister("beta") })
@@ -845,4 +849,85 @@ func TestSetup(t *testing.T) {
 	chooseHarnesses = func([]setup.Status) ([]string, bool, error) { return nil, false, errors.New("no tty") }
 	h.fails("prep setup --harness alpha,beta", "setup")
 	h.fails("one of --harness, --remove or --refresh", "setup", "--refresh", "--remove", "alpha")
+}
+
+// The Claude Code plugin carries the embedded skill and one version in both
+// manifests; the release workflow checks that version against the tag.
+func TestClaudeCodePlugin(t *testing.T) {
+	root := filepath.Join("..", "..")
+	b, err := os.ReadFile(filepath.Join(root, "plugins", "claude-code", "skills", "prep", "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != skillText {
+		t.Fatal("plugins/claude-code/skills/prep/SKILL.md differs from internal/cli/skill.md; run just sync-skill")
+	}
+	var plugin struct {
+		Name, Version string
+	}
+	var market struct {
+		Name    string
+		Plugins []struct{ Name, Source, Version string }
+	}
+	for path, v := range map[string]any{
+		filepath.Join(root, "plugins", "claude-code", ".claude-plugin", "plugin.json"): &plugin,
+		filepath.Join(root, ".claude-plugin", "marketplace.json"):                       &market,
+	} {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(b, v); err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+	}
+	if plugin.Name != "prep" || market.Name != "prep" || len(market.Plugins) != 1 || market.Plugins[0].Source != "./plugins/claude-code" {
+		t.Fatalf("manifests: %+v %+v", plugin, market)
+	}
+	if plugin.Version != market.Plugins[0].Version {
+		t.Fatalf("plugin.json version %s, marketplace.json %s", plugin.Version, market.Plugins[0].Version)
+	}
+	hooks, _ := os.ReadFile(filepath.Join(root, "plugins", "claude-code", "hooks", "hooks.json"))
+	if !strings.Contains(string(hooks), "prep prime --hook --plugin") {
+		t.Fatalf("hook does not run prime with the plugin root:\n%s", hooks)
+	}
+}
+
+func TestPrimeHookAndPluginVersion(t *testing.T) {
+	h := newHarness(t)
+	plugin := t.TempDir()
+	os.MkdirAll(filepath.Join(plugin, ".claude-plugin"), 0o755)
+	write := func(v string) {
+		os.WriteFile(filepath.Join(plugin, ".claude-plugin", "plugin.json"), []byte(`{"name":"prep","version":"`+v+`"}`), 0o644)
+	}
+	old := Version
+	t.Cleanup(func() { Version = old })
+
+	Version = "v0.3.0"
+	write("0.3.0")
+	if out := h.ok("prime", "--plugin", plugin); strings.HasPrefix(out, "!") {
+		t.Fatalf("matching versions warn:\n%s", out)
+	}
+	write("0.2.0")
+	if out := h.ok("prime", "--plugin", plugin); !strings.HasPrefix(out, "! The prep plugin (v0.2.0) is older than the prep binary (v0.3.0): run prep setup --refresh.") {
+		t.Fatalf("older plugin:\n%s", out)
+	}
+	write("0.4.0")
+	if out := h.ok("prime", "--plugin", plugin); !strings.Contains(out, "run prep update") {
+		t.Fatalf("older binary:\n%s", out)
+	}
+	Version = "dev"
+	if out := h.ok("prime", "--plugin", plugin); strings.HasPrefix(out, "!") {
+		t.Fatalf("development build warns:\n%s", out)
+	}
+
+	// Outside a project the hook stays silent; a plain prime still errors.
+	outside := t.TempDir()
+	var buf, errb bytes.Buffer
+	if code := Main([]string{"prime", "--hook", "--root", outside}, strings.NewReader(""), &buf, &errb); code != 0 || buf.Len()+errb.Len() != 0 {
+		t.Fatalf("hook outside a project: exit %d, %q %q", code, buf.String(), errb.String())
+	}
+	if code := Main([]string{"prime", "--root", outside}, strings.NewReader(""), &buf, &errb); code == 0 {
+		t.Fatal("prime outside a project should fail without --hook")
+	}
 }

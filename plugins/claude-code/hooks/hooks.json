@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v prep >/dev/null 2>&1 && prep prime || true"
+            "command": "command -v prep >/dev/null 2>&1 && prep prime --hook --plugin \"${CLAUDE_PLUGIN_ROOT}\" || true"
           }
         ]
       }

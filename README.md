@@ -19,6 +19,10 @@ go install github.com/fluid-movement/prep/cmd/prep@latest
 just install
 ```
 
+## Harness integrations
+
+The binary is half of prep; the other half teaches your agent to use it. After installing, the script runs `prep setup`, which detects your agent harnesses and installs their integration per user. For Claude Code that is the prep plugin: the prep skill, a briefing at the start of every session in a prep project, and `/prep:status`, `/prep:next` and `/prep:guide`. Run `prep setup` again at any time to add or remove harnesses; your choices live in `~/.config/prep/config.yaml`.
+
 ## Update
 
 ```sh

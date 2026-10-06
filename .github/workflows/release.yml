@@ -18,6 +18,16 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Plugin version matches the tag
+        run: |
+          want="${GITHUB_REF_NAME#v}"
+          for f in plugins/claude-code/.claude-plugin/plugin.json .claude-plugin/marketplace.json; do
+            got=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$f" | head -1)
+            if [ "$got" != "$want" ]; then
+              echo "$f has version $got, the tag is $GITHUB_REF_NAME; prepare releases with just release" >&2
+              exit 1
+            fi
+          done
       - run: go test ./...
       - uses: goreleaser/goreleaser-action@v6
         with:

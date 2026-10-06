@@ -1,22 +1,26 @@
 ---
 type: component
 title: Claude Code integration
-description: Project-local SessionStart hook running prep prime and the /prep-status, /prep-next and /prep-guide slash commands; read-only, no FSM logic.
+description: 'The prep plugin for Claude Code: skill, SessionStart briefing and /prep:status, /prep:next, /prep:guide, served from this repository as its own marketplace and installed per user by prep setup.'
 status: stable
 generated:
   by: claude-code/2.1.289
   at: 2026-10-05T00:00:00Z
 scope:
-  - .claude/settings.json
-  - .claude/commands
-confirmed_commit: dd33488db82aca8560c7f10963dabb81716c637f
+  - plugins/claude-code
+  - .claude-plugin
+  - internal/setup/claudecode
+  - .claude/skills
+confirmed_commit: 5c7e6aadb04fc5751ddce98ac53362bfb67250e2
 ---
 
 # Claude Code integration
 
-Applies when changing how Claude Code sessions in this repository start or which prep slash commands exist.
+Applies when changing what Claude Code sessions get from prep or how the plugin is installed. Decided in 20261006-084956 and its children.
 
-- `.claude/settings.json` registers a `SessionStart` hook: `command -v prep >/dev/null 2>&1 && prep prime || true`. Its stdout is the session's opening context; without the binary it is silent and exits 0. It never installs prep; that waits for the install and update flow.
-- `.claude/commands/` holds `prep-status.md` (`prep prime` plus `prep list`, rendered grouped by state), `prep-next.md` (`prep next`) and `prep-guide.md` (`prep guide $ARGUMENTS`, then work on the current step). They run the CLI through inline `!` bash with `allowed-tools: Bash(prep:*), Bash(echo:*)` and fall back to a "not installed" message pointing at the skill.
-- Only read commands run from the hook and commands; transitions stay with the agent following `prep guide` and the [CLI](/components/cli.md) contract. The skill in `.claude/skills/prep/SKILL.md` is separate and must match `internal/cli/skill.md`.
-- The configuration is project-local; shipping it to other projects as a Claude Code plugin is deferred until binaries are released.
+- **Plugin** (`plugins/claude-code`): `.claude-plugin/plugin.json` (name `prep`, version), `skills/prep/SKILL.md` (identical to `internal/cli/skill.md`; `just sync-skill` copies it and `TestClaudeCodePlugin` checks it), `commands/status.md`, `next.md`, `guide.md` (invoked as `/prep:status`, `/prep:next`, `/prep:guide`; read-only CLI calls through inline bash with `allowed-tools: Bash(prep:*)`), and `hooks/hooks.json` with a SessionStart hook: `command -v prep >/dev/null 2>&1 && prep prime --hook --plugin "${CLAUDE_PLUGIN_ROOT}" || true`. A `mod/` directory can take the TUI pane later (20261005-152621).
+- **Hook behavior**: silent without the binary and, through `prime --hook`, outside a prep project. `--plugin` makes prime compare the plugin's `plugin.json` version with the binary and lead with a warning naming `prep setup --refresh` (older plugin) or `prep update` (older binary); development versions are not compared ([Agent context](/features/agent-context.md)).
+- **Marketplace**: `.claude-plugin/marketplace.json` at the repository root makes this repository the marketplace `prep`, listing the plugin with source `./plugins/claude-code`. Both manifests carry the same version; `just release` sets it and the release workflow refuses a tag that differs ([Release, install and update](/components/release.md)).
+- **Installation** (`internal/setup/claudecode`, a [setup](/components/setup.md) harness): detects `claude` on PATH, reads `claude plugin list --json` (user scope `prep@prep`), installs by adding the marketplace pinned to the binary's tag (`fluid-movement/prep#vX.Y.Z`; `PREP_PLUGIN_SOURCE` overrides, required for development builds) and `claude plugin install prep@prep --scope user --json`; updating removes and re-adds the marketplace to move the pin; removal uninstalls the plugin and removes the marketplace. Pinning exists because third-party marketplaces do not auto-update.
+- **Cloud sessions** load no plugins, so this repository keeps `.claude/skills/prep/SKILL.md` as the static skill copy (20261005-185825 decides further).
+- Verified with the real Claude Code CLI in an isolated `CLAUDE_CONFIG_DIR` (install, refresh, remove) and in a session started with `--plugin-dir`, which received the prime briefing from the hook and listed the commands.

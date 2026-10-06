@@ -46,9 +46,25 @@ check:
 # Everything CI runs
 ci: lint test check
 
-# Copy the embedded skill to the static copy agents read
+# Copy the embedded skill to the static copies: cloud sessions and the Claude Code plugin
 sync-skill:
     cp internal/cli/skill.md .claude/skills/prep/SKILL.md
+    cp internal/cli/skill.md plugins/claude-code/skills/prep/SKILL.md
+
+# Prepare a release: set the plugin version, commit and tag; push the tag yourself
+release version:
+    #!/usr/bin/env sh
+    set -eu
+    case "{{version}}" in v[0-9]*.[0-9]*.[0-9]*) ;; *) echo "version must look like v1.2.3" >&2; exit 1 ;; esac
+    if [ -n "$(git status --porcelain)" ]; then echo "commit or stash your changes first" >&2; exit 1; fi
+    v="{{version}}"; v="${v#v}"
+    for f in plugins/claude-code/.claude-plugin/plugin.json .claude-plugin/marketplace.json; do
+        sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$v\"/" "$f" && rm "$f.bak"
+    done
+    go test ./...
+    git commit -qam "Release {{version}}"
+    git tag -a "{{version}}" -m "prep {{version}}"
+    echo "tagged {{version}}; publish it with: git push origin main {{version}}"
 
 # Remove build output
 clean:

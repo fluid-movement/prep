@@ -1,14 +1,19 @@
 package cli
 
 import (
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/gitx"
 	"github.com/fluid-movement/prep/internal/mdstore"
+	"github.com/fluid-movement/prep/internal/update"
 )
 
 // summary is the list view of one issue.
@@ -477,6 +482,7 @@ type primeBrief struct {
 	Claims     []claimSummary `json:"claims"`
 	Check      checkSummary   `json:"check"`
 	Bootstrap  string         `json:"bootstrap,omitempty"` // alert while the knowledge base is not bootstrapped
+	Plugin     string         `json:"plugin,omitempty"`    // alert when the harness plugin and the binary differ
 	Hint       string         `json:"hint"`
 }
 
@@ -495,11 +501,17 @@ type checkSummary struct {
 func cmdPrime(a *app, args []string) error {
 	fs := flag.NewFlagSet("prime", flag.ContinueOnError)
 	max := fs.Int("max", 8, "maximum entries per section")
+	hook := fs.Bool("hook", false, "run from a harness hook: print nothing outside a prep project")
+	plugin := fs.String("plugin", "", "harness plugin directory; warn when its version differs from this binary")
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
 	t, err := a.load(false)
 	if err != nil {
+		var de *domain.Error
+		if *hook && errors.As(err, &de) && de.Code == domain.ErrNoProject {
+			return nil
+		}
 		return err
 	}
 	cap := func(ss []summary) []summary {
@@ -540,9 +552,15 @@ func cmdPrime(a *app, args []string) error {
 		}
 	}
 	b.Bootstrap = t.BootstrapAlert()
+	if *plugin != "" {
+		b.Plugin = pluginAlert(*plugin)
+	}
 	if a.json {
 		a.emit(b)
 		return nil
+	}
+	if b.Plugin != "" {
+		a.printf("! %s\n\n", b.Plugin)
 	}
 	if b.Bootstrap != "" {
 		a.printf("! %s\n\n", b.Bootstrap)
@@ -597,4 +615,28 @@ func tagSuffix(tags []string) string {
 		return ""
 	}
 	return "  #" + strings.Join(tags, " #")
+}
+
+// pluginAlert compares a harness plugin's version with this binary's and
+// names the fix when they differ. Development builds on either side are
+// not compared.
+func pluginAlert(dir string) string {
+	b, err := os.ReadFile(filepath.Join(dir, ".claude-plugin", "plugin.json"))
+	if err != nil {
+		return ""
+	}
+	var m struct {
+		Version string `json:"version"`
+	}
+	if json.Unmarshal(b, &m) != nil {
+		return ""
+	}
+	pv, bv := "v"+strings.TrimPrefix(m.Version, "v"), Version
+	if !update.IsRelease(pv) || !update.IsRelease(bv) || strings.TrimPrefix(pv, "v") == strings.TrimPrefix(bv, "v") {
+		return ""
+	}
+	if newer, err := update.Newer(pv, bv); err == nil && newer {
+		return fmt.Sprintf("The prep plugin (%s) is older than the prep binary (%s): run prep setup --refresh.", pv, bv)
+	}
+	return fmt.Sprintf("The prep binary (%s) is older than the prep plugin (%s): run prep update.", bv, pv)
 }

@@ -1,0 +1,15 @@
+{
+  "name": "prep",
+  "owner": {
+    "name": "fluid-movement"
+  },
+  "description": "prep: a workflow engine and memory for coding agents",
+  "plugins": [
+    {
+      "name": "prep",
+      "source": "./plugins/claude-code",
+      "description": "Makes Claude Code work with prep: the prep skill, a SessionStart briefing, and status, next and guide commands.",
+      "version": "0.0.0-dev"
+    }
+  ]
+}

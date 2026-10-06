@@ -19,7 +19,7 @@ import (
 // Config is the user's choices.
 type Config struct {
 	// Harnesses lists the harnesses prep integrates with, by name.
-	Harnesses []string `yaml:"harnesses,omitempty"`
+	Harnesses []string `yaml:"harnesses"`
 }
 
 // Path returns the config file location.
