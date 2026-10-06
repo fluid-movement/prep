@@ -1,6 +1,7 @@
 ---
 title: Install prep in cloud sessions through a project SessionStart hook
 kind: code
+parent: 01M48KB1NRFQ1A3VWB9SHDM3TM
 tags:
   - adoption
 ---

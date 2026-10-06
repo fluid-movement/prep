@@ -1,6 +1,7 @@
 ---
 title: 'Skill: install the binary before falling back to hand edits'
 kind: code
+parent: 01M48KB1NRFQ1A3VWB9SHDM3TM
 tags:
   - adoption
 ---

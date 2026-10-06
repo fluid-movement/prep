@@ -1,6 +1,7 @@
 ---
 title: CI check that rejects invalid hand edits of .prep
 kind: code
+parent: 01M48KB1NRFQ1A3VWB9SHDM3TM
 tags:
   - adoption
 ---

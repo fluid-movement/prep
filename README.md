@@ -62,6 +62,20 @@ State is derived from which records exist in `.prep/issues/<id>/`, never stored:
 
 An issue is **stale** when its requirement or kind differs from the newest baseline: `prep ack` for a trivial change, `prep define` and re-enrichment for a real one. **Actionable** = ready, not stale, dependencies done, unclaimed, not a parent.
 
+## Views
+
+The tabs of `prep tui` are the saved views in `.prep/config.yaml`, in the order the file lists them. A view is a name and a query, with the same flags as `prep list`:
+
+```yaml
+views:
+  Unresolved: --state open,defined,ready,in_progress
+  All: ""
+```
+
+A query takes any number of flags, and an issue must match all of them; a comma-separated list within one flag matches any of its values (`--state ready --tag tui,cli --priority high,critical`). The flags are `--state`, `--kind`, `--tag`, `--priority`, `--under <id>` (descendants of an issue), `--text` (title or requirement), `--stale`, `--blocked`, `--actionable`, `--parent`, `--leaf` and `--top`; the boolean ones accept `=false`. An empty query lists every issue.
+
+`prep init` writes a starter set; change it freely. In the TUI, `s` opens the settings screen, where views are added, edited, deleted and reordered. `prep views` lists them, and `prep list --view <name>` runs one on the command line.
+
 ## Development
 
 ```sh
