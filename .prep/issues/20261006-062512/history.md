@@ -11,3 +11,5 @@
 - 2026-10-06T11:57:38Z released by claude-code/2.1.291 (claimed by claude-code/2.1.291 at 2026-10-06T11:39:58Z): requirement changed after the user tried it: wizard create, melodies only, no > key, ? keymap
 
 - 2026-10-06T12:02:01Z claude-code/2.1.291: Reworked after the user's try: create wizard, e edit menu, ? keymap with essential footers, no shifted keys or > key, settings move mode, tab without links explains itself; removed the user's test issue 20261006-114837 (never committed)
+
+- 2026-10-06T12:11:07Z claude-code/2.1.291: Context rows now show progress, notes and priority in the subtle tone, as the user asked for consistency

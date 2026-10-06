@@ -159,10 +159,15 @@ func ListRow(t *theme.Theme, r Row, selected bool, width int) string {
 	var head, title string
 	switch {
 	case r.Dimmed:
+		// A context row carries the same information as a result row, all
+		// in the subtle tone: the grey says it is only there for structure.
 		g := stateGlyphs[r.State]
 		plain := fmt.Sprintf("%s %-*s%-*s", r.ID, BadgeWidth, g+" "+StateLabel(r.State), KindWidth, r.Kind)
 		head = marker + t.S.Subtle.Render(plain) + tree
-		title = t.S.Subtle.Render(r.Title)
+		if r.Note != "" {
+			head += t.S.Subtle.Render(ansi.Strip(r.Note)) + " "
+		}
+		title = t.S.Subtle.Render(ansi.Strip(PriorityMark(t, r.Priority)) + r.Title)
 	default:
 		id := t.S.Muted.Render(r.ID)
 		if selected {

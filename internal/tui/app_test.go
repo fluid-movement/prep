@@ -761,6 +761,22 @@ func TestEditMenuAndKeys(t *testing.T) {
 	}
 }
 
+func TestContextRowsShowProgress(t *testing.T) {
+	p, ids := sample(t)
+	m := openModel(t, p, 110, 28)
+	run(m, "5") // To define: JSON writer is defined, a context row above its open child
+	var line string
+	for _, l := range strings.Split(ansi.Strip(m.View()), "\n") {
+		if strings.Contains(l, "JSON writer") && line == "" {
+			line = l
+		}
+	}
+	if !strings.Contains(line, "0/1") {
+		t.Fatalf("context row without progress: %q", line)
+	}
+	_ = ids
+}
+
 func TestCreateWizard(t *testing.T) {
 	p, _ := sample(t)
 	edits := []string{"Rows go to stdout.\n\nOne per line."}
