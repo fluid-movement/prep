@@ -22,5 +22,6 @@ Applies when changing file formats or write behavior. Format details: [Storage f
 - `LoadConfig` also records the order of the `views:` keys (`Config.ViewOrder`) from the YAML node; issue loading keeps `history.md` as `Issue.History`.
 - `Apply` writes `Change.Config` to config.yaml with `renderConfig`: the comment lines leading the current file (or the default header), `commit_mode`, and `views` in `ViewOrder` through a `yaml.Node` mapping (an empty query as `""`), so an unchanged config reproduces `DefaultConfig` byte for byte.
 - `Init` writes `project.md`, `config.yaml` and `.gitkeep` files for `issues/` and `knowledge/`; it no longer writes a placeholder overview, because the overview marks a bootstrapped knowledge base.
-- `Fmt` re-renders every parseable file canonically (`--check` reports only); `Fix` adds missing empty schema files and removes duplicate dependencies.
+- `Fmt` re-renders every parseable file canonically (`--check` reports only); `Fix` adds missing empty schema files, removes duplicate dependencies and merges repeated `##` sections whose copies hold content at most once (`mergeDuplicateSections` in `sections.go` keeps that copy, or the first; `loadIssue` reports repeats as I028 through `duplicateHeadings`, guided when several copies have content).
+
 - The contract corpus in `testdata/contract` (valid and broken trees with an `expect` file of diagnostic codes) runs in `contract_test.go` and is the test suite for any future adapter.

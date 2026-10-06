@@ -67,6 +67,7 @@ const (
 	CodeContextLinkMissing = "I025"
 	CodeTagInvalid         = "I026"
 	CodePriorityInvalid    = "I027"
+	CodeDuplicateHeading   = "I028" // a ## section heading repeats in a record file
 
 	// Knowledge base.
 	CodeKnowledgeFrontmatter = "K001"

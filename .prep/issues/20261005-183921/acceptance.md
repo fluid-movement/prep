@@ -1,0 +1,4 @@
+- [x] prep check reports I028 for a repeated ## heading in issue.md, acceptance.md, context.md or findings.md, ignoring headings inside code fences; an error for Open questions in issue.md, a warning otherwise
+- [x] prep fix merges the duplicates when at most one copy has content (keeping that copy, or the first when all are empty) and leaves the others for a person, whose diagnostic is guided
+- [x] The contract corpus has a broken tree with a duplicated Open questions section and a valid tree with a harmless duplicate, and mdstore tests cover the fix
+- [x] The storage format, markdown store and domain entries name I028

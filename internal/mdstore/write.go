@@ -311,7 +311,8 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 }
 
 // Fix applies safe automatic repairs: canonical format, missing empty schema
-// files and duplicate dependencies.
+// files, duplicate dependencies and repeated section headings whose copies
+// hold content at most once.
 func (s *Store) Fix() ([]string, error) {
 	changed, err := s.Fmt(false)
 	if err != nil {
@@ -353,12 +354,32 @@ func (s *Store) Fix() ([]string, error) {
 				deps = append(deps, d)
 			}
 		}
-		if len(deps) != len(i.DependsOn) {
-			i.DependsOn = deps
+		body, merged := mergeDuplicateSections(i.Body)
+		if len(deps) != len(i.DependsOn) || merged {
+			i.DependsOn, i.Body = deps, normalize(body)
 			if err := s.write(rel, renderIssue(i)); err != nil {
 				return changed, err
 			}
 			changed = append(changed, rel)
+		}
+		for _, f := range []struct {
+			name  string
+			canon func(string) string
+		}{{"acceptance.md", canonicalAcceptance}, {"context.md", fileText}, {"findings.md", fileText}} {
+			rel, canon := dir+"/"+f.name, f.canon
+			raw, ok, err := s.read(rel)
+			if err != nil {
+				return changed, err
+			}
+			if !ok {
+				continue
+			}
+			if text, merged := mergeDuplicateSections(normalize(raw)); merged {
+				if err := s.write(rel, canon(text)); err != nil {
+					return changed, err
+				}
+				changed = append(changed, rel)
+			}
 		}
 	}
 	return changed, nil

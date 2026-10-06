@@ -192,6 +192,22 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 	if renderIssue(i) != raw {
 		diag(domain.CodeNotCanonical, domain.SevWarning, domain.ClassFixable, "issue.md", "run prep fmt", "not in canonical format")
 	}
+	// Repeated ## headings: prep reads only the first Open questions section,
+	// so questions under another copy would not block define.
+	dupes := func(name, text string) {
+		for _, d := range duplicateHeadings(text) {
+			sev, why := domain.SevWarning, ""
+			if name == "issue.md" && d.key == "open questions" {
+				sev, why = domain.SevError, "; prep reads only the first, so questions under the others do not block define"
+			}
+			class, fix := domain.ClassGuided, "move the content under one heading and delete the other copies"
+			if d.mergeable {
+				class, fix = domain.ClassFixable, "run prep fix to merge them"
+			}
+			diag(domain.CodeDuplicateHeading, sev, class, name, fix, "section %q appears %d times%s", d.heading, d.count, why)
+		}
+	}
+	dupes("issue.md", i.Body)
 
 	for _, n := range schemaFiles {
 		if !i.HasFile(n) {
@@ -210,11 +226,13 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 		return nil, nil, err
 	} else if ok {
 		parseAcceptance(raw, i)
+		dupes("acceptance.md", normalize(raw))
 	}
 	if raw, ok, err := plain("context.md", fileText); err != nil {
 		return nil, nil, err
 	} else if ok {
 		parseContext(raw, i)
+		dupes("context.md", normalize(raw))
 	}
 	if raw, ok, err := plain("decisions.md", canonicalDecisions); err != nil {
 		return nil, nil, err
@@ -235,6 +253,7 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 	} else if ok {
 		f := normalize(raw)
 		i.Findings = &f
+		dupes("findings.md", f)
 	}
 
 	record := func(name string, parse func(string) error, render func() string) error {
