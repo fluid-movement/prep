@@ -1,0 +1,5 @@
+- [ ] New issue is one dialog with title, kind and a multi-line requirement; e and E edit the requirement and context inline in a multi-line editor, ctrl+e hands the text to $EDITOR and back, ctrl+s saves, rejected text is kept
+- [ ] Dialogs overlay the dimmed screen instead of replacing it
+- [ ] Direct keys E, k, i and > work from list and detail and show in the footer; > asks for confirmation for input-free transitions; the action menu lists only applicable actions and a direct key that does not apply explains why
+- [ ] The settings screen edits the commit mode and the saved views (add, rename, change query, reorder, delete) through PlanConfig; config.yaml keeps its header and view order; invalid queries are rejected; tabs follow right away
+- [ ] Snapshots and tests cover the overlay, the create flow, inline editing, direct keys and settings edits; the TUI knowledge entry describes the new behavior

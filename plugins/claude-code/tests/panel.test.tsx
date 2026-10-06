@@ -198,6 +198,17 @@ describe('inference', () => {
     expect(issueFromCommand(cmd)).toBe(CHILD)
   })
 
+  test('shell variables assigned in the command are expanded', () => {
+    expect(issueFromCommand(`I=${CHILD} && prep edit $I --body-file - && prep define $I`)).toBe(CHILD)
+    expect(issueFromCommand(`export R=${OTHER}; prep criterion "\${R}" --check 1`)).toBe(OTHER)
+    expect(issueFromCommand(`PREP_ACTOR=x I=${CHILD} && prep log $I done`)).toBe(CHILD)
+  })
+
+  test('a reference left a variable falls back to the output', () => {
+    expect(issueFromCommand('prep define $ID', `define ${OTHER}: now defined`)).toBe(OTHER)
+    expect(issueFromCommand('prep define $ID', '')).toBeUndefined()
+  })
+
   test('prep new takes the id from its output', () => {
     expect(issueFromCommand('prep new --title T --kind code --json', `{"ok":true,"op":"new","id":"${OTHER}"}`)).toBe(
       OTHER,

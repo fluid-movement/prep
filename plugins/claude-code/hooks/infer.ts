@@ -50,27 +50,45 @@ const ISSUE_ID = /\b(\d{8}-\d{6})\b/
 /**
  * The issue a Bash command makes current: the reference of the last prep
  * command in it that names one, or for prep new the ID its output reports.
- * Undefined when the command does not move focus.
+ * Shell variables assigned earlier in the command (I=<id> && prep log $I)
+ * are expanded; a reference that stays a variable falls back to the last
+ * issue ID in the output. Undefined when the command does not move focus.
  */
 export function issueFromCommand(command: string, output = ''): string | undefined {
   let found: string | undefined
+  const vars = new Map<string, string>()
   for (const segment of withoutHeredocs(command).split(/&&|\|\||[;|\n]/)) {
-    const words = segment.trim().split(/\s+/).filter(Boolean)
-    // Skip leading environment assignments (PREP_ACTOR=... prep log ...).
+    let words = segment.trim().split(/\s+/).filter(Boolean)
+    if (words[0] === 'export') words = words.slice(1)
+    // Assignments, alone or leading a command (PREP_ACTOR=... prep log ...).
     let at = 0
-    while (at < words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[at] ?? '')) at++
+    for (; at < words.length; at++) {
+      const m = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(words[at] ?? '')
+      if (!m) break
+      vars.set(m[1]!, expand(unquote(m[2]!), vars))
+    }
     if (!/(^|\/)prep$/.test(words[at] ?? '')) continue
     const sub = words[at + 1] ?? ''
     if (sub === 'new') {
-      const id = ISSUE_ID.exec(output)?.[1]
+      const id = lastId(output)
       if (id) found = id
       continue
     }
     if (!FOLLOWED.has(sub)) continue
-    const ref = firstPositional(words.slice(at + 2))
+    const args = words.slice(at + 2).map(w => expand(w, vars))
+    const ref = firstPositional(args)
     if (ref) found = ref
+    else if (args.some(a => a.startsWith('$'))) found = lastId(output) ?? found
   }
   return found
+}
+
+function expand(word: string, vars: Map<string, string>): string {
+  return word.replace(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g, (all, name: string) => vars.get(name) ?? all)
+}
+
+function lastId(output: string): string | undefined {
+  return [...output.matchAll(new RegExp(ISSUE_ID, 'g'))].pop()?.[1]
 }
 
 // Heredoc bodies are text, not commands: a requirement may mention prep guide.
