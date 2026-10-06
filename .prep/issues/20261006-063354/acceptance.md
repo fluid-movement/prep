@@ -1,0 +1,4 @@
+- [ ] prep import creates an Import existing work research issue (tag import) with a guiding context and criteria, prints prep guide <id>, and refuses while one is unresolved
+- [ ] The guiding context covers asking for sources, writing candidates as findings for review, skipping candidates whose Source line prep list --text finds, and creating open issues with prep new and a Source: line
+- [ ] --json output and tests in domain and cli cover the planned issue and the refusal
+- [ ] The skill, the CLI help and the CLI and agent context knowledge entries describe prep import

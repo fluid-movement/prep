@@ -1,0 +1,5 @@
+- [ ] prep new creates ULID IDs (26 characters, Crockford base32); two issues created in the same millisecond still get distinct IDs that sort by creation
+- [ ] Timestamp IDs stay valid everywhere; IDs, tree order and query tie-breaks order mixed trees by creation time
+- [ ] The TUI shows a ULID as its last 6 characters, and commands accept any unique suffix of either format
+- [ ] prep check accepts both formats and its bad-ID message names both; the contract corpus has a valid tree with ULID and mixed IDs
+- [ ] Storage format, domain and TUI knowledge entries and the skill describe ULIDs

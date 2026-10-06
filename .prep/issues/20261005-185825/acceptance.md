@@ -1,0 +1,3 @@
+- [ ] findings.md describes what a Claude Code on the web session offers at start (setup scripts or hooks, network, PATH, OS and architecture), with evidence from a real session
+- [ ] findings.md recommends how a cloud session gets the prep binary (for example the SessionStart hook installing a pinned release) and what a fallback must guarantee when it cannot, with the trade-offs
+- [ ] Follow-up issues for the recommended changes exist (plugin hook, install script, skill text or a CI check), linked from the findings

@@ -1,0 +1,6 @@
+Knowledge: [Agent context](/features/agent-context.md), [Issue lifecycle](/features/lifecycle.md), [CLI](/components/cli.md), [Domain package](/components/domain.md).
+
+- Model to follow: the knowledge bootstrap. `internal/domain/bootstrap.go` plans issues with guiding text (`PlanBootstrap`: a parent, a research child with a step-by-step context and criteria). `prep knowledge bootstrap` writes them (`internal/cli/write.go`, `bootstrap`), and prime and guide surface them (`BootstrapAlert`). The import works the same way, with existing commands only: `prep new` creates issues, and `prep list --text` finds an issue whose requirement names a source.
+- Sources are project-specific (the user's call), so there are no per-source importers. The guiding text names the usual places (TODO and FIXME comments, GitHub issues through `gh`, docs with task lists, other trackers) and tells the agent to ask the user which apply.
+- An imported issue's requirement carries a line `Source: <link or path:line>`. Re-running skips a candidate whose source a `prep list --text "<source>"` already finds. Imported issues are open, so they go through define like any other. Nothing is kept in sync.
+- New issues created in one run arrive in the same second today; the ULID issue (20261006-083752) makes that moot, and `nextStamp` handles it meanwhile.

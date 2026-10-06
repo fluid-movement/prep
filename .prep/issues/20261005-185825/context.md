@@ -1,0 +1,6 @@
+Knowledge: [Claude Code integration](/components/claude-code.md), [Release, install and update](/components/release.md), [Harness setup and user configuration](/components/setup.md), [Agent context](/features/agent-context.md).
+
+- Today's integration: the plugin in `plugins/claude-code` (served from this repository as its own marketplace, `.claude-plugin/marketplace.json`). Its SessionStart hook (`hooks/hooks.json`) runs `prep prime --hook` only when `prep` is on the PATH, and stays silent otherwise. The skill (`skills/prep`, also printed by `prep skill`) has a "Without the binary" section that tells agents to edit the files directly.
+- Install: `install.sh` (curl | sh) fetches a GitHub release archive and verifies it against `checksums.txt`; `prep update` does the same in Go (`internal/update`). Releases come from GoReleaser on `v*` tags. No release is published yet (Release 0.1.0 publishes the first).
+- In this repository a cloud session can also build prep from source (`go build ./cmd/prep`) when Go is available; other projects cannot.
+- A cloud session running this research is itself the test environment: record what it finds (OS, architecture, network access to github.com, whether hooks run, writable PATH directories, how setup scripts or environment configuration work) as evidence.
