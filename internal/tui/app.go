@@ -797,10 +797,15 @@ func (m *Model) relations(id string) []relation {
 	}
 	i := m.tree.Issues[id]
 	var out []relation
-	if i.Parent != "" && m.tree.Issues[i.Parent] != nil {
-		out = append(out, relation{"parent", i.Parent})
+	// Ancestors, root first: the breadcrumb.
+	anc := m.tree.Ancestors(id)
+	for k := len(anc) - 1; k >= 0; k-- {
+		if m.tree.Issues[anc[k]] != nil {
+			out = append(out, relation{"path", anc[k]})
+		}
 	}
-	for _, c := range m.tree.Children(id) {
+	_ = i.Parent
+	for _, c := range m.tree.ByPriority(m.tree.Children(id)) {
 		out = append(out, relation{"child", c})
 	}
 	for _, d := range i.DependsOn {
@@ -1105,6 +1110,87 @@ func shortID(id string) string {
 	return id
 }
 
+// relationBlock draws the detail's links by their shape: ancestors as a
+// breadcrumb, children as a tree under their progress, dependencies as
+// arrows ("← needs" what this waits on, "→ unblocks" what waits on it).
+// Tab walks them in this order; a window keeps the selected one in view.
+func (m *Model) relationBlock(id string, rels []relation, focused bool, inner int) []string {
+	if len(rels) == 0 {
+		return nil
+	}
+	sub := m.th.S.Subtle
+	var path []string
+	type line struct {
+		text string
+		rel  int // index into rels, -1 for a heading
+	}
+	var lines []line
+	link := func(k int, lead string) line {
+		rid := rels[k].id
+		r := m.issueRow(rid)
+		return line{ui.LinkLine(m.th, ui.Link{Lead: lead, State: m.tree.State(rid), ID: shortID(rid), Priority: m.tree.Issues[rid].Priority, Note: r.Note, Title: m.tree.Issues[rid].Title}, focused && k == m.relIdx, inner), k}
+	}
+	var children []int
+	for k, r := range rels {
+		switch r.label {
+		case "path":
+			title := ui.Fit(m.tree.Issues[r.id].Title, 32)
+			if focused && k == m.relIdx {
+				title = m.th.R.NewStyle().Foreground(m.th.C.Accent).Background(m.th.C.Selection).Bold(true).Render(title)
+			} else {
+				title = m.th.S.Muted.Render(title)
+			}
+			path = append(path, title)
+		case "child":
+			children = append(children, k)
+		}
+	}
+	var out []string
+	if len(path) > 0 {
+		out = append(out, ui.Fit(sub.Render("↑ ")+strings.Join(path, sub.Render(" › ")), inner))
+	}
+	if len(children) > 0 {
+		p := m.tree.ChildProgress(id)
+		lines = append(lines, line{m.th.S.Muted.Render("Children ") + ui.Progress(m.th, p.Done+p.Dropped, p.Total), -1})
+		for n, k := range children {
+			lead := "├─ "
+			if n == len(children)-1 {
+				lead = "└─ "
+			}
+			lines = append(lines, link(k, sub.Render(lead)))
+		}
+	}
+	for k, r := range rels {
+		switch r.label {
+		case "depends on":
+			lead := sub.Render("← needs ")
+			if !m.tree.State(r.id).Terminal() {
+				lead = m.th.R.NewStyle().Foreground(m.th.C.Warning).Render("← needs ")
+			}
+			lines = append(lines, link(k, lead))
+		case "blocks":
+			lines = append(lines, link(k, sub.Render("→ unblocks ")))
+		}
+	}
+	// Window the lines around the selected link.
+	sel := 0
+	for n, l := range lines {
+		if l.rel == m.relIdx {
+			sel = n
+		}
+	}
+	start := clamp(sel-maxRelations/2, 0, max(0, len(lines)-maxRelations))
+	for n := start; n < len(lines) && n < start+maxRelations; n++ {
+		out = append(out, lines[n].text)
+	}
+	if hidden := len(lines) - maxRelations; hidden > 0 {
+		out = append(out, sub.Render(fmt.Sprintf("  … %d more · tab moves", hidden)))
+	} else if focused {
+		out = append(out, sub.Render("  tab moves · enter opens"))
+	}
+	return append(out, "")
+}
+
 func (m *Model) detailPane(w, h int) string {
 	id := m.selected()
 	inner := w - 2 - 2*theme.Pad
@@ -1119,20 +1205,7 @@ func (m *Model) detailPane(w, h int) string {
 		m.relFor, m.relIdx = id, 0
 	}
 	m.relIdx = clamp(m.relIdx, 0, len(rels)-1)
-	var block []string
-	if len(rels) > 0 {
-		hint := ""
-		if focused {
-			hint = " · tab to move, enter to open"
-		}
-		block = append(block, m.th.S.Muted.Render(fmt.Sprintf("Related %d/%d", m.relIdx+1, len(rels)))+m.th.S.Subtle.Render(hint))
-		start := clamp(m.relIdx-maxRelations/2, 0, max(0, len(rels)-maxRelations))
-		for k := start; k < len(rels) && k < start+maxRelations; k++ {
-			rid := rels[k].id
-			block = append(block, ui.LinkRow(m.th, rels[k].label, m.tree.State(rid), shortID(rid), m.tree.Issues[rid].Title, focused && k == m.relIdx, inner))
-		}
-		block = append(block, "")
-	}
+	block := m.relationBlock(id, rels, focused, inner)
 
 	key := fmt.Sprintf("%s|%d|%d", id, inner, m.gen)
 	if key != m.docKey {

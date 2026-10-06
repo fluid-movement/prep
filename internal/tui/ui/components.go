@@ -294,6 +294,44 @@ func Fit(s string, width int) string {
 	return ansi.Truncate(s, width, "…")
 }
 
+// Link is one navigable issue in the detail's relations block. Its Lead
+// says how it relates by shape rather than by a label: tree lines for
+// children, an arrow for dependencies.
+type Link struct {
+	Lead     string // pre-rendered: "├─ ", "← needs ", ...
+	State    domain.State
+	ID       string
+	Priority domain.Priority
+	Note     string // pre-rendered progress or status, after the ID
+	Title    string
+}
+
+// LinkLine renders a Link with the list's row grammar: state glyph, ID,
+// note, priority mark, title. The selected one gets the selection marker
+// and background.
+func LinkLine(t *theme.Theme, l Link, selected bool, width int) string {
+	marker := "  "
+	idStyle, titleStyle := t.S.Muted, t.S.Body
+	if selected {
+		marker = t.R.NewStyle().Foreground(t.C.Accent).Render("▌ ")
+		idStyle, titleStyle = t.R.NewStyle().Foreground(t.C.Accent), t.S.Heading
+	}
+	g, ok := stateGlyphs[l.State]
+	if !ok {
+		g = "?"
+	}
+	line := marker + l.Lead + t.R.NewStyle().Foreground(t.State(l.State)).Render(g) + " " + idStyle.Render(l.ID) + " "
+	if l.Note != "" {
+		line += l.Note + " "
+	}
+	line += PriorityMark(t, l.Priority) + titleStyle.Render(l.Title)
+	line = Fit(line, width)
+	if selected {
+		return t.R.NewStyle().Background(t.C.Selection).Width(width).Render(line)
+	}
+	return line
+}
+
 // LinkWidth is the label column of a link row.
 const LinkWidth = 11
 

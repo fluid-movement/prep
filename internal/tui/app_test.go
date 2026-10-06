@@ -410,11 +410,13 @@ func TestHierarchy(t *testing.T) {
 	for _, r := range m.relations(m.selected()) {
 		got = append(got, r.label+":"+r.id)
 	}
-	wantRels := []string{"parent:" + ids["export"], "blocks:" + ids["json"]}
+	wantRels := []string{"path:" + ids["export"], "blocks:" + ids["json"]}
 	if strings.Join(got, ",") != strings.Join(wantRels, ",") {
 		t.Fatalf("relations = %v, want %v", got, wantRels)
 	}
-	if v := ansi.Strip(m.View()); !strings.Contains(v, "Related 1/2") {
+	// Links show by shape: the parent as a breadcrumb, what waits on this
+	// issue behind an arrow, a child parent with its progress.
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "↑ Export") || !strings.Contains(v, "→ unblocks ◐ 090300 ■■■■■ 0/1 JSON writer") {
 		t.Fatalf("relations block missing:\n%s", v)
 	}
 	keys(m, "tab", "enter")
@@ -775,6 +777,29 @@ func TestContextRowsShowProgress(t *testing.T) {
 		t.Fatalf("context row without progress: %q", line)
 	}
 	_ = ids
+}
+
+func TestRelationsByShape(t *testing.T) {
+	p, ids := sample(t)
+	m := openModel(t, p, 120, 30)
+	run(m, "6")
+	m.selectInCurrent(ids["export"])
+	v := ansi.Strip(m.View())
+	for _, want := range []string{"Children ■■■■■ 0/2", "├─ ▶ 090200 CSV writer", "└─ ◐ 090300 ■■■■■ 0/1 JSON writer"} {
+		if !strings.Contains(v, want) {
+			t.Fatalf("children tree lacks %q:\n%s", want, v)
+		}
+	}
+	m.selectInCurrent(ids["json"])
+	v = ansi.Strip(m.View())
+	for _, want := range []string{"↑ Export", "← needs ▶ 090200 CSV writer", "└─ ○ 090400 JSON schema"} {
+		if !strings.Contains(v, want) {
+			t.Fatalf("relations lack %q:\n%s", want, v)
+		}
+	}
+	if strings.Contains(v, "child ") || strings.Contains(v, "depends on") {
+		t.Fatalf("label column still drawn:\n%s", v)
+	}
 }
 
 func TestCreateWizard(t *testing.T) {
