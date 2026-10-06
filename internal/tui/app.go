@@ -134,7 +134,8 @@ type Model struct {
 	diagDone bool
 
 	modal         *modal
-	confirm       string            // a pending second key press: issue|op for >, delete|view in settings
+	confirm       string            // a pending second key press: delete|view in settings
+	moving        bool              // settings: the selected view moves with j/k
 	setIdx        int               // selected settings row: 0 commit mode, then the views
 	pending       map[string]string // issue|field: edited text a rejected write left
 	pendingSelect string            // issue to select after the next load
@@ -441,8 +442,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	s := k.String()
+	if s == "?" {
+		return m.openHelp()
+	}
 	// A second press confirms; any other key cancels the question.
-	if m.confirm != "" && s != ">" && !(m.screen == screenSettings && s == "d") {
+	if m.confirm != "" && !(m.screen == screenSettings && s == "d") {
 		m.confirm, m.notice = "", ""
 	}
 	// The settings screen takes digits for its rows (view n is tab n).
@@ -493,7 +497,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	if m.screen != screenIssues {
-		if s == "esc" {
+		if s == "esc" && !m.moving {
 			m.screen = screenIssues
 			return nil
 		}
@@ -518,18 +522,12 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		}
 		return nil
 	case "e":
-		return m.openText(m.selected(), "requirement")
-	case "E":
-		return m.openText(m.selected(), "context")
-	case "K":
-		return m.directCriteria()
+		return m.openEditMenu()
 	case "i":
 		if m.tree != nil && m.selected() != "" {
 			return m.openPriority()
 		}
 		return nil
-	case ">":
-		return m.nextTransition()
 	}
 	if m.focus == focusDetail {
 		return m.detailKey(s, k)
@@ -659,8 +657,9 @@ func (m *Model) detailKey(s string, k tea.KeyMsg) tea.Cmd {
 				step = -1
 			}
 			m.relIdx = (m.relIdx + step + len(rels)) % len(rels)
+			return nil
 		}
-		return nil
+		return m.flash("no linked issues: no parent, children or dependencies")
 	case "enter":
 		if len(rels) > 0 {
 			return m.jump(rels[clamp(m.relIdx, 0, len(rels)-1)].id, true)
@@ -887,13 +886,108 @@ func toneIf(cond bool, t ui.Tone) ui.Tone {
 	return ui.ToneMuted
 }
 
+// binding is one entry of a screen's keymap. Essential ones show in the
+// footer; ? shows them all, grouped.
+type binding struct {
+	group     string
+	key       ui.Key
+	essential bool
+}
+
+func bind(group, keys, desc string, essential bool) binding {
+	return binding{group, ui.Key{Keys: keys, Desc: desc}, essential}
+}
+
 var (
-	listKeys     = []ui.Key{{Keys: "↑↓", Desc: "move"}, {Keys: "enter", Desc: "details"}, {Keys: "a", Desc: "actions"}, {Keys: ">", Desc: "next step"}, {Keys: "n", Desc: "new"}, {Keys: "e/E", Desc: "requirement/context"}, {Keys: "K", Desc: "criteria"}, {Keys: "i", Desc: "priority"}, {Keys: "/", Desc: "filter"}, {Keys: "→/←", Desc: "into/out of parent"}, {Keys: "p", Desc: "parent"}, {Keys: "t", Desc: "tree/flat"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "tab/1-9", Desc: "views"}, {Keys: "q", Desc: "quit"}}
-	filterKeys   = []ui.Key{{Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
-	settingsKeys = []ui.Key{{Keys: "↑↓/1-9", Desc: "select"}, {Keys: "space", Desc: "commit mode"}, {Keys: "enter", Desc: "edit view"}, {Keys: "n", Desc: "add view"}, {Keys: "d d", Desc: "delete"}, {Keys: "J/K", Desc: "move"}, {Keys: "esc", Desc: "back"}}
-	pageKeys     = []ui.Key{{Keys: "↑↓ pgup/pgdn", Desc: "scroll"}, {Keys: "esc", Desc: "back"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "q", Desc: "quit"}}
-	detailKeys   = []ui.Key{{Keys: "a", Desc: "actions"}, {Keys: ">", Desc: "next step"}, {Keys: "e/E", Desc: "requirement/context"}, {Keys: "K", Desc: "criteria"}, {Keys: "i", Desc: "priority"}, {Keys: "tab", Desc: "next link"}, {Keys: "enter", Desc: "open"}, {Keys: "⌫", Desc: "back"}, {Keys: "↑↓", Desc: "scroll"}, {Keys: "esc", Desc: "list"}, {Keys: "p", Desc: "parent"}, {Keys: "y", Desc: "copy id"}, {Keys: "q", Desc: "quit"}}
+	issueBindings = []binding{
+		bind("Issue", "a", "actions (letters run them)", true),
+		bind("Issue", "e", "edit: r requirement · c context · t title", true),
+		bind("Issue", "i", "priority: c critical · h high · m medium · l low", true),
+		bind("Issue", "n", "new issue (under the focused parent)", true),
+		bind("Issue", "y", "copy the ID", false),
+		bind("Issue", "p", "go to the parent", false),
+	}
+	viewBindings = []binding{
+		bind("Views", "/", "filter (prep list flags; words match titles)", true),
+		bind("Views", "tab 1-9", "switch view", false),
+		bind("Views", "t", "tree or flat", false),
+	}
+	screenBindings = []binding{
+		bind("Screens", "c", "check", false),
+		bind("Screens", "s", "settings", false),
+		bind("Screens", "r", "reload", false),
+		bind("Screens", "?", "all keys", true),
+		bind("Screens", "q", "quit", true),
+	}
+	listBindings = concat([]binding{
+		bind("Move", "↑↓ j k", "move", false),
+		bind("Move", "g G pgup pgdn", "top, bottom, page", false),
+		bind("Move", "enter → l", "details, or into a parent", false),
+		bind("Move", "← h esc", "out of a parent; esc clears a filter", false),
+	}, issueBindings, viewBindings, screenBindings)
+	detailBindings = concat([]binding{
+		bind("Move", "↑↓ pgup pgdn", "scroll", false),
+		bind("Move", "tab", "next linked issue (parent, children, dependencies)", false),
+		bind("Move", "enter", "open the linked issue", false),
+		bind("Move", "⌫", "back to the previous issue", false),
+		bind("Move", "esc ← h", "back to the list", true),
+	}, issueBindings, screenBindings)
+	settingsBindings = []binding{
+		bind("Settings", "↑↓ j k 1-9", "select (n is view n)", false),
+		bind("Settings", "space", "toggle the commit mode", true),
+		bind("Settings", "enter", "edit the view", true),
+		bind("Settings", "n", "add a view", true),
+		bind("Settings", "d d", "delete the view", true),
+		bind("Settings", "m", "move the view: j k or arrows, enter when done", true),
+		bind("Settings", "esc", "back", true),
+		bind("Screens", "c", "check", false),
+		bind("Screens", "?", "all keys", true),
+	}
+	pageBindings = []binding{
+		bind("Page", "↑↓ pgup pgdn", "scroll", false),
+		bind("Page", "esc", "back", true),
+		bind("Screens", "c", "check", true),
+		bind("Screens", "s", "settings", true),
+		bind("Screens", "?", "all keys", true),
+		bind("Screens", "q", "quit", true),
+	}
+	filterKeys = []ui.Key{{Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
 )
+
+func concat(lists ...[]binding) []binding {
+	var out []binding
+	for _, l := range lists {
+		out = append(out, l...)
+	}
+	return out
+}
+
+// bindings is the keymap of what the screen shows now.
+func (m *Model) bindings() []binding {
+	switch {
+	case m.screen == screenSettings && m.tree != nil:
+		return settingsBindings
+	case m.screen != screenIssues:
+		return pageBindings
+	case m.focus == focusDetail:
+		return detailBindings
+	}
+	return listBindings
+}
+
+// essentials are the footer's keys, their descriptions cut to the first words.
+func essentials(bs []binding) []ui.Key {
+	var out []ui.Key
+	for _, x := range bs {
+		if x.essential {
+			k := x.key
+			k.Desc = strings.SplitN(k.Desc, ":", 2)[0]
+			k.Desc = strings.SplitN(k.Desc, " (", 2)[0]
+			out = append(out, k)
+		}
+	}
+	return out
+}
 
 func (m *Model) footer() string {
 	switch {
@@ -905,14 +999,8 @@ func (m *Model) footer() string {
 		return ui.Fit(ui.Error(m.th, m.err.Error()), m.w)
 	case m.filtering:
 		return ui.KeyHelp(m.th, filterKeys, m.w)
-	case m.screen == screenSettings && m.tree != nil:
-		return ui.KeyHelp(m.th, settingsKeys, m.w)
-	case m.screen != screenIssues:
-		return ui.KeyHelp(m.th, pageKeys, m.w)
-	case m.focus == focusDetail:
-		return ui.KeyHelp(m.th, detailKeys, m.w)
 	}
-	return ui.KeyHelp(m.th, listKeys, m.w)
+	return ui.KeyHelp(m.th, essentials(m.bindings()), m.w)
 }
 
 func (m *Model) listTitle(tb *tab) string {

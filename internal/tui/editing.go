@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/fluid-movement/prep/internal/domain"
+	"github.com/fluid-movement/prep/internal/tui/ui"
 )
 
 // --- multi-line text ---
@@ -143,85 +144,67 @@ func (m *Model) handleAreaEdited(msg areaEditedMsg) tea.Cmd {
 	return nil
 }
 
-// directCriteria opens the checklist dialog, or says why it cannot.
-func (m *Model) directCriteria() tea.Cmd {
+// openEditMenu offers what can be edited on the selected issue: e r
+// requirement, e c context, e t title.
+func (m *Model) openEditMenu() tea.Cmd {
 	id := m.selected()
 	if id == "" || m.tree == nil {
 		return nil
 	}
-	switch {
-	case m.tree.State(id).Terminal():
-		return m.flashErr(fmt.Errorf("resolved issues are history"))
-	case len(m.tree.Issues[id].Criteria) == 0:
-		return m.flashErr(fmt.Errorf("%s has no criteria yet", shortID(id)))
+	if m.tree.State(id).Terminal() {
+		return m.flashErr(fmt.Errorf("resolved issues are history; only their priority and tags change"))
 	}
-	return m.openCriteria()
+	m.modal = &modal{kind: modalMenu, id: id, heading: "Edit", items: []action{
+		{key: "r", label: "Requirement", run: func() tea.Cmd { return m.openText(id, "requirement") }},
+		{key: "c", label: "Context", run: func() tea.Cmd { return m.openText(id, "context") }},
+		{key: "t", label: "Title", run: m.openRename},
+	}}
+	return nil
 }
 
-// --- next transition ---
+// --- keymap ---
 
-// nextOp is the transition > runs for an issue: acknowledging a stale
-// issue, else the first forward transition in lifecycle order. Release and
-// drop are ways out, not forward.
-func (m *Model) nextOp(id string) (domain.Op, bool) {
-	t := m.tree
-	if t.Stale(id) && t.Applicable(id, domain.OpAck) {
-		return domain.OpAck, true
-	}
-	for _, op := range domain.Ops {
-		if op == domain.OpAck || op == domain.OpRelease || op == domain.OpDrop {
-			continue
-		}
-		if t.Applicable(id, op) {
-			return op, true
-		}
-	}
-	return "", false
+// openHelp shows the full keymap of the current screen, grouped, and on the
+// issue screens the action menu's sequences for the selected issue.
+func (m *Model) openHelp() tea.Cmd {
+	m.modal = &modal{kind: modalHelp}
+	return nil
 }
 
-// nextTransition runs on >: the first press names the transition and asks
-// for a second; complete opens its dialog. A transition that does not apply
-// says why.
-func (m *Model) nextTransition() tea.Cmd {
-	id := m.selected()
-	if id == "" || m.tree == nil {
-		return nil
-	}
-	op, ok := m.nextOp(id)
-	if !ok {
-		return m.flashErr(fmt.Errorf("%s has no next step: it is %s", shortID(id), m.tree.State(id)))
-	}
-	if op == domain.OpComplete {
-		if i := m.tree.Issues[id]; i.Kind == domain.KindCode && !m.tree.IsParent(id) {
-			return m.flashErr(fmt.Errorf("code issues are completed by an agent with commit evidence"))
+func (m *Model) helpLines(inner int) []string {
+	bs := m.bindings()
+	if m.screen == screenIssues && m.tree != nil && m.selected() != "" {
+		for _, a := range m.actions() {
+			desc := a.label
+			if a.reason != "" {
+				desc += " (not now: " + a.reason + ")"
+			}
+			bs = append(bs, bind("Action menu", "a "+a.key, desc, false))
 		}
-		m.confirm = ""
-		return m.openComplete()
 	}
-	if reason := m.gate(id, op); reason != "" {
-		m.confirm = ""
-		return m.flashErr(fmt.Errorf("%s: %s", op, reason))
+	var out []string
+	group := ""
+	for _, x := range bs {
+		if x.group != group {
+			if group != "" {
+				out = append(out, "")
+			}
+			group = x.group
+			out = append(out, m.th.S.Heading.Render(group))
+		}
+		key := m.th.S.Key.Render(fmt.Sprintf("%-15s", x.key.Keys))
+		out = append(out, ui.Fit("  "+key+m.th.S.KeyDesc.Render(x.key.Desc), inner))
 	}
-	if m.confirm != id+"|"+string(op) {
-		m.confirm = id + "|" + string(op)
-		m.notice, m.noticeTone = fmt.Sprintf("%s %s? press > again", op, shortID(id)), 0
-		return nil
-	}
-	m.confirm = ""
-	m.notice = ""
-	return m.transition(id, op, pastTense(op))()
+	return out
 }
 
-func pastTense(op domain.Op) string {
-	switch op {
-	case domain.OpReady:
-		return "marked ready"
-	case domain.OpAck:
-		return "acknowledged"
-	case domain.OpClaim:
-		return "claimed"
+// helpColumn re-fits keymap lines to a column width.
+func (m *Model) helpColumn(lines []string, width int) string {
+	out := make([]string, len(lines))
+	for k, l := range lines {
+		out[k] = ui.Fit(l, width)
 	}
-	return string(op) + "d"
+	return strings.Join(out, "\n")
 }
 
 // --- settings ---
@@ -245,9 +228,12 @@ func (m *Model) saveSettings(what string, cfg domain.Config, fromModal bool) tea
 
 // settingsKey handles the settings screen: arrows or digits select a row
 // (digit n is view n, the tab it shows as), space or enter toggles the
-// commit mode, enter edits a view, n adds one, d d deletes it, and
-// shift+arrows or K and J move it.
+// commit mode, enter edits a view, n adds one, d d deletes it, and m starts
+// moving it.
 func (m *Model) settingsKey(s string) tea.Cmd {
+	if m.moving {
+		return m.moveKey(s)
+	}
 	rows := m.settingsRows()
 	m.setIdx = clamp(m.setIdx, 0, rows-1)
 	cfg := m.settingsConfig()
@@ -287,19 +273,38 @@ func (m *Model) settingsKey(s string) tea.Cmd {
 		cfg.ViewOrder = slices.Delete(cfg.ViewOrder, view, view+1)
 		delete(cfg.Views, name)
 		return m.saveSettings("deleted view "+name, cfg, false)
-	case "shift+up", "K", "shift+down", "J":
-		to := view - 1
-		if s == "shift+down" || s == "J" {
-			to = view + 1
+	case "m":
+		if view >= 0 {
+			m.moving = true
+			m.notice, m.noticeTone = "moving "+cfg.ViewOrder[view]+": j/k or arrows, enter when done", 0
 		}
-		if view < 0 || to < 0 || to >= len(cfg.ViewOrder) {
-			return nil
-		}
-		cfg.ViewOrder[view], cfg.ViewOrder[to] = cfg.ViewOrder[to], cfg.ViewOrder[view]
-		m.setIdx = to + 1
-		return m.saveSettings("moved view "+cfg.ViewOrder[to], cfg, false)
 	}
 	return nil
+}
+
+// moveKey moves the selected view while in move mode: j/k or arrows move
+// it one place (one write each), enter or esc ends the mode.
+func (m *Model) moveKey(s string) tea.Cmd {
+	cfg := m.settingsConfig()
+	view := m.setIdx - 1
+	to := view
+	switch s {
+	case "up", "k":
+		to--
+	case "down", "j":
+		to++
+	case "enter", "esc", "m":
+		m.moving, m.notice = false, ""
+		return nil
+	default:
+		return nil
+	}
+	if view < 0 || to < 0 || to >= len(cfg.ViewOrder) {
+		return nil
+	}
+	cfg.ViewOrder[view], cfg.ViewOrder[to] = cfg.ViewOrder[to], cfg.ViewOrder[view]
+	m.setIdx = to + 1
+	return m.saveSettings("moved view "+cfg.ViewOrder[to], cfg, false)
 }
 
 // openViewEdit edits a saved view's name and query, or adds one when name is empty.

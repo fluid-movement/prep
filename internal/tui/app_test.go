@@ -194,13 +194,21 @@ func TestScreenSnapshots(t *testing.T) {
 		m.Update(tea.WindowSizeMsg{Width: w, Height: h})
 		keys(m, "6", "down", "n")
 		typeIn(m, "Stream rows")
-		run(m, "tab")
-		run(m, "tab")
+		run(m, "enter")
+		golden(t, fmt.Sprintf("dialog-create-kind-%dx%d", w, h), m.View())
+		run(m, "c")
 		typeIn(m, "Rows go to stdout.")
 		checkSize(t, m.View(), w, h)
 		golden(t, fmt.Sprintf("dialog-create-%dx%d", w, h), m.View())
 		run(m, "esc")
+		run(m, "esc")
+		run(m, "esc")
+		run(m, "?")
+		checkSize(t, m.View(), w, h)
+		golden(t, fmt.Sprintf("dialog-keys-%dx%d", w, h), m.View())
+		run(m, "esc")
 		run(m, "e")
+		run(m, "r")
 		checkSize(t, m.View(), w, h)
 		golden(t, fmt.Sprintf("dialog-requirement-%dx%d", w, h), m.View())
 		run(m, "esc")
@@ -683,10 +691,14 @@ func TestActionMenu(t *testing.T) {
 	}
 	run(m, "esc")
 
-	// The direct key says why a transition does not apply.
-	run(m, ">")
-	if !strings.Contains(m.notice, "Open questions section") {
-		t.Fatalf("> on an issue with open questions: notice %q", m.notice)
+	// ? lists every sequence, the ones that do not apply with their reason.
+	run(m, "?")
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "a d") || !strings.Contains(v, "Define (not now") || !strings.Contains(v, "a i") {
+		t.Fatalf("keymap lacks the action menu's sequences:\n%s", v)
+	}
+	run(m, "x") // any key closes
+	if m.modal != nil {
+		t.Fatal("? dialog did not close")
 	}
 
 	m.selectInCurrent(ids["csv"])
@@ -699,38 +711,21 @@ func TestActionMenu(t *testing.T) {
 	run(m, "esc")
 }
 
-func TestDirectKeys(t *testing.T) {
+func TestEditMenuAndKeys(t *testing.T) {
 	p, ids := sample(t)
-	edits := []string{"Write rows with a header line."}
+	var edits []string
 	m := editable(t, p, &edits)
 	run(m, "6")
-
-	// > names the next transition and runs it on the second press.
-	m.selectInCurrent(ids["json"])
-	if st, _ := stateOf(t, p, ids["json"]); st != domain.StateDefined {
-		t.Fatalf("fixture: json is %s", st)
-	}
 	m.selectInCurrent(ids["schema"])
-	run(m, ">")
-	if !strings.Contains(m.notice, "define 090400? press > again") {
-		t.Fatalf("first >: notice %q", m.notice)
-	}
-	run(m, "down") // any other key cancels
-	run(m, "up")
-	if m.confirm != "" {
-		t.Fatal("another key did not cancel the confirmation")
-	}
-	run(m, ">")
-	run(m, ">")
-	if st, _ := stateOf(t, p, ids["schema"]); st != domain.StateDefined {
-		t.Fatalf("after > >: %s", st)
-	}
 
-	// E edits the context inline; text typed in the dialog is saved with ctrl+s.
-	m.selectInCurrent(ids["schema"])
-	run(m, "E")
+	// e c edits the context inline; text typed in the dialog is saved with ctrl+s.
+	run(m, "e")
+	if m.modal == nil || m.modal.heading != "Edit" {
+		t.Fatalf("e opened %+v", m.modal)
+	}
+	run(m, "c")
 	if m.modal == nil || m.modal.kind != modalText || m.modal.field != "context" {
-		t.Fatalf("E opened %+v", m.modal)
+		t.Fatalf("e c opened %+v", m.modal)
 	}
 	typeIn(m, "Use JSON Schema 2020-12.")
 	run(m, "ctrl+s")
@@ -738,31 +733,62 @@ func TestDirectKeys(t *testing.T) {
 		t.Fatalf("context = %q", got)
 	}
 
-	// K opens the checklist, or says why not; i opens the priority picker.
-	run(m, "K")
-	if m.modal != nil || !strings.Contains(m.notice, "no criteria yet") {
-		t.Fatalf("K without criteria: modal %v notice %q", m.modal, m.notice)
-	}
+	// i h sets the priority without the action menu.
 	run(m, "i")
 	run(m, "h")
 	if got := issue(t, p, ids["schema"]).Priority; got != domain.PriorityHigh {
 		t.Fatalf("i h: priority %q", got)
 	}
+
+	// Shifted letters and > do nothing; the footer keeps to the essentials.
+	for _, k := range []string{"E", "K", ">"} {
+		run(m, k)
+		if m.modal != nil {
+			t.Fatalf("%s opened %+v", k, m.modal)
+		}
+	}
+	m.notice = ""
+	if f := ansi.Strip(m.footer()); !strings.Contains(f, "? all keys") || strings.Contains(f, "tree") {
+		t.Fatalf("footer: %q", f)
+	}
+
+	// tab in the detail of an issue without links says so.
+	m.selectInCurrent(ids["survey"])
+	run(m, "enter")
+	run(m, "tab")
+	if !strings.Contains(m.notice, "no linked issues") {
+		t.Fatalf("tab without links: notice %q", m.notice)
+	}
 }
 
-func TestCreateWithRequirement(t *testing.T) {
+func TestCreateWizard(t *testing.T) {
 	p, _ := sample(t)
 	edits := []string{"Rows go to stdout.\n\nOne per line."}
 	m := editable(t, p, &edits)
 	run(m, "6")
 	run(m, "n")
+	run(m, "enter")
+	if m.modal.step != 0 || m.modal.err == "" {
+		t.Fatalf("enter without a title moved on: %+v", m.modal.step)
+	}
 	typeIn(m, "Stream rows")
-	run(m, "tab")
-	run(m, "tab") // to the requirement
+	run(m, "enter")
+	if m.modal.step != 1 || !strings.Contains(ansi.Strip(m.View()), "New issue · 2/3") {
+		t.Fatalf("after the title: step %d", m.modal.step)
+	}
+	run(m, "esc") // back to the title, not out
+	if m.modal == nil || m.modal.step != 0 {
+		t.Fatal("esc did not step back")
+	}
+	run(m, "enter")
+	run(m, "r") // research, and on to the requirement
+	if m.modal.step != 2 || kinds[m.modal.kindIdx] != domain.KindResearch {
+		t.Fatalf("r: step %d kind %s", m.modal.step, kinds[m.modal.kindIdx])
+	}
 	typeIn(m, "Rows go")
 	run(m, "enter") // a new line, not a submit
 	if m.modal == nil {
-		t.Fatal("enter in the requirement submitted the dialog")
+		t.Fatal("enter in the requirement submitted the wizard")
 	}
 	run(m, "ctrl+e") // replaced by the editor's text
 	run(m, "ctrl+s")
@@ -770,8 +796,8 @@ func TestCreateWithRequirement(t *testing.T) {
 		t.Fatalf("create failed: %s", m.modal.err)
 	}
 	i := issue(t, p, m.selected())
-	if i.Title != "Stream rows" || i.Prose != "Rows go to stdout.\n\nOne per line." {
-		t.Fatalf("created %q with requirement %q", i.Title, i.Prose)
+	if i.Title != "Stream rows" || i.Kind != domain.KindResearch || i.Prose != "Rows go to stdout.\n\nOne per line." {
+		t.Fatalf("created %q (%s) with requirement %q", i.Title, i.Kind, i.Prose)
 	}
 }
 
@@ -818,11 +844,13 @@ func TestEditSettings(t *testing.T) {
 		t.Fatal("tabs did not follow the new view")
 	}
 
-	// Digits select the view row; J moves it, enter renames, d d deletes.
+	// Digits select the view row; m moves it, enter renames, d d deletes.
 	run(m, "6") // All
-	run(m, "J")
-	if c := cfg(); c.ViewOrder[5] != "Hot" || c.ViewOrder[6] != "All" {
-		t.Fatalf("after J: %v", c.ViewOrder)
+	run(m, "m")
+	run(m, "down")
+	run(m, "enter")
+	if c := cfg(); c.ViewOrder[5] != "Hot" || c.ViewOrder[6] != "All" || m.moving {
+		t.Fatalf("after m down enter: %v (moving %v)", c.ViewOrder, m.moving)
 	}
 	run(m, "6") // Hot now
 	run(m, "enter")
@@ -881,9 +909,9 @@ func TestCreateRenameAndEdit(t *testing.T) {
 	run(m, "right") // focus Export: new issues become its children
 	run(m, "n")
 	typeIn(m, "XML writer")
-	run(m, "tab")
-	run(m, "right") // kind: manual
 	run(m, "enter")
+	run(m, "m") // kind: manual
+	run(m, "ctrl+s")
 	if m.modal != nil {
 		t.Fatalf("create failed: %s", m.modal.err)
 	}
@@ -893,12 +921,12 @@ func TestCreateRenameAndEdit(t *testing.T) {
 		t.Fatalf("created issue = %+v (selected %s)", i, id)
 	}
 
-	viaEditor(m, "e")
+	viaEditor(m, "e", "r")
 	if got := issue(t, p, id).Prose; got != "Export rows as XML." {
 		t.Fatalf("requirement after editor = %q", got)
 	}
 	edits = append(edits, issue(t, p, id).Body)
-	viaEditor(m, "e")
+	viaEditor(m, "e", "r")
 	if m.notice != "no changes" {
 		t.Fatalf("unchanged editor text: notice %q", m.notice)
 	}
@@ -940,7 +968,7 @@ func TestRejectedEditKeepsText(t *testing.T) {
 	}
 	run(m, "6")
 	m.selectInCurrent(ids["survey"])
-	viaEditor(m, "e")
+	viaEditor(m, "e", "r")
 	if m.modal == nil || !strings.Contains(m.modal.err, "disk full") || m.pending[ids["survey"]+"|requirement"] != "New text" {
 		t.Fatalf("rejected edit: modal %+v pending %q", m.modal, m.pending)
 	}
@@ -953,7 +981,7 @@ func TestRejectedEditKeepsText(t *testing.T) {
 			return done(nil)
 		}
 	}
-	viaEditor(m, "e")
+	viaEditor(m, "e", "r")
 	if strings.TrimSpace(opened) != "New text" {
 		t.Fatalf("editor reopened with %q, want the rejected text", opened)
 	}
@@ -1014,12 +1042,12 @@ func TestTransitionsFromTheTUI(t *testing.T) {
 	// A manual issue through its whole lifecycle.
 	run(m, "n")
 	typeIn(m, "Announce the export")
-	run(m, "tab")
-	run(m, "right")
 	run(m, "enter")
+	run(m, "m")
+	run(m, "ctrl+s")
 	id := m.selected()
 	edits = append(edits, "Post a note in the changelog.")
-	viaEditor(m, "e")
+	viaEditor(m, "e", "r")
 	run(m, "a")
 	run(m, "d")
 	if st, _ := stateOf(t, p, id); st != domain.StateDefined {

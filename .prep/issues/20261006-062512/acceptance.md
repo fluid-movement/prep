@@ -1,5 +1,7 @@
-- [x] New issue is one dialog with title, kind and a multi-line requirement; e and E edit the requirement and context inline in a multi-line editor, ctrl+e hands the text to $EDITOR and back, ctrl+s saves, rejected text is kept
 - [x] Dialogs overlay the dimmed screen instead of replacing it
-- [x] Direct keys E, k, i and > work from list and detail and show in the footer; > asks for confirmation for input-free transitions; the action menu lists only applicable actions and a direct key that does not apply explains why
 - [x] The settings screen edits the commit mode and the saved views (add, rename, change query, reorder, delete) through PlanConfig; config.yaml keeps its header and view order; invalid queries are rejected; tabs follow right away
-- [x] Snapshots and tests cover the overlay, the create flow, inline editing, direct keys and settings edits; the TUI knowledge entry describes the new behavior
+- [x] New issue is a wizard (title, kind by letter, optional requirement; 1/3 shown; esc steps back); e r and e c edit requirement and context inline, ctrl+e hands the text to $EDITOR and back, ctrl+s saves, rejected text is kept
+- [x] Keys are unshifted letter melodies: e menu (r c t), i, n, a; no E, K, > keys; the action menu lists only applicable actions, including human transitions such as drop
+- [x] The footer shows only essential keys; ? opens the full keymap of the current screen; tab in the detail without linked issues says so
+- [x] Settings reorder via m then j/k or arrows; delete via d d
+- [x] Snapshots and tests cover the wizard, the overlay, inline editing, the edit menu, the keymap dialog and settings edits; the TUI knowledge entry describes the new behavior
