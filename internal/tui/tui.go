@@ -4,10 +4,12 @@ package tui
 
 import (
 	"io"
+	"os"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 
 	"github.com/fluid-movement/prep/internal/tui/theme"
 	"github.com/fluid-movement/prep/internal/tui/ui"
@@ -16,8 +18,8 @@ import (
 // RunGallery shows every component in a scrollable view that reflows on
 // resize, without project data.
 func RunGallery(in io.Reader, out io.Writer) error {
-	th := theme.New(lipgloss.NewRenderer(out))
-	_, err := tea.NewProgram(&gallery{th: th}, tea.WithInput(in), tea.WithOutput(out), tea.WithAltScreen(), tea.WithMouseCellMotion()).Run()
+	th := theme.New(true, colorprofile.Detect(out, os.Environ()))
+	_, err := tea.NewProgram(&gallery{th: th}, tea.WithInput(in), tea.WithOutput(out)).Run()
 	return err
 }
 
@@ -30,11 +32,17 @@ type gallery struct {
 
 var galleryKeys = []ui.Key{{Keys: "↑/↓ pgup/pgdn", Desc: "scroll"}, {Keys: "q", Desc: "quit"}}
 
-func (g *gallery) Init() tea.Cmd { return nil }
+func (g *gallery) Init() tea.Cmd { return tea.RequestBackgroundColor }
 
 func (g *gallery) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.BackgroundColorMsg:
+		*g.th = *theme.New(msg.IsDark(), g.th.Profile)
+		g.vp.SetContent(ui.Gallery(g.th, g.width-2))
+	case tea.ColorProfileMsg:
+		*g.th = *theme.New(g.th.Dark, msg.Profile)
+		g.vp.SetContent(ui.Gallery(g.th, g.width-2))
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
 			return g, tea.Quit
@@ -43,11 +51,11 @@ func (g *gallery) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		g.width = msg.Width
 		h := ui.Stack(msg.Height, 2, 2)
 		if !g.ready {
-			g.vp = viewport.New(msg.Width, h)
+			g.vp = newViewport()
 			g.ready = true
-		} else {
-			g.vp.Width, g.vp.Height = msg.Width, h
 		}
+		g.vp.SetWidth(msg.Width)
+		g.vp.SetHeight(h)
 		g.vp.SetContent(ui.Gallery(g.th, msg.Width-2))
 	}
 	var cmd tea.Cmd
@@ -55,7 +63,14 @@ func (g *gallery) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return g, cmd
 }
 
-func (g *gallery) View() string {
+func (g *gallery) View() tea.View {
+	v := tea.NewView(g.render())
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
+}
+
+func (g *gallery) render() string {
 	if !g.ready {
 		return ui.Loading(g.th, "Rendering gallery …")
 	}

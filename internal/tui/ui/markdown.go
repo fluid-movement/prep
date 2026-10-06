@@ -3,9 +3,9 @@ package ui
 import (
 	"strings"
 
-	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/glamour/ansi"
-	"github.com/charmbracelet/glamour/styles"
+	"charm.land/glamour/v2"
+	"charm.land/glamour/v2/ansi"
+	"charm.land/glamour/v2/styles"
 
 	"github.com/fluid-movement/prep/internal/tui/theme"
 )
@@ -16,7 +16,6 @@ func Markdown(t *theme.Theme, md string, width int) (string, error) {
 	r, err := glamour.NewTermRenderer(
 		glamour.WithStyles(markdownStyle(t)),
 		glamour.WithWordWrap(max(10, width)),
-		glamour.WithColorProfile(t.R.ColorProfile()),
 	)
 	if err != nil {
 		return "", err

@@ -1,0 +1,5 @@
+- [x] go.mod requires only charm.land v2 modules (bubbletea, lipgloss, bubbles, glamour) at their latest versions plus the latest charmbracelet/x modules used directly; no github.com/charmbracelet/{bubbletea,lipgloss,bubbles,glamour} v1 and no muesli/termenv remain
+- [x] prep tui, prep tui --gallery and the prep setup checklist run on v2 with the same screens, keys and colors in dark and light terminals; startup no longer blocks on the background query
+- [x] Golden snapshots for the gallery and the TUI screens pass unchanged, or every changed golden is explained in the work log
+- [x] Simplifications the v2 APIs allow are applied or recorded with the reason they were not
+- [x] The Stack and TUI design system knowledge entries name Charm v2 and describe the new theme construction

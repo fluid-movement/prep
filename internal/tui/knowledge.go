@@ -5,9 +5,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/tui/theme"
@@ -86,7 +86,7 @@ func (m *Model) attentionOf(path string) []domain.Diagnostic {
 // gives the entry the keys for scrolling, f filters, a toggles attention,
 // o goes to an issue that changed the entry, backspace returns to the
 // issue the screen was opened from.
-func (m *Model) knowledgeKey(s string, k tea.KeyMsg) tea.Cmd {
+func (m *Model) knowledgeKey(s string, k tea.KeyPressMsg) tea.Cmd {
 	paths, _ := m.knowledgePaths()
 	if m.know.onEntry {
 		switch s {
@@ -216,7 +216,7 @@ func (m *Model) knowledgeList(paths []string, err error, w, h int) string {
 	}
 	var bar []string
 	if m.filtering {
-		m.input.Width = max(1, inner-4)
+		m.input.SetWidth(max(1, inner-4))
 		bar = append(bar, m.input.View())
 		if m.filterErr != "" {
 			bar = append(bar, ui.Error(m.th, m.filterErr))
@@ -260,12 +260,12 @@ func (m *Model) knowledgeRow(path string, selected bool, width int) string {
 	marker := "  "
 	titleStyle := m.th.S.Body
 	if selected {
-		marker = m.th.R.NewStyle().Foreground(m.th.C.Accent).Render("▌ ")
+		marker = lipgloss.NewStyle().Foreground(m.th.C.Accent).Render("▌ ")
 		titleStyle = m.th.S.Heading
 	}
 	mark := "  "
 	if len(m.attentionOf(path)) > 0 {
-		mark = m.th.R.NewStyle().Foreground(m.th.C.Warning).Render("! ")
+		mark = lipgloss.NewStyle().Foreground(m.th.C.Warning).Render("! ")
 	}
 	status := e.Status
 	if status == "" {
@@ -274,7 +274,7 @@ func (m *Model) knowledgeRow(path string, selected bool, width int) string {
 	line := marker + m.th.S.Muted.Render(fmt.Sprintf("%-11s", e.Type)) + m.th.S.Subtle.Render(fmt.Sprintf("%-11s", status)) + mark + titleStyle.Render(e.Title)
 	line = ui.Fit(line, width)
 	if selected {
-		return m.th.R.NewStyle().Background(m.th.C.Selection).Width(width).Render(line)
+		return lipgloss.NewStyle().Background(m.th.C.Selection).Width(width).Render(line)
 	}
 	return line
 }
@@ -337,6 +337,7 @@ func (m *Model) entryPane(w, h int) string {
 		m.know.docKey = key
 		m.know.vp.SetContent(doc)
 	}
-	m.know.vp.Width, m.know.vp.Height = inner, h-2
+	m.know.vp.SetWidth(inner)
+	m.know.vp.SetHeight(h - 2)
 	return ui.Pane{Title: e.Path, Body: m.know.vp.View(), Focused: m.know.onEntry, Width: w, Height: h}.View(m.th)
 }

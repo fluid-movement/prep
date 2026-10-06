@@ -3,7 +3,7 @@ package ui
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/fluid-movement/prep/internal/tui/theme"
@@ -19,43 +19,27 @@ func Modal(t *theme.Theme, title, body string, width int) string {
 // Overlay draws a block centered over a background of width×height cells.
 // The background keeps its text but loses its colors and is drawn in the
 // subtle tone, so a dialog stands out while the screen behind stays readable.
+// Both are Lip Gloss layers; the block sits above the background.
 func Overlay(t *theme.Theme, background, block string, width, height int) string {
-	bg := strings.Split(background, "\n")
+	bg := strings.Split(ansi.Strip(background), "\n")
 	for len(bg) < height {
 		bg = append(bg, "")
 	}
-	bg = bg[:height]
-	fg := strings.Split(block, "\n")
-	bw := 0
-	for _, l := range fg {
-		bw = max(bw, ansi.StringWidth(l))
+	for y := range bg[:height] {
+		bg[y] = t.S.Subtle.Render(ansi.Truncate(bg[y], width, "") + strings.Repeat(" ", max(0, width-ansi.StringWidth(bg[y]))))
 	}
-	bw = min(bw, width)
-	top := max(0, (height-len(fg))/2)
-	left := max(0, (width-bw)/2)
-	out := make([]string, height)
-	for y, line := range bg {
-		plain := ansi.Strip(line)
-		if w := ansi.StringWidth(plain); w < width {
-			plain += strings.Repeat(" ", width-w)
-		}
-		k := y - top
-		if k < 0 || k >= len(fg) {
-			out[y] = t.S.Subtle.Render(ansi.Truncate(plain, width, ""))
-			continue
-		}
-		mid := ansi.Truncate(fg[k], bw, "")
-		if w := ansi.StringWidth(mid); w < bw {
-			mid += strings.Repeat(" ", bw-w)
-		}
-		out[y] = t.S.Subtle.Render(ansi.Truncate(plain, left, "")) + mid + t.S.Subtle.Render(ansi.TruncateLeft(ansi.Truncate(plain, width, ""), left+bw, ""))
-	}
-	return strings.Join(out, "\n")
+	top := max(0, (height-lipgloss.Height(block))/2)
+	left := max(0, (width-lipgloss.Width(block))/2)
+	layers := lipgloss.NewCompositor(
+		lipgloss.NewLayer(strings.Join(bg[:height], "\n")),
+		lipgloss.NewLayer(block).X(left).Y(top).Z(1),
+	)
+	return lipgloss.NewCanvas(width, height).Compose(layers).Render()
 }
 
 // Center places a block in the middle of an area.
 func Center(t *theme.Theme, block string, width, height int) string {
-	return t.R.Place(width, height, lipgloss.Center, lipgloss.Center, block)
+	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, block)
 }
 
 // MenuRow renders one action of a menu: key, label and, for an unavailable
@@ -63,9 +47,9 @@ func Center(t *theme.Theme, block string, width, height int) string {
 func MenuRow(t *theme.Theme, key, label, reason string, enabled, selected bool, width int) string {
 	marker := "  "
 	if selected {
-		marker = t.R.NewStyle().Foreground(t.C.Accent).Render("▌ ")
+		marker = lipgloss.NewStyle().Foreground(t.C.Accent).Render("▌ ")
 	}
-	keyStyle, labelStyle := t.R.NewStyle().Foreground(t.C.Accent).Bold(true), t.S.Body
+	keyStyle, labelStyle := lipgloss.NewStyle().Foreground(t.C.Accent).Bold(true), t.S.Body
 	if !enabled {
 		keyStyle, labelStyle = t.S.Subtle, t.S.Subtle
 	}
@@ -83,7 +67,7 @@ func MenuRow(t *theme.Theme, key, label, reason string, enabled, selected bool, 
 	}
 	line = Fit(line, width)
 	if selected {
-		return t.R.NewStyle().Background(t.C.Selection).Width(width).Render(line)
+		return lipgloss.NewStyle().Background(t.C.Selection).Width(width).Render(line)
 	}
 	return line
 }

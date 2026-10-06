@@ -2,10 +2,12 @@ package tui
 
 import (
 	"io"
+	"os"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 
 	"github.com/fluid-movement/prep/internal/tui/theme"
 	"github.com/fluid-movement/prep/internal/tui/ui"
@@ -39,26 +41,30 @@ func NewChecklist(th *theme.Theme, title string, items []ChecklistItem) *Checkli
 // RunChecklist asks the user and returns the final items, or ok false when
 // the user cancelled.
 func RunChecklist(in io.Reader, out io.Writer, title string, items []ChecklistItem) ([]ChecklistItem, bool, error) {
-	c := NewChecklist(theme.New(lipgloss.NewRenderer(out)), title, items)
+	c := NewChecklist(theme.New(true, colorprofile.Detect(out, os.Environ())), title, items)
 	if _, err := tea.NewProgram(c, tea.WithInput(in), tea.WithOutput(out)).Run(); err != nil {
 		return nil, false, err
 	}
 	return c.items, !c.cancelled, nil
 }
 
-func (c *Checklist) Init() tea.Cmd { return nil }
+func (c *Checklist) Init() tea.Cmd { return tea.RequestBackgroundColor }
 
 func (c *Checklist) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		c.width = msg.Width
-	case tea.KeyMsg:
+	case tea.BackgroundColorMsg:
+		*c.th = *theme.New(msg.IsDark(), c.th.Profile)
+	case tea.ColorProfileMsg:
+		*c.th = *theme.New(c.th.Dark, msg.Profile)
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "up", "k":
 			c.cursor = clamp(c.cursor-1, 0, len(c.items)-1)
 		case "down", "j":
 			c.cursor = clamp(c.cursor+1, 0, len(c.items)-1)
-		case " ", "x":
+		case "space", "x":
 			if len(c.items) > 0 {
 				c.items[c.cursor].Checked = !c.items[c.cursor].Checked
 			}
@@ -73,21 +79,21 @@ func (c *Checklist) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return c, nil
 }
 
-func (c *Checklist) View() string {
+func (c *Checklist) View() tea.View {
 	if c.done {
-		return ""
+		return tea.NewView("")
 	}
 	t := c.th
 	lines := []string{t.S.Title.Render(c.title), ""}
 	for k, it := range c.items {
 		box := t.S.Subtle.Render("[ ]")
 		if it.Checked {
-			box = t.R.NewStyle().Foreground(t.C.Accent).Bold(true).Render("[x]")
+			box = lipgloss.NewStyle().Foreground(t.C.Accent).Bold(true).Render("[x]")
 		}
 		marker := "  "
 		label := t.S.Body.Render(it.Label)
 		if k == c.cursor {
-			marker = t.R.NewStyle().Foreground(t.C.Accent).Render("▌ ")
+			marker = lipgloss.NewStyle().Foreground(t.C.Accent).Render("▌ ")
 			label = t.S.Heading.Render(it.Label)
 		}
 		line := marker + box + " " + label
@@ -97,5 +103,5 @@ func (c *Checklist) View() string {
 		lines = append(lines, ui.Fit(line, c.width))
 	}
 	lines = append(lines, "", ui.KeyHelp(t, []ui.Key{{Keys: "↑↓", Desc: "move"}, {Keys: "space", Desc: "toggle"}, {Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "cancel"}}, c.width))
-	return strings.Join(lines, "\n") + "\n"
+	return tea.NewView(strings.Join(lines, "\n") + "\n")
 }

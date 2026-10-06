@@ -3,15 +3,14 @@ package ui
 import (
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/muesli/termenv"
 
 	"github.com/fluid-movement/prep/internal/tui/theme"
 )
@@ -20,12 +19,7 @@ var update = flag.Bool("update", false, "rewrite golden files")
 
 // testTheme renders with a fixed true-color profile and background, so
 // snapshots do not depend on the terminal running the tests.
-func testTheme(dark bool) *theme.Theme {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(dark)
-	return theme.New(r)
-}
+func testTheme(dark bool) *theme.Theme { return theme.New(dark, colorprofile.TrueColor) }
 
 func TestGallerySnapshots(t *testing.T) {
 	for _, dark := range []bool{true, false} {
@@ -122,7 +116,7 @@ func TestDiffLines(t *testing.T) {
 }
 
 func TestMenuRowKeepsLongLabelsOnOneLine(t *testing.T) {
-	th := theme.New(lipgloss.NewRenderer(io.Discard))
+	th := theme.New(true, colorprofile.TrueColor)
 	row := MenuRow(th, "1", "├ 152616 TUI: human client next to the harness", "", true, true, 40)
 	if strings.Contains(row, "\n") {
 		t.Fatalf("long label wrapped:\n%s", row)

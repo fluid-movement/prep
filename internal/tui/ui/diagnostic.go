@@ -3,6 +3,8 @@ package ui
 import (
 	"strings"
 
+	"charm.land/lipgloss/v2"
+
 	"github.com/fluid-movement/prep/internal/tui/theme"
 )
 
@@ -19,14 +21,14 @@ type Diagnostic struct {
 // DiagnosticRow renders a finding over several lines: severity glyph, code
 // and location, then the message and the fix, wrapped to width.
 func DiagnosticRow(t *theme.Theme, d Diagnostic, width int) string {
-	glyph, tone := "▲", t.R.NewStyle().Foreground(t.C.Warning)
+	glyph, tone := "▲", lipgloss.NewStyle().Foreground(t.C.Warning)
 	if d.Error {
-		glyph, tone = "✕", t.R.NewStyle().Foreground(t.C.Error)
+		glyph, tone = "✕", lipgloss.NewStyle().Foreground(t.C.Error)
 	}
 	head := tone.Bold(true).Render(glyph+" "+d.Code) + "  " + t.S.Muted.Render(d.Where)
 	lines := []string{Fit(head, width)}
 	wrap := func(s string, st func(string) string) {
-		for _, l := range strings.Split(t.R.NewStyle().Width(max(1, width-2)).Render(s), "\n") {
+		for _, l := range strings.Split(lipgloss.NewStyle().Width(max(1, width-2)).Render(s), "\n") {
 			lines = append(lines, "  "+st(strings.TrimRight(l, " ")))
 		}
 	}

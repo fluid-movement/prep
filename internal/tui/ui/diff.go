@@ -3,6 +3,8 @@ package ui
 import (
 	"strings"
 
+	"charm.land/lipgloss/v2"
+
 	"github.com/fluid-movement/prep/internal/tui/theme"
 )
 
@@ -64,9 +66,9 @@ func Diff(t *theme.Theme, lines []DiffLine, width int) string {
 		sign, st := "  ", t.S.Muted
 		switch l.Op {
 		case '-':
-			sign, st = "- ", t.R.NewStyle().Foreground(t.C.Error)
+			sign, st = "- ", lipgloss.NewStyle().Foreground(t.C.Error)
 		case '+':
-			sign, st = "+ ", t.R.NewStyle().Foreground(t.C.Success)
+			sign, st = "+ ", lipgloss.NewStyle().Foreground(t.C.Success)
 		}
 		if l.Text == "" {
 			out = append(out, st.Render(strings.TrimRight(sign, " ")))

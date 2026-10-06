@@ -4,22 +4,22 @@
 package theme
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"image/color"
+
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 
 	"github.com/fluid-movement/prep/internal/domain"
 )
 
-// color is one token: true color, 256-color and 16-color values for dark
-// and light backgrounds.
-type color struct {
-	dark, light lipgloss.CompleteColor
-}
+// value is a color for one background: true color, 256-color and 16-color.
+type value struct{ trueColor, ansi256, ansi string }
 
-func c(darkTrue, dark256, dark16, lightTrue, light256, light16 string) color {
-	return color{
-		dark:  lipgloss.CompleteColor{TrueColor: darkTrue, ANSI256: dark256, ANSI: dark16},
-		light: lipgloss.CompleteColor{TrueColor: lightTrue, ANSI256: light256, ANSI: light16},
-	}
+// token is one color token for dark and light backgrounds.
+type token struct{ dark, light value }
+
+func c(darkTrue, dark256, dark16, lightTrue, light256, light16 string) token {
+	return token{dark: value{darkTrue, dark256, dark16}, light: value{lightTrue, light256, light16}}
 }
 
 // The palette. Change values here; names describe meaning, not hue.
@@ -34,7 +34,7 @@ var (
 	warning   = c("#F2C14E", "221", "11", "#9A5B00", "130", "3")
 	errorC    = c("#FF6B81", "204", "9", "#BE123C", "161", "1")
 
-	stateColors = map[domain.State]color{
+	stateColors = map[domain.State]token{
 		domain.StateOpen:       c("#A0A0AE", "247", "7", "#5C5C6A", "241", "8"),
 		domain.StateDefined:    c("#6CB6FF", "75", "12", "#1F5FAD", "25", "4"),
 		domain.StateReady:      c("#3DD6C6", "43", "14", "#0B7A70", "30", "6"),
@@ -42,7 +42,7 @@ var (
 		domain.StateDone:       c("#5BD68A", "78", "10", "#167A3E", "28", "2"),
 		domain.StateDropped:    c("#6E6E7C", "242", "8", "#9A9AA8", "247", "7"),
 	}
-	kindColors = map[domain.Kind]color{
+	kindColors = map[domain.Kind]token{
 		domain.KindCode:     c("#8AB4F8", "111", "12", "#1D5FBF", "26", "4"),
 		domain.KindManual:   c("#F58FC6", "211", "13", "#A3246C", "125", "5"),
 		domain.KindResearch: c("#62C7F5", "81", "14", "#0F6A99", "24", "6"),
@@ -50,9 +50,9 @@ var (
 	}
 )
 
-// Colors are the resolved tokens for one renderer.
+// Colors are the resolved tokens for one background and color profile.
 type Colors struct {
-	Text, Muted, Subtle, Accent, Border, Focus, Selection, Success, Warning, Error lipgloss.TerminalColor
+	Text, Muted, Subtle, Accent, Border, Focus, Selection, Success, Warning, Error color.Color
 }
 
 // Styles are the text styles. Components start from these.
@@ -67,25 +67,27 @@ const (
 	Section = 1 // blank lines between sections
 )
 
-// Theme is the design system bound to one renderer.
+// Theme is the design system resolved for one terminal background and
+// color profile.
 type Theme struct {
-	R      *lipgloss.Renderer
-	Dark   bool
-	C      Colors
-	S      Styles
-	Border lipgloss.Border
+	Dark    bool
+	Profile colorprofile.Profile
+	C       Colors
+	S       Styles
+	Border  lipgloss.Border
 }
 
-// New builds the theme for a renderer. Tests pass a renderer with a fixed
-// color profile and background so output is deterministic.
-func New(r *lipgloss.Renderer) *Theme {
-	t := &Theme{R: r, Dark: r.HasDarkBackground(), Border: lipgloss.RoundedBorder()}
+// New builds the theme for a background and color profile. Programs start
+// with dark and rebuild the theme when the terminal reports its background;
+// tests pass fixed values so output is deterministic.
+func New(dark bool, profile colorprofile.Profile) *Theme {
+	t := &Theme{Dark: dark, Profile: profile, Border: lipgloss.RoundedBorder()}
 	t.C = Colors{
 		Text: t.color(text), Muted: t.color(muted), Subtle: t.color(subtle), Accent: t.color(accent),
 		Border: t.color(border), Focus: t.color(accent), Selection: t.color(selection),
 		Success: t.color(success), Warning: t.color(warning), Error: t.color(errorC),
 	}
-	st := r.NewStyle
+	st := lipgloss.NewStyle
 	t.S = Styles{
 		Title:   st().Foreground(t.C.Accent).Bold(true),
 		Heading: st().Foreground(t.C.Text).Bold(true),
@@ -99,12 +101,16 @@ func New(r *lipgloss.Renderer) *Theme {
 	return t
 }
 
-func (t *Theme) color(c color) lipgloss.TerminalColor {
-	return lipgloss.CompleteAdaptiveColor{Dark: c.dark, Light: c.light}
+func (t *Theme) color(c token) color.Color {
+	v := c.light
+	if t.Dark {
+		v = c.dark
+	}
+	return lipgloss.Complete(t.Profile)(lipgloss.Color(v.ansi), lipgloss.Color(v.ansi256), lipgloss.Color(v.trueColor))
 }
 
 // State returns the color of an issue state.
-func (t *Theme) State(s domain.State) lipgloss.TerminalColor {
+func (t *Theme) State(s domain.State) color.Color {
 	if c, ok := stateColors[s]; ok {
 		return t.color(c)
 	}
@@ -112,7 +118,7 @@ func (t *Theme) State(s domain.State) lipgloss.TerminalColor {
 }
 
 // Kind returns the color of an issue kind.
-func (t *Theme) Kind(k domain.Kind) lipgloss.TerminalColor {
+func (t *Theme) Kind(k domain.Kind) color.Color {
 	if c, ok := kindColors[k]; ok {
 		return t.color(c)
 	}
@@ -122,26 +128,26 @@ func (t *Theme) Kind(k domain.Kind) lipgloss.TerminalColor {
 // Hex returns the true-color value of a token for the theme's background,
 // for libraries that take color strings (Glamour).
 func (t *Theme) Hex(name string) string {
-	m := map[string]color{"text": text, "muted": muted, "subtle": subtle, "accent": accent, "border": border,
+	m := map[string]token{"text": text, "muted": muted, "subtle": subtle, "accent": accent, "border": border,
 		"selection": selection, "success": success, "warning": warning, "error": errorC}
 	c, ok := m[name]
 	if !ok {
 		return ""
 	}
 	if t.Dark {
-		return c.dark.TrueColor
+		return c.dark.trueColor
 	}
-	return c.light.TrueColor
+	return c.light.trueColor
 }
 
 // Token names and their colors, in display order, for the gallery.
 func (t *Theme) Tokens() []struct {
 	Name  string
-	Color lipgloss.TerminalColor
+	Color color.Color
 } {
 	return []struct {
 		Name  string
-		Color lipgloss.TerminalColor
+		Color color.Color
 	}{
 		{"text", t.C.Text}, {"muted", t.C.Muted}, {"subtle", t.C.Subtle}, {"accent", t.C.Accent},
 		{"border", t.C.Border}, {"selection", t.C.Selection}, {"success", t.C.Success},

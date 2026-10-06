@@ -3,15 +3,16 @@ package tui
 import (
 	"fmt"
 	"io"
+	"os"
 	"slices"
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/cursor"
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/tui/theme"
@@ -38,7 +39,7 @@ type Options struct {
 
 // Run starts the issue views.
 func Run(opts Options, in io.Reader, out io.Writer) error {
-	m := NewModel(theme.New(lipgloss.NewRenderer(out)), opts)
+	m := NewModel(theme.New(true, colorprofile.Detect(out, os.Environ())), opts)
 	if opts.Watch != "" {
 		ch, stop, err := watch.Dir(opts.Watch)
 		if err != nil {
@@ -48,7 +49,7 @@ func Run(opts Options, in io.Reader, out io.Writer) error {
 			m.changes = ch
 		}
 	}
-	_, err := tea.NewProgram(m, tea.WithInput(in), tea.WithOutput(out), tea.WithAltScreen(), tea.WithMouseCellMotion()).Run()
+	_, err := tea.NewProgram(m, tea.WithInput(in), tea.WithOutput(out)).Run()
 	return err
 }
 
@@ -150,16 +151,20 @@ func NewModel(th *theme.Theme, opts Options) *Model {
 	in := textinput.New()
 	in.Prompt = "/ "
 	in.Placeholder = "--kind code --state open or words in titles"
-	in.PromptStyle = th.S.Title
-	in.TextStyle = th.S.Body
-	in.PlaceholderStyle = th.S.Subtle
-	in.Cursor.Style = th.R.NewStyle().Foreground(th.C.Accent)
-	in.Cursor.SetMode(cursor.CursorStatic) // no blink timer redrawing the screen
+	in.SetStyles(inputStyles(th))
 	m := &Model{th: th, opts: opts, treeMode: true, scope: map[string][]string{}, cursor: map[string]int{}, offset: map[string]int{},
-		vp: viewport.New(0, 0), page: viewport.New(0, 0), filters: map[string]string{}, input: in,
+		vp: newViewport(), page: newViewport(), know: knowState{vp: newViewport()}, filters: map[string]string{}, input: in,
 		pending: map[string]string{}, runEditor: execEditor, after: tea.Tick}
 	m.apply(opts.Load())
 	return m
+}
+
+// newViewport scrolls vertically only: everything shown in a viewport is
+// wrapped to its width, so left and right keep their navigation meaning.
+func newViewport() viewport.Model {
+	vp := viewport.New()
+	vp.SetHorizontalStep(0)
+	return vp
 }
 
 type loadedMsg struct {
@@ -173,7 +178,19 @@ type checkedMsg struct {
 	err   error
 }
 
-func (m *Model) Init() tea.Cmd { return m.waitForChange() }
+func (m *Model) Init() tea.Cmd { return tea.Batch(tea.RequestBackgroundColor, m.waitForChange()) }
+
+// retheme rebuilds the theme in place when the terminal reports its
+// background or color profile; components hold the same pointer, inputs
+// copy their styles, and cached renders start over.
+func (m *Model) retheme(dark bool, profile colorprofile.Profile) {
+	if dark == m.th.Dark && profile == m.th.Profile {
+		return
+	}
+	*m.th = *theme.New(dark, profile)
+	m.input.SetStyles(inputStyles(m.th))
+	m.docKey, m.know.docKey = "", ""
+}
 
 func (m *Model) waitForChange() tea.Cmd {
 	if m.changes == nil {
@@ -419,7 +436,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.notice = ""
 		}
 		return m, nil
-	case tea.KeyMsg:
+	case tea.BackgroundColorMsg:
+		m.retheme(msg.IsDark(), m.th.Profile)
+		return m, nil
+	case tea.ColorProfileMsg:
+		m.retheme(m.th.Dark, msg.Profile)
+		return m, nil
+	case tea.PasteMsg:
+		return m, m.paste(msg)
+	case tea.KeyPressMsg:
 		if m.modal != nil {
 			return m, m.modalKey(msg)
 		}
@@ -442,7 +467,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) key(k tea.KeyMsg) tea.Cmd {
+func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	s := k.String()
 	if s == "?" {
 		return m.openHelp()
@@ -468,8 +493,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		return m.reload()
 	case "y":
 		if id := m.selected(); id != "" {
-			m.th.R.Output().Copy(id)
-			return m.flash("copied " + id)
+			return tea.Batch(tea.SetClipboard(id), m.flash("copied "+id))
 		}
 		return nil
 	case "t":
@@ -619,7 +643,7 @@ func (m *Model) listKey(s string) tea.Cmd {
 }
 
 // filterKey handles keys while the filter bar is open.
-func (m *Model) filterKey(k tea.KeyMsg) tea.Cmd {
+func (m *Model) filterKey(k tea.KeyPressMsg) tea.Cmd {
 	tb := m.current()
 	switch k.String() {
 	case "ctrl+c":
@@ -669,7 +693,7 @@ func (m *Model) setFilter(tab, text string) {
 	m.rebuild()
 }
 
-func (m *Model) detailKey(s string, k tea.KeyMsg) tea.Cmd {
+func (m *Model) detailKey(s string, k tea.KeyPressMsg) tea.Cmd {
 	switch s {
 	case "esc", "left", "h":
 		m.focus = focusList
@@ -843,7 +867,14 @@ func (m *Model) bodyHeight() int { return ui.Stack(m.h, headerLines, footerLines
 
 func (m *Model) listHeight() int { return max(1, m.bodyHeight()-2) }
 
-func (m *Model) View() string {
+func (m *Model) View() tea.View {
+	v := tea.NewView(m.render())
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
+}
+
+func (m *Model) render() string {
 	if m.w == 0 || m.h == 0 {
 		return ui.Loading(m.th, "Starting …")
 	}
@@ -1085,7 +1116,7 @@ func (m *Model) listPane(w, h int) string {
 	rows := h - 2
 	var bar []string
 	if m.filtering {
-		m.input.Width = max(1, inner-lipgloss.Width(m.input.Prompt)-1)
+		m.input.SetWidth(max(1, inner-lipgloss.Width(m.input.Prompt)-1))
 		bar = append(bar, m.input.View())
 		if m.filterErr != "" {
 			bar = append(bar, ui.Error(m.th, m.filterErr))
@@ -1210,7 +1241,7 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) []string {
 		case "depends on":
 			lead := sub.Render("← needs ")
 			if !m.tree.State(r.id).Terminal() {
-				lead = m.th.R.NewStyle().Foreground(m.th.C.Warning).Render("← needs ")
+				lead = lipgloss.NewStyle().Foreground(m.th.C.Warning).Render("← needs ")
 			}
 			lines = append(lines, link(k, lead))
 		case "blocks":
@@ -1257,9 +1288,10 @@ func (m *Model) detailPane(w, h int) string {
 		}
 		m.docKey = key
 	}
-	m.vp.Width, m.vp.Height = inner, max(1, h-2-len(block))
+	m.vp.SetWidth(inner)
+	m.vp.SetHeight(max(1, h-2-len(block)))
 	title := shortID(id) + " " + m.tree.Issues[id].Title
-	if m.vp.TotalLineCount() > m.vp.Height {
+	if m.vp.TotalLineCount() > m.vp.Height() {
 		title += fmt.Sprintf("  %d%%", int(m.vp.ScrollPercent()*100))
 	}
 	body := strings.Join(append(block, m.vp.View()), "\n")
@@ -1349,13 +1381,13 @@ func (m *Model) settingsPane(w, h int) string {
 		sel := k == m.setIdx
 		marker := "  "
 		if sel {
-			marker = m.th.R.NewStyle().Foreground(m.th.C.Accent).Render("▌ ")
+			marker = lipgloss.NewStyle().Foreground(m.th.C.Accent).Render("▌ ")
 		}
-		line := marker + m.th.R.NewStyle().Foreground(m.th.C.Accent).Bold(true).Render(fmt.Sprintf("%-3s", key)) +
+		line := marker + lipgloss.NewStyle().Foreground(m.th.C.Accent).Bold(true).Render(fmt.Sprintf("%-3s", key)) +
 			m.th.S.Body.Render(fmt.Sprintf("%-18s", ui.Fit(label, 17))) + m.th.S.Muted.Render(value)
 		line = ui.Fit(line, inner)
 		if sel {
-			return m.th.R.NewStyle().Background(m.th.C.Selection).Width(inner).Render(line)
+			return lipgloss.NewStyle().Background(m.th.C.Selection).Width(inner).Render(line)
 		}
 		return line
 	}
@@ -1380,9 +1412,10 @@ func (m *Model) settingsPane(w, h int) string {
 }
 
 func (m *Model) pagePane(title, body string, w, h int) string {
-	m.page.Width, m.page.Height = w-2-2*theme.Pad, h-2
+	m.page.SetWidth(w - 2 - 2*theme.Pad)
+	m.page.SetHeight(h - 2)
 	m.page.SetContent(body)
-	if m.page.TotalLineCount() > m.page.Height {
+	if m.page.TotalLineCount() > m.page.Height() {
 		title += fmt.Sprintf("  %d%%", int(m.page.ScrollPercent()*100))
 	}
 	return ui.Pane{Title: title, Body: m.page.View(), Focused: true, Width: w, Height: h}.View(m.th)

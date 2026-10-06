@@ -5,9 +5,10 @@ package ui
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/fluid-movement/prep/internal/domain"
@@ -41,16 +42,16 @@ func StateBadge(t *theme.Theme, s domain.State) string {
 	if !ok {
 		g = "?"
 	}
-	st := t.R.NewStyle().Foreground(t.State(s)).Width(BadgeWidth)
+	st := lipgloss.NewStyle().Foreground(t.State(s)).Width(BadgeWidth)
 	if s == domain.StateDropped {
-		return st.Render(g + " " + t.R.NewStyle().Strikethrough(true).Render(StateLabel(s)))
+		return st.Render(g + " " + lipgloss.NewStyle().Strikethrough(true).Render(StateLabel(s)))
 	}
 	return st.Render(g + " " + StateLabel(s))
 }
 
 // KindTag renders an issue kind in its color, padded to KindWidth.
 func KindTag(t *theme.Theme, k domain.Kind) string {
-	return t.R.NewStyle().Foreground(t.Kind(k)).Width(KindWidth).Render(string(k))
+	return lipgloss.NewStyle().Foreground(t.Kind(k)).Width(KindWidth).Render(string(k))
 }
 
 // Progress renders resolved children of a parent as "n/m" with a short bar.
@@ -60,14 +61,14 @@ func Progress(t *theme.Theme, done, total int) string {
 	}
 	const cells = 5
 	filled := done * cells / total
-	bar := t.R.NewStyle().Foreground(t.C.Success).Render(strings.Repeat("■", filled)) +
-		t.R.NewStyle().Foreground(t.C.Subtle).Render(strings.Repeat("■", cells-filled))
+	bar := lipgloss.NewStyle().Foreground(t.C.Success).Render(strings.Repeat("■", filled)) +
+		lipgloss.NewStyle().Foreground(t.C.Subtle).Render(strings.Repeat("■", cells-filled))
 	return bar + " " + t.S.Muted.Render(fmt.Sprintf("%d/%d", done, total))
 }
 
 // Note renders a short status note such as "blocked" or "stale".
 func Note(t *theme.Theme, text string, tone Tone) string {
-	return t.R.NewStyle().Foreground(tone.color(t)).Render(text)
+	return lipgloss.NewStyle().Foreground(tone.color(t)).Render(text)
 }
 
 // Tone is the semantic emphasis of a note or message.
@@ -81,7 +82,7 @@ const (
 	ToneAccent
 )
 
-func (o Tone) color(t *theme.Theme) lipgloss.TerminalColor {
+func (o Tone) color(t *theme.Theme) color.Color {
 	switch o {
 	case ToneSuccess:
 		return t.C.Success
@@ -111,9 +112,9 @@ func Tabs(t *theme.Theme, tabs []Tab, active, width int) string {
 			label += " " + fmt.Sprint(tb.Count)
 		}
 		if k == active {
-			parts = append(parts, t.R.NewStyle().Foreground(t.C.Accent).Background(t.C.Selection).Bold(true).Padding(0, 1).Render(label))
+			parts = append(parts, lipgloss.NewStyle().Foreground(t.C.Accent).Background(t.C.Selection).Bold(true).Padding(0, 1).Render(label))
 		} else {
-			parts = append(parts, t.R.NewStyle().Foreground(t.C.Muted).Padding(0, 1).Render(label))
+			parts = append(parts, lipgloss.NewStyle().Foreground(t.C.Muted).Padding(0, 1).Render(label))
 		}
 	}
 	return Fit(strings.Join(parts, t.S.Subtle.Render("│")), width)
@@ -153,7 +154,7 @@ func PriorityMark(t *theme.Theme, p domain.Priority) string {
 func ListRow(t *theme.Theme, r Row, selected bool, width int) string {
 	marker := "  "
 	if selected {
-		marker = t.R.NewStyle().Foreground(t.C.Accent).Render("▌ ")
+		marker = lipgloss.NewStyle().Foreground(t.C.Accent).Render("▌ ")
 	}
 	tree := t.S.Subtle.Render(r.Tree)
 	var head, title string
@@ -171,7 +172,7 @@ func ListRow(t *theme.Theme, r Row, selected bool, width int) string {
 	default:
 		id := t.S.Muted.Render(r.ID)
 		if selected {
-			id = t.R.NewStyle().Foreground(t.C.Accent).Render(r.ID)
+			id = lipgloss.NewStyle().Foreground(t.C.Accent).Render(r.ID)
 		}
 		head = marker + id + " " + StateBadge(t, r.State) + KindTag(t, r.Kind) + tree
 		if r.Note != "" {
@@ -188,7 +189,7 @@ func ListRow(t *theme.Theme, r Row, selected bool, width int) string {
 	}
 	line := Fit(head+title, width)
 	if selected {
-		return t.R.NewStyle().Background(t.C.Selection).Width(width).Render(line)
+		return lipgloss.NewStyle().Background(t.C.Selection).Width(width).Render(line)
 	}
 	return line
 }
@@ -212,7 +213,7 @@ func (p Pane) View(t *theme.Theme) string {
 		bc = t.C.Focus
 	}
 	b := t.Border
-	edge := t.R.NewStyle().Foreground(bc)
+	edge := lipgloss.NewStyle().Foreground(bc)
 	inner := p.Width - 2
 
 	title := ""
@@ -270,26 +271,23 @@ func Empty(t *theme.Theme, title, hint string, width, height int) string {
 	if hint != "" {
 		body += "\n" + t.S.Subtle.Render(hint)
 	}
-	return t.R.Place(width, height, lipgloss.Center, lipgloss.Center, t.R.NewStyle().Align(lipgloss.Center).Render(body))
+	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, lipgloss.NewStyle().Align(lipgloss.Center).Render(body))
 }
 
 // Loading renders a loading message.
 func Loading(t *theme.Theme, msg string) string {
-	return t.R.NewStyle().Foreground(t.C.Accent).Render("◌") + " " + t.S.Muted.Render(msg)
+	return lipgloss.NewStyle().Foreground(t.C.Accent).Render("◌") + " " + t.S.Muted.Render(msg)
 }
 
 // Error renders an error message.
 func Error(t *theme.Theme, msg string) string {
-	return t.R.NewStyle().Foreground(t.C.Error).Bold(true).Render("✕") + " " + t.R.NewStyle().Foreground(t.C.Error).Render(msg)
+	return lipgloss.NewStyle().Foreground(t.C.Error).Bold(true).Render("✕") + " " + lipgloss.NewStyle().Foreground(t.C.Error).Render(msg)
 }
 
 // Fit truncates a rendered line to width cells, keeping escape codes intact.
 func Fit(s string, width int) string {
 	if width <= 0 {
 		return ""
-	}
-	if lipgloss.Width(s) <= width {
-		return s
 	}
 	return ansi.Truncate(s, width, "…")
 }
@@ -313,21 +311,21 @@ func LinkLine(t *theme.Theme, l Link, selected bool, width int) string {
 	marker := "  "
 	idStyle, titleStyle := t.S.Muted, t.S.Body
 	if selected {
-		marker = t.R.NewStyle().Foreground(t.C.Accent).Render("▌ ")
-		idStyle, titleStyle = t.R.NewStyle().Foreground(t.C.Accent), t.S.Heading
+		marker = lipgloss.NewStyle().Foreground(t.C.Accent).Render("▌ ")
+		idStyle, titleStyle = lipgloss.NewStyle().Foreground(t.C.Accent), t.S.Heading
 	}
 	g, ok := stateGlyphs[l.State]
 	if !ok {
 		g = "?"
 	}
-	line := marker + l.Lead + t.R.NewStyle().Foreground(t.State(l.State)).Render(g) + " " + idStyle.Render(l.ID) + " "
+	line := marker + l.Lead + lipgloss.NewStyle().Foreground(t.State(l.State)).Render(g) + " " + idStyle.Render(l.ID) + " "
 	if l.Note != "" {
 		line += l.Note + " "
 	}
 	line += PriorityMark(t, l.Priority) + titleStyle.Render(l.Title)
 	line = Fit(line, width)
 	if selected {
-		return t.R.NewStyle().Background(t.C.Selection).Width(width).Render(line)
+		return lipgloss.NewStyle().Background(t.C.Selection).Width(width).Render(line)
 	}
 	return line
 }
@@ -341,19 +339,19 @@ func LinkRow(t *theme.Theme, label string, state domain.State, id, title string,
 	marker := "  "
 	idStyle, titleStyle := t.S.Muted, t.S.Body
 	if selected {
-		marker = t.R.NewStyle().Foreground(t.C.Accent).Render("▌ ")
-		idStyle, titleStyle = t.R.NewStyle().Foreground(t.C.Accent), t.S.Heading
+		marker = lipgloss.NewStyle().Foreground(t.C.Accent).Render("▌ ")
+		idStyle, titleStyle = lipgloss.NewStyle().Foreground(t.C.Accent), t.S.Heading
 	}
 	g, ok := stateGlyphs[state]
 	if !ok {
 		g = "?"
 	}
 	line := marker + t.S.Subtle.Width(LinkWidth).Render(label) +
-		t.R.NewStyle().Foreground(t.State(state)).Render(g) + " " +
+		lipgloss.NewStyle().Foreground(t.State(state)).Render(g) + " " +
 		idStyle.Render(id) + " " + titleStyle.Render(title)
 	line = Fit(line, width)
 	if selected {
-		return t.R.NewStyle().Background(t.C.Selection).Width(width).Render(line)
+		return lipgloss.NewStyle().Background(t.C.Selection).Width(width).Render(line)
 	}
 	return line
 }

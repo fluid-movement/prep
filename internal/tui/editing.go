@@ -6,10 +6,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/cursor"
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/textarea"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/tui/ui"
@@ -29,18 +29,11 @@ func (m *Model) newArea(placeholder, value string, width int) textarea.Model {
 	a.MaxHeight = 0
 	a.SetWidth(width)
 	a.SetHeight(textHeight)
-	st := m.th.R.NewStyle()
-	for _, s := range []*textarea.Style{&a.FocusedStyle, &a.BlurredStyle} {
-		s.Base = st
-		s.CursorLine = st
-		s.Text = m.th.S.Body
-		s.Placeholder = m.th.S.Subtle
-		s.EndOfBuffer = m.th.S.Subtle
-		s.Prompt = m.th.S.Subtle
-	}
-	a.FocusedStyle.Prompt = st.Foreground(m.th.C.Accent)
-	a.Cursor.Style = st.Foreground(m.th.C.Accent)
-	a.Cursor.SetMode(cursor.CursorStatic)
+	st := lipgloss.NewStyle()
+	state := textarea.StyleState{Base: st, CursorLine: st, Text: m.th.S.Body, Placeholder: m.th.S.Subtle, EndOfBuffer: m.th.S.Subtle, Prompt: m.th.S.Subtle}
+	s := textarea.Styles{Focused: state, Blurred: state, Cursor: textarea.CursorStyle{Color: m.th.C.Accent}}
+	s.Focused.Prompt = st.Foreground(m.th.C.Accent)
+	a.SetStyles(s) // a static cursor: no blink timer redrawing the screen
 	a.SetValue(value)
 	return a
 }
@@ -292,7 +285,7 @@ func (m *Model) settingsKey(s string) tea.Cmd {
 		m.setIdx = clamp(m.setIdx+1, 0, rows-1)
 	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
 		m.setIdx = clamp(int(s[0]-'0'), 0, rows-1)
-	case " ", "enter":
+	case "space", "enter":
 		if view < 0 {
 			cfg.CommitMode = map[string]string{domain.CommitOff: domain.CommitAll, domain.CommitAll: domain.CommitOff}[cfg.CommitMode]
 			return m.saveSettings("commit mode "+cfg.CommitMode, cfg, false)

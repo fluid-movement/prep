@@ -3,7 +3,7 @@ package ui
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/tui/theme"
@@ -26,7 +26,7 @@ func Gallery(t *theme.Theme, width int) string {
 	section("Colors")
 	var swatches []string
 	for _, tok := range t.Tokens() {
-		swatches = append(swatches, t.R.NewStyle().Foreground(tok.Color).Render("██")+" "+t.S.Muted.Render(tok.Name))
+		swatches = append(swatches, lipgloss.NewStyle().Foreground(tok.Color).Render("██")+" "+t.S.Muted.Render(tok.Name))
 	}
 	b.WriteString(wrapItems(swatches, width, "  "))
 

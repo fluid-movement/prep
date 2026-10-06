@@ -4,17 +4,16 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/muesli/termenv"
 
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/mdstore"
@@ -24,12 +23,7 @@ import (
 
 var update = flag.Bool("update", false, "rewrite golden files")
 
-func testTheme() *theme.Theme {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-	return theme.New(r)
-}
+func testTheme() *theme.Theme { return theme.New(true, colorprofile.TrueColor) }
 
 // project builds a fixture through the domain and the markdown store with a
 // fixed clock, so IDs and dates are stable.
@@ -168,7 +162,7 @@ func TestKnowledgeScreen(t *testing.T) {
 	if m.screen != screenKnowledge {
 		t.Fatal("b did not open the knowledge screen")
 	}
-	v := ansi.Strip(m.View())
+	v := ansi.Strip(m.View().Content)
 	for _, want := range []string{"component  stable     ! CLI", "decision   draft        Default export format"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("knowledge list lacks %q:\n%s", want, v)
@@ -180,7 +174,7 @@ func TestKnowledgeScreen(t *testing.T) {
 	if paths, _ := m.knowledgePaths(); len(paths) != 1 || paths[0] != "/components/cli.md" {
 		t.Fatalf("attention-only = %v", paths)
 	}
-	v = ansi.Strip(m.View())
+	v = ansi.Strip(m.View().Content)
 	if !strings.Contains(v, "Needs an agent's attention") || !strings.Contains(v, "K003 broken link to /components/gone.md") {
 		t.Fatalf("entry lacks its finding:\n%s", v)
 	}
@@ -193,7 +187,7 @@ func TestKnowledgeScreen(t *testing.T) {
 	if paths, _ := m.knowledgePaths(); len(paths) != 1 || m.know.path != "/decisions/format.md" {
 		t.Fatalf("filtered = %v, selected %s", paths, m.know.path)
 	}
-	v = ansi.Strip(m.View())
+	v = ansi.Strip(m.View().Content)
 	if !strings.Contains(v, "CSV, because spreadsheets open it.") || !strings.Contains(v, "Document the format") {
 		t.Fatalf("entry lacks body or backlink:\n%s", v)
 	}
@@ -209,7 +203,7 @@ func TestKnowledgeFromAnIssue(t *testing.T) {
 	m := openModel(t, p, 120, 30)
 	run(m, "6")
 	m.selectInCurrent(ids["csv"])
-	if v := ansi.Strip(m.View()); !strings.Contains(v, "≡ knows component CLI") {
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "≡ knows component CLI") {
 		t.Fatalf("issue detail lacks its knowledge:\n%s", v)
 	}
 	run(m, "o")
@@ -231,31 +225,24 @@ func TestKnowledgeFromAnIssue(t *testing.T) {
 
 func keys(m *Model, ks ...string) {
 	for _, k := range ks {
-		var msg tea.KeyMsg
-		switch k {
-		case "enter":
-			msg = tea.KeyMsg{Type: tea.KeyEnter}
-		case "esc":
-			msg = tea.KeyMsg{Type: tea.KeyEsc}
-		case "tab":
-			msg = tea.KeyMsg{Type: tea.KeyTab}
-		case "down":
-			msg = tea.KeyMsg{Type: tea.KeyDown}
-		case "pgdown":
-			msg = tea.KeyMsg{Type: tea.KeyPgDown}
-		case "right":
-			msg = tea.KeyMsg{Type: tea.KeyRight}
-		case "left":
-			msg = tea.KeyMsg{Type: tea.KeyLeft}
-		case "end":
-			msg = tea.KeyMsg{Type: tea.KeyEnd}
-		case "backspace":
-			msg = tea.KeyMsg{Type: tea.KeyBackspace}
-		default:
-			msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}
-		}
-		m.Update(msg)
+		m.Update(keyMsg(k))
 	}
+}
+
+// keyMsg builds the key press a terminal sends for a key name.
+func keyMsg(k string) tea.KeyPressMsg {
+	named := map[string]tea.KeyPressMsg{
+		"enter": {Code: tea.KeyEnter}, "esc": {Code: tea.KeyEscape}, "tab": {Code: tea.KeyTab},
+		"down": {Code: tea.KeyDown}, "up": {Code: tea.KeyUp}, "right": {Code: tea.KeyRight}, "left": {Code: tea.KeyLeft},
+		"pgdown": {Code: tea.KeyPgDown}, "end": {Code: tea.KeyEnd}, "backspace": {Code: tea.KeyBackspace},
+		"space": {Code: tea.KeySpace, Text: " "}, "shift+up": {Code: tea.KeyUp, Mod: tea.ModShift},
+		"ctrl+e": {Code: 'e', Mod: tea.ModCtrl}, "ctrl+s": {Code: 's', Mod: tea.ModCtrl},
+	}
+	if msg, ok := named[k]; ok {
+		return msg
+	}
+	r := []rune(k)[0]
+	return tea.KeyPressMsg{Code: r, Text: k}
 }
 
 func openModel(t *testing.T, p *project, w, h int) *Model {
@@ -283,13 +270,13 @@ func TestScreenSnapshots(t *testing.T) {
 
 	wide := openModel(t, p, 110, 28)
 	keys(wide, "6", "down")
-	checkSize(t, wide.View(), 110, 28)
-	golden(t, "screen-110x28", wide.View())
+	checkSize(t, wide.View().Content, 110, 28)
+	golden(t, "screen-110x28", wide.View().Content)
 
 	narrow := openModel(t, p, 80, 24)
 	keys(narrow, "6", "down", "enter")
-	checkSize(t, narrow.View(), 80, 24)
-	golden(t, "screen-80x24-detail", narrow.View())
+	checkSize(t, narrow.View().Content, 80, 24)
+	golden(t, "screen-80x24-detail", narrow.View().Content)
 
 	// Dialogs float over the dimmed screen; the inline editor and the
 	// editable settings at both sizes.
@@ -301,32 +288,32 @@ func TestScreenSnapshots(t *testing.T) {
 		keys(m, "6", "down", "n")
 		typeIn(m, "Stream rows")
 		run(m, "enter")
-		golden(t, fmt.Sprintf("dialog-create-kind-%dx%d", w, h), m.View())
+		golden(t, fmt.Sprintf("dialog-create-kind-%dx%d", w, h), m.View().Content)
 		run(m, "c")
 		typeIn(m, "Rows go to stdout.")
-		checkSize(t, m.View(), w, h)
-		golden(t, fmt.Sprintf("dialog-create-%dx%d", w, h), m.View())
+		checkSize(t, m.View().Content, w, h)
+		golden(t, fmt.Sprintf("dialog-create-%dx%d", w, h), m.View().Content)
 		run(m, "esc")
 		run(m, "esc")
 		run(m, "esc")
 		run(m, "?")
-		checkSize(t, m.View(), w, h)
-		golden(t, fmt.Sprintf("dialog-keys-%dx%d", w, h), m.View())
+		checkSize(t, m.View().Content, w, h)
+		golden(t, fmt.Sprintf("dialog-keys-%dx%d", w, h), m.View().Content)
 		run(m, "esc")
 		run(m, "e")
 		run(m, "r")
-		checkSize(t, m.View(), w, h)
-		golden(t, fmt.Sprintf("dialog-requirement-%dx%d", w, h), m.View())
+		checkSize(t, m.View().Content, w, h)
+		golden(t, fmt.Sprintf("dialog-requirement-%dx%d", w, h), m.View().Content)
 		run(m, "esc")
 		run(m, "s")
 		run(m, "3")
-		checkSize(t, m.View(), w, h)
-		golden(t, fmt.Sprintf("settings-%dx%d", w, h), m.View())
+		checkSize(t, m.View().Content, w, h)
+		golden(t, fmt.Sprintf("settings-%dx%d", w, h), m.View().Content)
 		kp, _ := knowledgeSample(t)
 		k := withCheck(openModel(t, kp, w, h), kp)
 		run(k, "b")
-		checkSize(t, k.View(), w, h)
-		golden(t, fmt.Sprintf("knowledge-%dx%d", w, h), k.View())
+		checkSize(t, k.View().Content, w, h)
+		golden(t, fmt.Sprintf("knowledge-%dx%d", w, h), k.View().Content)
 	}
 }
 
@@ -354,7 +341,7 @@ func TestTabsAndSelection(t *testing.T) {
 		t.Fatalf("cursor not clamped to the last issue: %s", m.selected())
 	}
 	keys(m, "g", "enter")
-	if v := ansi.Strip(m.View()); m.focus != focusDetail || !strings.Contains(v, "Export data in several") {
+	if v := ansi.Strip(m.View().Content); m.focus != focusDetail || !strings.Contains(v, "Export data in several") {
 		t.Fatalf("enter does not show the detail:\n%s", v)
 	}
 	keys(m, "esc")
@@ -370,7 +357,7 @@ func TestTabsAndSelection(t *testing.T) {
 	if m.selected() != sel {
 		t.Fatalf("selection moved from %s to %s after reload", sel, m.selected())
 	}
-	if v := ansi.Strip(m.View()); !strings.Contains(v, "All 7") {
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "All 7") {
 		t.Fatalf("tab count not updated:\n%s", v)
 	}
 }
@@ -404,7 +391,7 @@ func TestLoadErrorKeepsData(t *testing.T) {
 	p, _ := sample(t)
 	m := openModel(t, p, 110, 28)
 	m.Update(loadedMsg{nil, errors.New("issue.md: bad frontmatter")})
-	v := ansi.Strip(m.View())
+	v := ansi.Strip(m.View().Content)
 	if !strings.Contains(v, "bad frontmatter") || !strings.Contains(v, "Attention") {
 		t.Fatalf("error not shown with the last data:\n%s", v)
 	}
@@ -469,14 +456,14 @@ func TestHierarchy(t *testing.T) {
 	if got := rowIDs(m); strings.Join(got, ",") != strings.Join([]string{ids["export"], ids["csv"], ids["json"], ids["schema"]}, ",") {
 		t.Fatalf("focused Export rows = %v", got)
 	}
-	if v := ansi.Strip(m.View()); !strings.Contains(v, "All › Export") {
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "All › Export") {
 		t.Fatalf("breadcrumb missing:\n%s", v)
 	}
 	keys(m, "down", "down", "right")
 	if got := rowIDs(m); len(got) != 2 || got[0] != ids["json"] || got[1] != ids["schema"] {
 		t.Fatalf("nested focus rows = %v", got)
 	}
-	if v := ansi.Strip(m.View()); !strings.Contains(v, "All › Export › JSON writer") {
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "All › Export › JSON writer") {
 		t.Fatalf("nested breadcrumb missing:\n%s", v)
 	}
 	keys(m, "left")
@@ -527,7 +514,7 @@ func TestHierarchy(t *testing.T) {
 	}
 	// Links show by shape: the parent as a breadcrumb, what waits on this
 	// issue behind an arrow, a child parent with its progress.
-	if v := ansi.Strip(m.View()); !strings.Contains(v, "↑ Export") || !strings.Contains(v, "→ unblocks ◐ 090300 ■■■■■ 0/1 JSON writer") {
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "↑ Export") || !strings.Contains(v, "→ unblocks ◐ 090300 ■■■■■ 0/1 JSON writer") {
 		t.Fatalf("relations block missing:\n%s", v)
 	}
 	keys(m, "o", "2") // the second link: → unblocks JSON writer
@@ -542,7 +529,7 @@ func TestHierarchy(t *testing.T) {
 
 func typeText(m *Model, s string) {
 	for _, r := range s {
-		m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		m.Update(keyMsg(string(r)))
 	}
 }
 
@@ -553,12 +540,12 @@ func TestFilterBar(t *testing.T) {
 	if !m.filtering {
 		t.Fatal("/ does not open the filter bar")
 	}
-	typeText(m, "--kind decision")
+	m.Update(tea.PasteMsg{Content: "--kind decision"})
 	keys(m, "enter")
 	if got := rowIDs(m); len(got) != 1 || got[0] != ids["format"] {
 		t.Fatalf("--kind decision rows = %v", got)
 	}
-	if v := ansi.Strip(m.View()); !strings.Contains(v, "/ --kind decision") {
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "/ --kind decision") {
 		t.Fatalf("filter missing from the pane title:\n%s", v)
 	}
 
@@ -601,7 +588,7 @@ func TestStaleDiff(t *testing.T) {
 	m := openModel(t, p, 120, 40)
 	keys(m, "6")
 	m.selectInCurrent(ids["json"])
-	v := ansi.Strip(m.View())
+	v := ansi.Strip(m.View().Content)
 	for _, want := range []string{"Changed since baseline", "- kind: code", "+ kind: manual", "- Write rows as JSON.", "+ Write rows as JSON lines."} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("stale diff lacks %q:\n%s", want, v)
@@ -625,12 +612,12 @@ func TestCheckAndSettingsScreens(t *testing.T) {
 	}})
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
 
-	cmd := m.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("c")})
+	cmd := m.key(keyMsg("c"))
 	if m.screen != screenCheck || cmd == nil {
 		t.Fatal("c does not open the check screen")
 	}
 	m.Update(cmd())
-	v := ansi.Strip(m.View())
+	v := ansi.Strip(m.View().Content)
 	if calls != 1 || !strings.Contains(v, "Errors (1)") || !strings.Contains(v, "notes.txt") || !strings.Contains(v, "✕ 1") {
 		t.Fatalf("check screen (calls %d):\n%s", calls, v)
 	}
@@ -640,7 +627,7 @@ func TestCheckAndSettingsScreens(t *testing.T) {
 	}
 
 	keys(m, "s")
-	v = ansi.Strip(m.View())
+	v = ansi.Strip(m.View().Content)
 	for _, want := range []string{"Settings", "Commit mode", "Attention", "--stale", "Definition of Done"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("settings lacks %q:\n%s", want, v)
@@ -704,32 +691,7 @@ func viaEditor(m *Model, key ...string) {
 // run sends a key and runs the commands it returns until they settle,
 // skipping timers, the way the Bubble Tea runtime would.
 func run(m *Model, k string) {
-	var msg tea.KeyMsg
-	switch k {
-	case "enter":
-		msg = tea.KeyMsg{Type: tea.KeyEnter}
-	case "esc":
-		msg = tea.KeyMsg{Type: tea.KeyEsc}
-	case "tab":
-		msg = tea.KeyMsg{Type: tea.KeyTab}
-	case "down":
-		msg = tea.KeyMsg{Type: tea.KeyDown}
-	case "right":
-		msg = tea.KeyMsg{Type: tea.KeyRight}
-	case "space":
-		msg = tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{' '}}
-	case "up":
-		msg = tea.KeyMsg{Type: tea.KeyUp}
-	case "shift+up":
-		msg = tea.KeyMsg{Type: tea.KeyShiftUp}
-	case "ctrl+e":
-		msg = tea.KeyMsg{Type: tea.KeyCtrlE}
-	case "ctrl+s":
-		msg = tea.KeyMsg{Type: tea.KeyCtrlS}
-	default:
-		msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}
-	}
-	_, cmd := m.Update(msg)
+	_, cmd := m.Update(keyMsg(k))
 	settle(m, cmd)
 }
 
@@ -762,7 +724,7 @@ func settle(m *Model, cmd tea.Cmd) {
 
 func typeIn(m *Model, s string) {
 	for _, r := range s {
-		_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		_, cmd := m.Update(keyMsg(string(r)))
 		settle(m, cmd)
 	}
 }
@@ -787,7 +749,7 @@ func TestActionMenu(t *testing.T) {
 		t.Fatal("a does not open the action menu")
 	}
 	// Only what applies is listed: survey has open questions, so no Define.
-	v := ansi.Strip(m.View())
+	v := ansi.Strip(m.View().Content)
 	for _, want := range []string{"Actions · 090600 Survey export tools", "Edit requirement", "Set priority", "Drop"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("menu lacks %q:\n%s", want, v)
@@ -806,7 +768,7 @@ func TestActionMenu(t *testing.T) {
 
 	// ? lists every sequence, the ones that do not apply with their reason.
 	run(m, "?")
-	if v := ansi.Strip(m.View()); !strings.Contains(v, "a d") || !strings.Contains(v, "Define (not now") || !strings.Contains(v, "a i") {
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "a d") || !strings.Contains(v, "Define (not now") || !strings.Contains(v, "a i") {
 		t.Fatalf("keymap lacks the action menu's sequences:\n%s", v)
 	}
 	run(m, "x") // any key closes
@@ -840,7 +802,8 @@ func TestEditMenuAndKeys(t *testing.T) {
 	if m.modal == nil || m.modal.kind != modalText || m.modal.field != "context" {
 		t.Fatalf("e c opened %+v", m.modal)
 	}
-	typeIn(m, "Use JSON Schema 2020-12.")
+	typeIn(m, "Use JSON ")
+	m.Update(tea.PasteMsg{Content: "Schema 2020-12."}) // a paste arrives as its own message
 	run(m, "ctrl+s")
 	if got := issue(t, p, ids["schema"]).Context; got != "Use JSON Schema 2020-12." {
 		t.Fatalf("context = %q", got)
@@ -885,7 +848,7 @@ func TestContextRowsShowProgress(t *testing.T) {
 	m := openModel(t, p, 110, 28)
 	run(m, "5") // To define: JSON writer is defined, a context row above its open child
 	var line string
-	for _, l := range strings.Split(ansi.Strip(m.View()), "\n") {
+	for _, l := range strings.Split(ansi.Strip(m.View().Content), "\n") {
 		if strings.Contains(l, "JSON writer") && line == "" {
 			line = l
 		}
@@ -901,14 +864,14 @@ func TestRelationsByShape(t *testing.T) {
 	m := openModel(t, p, 120, 30)
 	run(m, "6")
 	m.selectInCurrent(ids["export"])
-	v := ansi.Strip(m.View())
+	v := ansi.Strip(m.View().Content)
 	for _, want := range []string{"Children ■■■■■ 0/2", "├─ ▶ 090200 CSV writer", "└─ ◐ 090300 ■■■■■ 0/1 JSON writer"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("children tree lacks %q:\n%s", want, v)
 		}
 	}
 	m.selectInCurrent(ids["json"])
-	v = ansi.Strip(m.View())
+	v = ansi.Strip(m.View().Content)
 	for _, want := range []string{"↑ Export", "← needs ▶ 090200 CSV writer", "└─ ○ 090400 JSON schema"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("relations lack %q:\n%s", want, v)
@@ -956,7 +919,7 @@ func TestCreateWizard(t *testing.T) {
 	}
 	typeIn(m, "Stream rows")
 	run(m, "enter")
-	if m.modal.step != 1 || !strings.Contains(ansi.Strip(m.View()), "New issue · 2/3") {
+	if m.modal.step != 1 || !strings.Contains(ansi.Strip(m.View().Content), "New issue · 2/3") {
 		t.Fatalf("after the title: step %d", m.modal.step)
 	}
 	run(m, "esc") // back to the title, not out
@@ -989,7 +952,7 @@ func TestEditSettings(t *testing.T) {
 	var edits []string
 	m := editable(t, p, &edits)
 	run(m, "s")
-	if v := ansi.Strip(m.View()); !strings.Contains(v, "Commit mode") || !strings.Contains(v, "6  All") {
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Commit mode") || !strings.Contains(v, "6  All") {
 		t.Fatalf("settings screen:\n%s", v)
 	}
 	cfg := func() domain.Config {
@@ -1016,7 +979,7 @@ func TestEditSettings(t *testing.T) {
 		t.Fatalf("invalid query: modal %+v", m.modal)
 	}
 	for range "urgent" {
-		m.modal.inputs[1], _ = m.modal.inputs[1].Update(tea.KeyMsg{Type: tea.KeyBackspace})
+		m.modal.inputs[1], _ = m.modal.inputs[1].Update(keyMsg("backspace"))
 	}
 	typeIn(m, "high")
 	run(m, "enter")
@@ -1063,14 +1026,14 @@ func TestSetPriority(t *testing.T) {
 	if m.modal == nil || m.modal.heading != "Priority" {
 		t.Fatal("i does not open the priority menu")
 	}
-	if v := ansi.Strip(m.View()); !strings.Contains(v, "Priority · ") || !strings.Contains(v, "Medium (current)") {
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Priority · ") || !strings.Contains(v, "Medium (current)") {
 		t.Fatalf("priority menu:\n%s", v)
 	}
 	run(m, "c")
 	if got := issue(t, p, ids["csv"]).Priority; got != domain.PriorityCritical {
 		t.Fatalf("priority = %q", got)
 	}
-	v := ansi.Strip(m.View())
+	v := ansi.Strip(m.View().Content)
 	if !strings.Contains(v, "!crit") || !strings.Contains(v, "priority critical") {
 		t.Fatalf("row mark or detail missing:\n%s", v)
 	}
@@ -1117,7 +1080,7 @@ func TestCreateRenameAndEdit(t *testing.T) {
 	run(m, "a")
 	run(m, "t")
 	for range "XML writer" {
-		m.modal.inputs[0], _ = m.modal.inputs[0].Update(tea.KeyMsg{Type: tea.KeyBackspace})
+		m.modal.inputs[0], _ = m.modal.inputs[0].Update(keyMsg("backspace"))
 	}
 	typeIn(m, "XML export")
 	run(m, "enter")
@@ -1297,19 +1260,35 @@ func stateOf(t *testing.T, p *project, id string) (domain.State, bool) {
 
 func TestChecklist(t *testing.T) {
 	c := NewChecklist(testTheme(), "Integrate prep with", []ChecklistItem{{Label: "Claude Code", Detail: "detected", Checked: true}, {Label: "Pi"}})
-	if v := ansi.Strip(c.View()); !strings.Contains(v, "[x] Claude Code  detected") || !strings.Contains(v, "[ ] Pi") {
+	if v := ansi.Strip(c.View().Content); !strings.Contains(v, "[x] Claude Code  detected") || !strings.Contains(v, "[ ] Pi") {
 		t.Fatalf("view:\n%s", v)
 	}
-	for _, k := range []tea.KeyMsg{{Type: tea.KeyDown}, {Type: tea.KeySpace, Runes: []rune{' '}}, {Type: tea.KeyUp}, {Type: tea.KeySpace, Runes: []rune{' '}}} {
+	for _, k := range []tea.KeyPressMsg{keyMsg("down"), keyMsg("space"), keyMsg("up"), keyMsg("space")} {
 		c.Update(k)
 	}
-	_, cmd := c.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := c.Update(keyMsg("enter"))
 	if cmd == nil || c.cancelled || c.items[0].Checked || !c.items[1].Checked {
 		t.Fatalf("after toggling: %+v cancelled=%v", c.items, c.cancelled)
 	}
 	c2 := NewChecklist(testTheme(), "x", []ChecklistItem{{Label: "a"}})
-	c2.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	c2.Update(keyMsg("esc"))
 	if !c2.cancelled {
 		t.Fatal("esc does not cancel")
+	}
+}
+
+func TestDetailDoesNotScrollSideways(t *testing.T) {
+	p, ids := sample(t)
+	m := openModel(t, p, 120, 30)
+	keys(m, "6")
+	m.selectInCurrent(ids["export"])
+	keys(m, "enter")
+	m.View()
+	// A line Glamour cannot wrap, such as a long code line, is wider than the pane.
+	m.vp.SetContent(strings.Repeat("x", 300))
+	m.detailKey("right", keyMsg("right"))
+	m.Update(tea.MouseWheelMsg{X: 100, Y: 10, Button: tea.MouseWheelRight})
+	if m.vp.XOffset() != 0 {
+		t.Fatalf("detail scrolled sideways: x offset %d", m.vp.XOffset())
 	}
 }

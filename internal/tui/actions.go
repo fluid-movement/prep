@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/cursor"
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textarea"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/fluid-movement/prep/internal/domain"
+	"github.com/fluid-movement/prep/internal/tui/theme"
 	"github.com/fluid-movement/prep/internal/tui/ui"
 )
 
@@ -81,14 +81,17 @@ func (m *Model) newInput(placeholder, value string) textinput.Model {
 	in := textinput.New()
 	in.Prompt = "› "
 	in.Placeholder = placeholder
-	in.PromptStyle = m.th.S.Title
-	in.TextStyle = m.th.S.Body
-	in.PlaceholderStyle = m.th.S.Subtle
-	in.Cursor.Style = m.th.R.NewStyle().Foreground(m.th.C.Accent)
-	in.Cursor.SetMode(cursor.CursorStatic)
+	in.SetStyles(inputStyles(m.th))
 	in.SetValue(value)
 	in.CursorEnd()
 	return in
+}
+
+// inputStyles styles a text input from the theme, with a static cursor so
+// no blink timer redraws the screen.
+func inputStyles(th *theme.Theme) textinput.Styles {
+	state := textinput.StyleState{Prompt: th.S.Title, Text: th.S.Body, Placeholder: th.S.Subtle}
+	return textinput.Styles{Focused: state, Blurred: state, Cursor: textinput.CursorStyle{Color: th.C.Accent}}
 }
 
 // write runs a planned change through the injected writer in the
@@ -226,7 +229,7 @@ func (m *Model) createStep(step int) tea.Cmd {
 // createKey runs the wizard: enter continues from the title; a kind's
 // letter (c m r d) picks it and continues, as do arrows and enter; the
 // requirement takes text until ctrl+s creates the issue.
-func (m *Model) createKey(s string, k tea.KeyMsg) tea.Cmd {
+func (m *Model) createKey(s string, k tea.KeyPressMsg) tea.Cmd {
 	d := m.modal
 	switch d.step {
 	case 0:
@@ -350,7 +353,7 @@ func (m *Model) parentCandidates(id, filter string) []string {
 }
 
 // modalKey handles keys while a dialog is open.
-func (m *Model) modalKey(k tea.KeyMsg) tea.Cmd {
+func (m *Model) modalKey(k tea.KeyPressMsg) tea.Cmd {
 	d := m.modal
 	s := k.String()
 	switch s {
@@ -392,7 +395,7 @@ func (m *Model) modalKey(k tea.KeyMsg) tea.Cmd {
 			d.cursor = clamp(d.cursor-1, 0, len(d.checks)-1)
 		case "down", "j":
 			d.cursor = clamp(d.cursor+1, 0, len(d.checks)-1)
-		case " ", "x":
+		case "space", "x":
 			if len(d.checks) > 0 {
 				d.checks[d.cursor] = !d.checks[d.cursor]
 			}
@@ -463,6 +466,31 @@ func (m *Model) modalKey(k tea.KeyMsg) tea.Cmd {
 	}
 	var cmd tea.Cmd
 	d.inputs[d.focus], cmd = d.inputs[d.focus].Update(k)
+	return cmd
+}
+
+// paste sends pasted text to the field that takes text now: the filter bar
+// or the open dialog's input or editor. Bubble Tea reports a paste as its
+// own message, not as keys.
+func (m *Model) paste(p tea.PasteMsg) tea.Cmd {
+	var cmd tea.Cmd
+	d := m.modal
+	switch {
+	case d == nil:
+		if m.filtering {
+			m.input, cmd = m.input.Update(p)
+		}
+	case d.kind == modalText || d.kind == modalCreate && d.step == 2:
+		d.area, cmd = d.area.Update(p)
+	case d.kind == modalCreate && d.step == 0:
+		d.inputs[0], cmd = d.inputs[0].Update(p)
+	case d.kind == modalReparent:
+		d.inputs[0], cmd = d.inputs[0].Update(p)
+		d.picks = m.parentCandidates(d.id, d.inputs[0].Value())
+		d.cursor = clamp(d.cursor, 0, len(d.picks)-1)
+	case d.kind == modalRename || d.kind == modalDrop || d.kind == modalComplete || d.kind == modalViewEdit:
+		d.inputs[d.focus], cmd = d.inputs[d.focus].Update(p)
+	}
 	return cmd
 }
 
@@ -679,9 +707,9 @@ func (m *Model) modalView(width, height int) string {
 			var opts []string
 			for k, kd := range kinds {
 				letter, rest := string(kd)[:1], string(kd)[1:]
-				label := m.th.R.NewStyle().Foreground(m.th.C.Accent).Bold(true).Render(letter) + m.th.S.Body.Render(rest)
+				label := lipgloss.NewStyle().Foreground(m.th.C.Accent).Bold(true).Render(letter) + m.th.S.Body.Render(rest)
 				if k == d.kindIdx {
-					label = m.th.R.NewStyle().Background(m.th.C.Selection).Render(" " + label + " ")
+					label = lipgloss.NewStyle().Background(m.th.C.Selection).Render(" " + label + " ")
 				} else {
 					label = " " + label + " "
 				}
@@ -739,7 +767,7 @@ func (m *Model) modalView(width, height int) string {
 			}
 			line := ui.Fit(fmt.Sprintf("%s %d. %s", mark, k+1, c.Text), inner-2)
 			if k == d.cursor {
-				line = m.th.R.NewStyle().Background(m.th.C.Selection).Width(inner).Render(m.th.R.NewStyle().Foreground(m.th.C.Accent).Render("▌ ") + line)
+				line = lipgloss.NewStyle().Background(m.th.C.Selection).Width(inner).Render(lipgloss.NewStyle().Foreground(m.th.C.Accent).Render("▌ ") + line)
 			} else {
 				line = "  " + m.th.S.Body.Render(line)
 			}

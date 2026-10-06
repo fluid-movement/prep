@@ -1,0 +1,9 @@
+- 2026-10-06T13:08:57Z edited by claude-code/2.1.291: requirement
+
+- 2026-10-06T13:20:48Z claude-code/2.1.291: Moved to bubbletea v2.0.10, lipgloss v2.0.6, bubbles v2.2.1, glamour v2.0.1, x/ansi v0.11.8, colorprofile v0.4.3; termenv and all v1 Charm modules are gone. Indirect ultraviolet and x/exp/slice stay at the versions the libraries pin.
+
+- 2026-10-06T13:20:48Z claude-code/2.1.291: Goldens: every snapshot was compared cell by cell (content, attributes, fg, bg) against the v1 goldens: 0 cells differ. Byte changes come from SGR encoding (ESC[m resets) and exact palette values (v1 rounded some by one step, e.g. #E4E4EA was 227,227,234, now 228,228,234). knowledge-110x28 also gains OSC 8 hyperlinks: Glamour v2 links markdown links and has no option to turn that off; text and colors are unchanged.
+
+- 2026-10-06T13:20:48Z claude-code/2.1.291: Regressions v2 would have introduced, fixed with tests: pastes arrive as tea.PasteMsg and reached no input (now routed by paste); Bubbles v2 viewports scroll sideways on left/right and horizontal wheel, which would shift over-wide lines (now newViewport sets the step to 0; a zero-value viewport re-applies defaults on first update, so the knowledge viewport is built explicitly).
+
+- 2026-10-06T13:20:48Z claude-code/2.1.291: Simplifications applied: ui.Overlay composites Lip Gloss layers on a canvas instead of splicing escape-coded strings (cells identical); the background query is asynchronous (no startup delay); alt screen and mouse mode are View fields; OSC 52 copy is tea.SetClipboard; both text-input setups share inputStyles; Fit drops a redundant width check. Not applied: dropping the hand-picked 256/16-color values for automatic downsampling (changes looks on those terminals); border titles (Lip Gloss v2 has none, Pane stays); resolving bundle-relative markdown links with glamour.WithBaseURL (a feature, not a simplification).
