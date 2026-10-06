@@ -12,3 +12,8 @@ Existing keys keep their meaning (c check screen, s settings, t tree, p parent, 
 date: 2026-10-06
 
 Settings edits are a domain Change (PlanConfig) validated by CheckWrite and written by the markdown store, so the TUI uses the same pipeline (stage or commit via record) as every other write, and an invalid view query is rejected before anything is written. Alternative: the TUI writing config.yaml directly (bypasses validation and the commit mode).
+
+## D4: Letter sequences over menu navigation
+date: 2026-10-06
+
+The user likes the melody of a i l for setting a low priority: every action stays reachable as a short, stable sequence of letters that turns into muscle memory, and arrows plus enter are only the fallback. So menus and pickers keep fixed mnemonic letters (the priority picker c h m l, the action menu's letters), direct keys shorten frequent sequences without changing them (i l works as well as a i l), and new dialogs (settings, the > confirmation) follow the same pattern: no list that can only be scrolled. Alternative: arrow-driven menus and pickers, which cannot become muscle memory.
