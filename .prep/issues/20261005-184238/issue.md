@@ -1,6 +1,7 @@
 ---
 title: Install the Claude Code integration in user projects
 kind: code
+parent: 20261006-084956
 depends_on:
   - 20261005-152623
 tags:
