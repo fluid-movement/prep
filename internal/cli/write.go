@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -22,6 +23,7 @@ type writeResult struct {
 	Stale bool         `json:"stale,omitempty"`
 	Entry string       `json:"entry,omitempty"` // knowledge entry path
 	Files []string     `json:"files"`
+	Next  string       `json:"next,omitempty"` // the command to run next
 }
 
 func (a *app) reportWrite(r writeResult) {
@@ -46,6 +48,9 @@ func (a *app) reportWrite(r writeResult) {
 	}
 	for _, f := range r.Files {
 		a.printf("  %s\n", f)
+	}
+	if r.Next != "" {
+		a.printf("Next: %s\n", r.Next)
 	}
 }
 
@@ -79,8 +84,7 @@ func cmdInit(a *app, args []string) error {
 	return nil
 }
 
-// bootstrap creates the knowledge base bootstrap issues, one change after
-// the other through the write pipeline.
+// bootstrap creates the knowledge base bootstrap issues.
 func (a *app) bootstrap() ([]string, error) {
 	t, err := a.load(false)
 	if err != nil {
@@ -90,6 +94,12 @@ func (a *app) bootstrap() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	return a.applyAll(t, cs, "prep: bootstrap the knowledge base")
+}
+
+// applyAll writes planned changes one after the other through the write
+// pipeline.
+func (a *app) applyAll(t *domain.Tree, cs []*domain.Change, msg string) ([]string, error) {
 	var files []string
 	for _, c := range cs {
 		if err := t.CheckWrite(c); err != nil {
@@ -99,11 +109,39 @@ func (a *app) bootstrap() ([]string, error) {
 		if err != nil {
 			return files, err
 		}
-		files = append(files, fs...)
+		for _, f := range fs {
+			if !slices.Contains(files, f) {
+				files = append(files, f)
+			}
+		}
 		t = t.Apply(c)
 	}
-	a.afterWrite(t, "prep: bootstrap the knowledge base", files)
+	a.afterWrite(t, msg, files)
 	return files, nil
+}
+
+// cmdImport creates the issue that guides an agent through importing the
+// project's existing work items.
+func cmdImport(a *app, args []string) error {
+	fs := flag.NewFlagSet("import", flag.ContinueOnError)
+	if _, err := parse(fs, args); err != nil {
+		return err
+	}
+	t, err := a.load(false)
+	if err != nil {
+		return err
+	}
+	cs, err := t.PlanImport(a.actor, a.now(), a.entropy)
+	if err != nil {
+		return err
+	}
+	files, err := a.applyAll(t, cs, "prep: import existing work")
+	if err != nil {
+		return err
+	}
+	id := cs[0].IssueID
+	a.reportWrite(writeResult{OK: true, Op: "import", ID: id, State: domain.StateOpen, Files: files, Next: "prep guide " + id})
+	return nil
 }
 
 func cmdNew(a *app, args []string) error {

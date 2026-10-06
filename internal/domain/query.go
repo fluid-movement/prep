@@ -20,7 +20,7 @@ type Filter struct {
 	Blocked    *bool
 	Parent     *bool // true: only parents, false: only leaves
 	TopLevel   bool
-	Text       []string // case-insensitive title substring
+	Text       []string // case-insensitive substring of the title or requirement
 }
 
 // ParseFilter parses query flags such as `--state ready --kind code --under <id>`.
@@ -185,7 +185,7 @@ func (t *Tree) Query(f Filter) ([]string, error) {
 		if len(f.Text) > 0 {
 			hit := false
 			for _, s := range f.Text {
-				if strings.Contains(strings.ToLower(i.Title), s) {
+				if strings.Contains(strings.ToLower(i.Title), s) || strings.Contains(strings.ToLower(i.Body), s) {
 					hit = true
 				}
 			}

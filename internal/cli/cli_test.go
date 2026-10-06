@@ -1016,3 +1016,39 @@ func TestPrimeHookAndPluginVersion(t *testing.T) {
 		t.Fatal("prime outside a project should fail without --hook")
 	}
 }
+
+func TestImport(t *testing.T) {
+	h := newHarness(t)
+	var r writeResult
+	h.jsonOf(&r, "import")
+	id := r.ID
+	if r.Op != "import" || r.State != "open" || r.Next != "prep guide "+id || len(r.Files) == 0 {
+		t.Fatalf("import = %+v", r)
+	}
+	var s struct {
+		Issues []summary `json:"issues"`
+	}
+	h.jsonOf(&s, "list", "--tag", "import")
+	if len(s.Issues) != 1 || s.Issues[0].ID != id || s.Issues[0].Kind != "research" || s.Issues[0].Title != "Import existing work" {
+		t.Fatalf("import issues = %+v", s.Issues)
+	}
+	if ctx := h.read(id, "context.md"); !strings.Contains(ctx, "prep findings "+id) || !strings.Contains(ctx, "Source: <source>") {
+		t.Fatalf("import context:\n%s", ctx)
+	}
+	if acc := h.read(id, "acceptance.md"); !strings.Contains(acc, "Source: line") {
+		t.Fatalf("import criteria:\n%s", acc)
+	}
+	h.fails("an import issue is unresolved: prep guide "+id, "import", "--json")
+
+	// An imported issue is found by its source, which is how a rerun skips it.
+	h.ok("new", "--title", "CSV export", "--kind", "code", "--body", "Export rows as CSV.\n\nSource: internal/export/csv.go:48")
+	if got := listIDs(h, "list", "--text", "Source: internal/export/csv.go:48"); len(got) != 1 {
+		t.Fatalf("list --text by source = %v", got)
+	}
+
+	// Once the import is resolved, another can start; text output names the guide.
+	h.ok("drop", id, "--reason", "not now")
+	if out := h.ok("import"); !strings.Contains(out, "Next: prep guide ") {
+		t.Fatalf("import output:\n%s", out)
+	}
+}
