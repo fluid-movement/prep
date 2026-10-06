@@ -2,7 +2,7 @@ Knowledge: [Domain package](/components/domain.md), [Storage format](/convention
 
 - Generation: `Stamp` and `nextStamp` in `internal/domain/fsm.go`; `PlanNew` calls `nextStamp(now, taken)` for the issue ID. Baseline names also use `nextStamp` (per issue, compared with `latest`); they are not issue IDs and stay timestamps.
 - Validation: `idPattern` and `ValidID` in `internal/domain/tree.go` (`^\d{8}-\d{6}$`); `mdstore` uses `ValidID` for directory names (I001 message in `store.go` names the YYYYMMDD-HHMMSS shape) and for `issueIDs`.
-- Schema: `domain.SchemaVersion` is 1 (`internal/domain/types.go`); `prep migrate` (`cmdMigrate` in `internal/cli/write.go`) runs `migrations[v-1]` for each step and sets the schema in project.md; P002 reports a project on another schema. Schema 2 adds the ID migration. The store needs a rename operation for issue directories (writes today are per file, with compare-and-swap).
+- No schema change and no `prep migrate` step (D4). The one-time conversion of this repository is a throwaway script: rename `.prep/issues/<old>` to `.prep/issues/<ulid>` and replace every old ID in `.prep` text files.
 - Ordering: `Tree.IDs` sorts strings; ULIDs sort by creation time as strings, so string order stays correct once every ID is a ULID.
 - Resolution: `Tree.Resolve` already accepts a full ID or any unique suffix.
 - Display: `shortID` in `internal/tui/app.go` takes the part after the last `-` (the time); for a ULID it takes the last 6 characters. Commit subjects from the TUI (`internal/cli/tui.go`) use the ID.

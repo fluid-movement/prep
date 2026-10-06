@@ -29,11 +29,11 @@ Do this first: you are running in exactly the environment it asks about. Record 
 
 ### 2. Collision-free issue IDs (ULID) — `20261006-083752` (code)
 
-ULIDs replace timestamp IDs completely: prep is in development and this repository is its only user, so there is no compatibility to keep. `prep new` creates ULIDs, schema 2 accepts only ULIDs, and `prep migrate` converts a schema 1 project once (renames the issue directories and rewrites every old ID in `.prep`). The TUI shows a ULID's last 6 characters. The context and the decisions (D1 and D3; D3 supersedes D2) say where IDs are generated, validated, ordered and displayed. Keep tests deterministic by injecting the random source. Do this before item 3, because item 3 creates issues with `prep new`.
+ULIDs replace timestamp IDs completely: prep is unreleased and this repository is its only user, so there is no compatibility to keep and no migration to ship. `prep new` creates ULIDs, ULIDs are the only valid issue ID (the schema version does not change), and the TUI shows a ULID's last 6 characters. The context and the decisions (D1 and D4; D4 supersedes D2 and D3) say where IDs are generated, validated, ordered and displayed. Keep tests deterministic by injecting the random source. Do this before item 3, because item 3 creates issues with `prep new`.
 
-Finish it by migrating this repository: rebuild the binary, run `prep migrate`, check that `prep check` is clean, and commit the migration on its own. **After that, every issue ID in this file is stale.** Find the remaining work by title with `prep list --text "Import existing work"` or `prep next`.
+Finish it by converting this repository once, with a throwaway script you run from a temporary directory and do not commit: give each issue a ULID whose time part is its old timestamp, rename its directory, and replace every old ID in `.prep` text files. Rebuild the binary, check that `prep check` is clean, and commit the conversion on its own. **After that, every issue ID in this file is stale.** Find the remaining work by title with `prep list --text "Import existing work"` or `prep next`.
 
-### 3. Import existing work items — `20261006-063354` before the migration (code)
+### 3. Import existing work items — `20261006-063354` before the conversion (code)
 
 A `prep import` command that plans one guided research issue, modeled on the knowledge bootstrap (`internal/domain/bootstrap.go`). The decision on the issue lists the steps its context must guide. Sources are project-specific on purpose: no per-source importers.
 

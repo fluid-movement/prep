@@ -1,6 +1,5 @@
 - [ ] prep new creates ULID IDs (26 characters, Crockford base32); two issues created in the same millisecond still get distinct IDs that sort by creation
 - [ ] Storage format, domain and TUI knowledge entries and the skill describe ULIDs
-- [ ] Schema 2 accepts only ULID IDs; prep migrate converts a schema 1 project: ULIDs keep each issue's creation time and order, directories are renamed, and every old ID in .prep text (references, records, bodies, logs, knowledge) is rewritten; prep check is clean afterwards
-- [ ] prep check reports timestamp IDs under schema 2 with a message naming the ULID shape; fixtures, goldens and the contract corpus use ULIDs, and the corpus has a schema 1 tree the migration test converts
-- [ ] This repository is migrated with the new binary in its own commit
 - [ ] The TUI shows a ULID as its last 6 characters, and commands accept any unique suffix of an ID
+- [ ] ValidID accepts only ULIDs and prep check reports any other issue directory as I001 with a message naming the ULID shape; fixtures, goldens and the contract corpus use ULIDs
+- [ ] This repository's issues are converted once by a throwaway script (not committed): ULIDs keep each issue's creation time and order, directories are renamed, every old ID in .prep is rewritten, prep check is clean, and the conversion is its own commit
