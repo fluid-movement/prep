@@ -114,10 +114,8 @@ type Model struct {
 	focus    focus
 	w, h     int
 	vp       viewport.Model
-	docKey   string // issue, width and generation of the rendered detail
-	gen      int    // increases on every successful load
-	relFor   string // issue whose relations relCursor refers to
-	relIdx   int
+	docKey   string   // issue, width and generation of the rendered detail
+	gen      int      // increases on every successful load
 	back     []string // previously shown issues, for backspace
 	notice   string
 	changes  <-chan struct{}
@@ -528,6 +526,8 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			return m.openPriority()
 		}
 		return nil
+	case "o":
+		return m.openLinks()
 	}
 	if m.focus == focusDetail {
 		return m.detailKey(s, k)
@@ -645,25 +645,15 @@ func (m *Model) setFilter(tab, text string) {
 }
 
 func (m *Model) detailKey(s string, k tea.KeyMsg) tea.Cmd {
-	rels := m.relations(m.selected())
 	switch s {
 	case "esc", "left", "h":
 		m.focus = focusList
 		return nil
-	case "tab", "shift+tab":
-		if len(rels) > 0 {
-			step := 1
-			if s == "shift+tab" {
-				step = -1
-			}
-			m.relIdx = (m.relIdx + step + len(rels)) % len(rels)
-			return nil
-		}
-		return m.flash("no linked issues: no parent, children or dependencies")
-	case "enter":
-		if len(rels) > 0 {
-			return m.jump(rels[clamp(m.relIdx, 0, len(rels)-1)].id, true)
-		}
+	case "tab":
+		m.switchTab(m.active + 1)
+		return nil
+	case "shift+tab":
+		m.switchTab(m.active - 1)
 		return nil
 	case "backspace":
 		if n := len(m.back); n > 0 {
@@ -911,6 +901,7 @@ var (
 		bind("Issue", "n", "new issue (under the focused parent)", true),
 		bind("Issue", "y", "copy the ID", false),
 		bind("Issue", "p", "go to the parent", false),
+		bind("Issue", "o", "go to a linked issue (numbered menu)", false),
 	}
 	viewBindings = []binding{
 		bind("Views", "f", "filter (prep list flags; words match titles)", true),
@@ -932,11 +923,10 @@ var (
 	}, issueBindings, viewBindings, screenBindings)
 	detailBindings = concat([]binding{
 		bind("Move", "↑↓ pgup pgdn", "scroll", false),
-		bind("Move", "tab", "next linked issue (parent, children, dependencies)", false),
-		bind("Move", "enter", "open the linked issue", false),
+		bind("Move", "o", "go to a linked issue: its number in the menu", true),
 		bind("Move", "⌫", "back to the previous issue", false),
 		bind("Move", "esc ← h", "back to the list", true),
-	}, issueBindings, screenBindings)
+	}, issueBindings, viewBindings, screenBindings)
 	settingsBindings = []binding{
 		bind("Settings", "↑↓ j k 1-9", "select (n is view n)", false),
 		bind("Settings", "space", "toggle the commit mode", true),
@@ -1113,8 +1103,8 @@ func shortID(id string) string {
 // relationBlock draws the detail's links by their shape: ancestors as a
 // breadcrumb, children as a tree under their progress, dependencies as
 // arrows ("← needs" what this waits on, "→ unblocks" what waits on it).
-// Tab walks them in this order; a window keeps the selected one in view.
-func (m *Model) relationBlock(id string, rels []relation, focused bool, inner int) []string {
+// The block is display only; o opens a numbered menu of the same links.
+func (m *Model) relationBlock(id string, rels []relation, inner int) []string {
 	if len(rels) == 0 {
 		return nil
 	}
@@ -1128,18 +1118,14 @@ func (m *Model) relationBlock(id string, rels []relation, focused bool, inner in
 	link := func(k int, lead string) line {
 		rid := rels[k].id
 		r := m.issueRow(rid)
-		return line{ui.LinkLine(m.th, ui.Link{Lead: lead, State: m.tree.State(rid), ID: shortID(rid), Priority: m.tree.Issues[rid].Priority, Note: r.Note, Title: m.tree.Issues[rid].Title}, focused && k == m.relIdx, inner), k}
+		return line{ui.LinkLine(m.th, ui.Link{Lead: lead, State: m.tree.State(rid), ID: shortID(rid), Priority: m.tree.Issues[rid].Priority, Note: r.Note, Title: m.tree.Issues[rid].Title}, false, inner), k}
 	}
 	var children []int
 	for k, r := range rels {
 		switch r.label {
 		case "path":
 			title := ui.Fit(m.tree.Issues[r.id].Title, 32)
-			if focused && k == m.relIdx {
-				title = m.th.R.NewStyle().Foreground(m.th.C.Accent).Background(m.th.C.Selection).Bold(true).Render(title)
-			} else {
-				title = m.th.S.Muted.Render(title)
-			}
+			title = m.th.S.Muted.Render(title)
 			path = append(path, title)
 		case "child":
 			children = append(children, k)
@@ -1172,21 +1158,11 @@ func (m *Model) relationBlock(id string, rels []relation, focused bool, inner in
 			lines = append(lines, link(k, sub.Render("→ unblocks ")))
 		}
 	}
-	// Window the lines around the selected link.
-	sel := 0
-	for n, l := range lines {
-		if l.rel == m.relIdx {
-			sel = n
-		}
-	}
-	start := clamp(sel-maxRelations/2, 0, max(0, len(lines)-maxRelations))
-	for n := start; n < len(lines) && n < start+maxRelations; n++ {
+	for n := 0; n < len(lines) && n < maxRelations; n++ {
 		out = append(out, lines[n].text)
 	}
 	if hidden := len(lines) - maxRelations; hidden > 0 {
-		out = append(out, sub.Render(fmt.Sprintf("  … %d more · tab moves", hidden)))
-	} else if focused {
-		out = append(out, sub.Render("  tab moves · enter opens"))
+		out = append(out, sub.Render(fmt.Sprintf("  … %d more · o lists all", hidden)))
 	}
 	return append(out, "")
 }
@@ -1201,11 +1177,7 @@ func (m *Model) detailPane(w, h int) string {
 
 	// Relations: a fixed block of rows above the scrolling document.
 	rels := m.relations(id)
-	if m.relFor != id {
-		m.relFor, m.relIdx = id, 0
-	}
-	m.relIdx = clamp(m.relIdx, 0, len(rels)-1)
-	block := m.relationBlock(id, rels, focused, inner)
+	block := m.relationBlock(id, rels, inner)
 
 	key := fmt.Sprintf("%s|%d|%d", id, inner, m.gen)
 	if key != m.docKey {

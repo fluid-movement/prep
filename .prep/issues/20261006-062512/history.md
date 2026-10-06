@@ -15,3 +15,5 @@
 - 2026-10-06T12:11:07Z claude-code/2.1.291: Context rows now show progress, notes and priority in the subtle tone, as the user asked for consistency
 
 - 2026-10-06T12:26:32Z claude-code/2.1.291: Detail links by shape: breadcrumb for ancestors, children tree with progress, ← needs and → unblocks arrows, no label column (the user's idea)
+
+- 2026-10-06T12:29:20Z claude-code/2.1.291: tab switches views everywhere; o opens a numbered Go to menu of links; relations block display only

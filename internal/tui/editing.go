@@ -162,6 +162,36 @@ func (m *Model) openEditMenu() tea.Cmd {
 	return nil
 }
 
+// openLinks lists the selected issue's links as a numbered menu, in the
+// order the detail shows them: o 3 goes to the third.
+func (m *Model) openLinks() tea.Cmd {
+	id := m.selected()
+	if id == "" || m.tree == nil {
+		return nil
+	}
+	rels := m.relations(id)
+	if len(rels) == 0 {
+		return m.flash("no linked issues: no parent, children or dependencies")
+	}
+	lead := map[string]string{"path": "↑ ", "child": "├ ", "depends on": "← needs ", "blocks": "→ unblocks "}
+	// Children first after the path, as the detail draws them.
+	order := func(l string) int { return map[string]int{"path": 0, "child": 1, "depends on": 2, "blocks": 3}[l] }
+	sorted := append([]relation(nil), rels...)
+	slices.SortStableFunc(sorted, func(a, b relation) int { return order(a.label) - order(b.label) })
+	keys := "123456789bcdfghjklmnrstuvwxyz"
+	d := &modal{kind: modalMenu, id: id, heading: "Go to"}
+	for n, r := range sorted {
+		if n >= len(keys) {
+			break
+		}
+		target := r.id
+		d.items = append(d.items, action{key: keys[n : n+1], label: lead[r.label] + shortID(target) + " " + m.tree.Issues[target].Title,
+			run: func() tea.Cmd { return m.jump(target, true) }})
+	}
+	m.modal = d
+	return nil
+}
+
 // --- keymap ---
 
 // openHelp shows the full keymap of the current screen, grouped, and on the

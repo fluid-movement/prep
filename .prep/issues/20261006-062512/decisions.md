@@ -39,3 +39,8 @@ The one-dialog create was unclear: enter in the title was expected to move on an
 date: 2026-10-06
 
 J and K were chords. m enters move mode on the selected view: j/k or arrows move it, enter or esc ends; one write per move. Alternatives: + and - (shifted on US keyboards), [ and ] (AltGr on German keyboards).
+
+## D9: tab always switches views; links via o
+date: 2026-10-06
+
+The user disliked tab meaning next view in the list but next link in the detail. tab and shift+tab now switch views everywhere, like 1-9; links are followed with the melody o <n> from a numbered Go to menu, p stays for the parent, backspace goes back, and the relations block is display only. Alternatives: arrows moving a link selection inside the detail (another mode), keeping tab for links in the detail.

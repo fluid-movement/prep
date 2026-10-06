@@ -419,9 +419,9 @@ func TestHierarchy(t *testing.T) {
 	if v := ansi.Strip(m.View()); !strings.Contains(v, "↑ Export") || !strings.Contains(v, "→ unblocks ◐ 090300 ■■■■■ 0/1 JSON writer") {
 		t.Fatalf("relations block missing:\n%s", v)
 	}
-	keys(m, "tab", "enter")
+	keys(m, "o", "2") // the second link: → unblocks JSON writer
 	if m.selected() != ids["json"] || m.focus != focusDetail {
-		t.Fatalf("enter on a relation selected %s", m.selected())
+		t.Fatalf("o 2 selected %s", m.selected())
 	}
 	keys(m, "backspace")
 	if m.selected() != ids["csv"] {
@@ -754,12 +754,18 @@ func TestEditMenuAndKeys(t *testing.T) {
 		t.Fatalf("footer: %q", f)
 	}
 
-	// tab in the detail of an issue without links says so.
+	// o on an issue without links says so; tab switches views in the
+	// detail as it does in the list.
 	m.selectInCurrent(ids["survey"])
 	run(m, "enter")
+	run(m, "o")
+	if m.modal != nil || !strings.Contains(m.notice, "no linked issues") {
+		t.Fatalf("o without links: modal %v notice %q", m.modal, m.notice)
+	}
+	before := m.active
 	run(m, "tab")
-	if !strings.Contains(m.notice, "no linked issues") {
-		t.Fatalf("tab without links: notice %q", m.notice)
+	if m.active == before {
+		t.Fatal("tab in the detail did not switch the view")
 	}
 }
 
