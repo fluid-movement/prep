@@ -1,0 +1,6 @@
+- Builds on the side panel ([Claude Code integration](/components/claude-code.md)); all changes are in `plugins/claude-code`, no Go changes.
+- State: a `prep.view` atom (`live` default, `project`) in `$.state`, declared in `types/index.d.ts`, so the choice holds for the session and across hot reloads; a `prep.project` snapshot holds the project view's data.
+- Data: the project view reads `prep prime --json` (overview) and `prep list --tree --state open,defined,ready,in_progress --json` (rows in tree order with `depth`). Refresh loads the project data only while the project view is shown and when switching to it, so the live view costs nothing extra; `prep watch` lines refresh whichever view is shown.
+- Drawing: `panel.tsx` gains a tab row (two `Button`s, `plain`, the active one in the accent color, hotkeys `l` and `p`, `onPress` writing `prep.view` through `update`) above both views, and `drawProject` for the overview and the tree (indent by depth, state colored as in the live view, progress for parents, stale/blocked marks).
+- Commands: `/prep:pane` with `live` or `project` opens the pane and sets the view; without an argument it toggles as before.
+- Tests: tab presses and hotkeys through the mounted pane, `/prep:pane project`, project view contents with the list call mocked.

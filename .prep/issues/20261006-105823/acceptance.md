@@ -1,0 +1,3 @@
+- [ ] Live and Project tabs switch the view by click, by the l and p hotkeys while the pane holds the keyboard, and through /prep:pane live|project, which also opens the pane; the view is kept for the session
+- [ ] The project view shows the overview (bootstrap alert, counts, check, in progress, attention) and the unresolved issues as a tree with state, parent progress and stale or blocked marks, and updates live
+- [ ] claude plugin validate and claude plugin test pass; tried live in a session

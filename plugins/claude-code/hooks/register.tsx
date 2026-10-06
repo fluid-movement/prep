@@ -4,9 +4,18 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { PrepGuide, PrepPrime, PrepShow, PrepSnapshot, PrepSource, PrepSummary } from '../types'
+import type {
+  PrepGuide,
+  PrepPrime,
+  PrepProjectSnapshot,
+  PrepShow,
+  PrepSnapshot,
+  PrepSource,
+  PrepSummary,
+  PrepTab,
+} from '../types'
 import { issueFromCommand, issueFromPath } from './infer'
-import { drawPanel } from './panel'
+import { drawPane, drawPanel } from './panel'
 
 const PANE = 'prep'
 const TITLE = 'prep'
@@ -14,6 +23,11 @@ const TITLE = 'prep'
 const focus = atom({ plugin: 'prep', key: 'focus' } as const, null)
 const pin = atom({ plugin: 'prep', key: 'pin' } as const, null)
 const snapshot = atom({ plugin: 'prep', key: 'snapshot' } as const, null)
+const tab = atom({ plugin: 'prep', key: 'tab' } as const, 'live' as PrepTab)
+const project = atom({ plugin: 'prep', key: 'project' } as const, null)
+
+// The project view lists what is not resolved yet.
+const UNRESOLVED = ['--state', 'open,defined,ready,in_progress']
 
 /** Runs a prep read command and parses its JSON output. */
 async function prep<T>($: EngineInterface, args: string[]): Promise<T> {
@@ -58,8 +72,18 @@ function normalPrime(p: PrepPrime): PrepPrime {
   return { ...p, parents: p.parents ?? [], next: p.next ?? [], stale: p.stale ?? [], claims: p.claims ?? [] }
 }
 
+/** Loads the project view: the overview and the unresolved issues in tree order. */
+async function loadProject($: EngineInterface): Promise<PrepProjectSnapshot> {
+  const [prime, list] = await Promise.all([
+    prep<PrepPrime>($, ['prime']),
+    prep<{ issues: PrepSummary[] | null }>($, ['list', '--tree', ...UNRESOLVED]),
+  ])
+  return { prime: normalPrime(prime), tree: list.issues ?? [] }
+}
+
 // Refreshes can overlap (a watch line and a tool call); only the newest writes.
 let generation = 0
+let projectGeneration = 0
 // Set once session.start found a prep project; outside one the module idles.
 let active = false
 
@@ -72,6 +96,24 @@ async function refresh($: EngineInterface): Promise<void> {
     next = { view: 'error', message: err instanceof Error ? err.message : String(err) }
   }
   if (gen === generation) await update($, snapshot, () => next)
+  if ((await read($, tab)) === 'project') await refreshProject($)
+}
+
+async function refreshProject($: EngineInterface): Promise<void> {
+  const gen = ++projectGeneration
+  let next: PrepProjectSnapshot
+  try {
+    next = await loadProject($)
+  } catch (err) {
+    next = { error: err instanceof Error ? err.message : String(err) }
+  }
+  if (gen === projectGeneration) await update($, project, () => next)
+}
+
+/** Shows a view; the project view loads fresh data as it opens. */
+async function showTab($: EngineInterface, next: PrepTab): Promise<void> {
+  await update($, tab, () => next)
+  if (next === 'project') await refreshProject($)
 }
 
 /** Makes ref the agent's current issue and redraws when it changed. */
@@ -173,8 +215,16 @@ export const register: Register = (on, options) => {
     return { text: `prep panel pinned to ${id}.` }
   })
 
-  on('command.run', { command: 'prep:pane' }, async $ => {
+  on('command.run', { command: 'prep:pane' }, async ($, e) => {
     if (!active) return { text: 'Not a prep project.' }
+    const arg = e.args.trim()
+    if (arg === 'live' || arg === 'project') {
+      await showTab($, arg)
+      await $.store.set(openKey(cwd), true)
+      await $.ui.open({ id: PANE, title: TITLE })
+      return { text: `prep panel shows the ${arg} view.` }
+    }
+    if (arg !== '') return { text: `prep panel: unknown view ${arg}; use live or project.` }
     if (await isPaneOpen($)) {
       await $.store.set(openKey(cwd), false)
       await $.ui.close({ id: PANE })
@@ -193,9 +243,9 @@ export const register: Register = (on, options) => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const kit = $.ui.resolve(e)
-    const snap = await read($, snapshot)
+    const [shown, live, proj] = [await read($, tab), await read($, snapshot), await read($, project)]
     try {
-      return drawPanel(kit, snap)
+      return drawPane(kit, shown, live, proj, next => void showTab($, next))
     } catch (err) {
       // Never an empty pane: say what failed instead.
       return drawPanel(kit, { view: 'error', message: err instanceof Error ? err.message : String(err) })

@@ -78,6 +78,15 @@ const list = {
   ],
 }
 
+// prep list --tree with the unresolved states: rows in tree order with depth.
+const tree = {
+  issues: [
+    summary(PARENT, 'TUI parent', 'open', { children: 1, progress: { done: 0, dropped: 0, total: 1 } }),
+    summary(CHILD, 'Side panel', 'in_progress', { parent: PARENT, depth: 1, stale: true }),
+    summary(OTHER, 'Other work', 'ready', { actionable: true }),
+  ],
+}
+
 type Project = {
   claims?: { id: string; title: string; by: string }[]
   isPrep?: boolean
@@ -109,7 +118,7 @@ function fakePrep(on: On, project: Project = {}) {
         // A resolved issue: prep writes null for its empty lists.
         return ok(full === PARENT ? { ...guide, step: 'resolved', transitions: null, knowledge: null } : guide)
       case 'list':
-        return ok(list)
+        return ok(argv.includes('--tree') ? tree : list)
     }
     return { ...ok({}), exitCode: 2 }
   }
@@ -141,11 +150,15 @@ function fakePanes(on: On) {
 const START = { cwd: '/repo', surface: 'terminal', isInteractive: true } as const
 
 // One mounted pane per test: it redraws as the plugin's state changes.
-const mounted = new WeakMap<object, Promise<{ findAll: (q: object) => Promise<readonly { text?: string }[]> }>>()
+const mounted = new WeakMap<object, ReturnType<typeof mount>>()
+
+function pane($: Engine) {
+  if (!mounted.has($)) mounted.set($, mount($))
+  return mounted.get($)!
+}
 
 async function drawn($: Engine) {
-  if (!mounted.has($)) mounted.set($, mount($))
-  const ui = await mounted.get($)!
+  const ui = await pane($)
   return (await ui.findAll({})).map(el => el.text ?? '').join('\n')
 }
 
@@ -335,6 +348,47 @@ describe('panel', () => {
     expect(panes.has('prep')).toBe(false)
     const out = await $.command.run({ command: 'prep:pane', args: '' } as never)
     expect(out.text).toBe('Not a prep project.')
+  })
+})
+
+describe('views', () => {
+  test('the Live and Project tabs switch the view', async ($, on) => {
+    const calls = fakePrep(on)
+    fakePanes(on)
+    on('tool.call', async () => ({ result: {} as never, text: 'ok' }))
+    await $.session.start(START)
+    await bash($, `prep guide ${CHILD}`)
+    expect(await drawn($)).toContain('step implement')
+    expect(calls.some(c => c.includes('--tree'))).toBe(false)
+
+    const ui = await pane($)
+    await ui.press({ key: 'tab-project' })
+    const text = await drawn($)
+    expect(text).toContain('Open issues 3')
+    expect(text).toContain('check: 0 errors, 1 warnings')
+    expect(text).toContain('  in_progress')
+    expect(text).toContain('stale')
+    expect(text).toContain('actionable')
+    expect(text).not.toContain('step implement')
+
+    await ui.press({ key: 'tab-live' })
+    expect(await drawn($)).toContain('step implement')
+  })
+
+  test('/prep:pane project opens the pane on the project view', async ($, on) => {
+    fakePrep(on)
+    const panes = fakePanes(on)
+    await $.session.start(START)
+    await $.command.run({ command: 'prep:pane', args: '' } as never)
+    expect(panes.has('prep')).toBe(false)
+    const out = await $.command.run({ command: 'prep:pane', args: 'project' } as never)
+    expect(out.text).toContain('project view')
+    expect(panes.has('prep')).toBe(true)
+    expect(await drawn($)).toContain('Open issues 3')
+    await $.command.run({ command: 'prep:pane', args: 'live' } as never)
+    expect(await drawn($)).toContain('no issue in focus')
+    const bad = await $.command.run({ command: 'prep:pane', args: 'board' } as never)
+    expect(bad.text).toContain('unknown view board')
   })
 })
 

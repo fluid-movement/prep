@@ -1,0 +1,1 @@
+- 2026-10-06T11:00:13Z claude-code/2.1.291: Added the Live/Project tabs (plain Buttons with hotkeys l and p), the prep.tab and prep.project state, the project view (overview and prep list --tree of unresolved issues) and /prep:pane live|project; tests for tab presses and the command

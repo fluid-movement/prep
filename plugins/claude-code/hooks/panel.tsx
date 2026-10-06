@@ -1,10 +1,11 @@
-// Draws the panel from a snapshot: the current issue or the project overview.
+// Draws the panel: tabs over the live view (the current issue, or the
+// overview while there is none) or the project view (overview and issue tree).
 
 import type { Color, Elements, RenderChildren, RenderElement } from 'claude-code'
 
-import type { PrepGuide, PrepPrime, PrepShow, PrepSnapshot, PrepSummary } from '../types'
+import type { PrepGuide, PrepPrime, PrepProjectSnapshot, PrepShow, PrepSnapshot, PrepSummary, PrepTab } from '../types'
 
-type Kit = Pick<Elements['terminal'], 'Box' | 'Text' | 'Markdown'>
+type Kit = Pick<Elements['terminal'], 'Box' | 'Text' | 'Markdown' | 'Button'>
 
 // The TUI design system's tokens, mapped onto the theme keys of Claude Code
 // so the panel follows the person's light or dark theme.
@@ -21,9 +22,41 @@ const STATE: Record<string, Color> = {
 // How much of each section shows; the pane scrolls past the rest.
 const REQUIREMENT_LINES = 14
 const LIST_ROWS = 8
+const TREE_ROWS = 200
 const HISTORY_LINES = 3
 
 const SOURCE = { pinned: 'pinned', agent: 'following the agent', claimed: 'claimed here' }
+
+/** The tab row and the chosen view; onTab switches views. */
+export function drawPane(
+  kit: Kit,
+  tab: PrepTab,
+  live: PrepSnapshot | null,
+  project: PrepProjectSnapshot | null,
+  onTab: (tab: PrepTab) => void,
+): RenderElement {
+  const { Box, Button } = kit
+  const tabButton = (t: PrepTab, label: string, hotkey: string) => (
+    <Button
+      key={`tab-${t}`}
+      label={label}
+      hotkey={hotkey}
+      plain
+      variant={t === tab ? 'primary' : undefined}
+      dimColor={t !== tab}
+      onPress={() => onTab(t)}
+    />
+  )
+  return (
+    <Box flexDirection="column" gap={1}>
+      <Box flexDirection="row" gap={2}>
+        {tabButton('live', 'Live', 'l')}
+        {tabButton('project', 'Project', 'p')}
+      </Box>
+      {tab === 'project' ? drawProjectView(kit, project) : drawPanel(kit, live)}
+    </Box>
+  )
+}
 
 export function drawPanel(kit: Kit, snap: PrepSnapshot | null): RenderElement {
   const { Box, Text } = kit
@@ -135,6 +168,44 @@ function drawIssue(kit: Kit, show: PrepShow, guide: PrepGuide, issues: PrepSumma
   )
 }
 
+function drawProjectView(kit: Kit, project: PrepProjectSnapshot | null): RenderElement {
+  const { Box, Text } = kit
+  if (project === null) return <Text dimColor>Loading prep…</Text>
+  if ('error' in project) return drawPanel(kit, { view: 'error', message: project.error })
+  const { prime: p, tree } = project
+  const check =
+    p.check.errors + p.check.warnings === 0
+      ? 'check ok'
+      : `check: ${p.check.errors} errors, ${p.check.warnings} warnings`
+  return (
+    <Box flexDirection="column" gap={1}>
+      <Box flexDirection="column">
+        <Text bold color={ACCENT}>
+          prep
+        </Text>
+        <Text dimColor>{`${p.issues} issues · ${p.actionable} actionable · ${check}`}</Text>
+      </Box>
+      {p.bootstrap && <Text color="warning">{p.bootstrap}</Text>}
+      {p.claims.length > 0 &&
+        section(kit, 'In progress', [
+          p.claims.slice(0, LIST_ROWS).map(c => (
+            <Text wrap="truncate-end">
+              <Text dimColor>{`${c.id} `}</Text>
+              {c.title}
+            </Text>
+          )),
+        ])}
+      {p.stale.length > 0 &&
+        section(kit, 'Attention', [p.stale.slice(0, LIST_ROWS).map(s => row(kit, s, 'stale'))], 'warning')}
+      {section(kit, `Open issues ${tree.length}`, [
+        tree.length === 0 && <Text dimColor>Nothing open.</Text>,
+        tree.slice(0, TREE_ROWS).map(s => treeRow(kit, s)),
+        tree.length > TREE_ROWS && <Text dimColor>{`… ${tree.length - TREE_ROWS} more`}</Text>,
+      ])}
+    </Box>
+  )
+}
+
 function drawOverview(kit: Kit, p: PrepPrime): RenderElement {
   const { Box, Text } = kit
   const attention = p.stale.length > 0 || p.check.errors > 0 || p.check.warnings > 0
@@ -195,6 +266,22 @@ function row(kit: Kit, s: PrepSummary, note?: string): RenderElement {
       <Text color={STATE[s.state] ?? 'text'}>{pad(s.state)}</Text>
       {s.title}
       <Text dimColor>{progress + (note ? ` (${note})` : '')}</Text>
+    </Text>
+  )
+}
+
+/** One row of the issue tree: indented by depth, with marks for what needs attention. */
+function treeRow(kit: Kit, s: PrepSummary): RenderElement {
+  const { Text } = kit
+  const progress = s.progress ? ` ${s.progress.done + s.progress.dropped}/${s.progress.total}` : ''
+  const marks = [s.stale && 'stale', s.blocked && 'blocked', s.actionable && 'actionable'].filter(Boolean)
+  return (
+    <Text wrap="truncate-end">
+      {'  '.repeat(s.depth ?? 0)}
+      <Text color={STATE[s.state] ?? 'text'}>{pad(s.state)}</Text>
+      {s.title}
+      <Text dimColor>{progress}</Text>
+      {marks.length > 0 && <Text color={s.stale || s.blocked ? 'warning' : 'success'}>{` ${marks.join(' ')}`}</Text>}
     </Text>
   )
 }

@@ -16,6 +16,8 @@ export type PrepSummary = {
   tags?: string[]
   children: number
   progress?: PrepProgress
+  /** Nesting in prep list --tree. */
+  depth?: number
 }
 
 /** prep show <id> --json, the fields the panel reads. */
@@ -75,6 +77,12 @@ export type PrepSnapshot =
   | { view: 'overview'; prime: PrepPrime }
   | { view: 'error'; message: string }
 
+/** Which view the pane shows: the issue being worked on, or the project. */
+export type PrepTab = 'live' | 'project'
+
+/** What the project view draws: the overview and the unresolved issues in tree order. */
+export type PrepProjectSnapshot = { prime: PrepPrime; tree: PrepSummary[] } | { error: string }
+
 declare module 'claude-code' {
   interface PluginState {
     prep: {
@@ -82,8 +90,12 @@ declare module 'claude-code' {
       focus: string | null
       /** The issue /prep:focus pinned; it wins over focus. */
       pin: string | null
-      /** The last data loaded for the pane. */
+      /** The last data loaded for the live view. */
       snapshot: PrepSnapshot | null
+      /** The view the pane shows; live unless the person picked project. */
+      tab: PrepTab
+      /** The last data loaded for the project view, while it is shown. */
+      project: PrepProjectSnapshot | null
     }
   }
 }
