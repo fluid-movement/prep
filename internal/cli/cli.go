@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
 	"strings"
 	"time"
 
@@ -281,13 +280,4 @@ func formatDiag(d domain.Diagnostic) string {
 		loc = d.Issue + "/" + d.File
 	}
 	return fmt.Sprintf("%-7s %s %s: %s (%s; fix: %s)", d.Severity, d.Code, loc, d.Message, d.Class, d.Fix)
-}
-
-func sortedViewNames(m map[string]string) []string {
-	ks := make([]string, 0, len(m))
-	for k := range m {
-		ks = append(ks, k)
-	}
-	sort.Strings(ks)
-	return ks
 }

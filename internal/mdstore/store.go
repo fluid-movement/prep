@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/fluid-movement/prep/internal/domain"
+	"gopkg.in/yaml.v3"
 )
 
 // Dir is the project data directory inside the repository.
@@ -224,8 +225,10 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 			diag(domain.CodeDecisionInvalid, domain.SevError, domain.ClassManual, "decisions.md", "entries are '## <id>: <title>' followed by date: YYYY-MM-DD", "%s", p)
 		}
 	}
-	if _, _, err := plain("history.md", fileText); err != nil {
+	if raw, ok, err := plain("history.md", fileText); err != nil {
 		return nil, nil, err
+	} else if ok {
+		i.History = normalize(raw)
 	}
 	if raw, ok, err := plain("findings.md", fileText); err != nil {
 		return nil, nil, err
@@ -323,7 +326,29 @@ func (s *Store) LoadConfig() (domain.Config, error) {
 		}
 	}
 	cfg.Views = f.Views
+	cfg.ViewOrder = viewOrder(raw)
 	return cfg, nil
+}
+
+// viewOrder returns the keys of the views mapping in file order.
+func viewOrder(raw string) []string {
+	var doc yaml.Node
+	if yaml.Unmarshal([]byte(raw), &doc) != nil || len(doc.Content) == 0 {
+		return nil
+	}
+	root := doc.Content[0]
+	for k := 0; k+1 < len(root.Content); k += 2 {
+		if root.Content[k].Value != "views" {
+			continue
+		}
+		var names []string
+		v := root.Content[k+1]
+		for j := 0; j+1 < len(v.Content); j += 2 {
+			names = append(names, v.Content[j].Value)
+		}
+		return names
+	}
+	return nil
 }
 
 // DefaultConfig is written by prep init.

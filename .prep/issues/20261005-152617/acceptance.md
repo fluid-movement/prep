@@ -1,0 +1,7 @@
+- [x] prep tui opens with the saved views as tabs in config.yaml order, each with its issue count; prep views lists them in that order too
+- [x] Each tab lists its issues with ID, state badge, kind, progress, blocked or stale note and title, from the same query engine as prep list
+- [x] The detail pane renders the selected issue: metadata, requirement, open questions, context, decisions, numbered criteria, Definition of Done, history and resolution as markdown, scrollable
+- [x] Keys: tab/shift+tab and 1-9 switch tabs, up/down and j/k move, enter and esc switch focus, pgup/pgdn scroll, y copies the selected ID, q quits; a footer lists them
+- [x] Changes under .prep appear within a second without a keypress, keeping the selection; a load error keeps the last data and shows the error
+- [x] Works at 80x24 (one pane at a time) and wider (list and detail side by side)
+- [x] Screen snapshot, model and watcher tests pass

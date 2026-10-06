@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -242,4 +243,24 @@ func (t *Tree) TreeOrder(ids []string) []string {
 		}
 	}
 	return out
+}
+
+// ViewNames lists saved views in config order, then any others sorted.
+func ViewNames(c Config) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, n := range c.ViewOrder {
+		if _, ok := c.Views[n]; ok && !seen[n] {
+			seen[n] = true
+			out = append(out, n)
+		}
+	}
+	var rest []string
+	for n := range c.Views {
+		if !seen[n] {
+			rest = append(rest, n)
+		}
+	}
+	sort.Strings(rest)
+	return append(out, rest...)
 }

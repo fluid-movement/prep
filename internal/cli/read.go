@@ -182,7 +182,7 @@ func cmdViews(a *app, args []string) error {
 		a.emit(map[string]any{"views": views})
 		return nil
 	}
-	for _, n := range sortedViewNames(views) {
+	for _, n := range domain.ViewNames(t.Project.Config) {
 		a.printf("%-14s %s\n", n, views[n])
 	}
 	return nil

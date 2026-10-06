@@ -23,7 +23,7 @@ internal/domain     model, derived state, FSM and gates, validation, query engin
 internal/mdstore    issue store adapter: .prep/issues as markdown
 internal/okf        knowledge store adapter: .prep/knowledge as an OKF v0.2 bundle
 internal/gitx       the few git calls (staging, commits, drift, commit evidence)
-internal/tui        human interface: screens (Bubble Tea); theme and ui hold the design system
+internal/tui        human interface: screens (Bubble Tea) loading through an injected loader; theme and ui hold the design system
 ```
 
 - Ports are defined in `internal/domain/ports.go`: `IssueStore` (transactional records: `Load`, `Apply`) and `KnowledgeStore` (retrieval: `Load`). They are separate because access patterns differ.

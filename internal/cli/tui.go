@@ -3,9 +3,12 @@ package cli
 import (
 	"flag"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/term"
 
+	"github.com/fluid-movement/prep/internal/domain"
+	"github.com/fluid-movement/prep/internal/mdstore"
 	"github.com/fluid-movement/prep/internal/tui"
 )
 
@@ -21,5 +24,11 @@ func cmdTUI(a *app, args []string) error {
 	if *gallery {
 		return tui.RunGallery(os.Stdin, os.Stdout)
 	}
-	return usageErr("the issue views are not built yet (issue 20261005-152617); try prep tui --gallery")
+	if err := a.open(); err != nil {
+		return err
+	}
+	return tui.Run(tui.Options{
+		Load:  func() (*domain.Tree, error) { return a.load(false) },
+		Watch: filepath.Join(a.store.Root, mdstore.Dir),
+	}, os.Stdin, os.Stdout)
 }

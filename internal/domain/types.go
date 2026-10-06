@@ -64,6 +64,8 @@ type Project struct {
 type Config struct {
 	CommitMode string            `json:"commit_mode"`
 	Views      map[string]string `json:"views,omitempty"`
+	// ViewOrder lists the view names in the order the config file gives them.
+	ViewOrder []string `json:"view_order,omitempty"`
 }
 
 // Commit modes.
@@ -168,6 +170,7 @@ type Issue struct {
 	ContextPaths []string `json:"context_paths,omitempty"` // code paths mentioned in context.md
 
 	Decisions []Decision `json:"decisions,omitempty"`
+	History   string     `json:"-"` // the work log
 	Findings  *string    `json:"-"`
 
 	Baselines  []Baseline  `json:"baselines,omitempty"` // oldest first
