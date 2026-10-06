@@ -1,0 +1,14 @@
+---
+outcome: done
+by: claude-code/opus-5.5
+at: 2026-10-06T18:34:53Z
+evidence: bf76661
+documentation:
+  entries:
+    - /components/markdown-store.md
+dod:
+  - go test ./... passes
+  - prep check reports no errors
+  - prep fmt --check passes
+  - knowledge entries describing changed behavior are updated
+---
