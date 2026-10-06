@@ -1,0 +1,1 @@
+Question: a branch commit recorded as completion evidence disappears after a squash merge. Should prep check require reachable evidence, warn about unreachable hashes, or accept the hash as informational? Today only the format is validated.

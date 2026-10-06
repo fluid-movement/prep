@@ -23,6 +23,7 @@ Applies when adding or changing commands.
 - Record writes (`recordCmd` in `write.go`): `context` and `findings` replace their record and require `--body` or `--body-file`; `decide` appends a decision; `criterion` (`--add`, `--check`/`--uncheck`/`--remove <n>`) and `dod` (`--add`, `--opt-out` with `--reason`, `--remove <item>`) change acceptance.md; `log <id> <text>` appends to history. `prep show` numbers criteria for `--check <n>`.
 - `record` stages written paths or commits them in commit mode `all`; `afterWrite` prints its errors, the TUI's write function returns them.
 - `prep knowledge new|update|confirm` (`knowledge.go`): knowledge entry writes run plan (`Tree.PlanKnowledge`), render through the store, `CheckWrite`, write, stage; `confirm` sets `confirmed_commit` to HEAD for the named entries or `--drifted` ones and needs git and a scope.
+- Commit mode defaults to `off`: prep stages the `.prep` files it writes and the user or agent commits them with the code; `all` commits each operation (decided in 20261005-152627).
 - Write pipeline: load → `Plan` → `CheckWrite` → `store.Apply` → stage (commit mode `off`) or commit only `.prep` paths (`all`).
 - `prep tui` is a read command that needs a terminal (stdin and stdout); it opens the [TUI](/components/tui.md), and `--gallery` shows the [TUI design system](/components/tui-design-system.md). `prep views` lists saved views in config order.
 - `prep skill` prints the embedded `internal/cli/skill.md`; `.claude/skills/prep/SKILL.md` must stay identical (tested).

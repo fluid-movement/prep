@@ -1,0 +1,1 @@
+Question: should prep only stage the .prep files it writes (off) or commit each operation (all) by default? prep init writes commit_mode: off today. Options: off keeps .prep changes in the same commits as the code they describe and works with squash merges; all gives an exact git trail per operation but many small commits.

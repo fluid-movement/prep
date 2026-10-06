@@ -1,0 +1,1 @@
+Question: how is prep installed and updated? The sketch: GoReleaser on tag push, GitHub Release binaries, a curl | sh installer, prep update replacing itself (deferring to Homebrew or go install when installed that way); the Claude Code plugin ships separately through a plugin marketplace and checks binary compatibility. Options: that full flow; go install only; Homebrew first.

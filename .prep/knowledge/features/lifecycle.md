@@ -32,6 +32,8 @@ States (never stored): resolution.md → done/dropped; claim.md with valid ready
 - **Edit** is not a transition: `prep edit` changes title, kind, parent, dependencies or requirement of any unresolved issue and appends a history line; it never changes state, but a requirement or kind edit makes a defined issue stale.
 - **Stale**: requirement (issue.md body) or kind differs from the newest baseline. Ack for trivial changes; define plus re-enrichment for real ones.
 - **Actionable**: ready, not stale, dependencies done, unclaimed, not a parent. **Blocked**: unresolved dependencies.
+- **Completion evidence** for code issues is informational: `prep complete --commit` and `prep check` validate the hash format only, so evidence stays valid after a squash merge removes the branch commit (decided in 20261005-152625).
+- **Claims across branches**: prep never pushes. A claim made on a branch is visible elsewhere once the branch merges; working on main has no lag (decided in 20261005-152626).
 - **Definition of Done** cascades project → ancestors → issue with opt-outs and is snapshotted into resolution.md.
 - Parents are never claimed; their kind is ignored while they have children.
 

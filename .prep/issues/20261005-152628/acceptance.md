@@ -1,0 +1,1 @@
+- [x] The decision is recorded with outcome: true and the affected knowledge or follow-up issue named
