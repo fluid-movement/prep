@@ -216,7 +216,7 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 	} else if ok {
 		parseContext(raw, i)
 	}
-	if raw, ok, err := plain("decisions.md", fileText); err != nil {
+	if raw, ok, err := plain("decisions.md", canonicalDecisions); err != nil {
 		return nil, nil, err
 	} else if ok {
 		var problems []string

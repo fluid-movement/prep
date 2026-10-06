@@ -245,7 +245,7 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 			}},
 			{"acceptance.md", always(canonicalAcceptance)},
 			{"context.md", always(fileText)},
-			{"decisions.md", always(fileText)},
+			{"decisions.md", always(canonicalDecisions)},
 			{"history.md", always(fileText)},
 			{"findings.md", always(fileText)},
 			{"ready.md", func(raw string) (string, bool) {

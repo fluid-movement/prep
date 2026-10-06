@@ -367,6 +367,9 @@ func parseDecisions(raw string) ([]domain.Decision, []string) {
 			continue
 		}
 		if inMeta {
+			if strings.TrimSpace(l) == "" {
+				continue // blank lines before the metadata are tolerated
+			}
 			if m := decisionKVRe.FindStringSubmatch(l); m != nil {
 				v := strings.TrimSpace(m[2])
 				switch m[1] {
@@ -388,6 +391,36 @@ func parseDecisions(raw string) ([]domain.Decision, []string) {
 	}
 	flush()
 	return out, problems
+}
+
+// canonicalDecisions renders decisions.md canonically: blank lines between
+// a heading and its metadata lines are removed.
+func canonicalDecisions(raw string) string {
+	lines := strings.Split(normalize(raw), "\n")
+	var out []string
+	inMeta := false
+	for k, l := range lines {
+		switch {
+		case strings.HasPrefix(l, "## "):
+			inMeta = true
+		case inMeta && strings.TrimSpace(l) == "":
+			next := ""
+			for _, n := range lines[k+1:] {
+				if strings.TrimSpace(n) != "" {
+					next = n
+					break
+				}
+			}
+			if decisionKVRe.MatchString(next) {
+				continue
+			}
+			inMeta = false
+		case inMeta && !decisionKVRe.MatchString(l):
+			inMeta = false
+		}
+		out = append(out, l)
+	}
+	return fileText(strings.Join(out, "\n"))
 }
 
 // --- baselines, ready, claim, resolution ---

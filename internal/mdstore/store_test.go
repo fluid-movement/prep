@@ -68,3 +68,18 @@ func TestRoundTripIsCanonical(t *testing.T) {
 		t.Fatalf("prose %q questions %q", i.Prose, i.OpenQuestions)
 	}
 }
+
+func TestDecisionsTolerateBlankLines(t *testing.T) {
+	raw := "## D1: Use CSV\n\ndate: 2026-10-05\n\noutcome: true\n\nBecause.\n\n## D2: Stream\ndate: 2026-10-06\n\nRows.\n"
+	ds, problems := parseDecisions(raw)
+	if len(problems) > 0 || len(ds) != 2 || ds[0].Date != "2026-10-05" || !ds[0].Outcome || ds[0].Body != "Because." || ds[1].Body != "Rows." {
+		t.Fatalf("parsed %+v problems %v", ds, problems)
+	}
+	want := "## D1: Use CSV\ndate: 2026-10-05\noutcome: true\n\nBecause.\n\n## D2: Stream\ndate: 2026-10-06\n\nRows.\n"
+	if got := canonicalDecisions(raw); got != want {
+		t.Fatalf("canonical =\n%q\nwant\n%q", got, want)
+	}
+	if canonicalDecisions(want) != want {
+		t.Fatal("canonical form is not stable")
+	}
+}

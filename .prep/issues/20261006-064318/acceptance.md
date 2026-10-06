@@ -1,0 +1,3 @@
+- [x] A blank line between a decision heading and date:, supersedes: or outcome: parses correctly
+- [x] prep check reports such a file as not canonical and prep fmt removes the blank lines
+- [x] Storage format entry updated
