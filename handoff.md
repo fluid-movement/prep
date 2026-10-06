@@ -29,11 +29,11 @@ Do this first: you are running in exactly the environment it asks about. Record 
 
 ### 2. Collision-free issue IDs (ULID) — `20261006-083752` (code)
 
-`prep new` creates ULIDs; existing timestamp IDs stay valid; ordering compares creation times; the TUI shows a ULID's last 6 characters. The context and two decisions on the issue spell out where IDs are generated, validated, ordered and displayed; read them with `prep guide`. Keep tests deterministic (inject the random source). Do this before item 3, because item 3 creates issues with `prep new`.
+ULIDs replace timestamp IDs completely: prep is in development and this repository is its only user, so there is no compatibility to keep. `prep new` creates ULIDs, schema 2 accepts only ULIDs, and `prep migrate` converts a schema 1 project once (renames the issue directories and rewrites every old ID in `.prep`). The TUI shows a ULID's last 6 characters. The context and the decisions (D1 and D3; D3 supersedes D2) say where IDs are generated, validated, ordered and displayed. Keep tests deterministic by injecting the random source. Do this before item 3, because item 3 creates issues with `prep new`.
 
-The user accepted the recommended answers for this issue (keep timestamp IDs valid; short form = last 6 characters). If anything in the code makes either one a bad idea, stop and write it up rather than choosing differently.
+Finish it by migrating this repository: rebuild the binary, run `prep migrate`, check that `prep check` is clean, and commit the migration on its own. **After that, every issue ID in this file is stale.** Find the remaining work by title with `prep list --text "Import existing work"` or `prep next`.
 
-### 3. Import existing work items — `20261006-063354` (code)
+### 3. Import existing work items — `20261006-063354` before the migration (code)
 
 A `prep import` command that plans one guided research issue, modeled on the knowledge bootstrap (`internal/domain/bootstrap.go`). The decision on the issue lists the steps its context must guide. Sources are project-specific on purpose: no per-source importers.
 

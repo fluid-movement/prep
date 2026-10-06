@@ -1,5 +1,6 @@
 - [ ] prep new creates ULID IDs (26 characters, Crockford base32); two issues created in the same millisecond still get distinct IDs that sort by creation
-- [ ] Timestamp IDs stay valid everywhere; IDs, tree order and query tie-breaks order mixed trees by creation time
-- [ ] The TUI shows a ULID as its last 6 characters, and commands accept any unique suffix of either format
-- [ ] prep check accepts both formats and its bad-ID message names both; the contract corpus has a valid tree with ULID and mixed IDs
 - [ ] Storage format, domain and TUI knowledge entries and the skill describe ULIDs
+- [ ] Schema 2 accepts only ULID IDs; prep migrate converts a schema 1 project: ULIDs keep each issue's creation time and order, directories are renamed, and every old ID in .prep text (references, records, bodies, logs, knowledge) is rewritten; prep check is clean afterwards
+- [ ] prep check reports timestamp IDs under schema 2 with a message naming the ULID shape; fixtures, goldens and the contract corpus use ULIDs, and the corpus has a schema 1 tree the migration test converts
+- [ ] This repository is migrated with the new binary in its own commit
+- [ ] The TUI shows a ULID as its last 6 characters, and commands accept any unique suffix of an ID
