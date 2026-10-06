@@ -32,6 +32,9 @@ func (t *Tree) PlanKnowledge(in KnowledgeEdit) (*Change, error) {
 	}
 	in.Path = p
 	in.At = in.At.UTC().Truncate(time.Second)
+	if in.Body != nil && strings.TrimSpace(*in.Body) == "" {
+		return nil, &Error{Code: ErrUsage, Message: "the body is empty; an entry needs content (nothing was written)"}
+	}
 	exists := t.Knowledge[p] != nil
 	empty := func(s *string) bool { return s == nil || strings.TrimSpace(*s) == "" }
 	switch {

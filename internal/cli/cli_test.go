@@ -595,6 +595,10 @@ func TestKnowledgeCommands(t *testing.T) {
 		}
 	}
 	h.fails("nothing to change", "knowledge", "update", "components/export.md", "--json")
+	h.fails("the body is empty", "knowledge", "update", "components/export.md", "--body", "  ", "--json")
+	if !strings.Contains(entry("components/export.md"), "Rewritten.") {
+		t.Fatal("an empty body was written")
+	}
 	h.fails("E_NOT_FOUND", "knowledge", "update", "components/missing.md", "--title", "x", "--json")
 	h.fails("not a valid entry path", "knowledge", "update", "../escape.md", "--title", "x", "--json")
 

@@ -1,0 +1,1 @@
+- [x] prep knowledge new and update refuse an empty --body or --body-file and leave the entry unchanged

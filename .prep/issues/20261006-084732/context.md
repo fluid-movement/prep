@@ -1,0 +1,1 @@
+One check in `Tree.PlanKnowledge` (`internal/domain/knowledge.go`): a given body that is empty after trimming is a usage error, for new and update alike. Test in `TestKnowledgeCommands` (`internal/cli/cli_test.go`). [Domain package](/components/domain.md) mentions it.
