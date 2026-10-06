@@ -57,10 +57,11 @@ func Gallery(t *theme.Theme, width int) string {
 	b.WriteString(Fit(Note(t, "blocked", ToneWarning)+"  "+Note(t, "stale", ToneError)+"  "+Note(t, "actionable", ToneSuccess)+"  "+Note(t, "claimed", ToneAccent)+"  "+Note(t, "note", ToneMuted), width))
 
 	section("Tabs")
-	tabs := []Tab{{"Attention", 1}, {"Actionable", 0}, {"In progress", 2}, {"To enrich", 3}, {"To define", 12}, {"All", 25}}
+	// The views prep init writes, then two a project added.
+	tabs := []Tab{{"Unresolved", 17}, {"All", 25}, {"In progress", 2}, {"Release 0.1.0", 6}}
 	b.WriteString(Tabs(t, tabs, 0, width) + "\n")
 	b.WriteString(Tabs(t, tabs, 2, width) + "\n")
-	b.WriteString(Tabs(t, tabs, 5, min(width, 40)))
+	b.WriteString(Tabs(t, tabs, 3, min(width, 40)))
 
 	section("List rows")
 	rows := []Row{

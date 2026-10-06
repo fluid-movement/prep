@@ -411,11 +411,7 @@ const DefaultConfig = `# prep project configuration (project-level only).
 # commit_mode: off stages .prep changes; all commits each tool operation.
 commit_mode: off
 views:
-  Attention: --stale
-  Actionable: --actionable
-  In progress: --state in_progress
-  To enrich: --state defined
-  To define: --state open
+  Unresolved: --state open,defined,ready,in_progress
   All: ""
 `
 

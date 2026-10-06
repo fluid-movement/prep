@@ -86,9 +86,37 @@ func (p *project) record(id string, op domain.Op, in domain.RecordInput) {
 	})
 }
 
-// sample is a small project with every state and a parent.
+// sampleViews are more views than prep init writes, so tests can switch,
+// filter and reorder tabs.
+var sampleViews = []struct{ name, query string }{
+	{"Attention", "--stale"},
+	{"Actionable", "--actionable"},
+	{"In progress", "--state in_progress"},
+	{"To enrich", "--state defined"},
+	{"To define", "--state open"},
+	{"All", ""},
+}
+
+// sample is a small project with every state and a parent, and the
+// sampleViews.
 func sample(t *testing.T) (*project, map[string]string) {
 	p := newProject(t)
+	tr, err := p.load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := domain.Config{CommitMode: tr.Project.Config.CommitMode, Views: map[string]string{}}
+	for _, v := range sampleViews {
+		cfg.Views[v.name] = v.query
+		cfg.ViewOrder = append(cfg.ViewOrder, v.name)
+	}
+	c, err := tr.PlanConfig(cfg)
+	if err == nil {
+		_, err = mdstore.Open(p.dir).Apply(c)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
 	ids := map[string]string{}
 	ids["export"] = p.issue("Export", domain.KindCode, "Export data in several formats.", "")
 	ids["csv"] = p.issue("CSV writer", domain.KindCode, "Write rows as CSV with a header line.", ids["export"])
@@ -362,6 +390,33 @@ func TestTabsAndSelection(t *testing.T) {
 	}
 	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "All 7") {
 		t.Fatalf("tab count not updated:\n%s", v)
+	}
+}
+
+// A project as prep init leaves it has the Unresolved and All tabs: all
+// unresolved work first, every issue second.
+func TestDefaultViews(t *testing.T) {
+	p := newProject(t)
+	open := p.issue("Open", domain.KindCode, "x", "")
+	defined := p.issue("Defined", domain.KindCode, "x", "")
+	p.op(defined, domain.OpDefine, domain.Input{})
+	dropped := p.issue("Dropped", domain.KindCode, "x", "")
+	p.op(dropped, domain.OpDrop, domain.Input{Reason: "fixture"})
+	m := openModel(t, p, 110, 28)
+
+	var names []string
+	for _, tb := range m.tabs {
+		names = append(names, tb.name)
+	}
+	if got := strings.Join(names, ","); got != "Unresolved,All" {
+		t.Fatalf("default tabs = %s", got)
+	}
+	if got := strings.Join(rowIDs(m), ","); got != open+","+defined {
+		t.Fatalf("Unresolved rows = %s", got)
+	}
+	keys(m, "2")
+	if got := len(rowIDs(m)); got != 3 {
+		t.Fatalf("All has %d rows, want 3", got)
 	}
 }
 
