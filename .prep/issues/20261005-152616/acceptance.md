@@ -1,0 +1,1 @@
+- [x] Every child issue is resolved: views, editing, knowledge view, design system, filter and check screens, hierarchy, editing experience, Charm v2, mouse support and wheel scrolling

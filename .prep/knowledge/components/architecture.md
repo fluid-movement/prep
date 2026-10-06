@@ -9,7 +9,7 @@ generated:
 scope:
   - cmd/**
   - internal/**
-confirmed_commit: b6187bcf5752597e6271ee5b0e29df13d2427dfb
+confirmed_commit: 361f9e651425cf3b1bca9dd0fa626e954b6e9a3b
 ---
 
 # Architecture
@@ -25,6 +25,9 @@ internal/okf        knowledge store adapter: .prep/knowledge as an OKF v0.2 bund
 internal/gitx       the few git calls (staging, commits, drift, commit evidence)
 internal/watch      fsnotify watcher over .prep (recursive, debounced), shared by prep watch and the TUI
 internal/tui        human interface: screens (Bubble Tea) loading through an injected loader; theme and ui hold the design system
+internal/setup      harness integrations installed, refreshed and removed by prep setup
+internal/userconfig the user's choices in ~/.config/prep/config.yaml (harnesses, TUI mouse)
+internal/update     prep update: download, checksum check and replacement of the binary
 ```
 
 - Ports are defined in `internal/domain/ports.go`: `IssueStore` (transactional records: `Load`, `Apply`) and `KnowledgeStore` (retrieval: `Load`; writes: `Render` then `Apply`). They are separate because access patterns differ.
@@ -32,4 +35,4 @@ internal/tui        human interface: screens (Bubble Tea) loading through an inj
 - The CLI and the TUI share `domain.Filter` and `Tree.Query`, so both agree on derived states.
 - Git is versioning, not the system of record; every git call tolerates git being absent. A database adapter would have to provide what git gives today (history, branch-scoped review) itself; the domain assumes neither.
 
-Details: [domain](/components/domain.md), [markdown store](/components/markdown-store.md), [OKF store](/components/okf-store.md), [CLI](/components/cli.md), [TUI design system](/components/tui-design-system.md).
+Details: [domain](/components/domain.md), [markdown store](/components/markdown-store.md), [OKF store](/components/okf-store.md), [CLI](/components/cli.md), [TUI design system](/components/tui-design-system.md), [setup and user configuration](/components/setup.md), [release, install and update](/components/release.md).
