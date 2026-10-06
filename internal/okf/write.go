@@ -98,7 +98,9 @@ func (s *Store) Apply(e *domain.KnowledgeEdit) ([]string, error) {
 	if err := os.Rename(tmp.Name(), p); err != nil {
 		return nil, err
 	}
-	return []string{Dir + e.Path}, nil
+	touched := []string{Dir + e.Path}
+	idx, err := s.WriteIndexes(false)
+	return append(touched, idx...), err
 }
 
 func renderNew(e *domain.KnowledgeEdit) (string, error) {

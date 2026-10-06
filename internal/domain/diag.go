@@ -74,6 +74,7 @@ const (
 	CodeKnowledgeSize        = "K004" // entry above size threshold
 	CodeKnowledgeDrift       = "K005" // scoped paths changed since confirmed_commit
 	CodeKnowledgeCommit      = "K006" // confirmed_commit cannot be resolved
+	CodeKnowledgeIndex       = "K007" // OKF index.md missing, outdated or unneeded
 )
 
 // SortDiagnostics orders diagnostics deterministically.

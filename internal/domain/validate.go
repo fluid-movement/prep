@@ -202,8 +202,8 @@ func validateKnowledge(t *Tree) []Diagnostic {
 		if strings.TrimSpace(k.Description) == "" {
 			e(CodeKnowledgeField, SevError, ClassManual, "add a one-line description; prep guide lists it for triage", "description is missing")
 		}
-		if k.Status != "" && k.Status != "draft" && k.Status != "stable" {
-			e(CodeKnowledgeField, SevError, ClassManual, "use draft or stable; stale entries are deleted, not deprecated", "status %q is not allowed", k.Status)
+		if k.Status != "" && k.Status != "draft" && k.Status != "stable" && k.Status != "deprecated" {
+			e(CodeKnowledgeField, SevError, ClassManual, "use draft, stable or deprecated (OKF v0.2)", "status %q is not allowed", k.Status)
 		}
 		for _, l := range k.Links {
 			if t.Knowledge[l] == nil {

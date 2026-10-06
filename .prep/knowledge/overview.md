@@ -1,7 +1,7 @@
 ---
 type: overview
 title: Project overview
-description: Entry point to prep's knowledge base; what prep is and links to every other entry.
+description: 'Entry point to prep''s knowledge base: what prep is and where to start; index.md files list every entry.'
 status: stable
 generated:
   by: claude-code/2.1.289

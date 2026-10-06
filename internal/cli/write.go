@@ -346,6 +346,11 @@ func cmdFmt(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	idx, err := a.kstore.WriteIndexes(*check)
+	if err != nil {
+		return err
+	}
+	files = append(files, idx...)
 	if *check {
 		if a.json {
 			a.emit(map[string]any{"ok": len(files) == 0, "files": nonNil(files)})
@@ -376,6 +381,11 @@ func cmdFix(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	idx, err := a.kstore.WriteIndexes(false)
+	if err != nil {
+		return err
+	}
+	files = append(files, idx...)
 	a.afterWrite(&domain.Tree{Project: domain.Project{Config: cfg}}, "prep: fix", files)
 	a.reportWrite(writeResult{OK: true, Op: "fix", Files: files})
 	return nil

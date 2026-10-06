@@ -23,7 +23,7 @@ Applies when changing lifecycle rules, gates, diagnostics or queries.
 - `knowledge.go`: `KnowledgeEdit` and `Tree.PlanKnowledge` (path form, no rename, existence, required fields for new entries, scope required for `confirmed_commit`); `Change.KnowledgeEntry` carries the adapter-rendered entry so `Tree.Apply` and `CheckWrite` validate it. The `KnowledgeStore` port has `Load`, `Render` and `Apply`.
 - `guide.go`: each `Pointer` in the Write list carries the `command` that writes it.
 - `validate.go` and `diag.go`: diagnostics with stable codes (`P*` project, `I*` issues, `K*` knowledge), severity and class (fixable, guided, manual). Codes are never reused.
-- `query.go`: `ParseFilter` (different flags AND, repeated flags OR), `Query`, tree ordering, `ViewNames` (saved views in config order).
+- `query.go`: `ParseFilter` (different flags AND, repeated flags OR), `Query`, tree ordering, `ViewNames` (saved views in config order). `validateKnowledge` accepts the OKF statuses draft, stable and deprecated.
 - `guide.go`: `BuildGuide` step contracts and `Candidates` knowledge retrieval; `ScopeMatch` globbing.
 - `errors.go`: `E_*` error codes for commands.
 

@@ -40,7 +40,7 @@ func (s *Store) Load(drift bool) ([]*domain.Entry, []domain.Diagnostic, error) {
 			}
 			return err
 		}
-		if d.IsDir() || !strings.HasSuffix(p, ".md") || d.Name() == "index.md" {
+		if d.IsDir() || !strings.HasSuffix(p, ".md") || d.Name() == "index.md" || d.Name() == "log.md" {
 			return nil
 		}
 		rel, _ := filepath.Rel(base, p)
@@ -68,7 +68,18 @@ func (s *Store) Load(drift bool) ([]*domain.Entry, []domain.Diagnostic, error) {
 		return nil
 	})
 	sort.Slice(entries, func(a, b int) bool { return entries[a].Path < entries[b].Path })
-	return entries, diags, err
+	if err != nil {
+		return entries, diags, err
+	}
+	_, stale, ierr := s.indexState(entries)
+	if ierr != nil {
+		return entries, diags, ierr
+	}
+	for _, k := range stale {
+		diags = append(diags, domain.Diagnostic{Code: domain.CodeKnowledgeIndex, Severity: domain.SevWarning, Class: domain.ClassFixable,
+			File: Dir + k, Message: "index file is missing, outdated or no longer needed", Fix: "run prep fmt or prep fix to regenerate the OKF index files"})
+	}
+	return entries, diags, nil
 }
 
 var linkRe = regexp.MustCompile(`\]\(([^)\s]+)\)`)

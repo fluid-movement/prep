@@ -1,0 +1,5 @@
+- [x] Every bundle directory with entries has a generated index.md in OKF list format; the root index declares okf_version "0.2"
+- [x] Index files are rewritten on every knowledge write and by prep fmt and prep fix; prep check reports missing or outdated ones as K007
+- [x] log.md is not read as an entry; status deprecated is accepted
+- [x] Contract corpus and tests updated; this repository has its index files
+- [x] Knowledge entries describe index files
