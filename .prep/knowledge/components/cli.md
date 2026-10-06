@@ -28,6 +28,7 @@ Applies when adding or changing commands.
 - Write pipeline: load → `Plan` → `CheckWrite` → `store.Apply` → stage (commit mode `off`) or commit only `.prep` paths (`all`).
 - Tags: `prep new --tag` and `prep edit --tag` (repeatable or comma-separated; edit replaces the list, `--tag ''` clears it, and a tag-only edit also works on resolved issues); `prep list --tag` filters; `prep list` shows tags as `#tag` after the title and `prep show` as a `tags:` line.
 - `prep init [--no-bootstrap]` creates `.prep` (no placeholder overview) and, unless skipped, the bootstrap issues via `Tree.PlanBootstrap`, written change by change; `prep knowledge bootstrap` does the same later when the knowledge base is not bootstrapped and no bootstrap issue is open. `prep prime` (JSON `bootstrap`) and `prep guide` (`alerts`) print the bootstrap alert first.
+- `prep setup [--harness h,...|--remove h|--refresh]` installs harness integrations; see [Harness setup](/components/setup.md).
 - `prep update [--check]` replaces the binary with the latest release; see [Release, install and update](/components/release.md).
 - `prep tui` is a read command that needs a terminal (stdin and stdout); it opens the [TUI](/components/tui.md), and `--gallery` shows the [TUI design system](/components/tui-design-system.md). `prep views` lists saved views in config order.
 - `prep skill` prints the embedded `internal/cli/skill.md`; `.claude/skills/prep/SKILL.md` must stay identical (tested).

@@ -157,8 +157,11 @@ func TestNewer(t *testing.T) {
 	if _, err := Newer("6449764", "v0.1.0"); err == nil {
 		t.Error("a commit hash compared as a version")
 	}
-	if IsRelease("6449764-dirty") || !IsRelease("v0.1.0") {
+	if IsRelease("6449764-dirty") || !IsRelease("v0.1.0") || !IsRelease("v1.0.0-rc.1") {
 		t.Error("IsRelease")
+	}
+	if IsRelease("v0.0.0-20261006090120-93aa83c32597") || IsRelease("v0.1.1-0.20261006090120-93aa83c32597") {
+		t.Error("a Go pseudo-version counted as a release")
 	}
 }
 

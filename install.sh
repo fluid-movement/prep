@@ -63,6 +63,16 @@ tar -xzf "$tmp/$archive" -C "$tmp" prep
 mkdir -p "$bindir"
 install -m 0755 "$tmp/prep" "$bindir/prep"
 echo "prep install: installed $("$bindir/prep" version) to $bindir/prep"
+
+# Harness integrations (skills, hooks, commands) are what make agents use
+# prep. Ask about them when a person is at the terminal; curl | sh leaves
+# stdin to the pipe, so prep setup reads the terminal itself.
+if [ -t 1 ] && { : </dev/tty; } 2>/dev/null; then
+  echo
+  "$bindir/prep" setup </dev/tty || echo "prep install: harness setup did not finish; run prep setup to try again"
+else
+  echo "prep install: run prep setup to integrate prep with your agent harnesses"
+fi
 case ":$PATH:" in
   *":$bindir:"*) ;;
   *)

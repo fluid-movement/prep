@@ -18,7 +18,7 @@ Applies when a request touches one of these topics.
 - Approval or permission system: harness permissions handle it.
 - Focus or active goal, priorities, goal ordering: none for now.
 - How work inside a step happens: the user's and agent's choice.
-- User-level config: project-level only.
+- User-level config beyond personal choices: `~/.config/prep` holds only the user's choices, such as integrated harnesses ([Harness setup](/components/setup.md)); project behavior stays in the project config.
 - Hosted or database storage: possible through the storage port, markdown only for now.
 - Human-facing documentation: can be generated from the knowledge base later.
 - Knowledge editing, visualization, publishing: OKF ecosystem tools and `$EDITOR`.

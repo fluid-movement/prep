@@ -68,8 +68,16 @@ type Asset struct {
 
 var versionRe = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$`)
 
-// IsRelease reports whether v is a release version such as v1.2.3.
-func IsRelease(v string) bool { return versionRe.MatchString(v) }
+// pseudoRe matches the pre-release part Go gives untagged builds
+// (v0.0.0-20261006090120-93aa83c32597), which are not releases.
+var pseudoRe = regexp.MustCompile(`(^|\.)\d{14}-[0-9a-f]{12}$`)
+
+// IsRelease reports whether v is a release version such as v1.2.3 or
+// v1.2.3-rc.1; Go pseudo-versions of untagged builds are not.
+func IsRelease(v string) bool {
+	m := versionRe.FindStringSubmatch(v)
+	return m != nil && !pseudoRe.MatchString(m[4])
+}
 
 // Newer reports whether latest is newer than current. A pre-release is
 // older than the release with the same numbers.

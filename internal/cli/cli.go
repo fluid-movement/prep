@@ -95,6 +95,7 @@ func init() {
 		{"fix", true, "fix                        safe auto-fixes from check", cmdFix},
 		{"migrate", true, "migrate                    migrate .prep to this binary's schema", cmdMigrate},
 		{"tui", false, "tui [--gallery]            terminal UI next to the harness (--gallery: the design system's components)", cmdTUI},
+		{"setup", true, "setup [--harness h,...|--remove h|--refresh]  install harness integrations (skill, hooks, commands)", cmdSetup},
 		{"update", true, "update [--check]           replace this binary with the latest release (verifies its checksum)", cmdUpdate},
 		{"skill", false, "skill                      print the agent skill (static copy for environments without the binary)", cmdSkill},
 		{"version", false, "version                    print the version", cmdVersion},

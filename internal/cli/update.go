@@ -2,6 +2,7 @@ package cli
 
 import (
 	"flag"
+	"os/exec"
 
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/update"
@@ -51,6 +52,17 @@ func cmdUpdate(a *app, args []string) error {
 		result["updated"] = true
 		if !a.json {
 			a.printf("updated prep %s → %s (%s)\n", Version, r.Tag, u.Exe)
+		}
+		// The new binary knows the current integrations, so it refreshes them.
+		refresh := exec.Command(u.Exe, "setup", "--refresh")
+		if !a.json {
+			refresh.Stdout, refresh.Stderr = a.out, a.errw
+		}
+		if err := refresh.Run(); err != nil {
+			result["refresh_error"] = err.Error()
+			if !a.json {
+				a.printf("prep: refreshing harness integrations failed (%v); run prep setup --refresh\n", err)
+			}
 		}
 	}
 	if a.json {

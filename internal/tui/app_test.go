@@ -881,3 +881,22 @@ func stateOf(t *testing.T, p *project, id string) (domain.State, bool) {
 	}
 	return tr.State(id), tr.Stale(id)
 }
+
+func TestChecklist(t *testing.T) {
+	c := NewChecklist(testTheme(), "Integrate prep with", []ChecklistItem{{Label: "Claude Code", Detail: "detected", Checked: true}, {Label: "Pi"}})
+	if v := ansi.Strip(c.View()); !strings.Contains(v, "[x] Claude Code  detected") || !strings.Contains(v, "[ ] Pi") {
+		t.Fatalf("view:\n%s", v)
+	}
+	for _, k := range []tea.KeyMsg{{Type: tea.KeyDown}, {Type: tea.KeySpace, Runes: []rune{' '}}, {Type: tea.KeyUp}, {Type: tea.KeySpace, Runes: []rune{' '}}} {
+		c.Update(k)
+	}
+	_, cmd := c.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil || c.cancelled || c.items[0].Checked || !c.items[1].Checked {
+		t.Fatalf("after toggling: %+v cancelled=%v", c.items, c.cancelled)
+	}
+	c2 := NewChecklist(testTheme(), "x", []ChecklistItem{{Label: "a"}})
+	c2.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if !c2.cancelled {
+		t.Fatal("esc does not cancel")
+	}
+}

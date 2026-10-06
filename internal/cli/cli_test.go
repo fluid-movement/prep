@@ -3,12 +3,15 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/fluid-movement/prep/internal/setup"
 )
 
 // harness runs prep commands in a temporary project with a controllable clock.
@@ -754,4 +757,92 @@ func TestUpdateRefusesDevelopmentBuilds(t *testing.T) {
 	Version = "6449764-dirty"
 	t.Cleanup(func() { Version = old })
 	h.fails("development build", "update", "--json")
+}
+
+type fakeHarness struct {
+	name, version string
+	detected      bool
+	log           *[]string
+}
+
+func (f *fakeHarness) Name() string  { return f.name }
+func (f *fakeHarness) Title() string { return "Fake " + f.name }
+func (f *fakeHarness) Detect() bool  { return f.detected }
+func (f *fakeHarness) Installed() (string, bool, error) {
+	return f.version, f.version != "", nil
+}
+func (f *fakeHarness) Install(v string) error {
+	*f.log = append(*f.log, f.name+" install "+v)
+	f.version = v
+	return nil
+}
+func (f *fakeHarness) Remove() error {
+	*f.log = append(*f.log, f.name+" remove")
+	f.version = ""
+	return nil
+}
+
+func TestSetup(t *testing.T) {
+	h := newHarness(t)
+	cfgDir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", cfgDir)
+	old := Version
+	Version = "v0.3.0"
+	t.Cleanup(func() { Version = old })
+	var log []string
+	alpha := &fakeHarness{name: "alpha", detected: true, log: &log}
+	beta := &fakeHarness{name: "beta", detected: false, log: &log}
+	setup.Register(alpha)
+	setup.Register(beta)
+	t.Cleanup(func() { setup.Unregister("alpha"); setup.Unregister("beta") })
+	cfg := func() string {
+		b, _ := os.ReadFile(filepath.Join(cfgDir, "prep", "config.yaml"))
+		return string(b)
+	}
+
+	// Interactive: the prompt sees detected harnesses preselected.
+	var asked []setup.Status
+	realChoose := chooseHarnesses
+	t.Cleanup(func() { chooseHarnesses = realChoose })
+	chooseHarnesses = func(s []setup.Status) ([]string, bool, error) { asked = s; return []string{"alpha"}, true, nil }
+	out := h.ok("setup")
+	if len(asked) != 2 || !asked[0].Detected || asked[1].Detected || !strings.Contains(out, "alpha        installed v0.3.0") {
+		t.Fatalf("interactive setup: asked %+v\n%s", asked, out)
+	}
+	if !strings.Contains(cfg(), "harnesses:\n  - alpha\n") {
+		t.Fatalf("config:\n%s", cfg())
+	}
+
+	// Refresh brings chosen harnesses to the binary's version only.
+	Version = "v0.4.0"
+	var r struct {
+		Results []setup.Result `json:"results"`
+	}
+	h.jsonOf(&r, "setup", "--refresh")
+	if len(r.Results) != 1 || r.Results[0].Action != "updated" || alpha.version != "v0.4.0" || beta.version != "" {
+		t.Fatalf("refresh: %+v", r.Results)
+	}
+
+	// --harness selects exactly; deselected installed harnesses are removed.
+	beta.version = "v0.4.0"
+	h.ok("setup", "--harness", "beta")
+	if alpha.version != "" || !strings.Contains(cfg(), "- beta") || strings.Contains(cfg(), "alpha") {
+		t.Fatalf("after --harness beta: alpha=%q config:\n%s", alpha.version, cfg())
+	}
+	h.fails("unknown harness gamma", "setup", "--harness", "gamma", "--json")
+
+	// --remove drops one and the choice.
+	h.ok("setup", "--remove", "beta")
+	if beta.version != "" || strings.Contains(cfg(), "beta") {
+		t.Fatalf("after --remove: beta=%q config:\n%s", beta.version, cfg())
+	}
+
+	// Cancelling changes nothing; no terminal names the non-interactive command.
+	chooseHarnesses = func([]setup.Status) ([]string, bool, error) { return nil, false, nil }
+	if out := h.ok("setup"); !strings.Contains(out, "nothing changed") {
+		t.Fatalf("cancel: %s", out)
+	}
+	chooseHarnesses = func([]setup.Status) ([]string, bool, error) { return nil, false, errors.New("no tty") }
+	h.fails("prep setup --harness alpha,beta", "setup")
+	h.fails("one of --harness, --remove or --refresh", "setup", "--refresh", "--remove", "alpha")
 }

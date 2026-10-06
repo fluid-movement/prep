@@ -9,5 +9,6 @@
 * [Markdown store](/components/markdown-store.md) - internal/mdstore — parses and renders .prep files canonically, atomic writes with compare-and-swap, fmt and fix.
 * [OKF store](/components/okf-store.md) - internal/okf — reads the knowledge bundle (links, drift) and writes entries for prep knowledge new, update and confirm.
 * [Release, install and update](/components/release.md) - How prep is released (GoReleaser on v* tags), installed (install.sh, go install, just install) and updated (prep update with checksum verification).
+* [Harness setup and user configuration](/components/setup.md) - prep setup installs, refreshes and removes harness integrations through the setup.Harness interface; ~/.config/prep/config.yaml records which harnesses the user chose.
 * [TUI design system](/components/tui-design-system.md) - internal/tui/theme tokens and text styles, internal/tui/ui components, layout helpers, the gallery and golden snapshots; how to change looks or add a component.
 * [TUI](/components/tui.md) - prep tui screens in internal/tui — the issue views (tabs, list, detail), loader injection, live reload with fsnotify, keys, and how screens are tested.
