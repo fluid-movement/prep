@@ -1,0 +1,5 @@
+- [ ] prep watch streams a line per change under .prep; prep show --json includes history
+- [ ] The panel follows the issue named by the agent's prep writes, prep guide, prep new and edits under .prep/issues, ignores reads, falls back to a claimed issue, then to the project overview
+- [ ] The panel shows status and next step, requirement, open questions, checklist with progress, DoD, decisions and surroundings, and updates live
+- [ ] /prep:focus pins and unpins, /prep:pane toggles, and the pane option (remember, open, closed) decides opening at session start
+- [ ] The module is part of the prep plugin; claude plugin validate and claude plugin test pass; tried live in a session
