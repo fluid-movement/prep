@@ -105,6 +105,17 @@ func Gallery(t *theme.Theme, width int) string {
 	b.WriteString(DiagnosticRow(t, Diagnostic{Error: true, Code: "I019", Where: "20261005-152620 · decisions.md", Message: "decision D1 has no date", Fix: "entries are '## <id>: <title>' followed by date: YYYY-MM-DD", Class: "manual"}, width) + "\n")
 	b.WriteString(DiagnosticRow(t, Diagnostic{Code: "K005", Where: "components/cli.md", Message: "scoped paths changed since 0da33f5: internal/cli/cli.go", Fix: "re-check the entry against the code, update it and confirmed_commit", Class: "guided"}, width))
 
+	section("Menu and modal")
+	w := min(width, 64)
+	menu := strings.Join([]string{
+		MenuRow(t, "n", "New issue", "", true, false, w-4),
+		MenuRow(t, "e", "Edit requirement", "", true, true, w-4),
+		MenuRow(t, "d", "Define", "the Open questions section is not empty", false, false, w-4),
+		MenuRow(t, "f", "Complete", "code issues are completed by an agent", false, false, w-4),
+	}, "\n")
+	b.WriteString(Modal(t, "Actions · 152618 TUI editing and transitions", menu, w) + "\n")
+	b.WriteString(Modal(t, "Drop 152629", Field(t, "Reason", "› not needed any more", true)+"\n\n"+Field(t, "Kind", "code", false), w))
+
 	section("Panes")
 	left, right := Split(width, 0.5, 20, 20)
 	body := "Requirement prose\n" + t.S.Muted.Render("muted second line") + "\nA line long enough to be clipped at the pane's inner width, ending here."

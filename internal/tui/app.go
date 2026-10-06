@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -25,6 +26,12 @@ type Options struct {
 	// Check returns every diagnostic, including knowledge drift. It is slower
 	// than Load (git), so it runs only for the check screen.
 	Check func() ([]domain.Diagnostic, error)
+	// Write runs a planned change through the CLI's write pipeline (plan,
+	// CheckWrite, store, stage) and returns the changed issue's ID. Nil
+	// makes the TUI read-only.
+	Write func(plan func(*domain.Tree) (*domain.Change, error)) (string, error)
+	// Actor records who writes, human:<name> for the TUI.
+	Actor string
 }
 
 // Run starts the issue views.
@@ -124,6 +131,13 @@ type Model struct {
 	diags    []domain.Diagnostic
 	diagErr  error
 	diagDone bool
+
+	modal         *modal
+	pending       map[string]string // issue|field: edited text a rejected write left
+	pendingSelect string            // issue to select after the next load
+	noticeTone    ui.Tone
+	runEditor     func(path string, done func(error) tea.Msg) tea.Cmd
+	after         func(time.Duration, func(time.Time) tea.Msg) tea.Cmd // tea.Tick; tests drop timers
 }
 
 // NewModel loads the project once and builds the screen state.
@@ -135,8 +149,10 @@ func NewModel(th *theme.Theme, opts Options) *Model {
 	in.TextStyle = th.S.Body
 	in.PlaceholderStyle = th.S.Subtle
 	in.Cursor.Style = th.R.NewStyle().Foreground(th.C.Accent)
+	in.Cursor.SetMode(cursor.CursorStatic) // no blink timer redrawing the screen
 	m := &Model{th: th, opts: opts, treeMode: true, scope: map[string][]string{}, cursor: map[string]int{}, offset: map[string]int{},
-		vp: viewport.New(0, 0), page: viewport.New(0, 0), filters: map[string]string{}, input: in}
+		vp: viewport.New(0, 0), page: viewport.New(0, 0), filters: map[string]string{}, input: in,
+		pending: map[string]string{}, runEditor: execEditor, after: tea.Tick}
 	m.apply(opts.Load())
 	return m
 }
@@ -193,6 +209,10 @@ func (m *Model) apply(t *domain.Tree, err error) {
 	m.tree, m.err = t, nil
 	m.gen++
 	m.rebuild()
+	if id := m.pendingSelect; id != "" && t.Issues[id] != nil {
+		m.pendingSelect = ""
+		m.jump(id, false)
+	}
 }
 
 // rebuild recomputes every tab from the tree, keeping each tab's selection
@@ -382,12 +402,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case checkedMsg:
 		m.diags, m.diagErr, m.diagDone = msg.diags, msg.err, true
 		return m, nil
+	case wroteMsg:
+		return m, m.handleWrote(msg)
+	case editedMsg:
+		return m, m.handleEdited(msg)
 	case clearNoticeMsg:
 		if m.notice == msg.notice {
 			m.notice = ""
 		}
 		return m, nil
 	case tea.KeyMsg:
+		if m.modal != nil {
+			return m, m.modalKey(msg)
+		}
 		if m.filtering {
 			return m, m.filterKey(msg)
 		}
@@ -461,8 +488,21 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		m.page, cmd = m.page.Update(k)
 		return cmd
 	}
-	if s == "p" {
+	switch s {
+	case "p":
 		return m.jumpToParent()
+	case "a":
+		if m.tree != nil {
+			return m.openMenu()
+		}
+		return nil
+	case "n":
+		if m.tree != nil {
+			return m.openCreate()
+		}
+		return nil
+	case "e":
+		return m.editText(m.selected(), "requirement")
 	}
 	if m.focus == focusDetail {
 		return m.detailKey(s, k)
@@ -679,8 +719,15 @@ func (m *Model) selectInCurrent(id string) bool {
 }
 
 func (m *Model) flash(n string) tea.Cmd {
-	m.notice = n
-	return tea.Tick(noticeFor, func(time.Time) tea.Msg { return clearNoticeMsg{n} })
+	m.notice, m.noticeTone = n, ui.ToneAccent
+	return m.after(noticeFor, func(time.Time) tea.Msg { return clearNoticeMsg{n} })
+}
+
+// flashErr shows an error in the footer for longer than a notice.
+func (m *Model) flashErr(err error) tea.Cmd {
+	n := strings.ReplaceAll(err.Error(), "\n", " ")
+	m.notice, m.noticeTone = n, ui.ToneError
+	return m.after(errorFor, func(time.Time) tea.Msg { return clearNoticeMsg{n} })
 }
 
 func (m *Model) switchTab(n int) {
@@ -758,6 +805,8 @@ func (m *Model) View() string {
 	switch {
 	case m.tree == nil:
 		body = ui.Empty(m.th, "Could not load .prep", fmt.Sprint(m.err), m.w, bodyH)
+	case m.modal != nil:
+		body = m.modalView(m.w, bodyH)
 	case m.screen == screenCheck:
 		body = m.checkPane(m.w, bodyH)
 	case m.screen == screenSettings:
@@ -810,16 +859,18 @@ func toneIf(cond bool, t ui.Tone) ui.Tone {
 }
 
 var (
-	listKeys   = []ui.Key{{Keys: "↑↓", Desc: "move"}, {Keys: "enter", Desc: "details"}, {Keys: "/", Desc: "filter"}, {Keys: "→/←", Desc: "into/out of parent"}, {Keys: "p", Desc: "parent"}, {Keys: "t", Desc: "tree/flat"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "tab/1-9", Desc: "views"}, {Keys: "q", Desc: "quit"}}
+	listKeys   = []ui.Key{{Keys: "↑↓", Desc: "move"}, {Keys: "enter", Desc: "details"}, {Keys: "a", Desc: "actions"}, {Keys: "/", Desc: "filter"}, {Keys: "→/←", Desc: "into/out of parent"}, {Keys: "p", Desc: "parent"}, {Keys: "t", Desc: "tree/flat"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "tab/1-9", Desc: "views"}, {Keys: "q", Desc: "quit"}}
 	filterKeys = []ui.Key{{Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
 	pageKeys   = []ui.Key{{Keys: "↑↓ pgup/pgdn", Desc: "scroll"}, {Keys: "esc", Desc: "back"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "q", Desc: "quit"}}
-	detailKeys = []ui.Key{{Keys: "tab", Desc: "next link"}, {Keys: "enter", Desc: "open"}, {Keys: "⌫", Desc: "back"}, {Keys: "↑↓", Desc: "scroll"}, {Keys: "esc", Desc: "list"}, {Keys: "p", Desc: "parent"}, {Keys: "y", Desc: "copy id"}, {Keys: "q", Desc: "quit"}}
+	detailKeys = []ui.Key{{Keys: "a", Desc: "actions"}, {Keys: "tab", Desc: "next link"}, {Keys: "enter", Desc: "open"}, {Keys: "⌫", Desc: "back"}, {Keys: "↑↓", Desc: "scroll"}, {Keys: "esc", Desc: "list"}, {Keys: "p", Desc: "parent"}, {Keys: "y", Desc: "copy id"}, {Keys: "q", Desc: "quit"}}
 )
 
 func (m *Model) footer() string {
 	switch {
 	case m.notice != "":
-		return ui.Fit(ui.Note(m.th, m.notice, ui.ToneAccent), m.w)
+		return ui.Fit(ui.Note(m.th, m.notice, m.noticeTone), m.w)
+	case m.modal != nil:
+		return ui.KeyHelp(m.th, m.modalKeys(), m.w)
 	case m.err != nil:
 		return ui.Fit(ui.Error(m.th, m.err.Error()), m.w)
 	case m.filtering:

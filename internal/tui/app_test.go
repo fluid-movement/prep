@@ -531,3 +531,353 @@ func TestCheckAndSettingsScreens(t *testing.T) {
 		t.Fatal("s does not toggle the settings screen")
 	}
 }
+
+// writer runs a plan like the CLI does: fresh store, plan, CheckWrite, Apply.
+func (p *project) writer() func(func(*domain.Tree) (*domain.Change, error)) (string, error) {
+	return func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
+		st := mdstore.Open(p.dir)
+		tr, err := domain.Load(st, &okf.Store{Root: p.dir}, false)
+		if err != nil {
+			return "", err
+		}
+		c, err := plan(tr)
+		if err != nil {
+			return "", err
+		}
+		if err := tr.CheckWrite(c); err != nil {
+			return "", err
+		}
+		_, err = st.Apply(c)
+		return c.IssueID, err
+	}
+}
+
+// editable opens a model that writes to the fixture and whose editor
+// replaces the file's text with the next queued edit.
+func editable(t *testing.T, p *project, edits *[]string) *Model {
+	t.Helper()
+	m := NewModel(testTheme(), Options{Load: p.load, Write: p.writer(), Actor: "human:tester"})
+	m.runEditor = func(path string, done func(error) tea.Msg) tea.Cmd {
+		return func() tea.Msg {
+			if len(*edits) > 0 {
+				os.WriteFile(path, []byte((*edits)[0]), 0o644)
+				*edits = (*edits)[1:]
+			}
+			return done(nil)
+		}
+	}
+	m.after = func(time.Duration, func(time.Time) tea.Msg) tea.Cmd { return nil }
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 34})
+	return m
+}
+
+// run sends a key and runs the commands it returns until they settle,
+// skipping timers, the way the Bubble Tea runtime would.
+func run(m *Model, k string) {
+	var msg tea.KeyMsg
+	switch k {
+	case "enter":
+		msg = tea.KeyMsg{Type: tea.KeyEnter}
+	case "esc":
+		msg = tea.KeyMsg{Type: tea.KeyEsc}
+	case "tab":
+		msg = tea.KeyMsg{Type: tea.KeyTab}
+	case "down":
+		msg = tea.KeyMsg{Type: tea.KeyDown}
+	case "right":
+		msg = tea.KeyMsg{Type: tea.KeyRight}
+	case "space":
+		msg = tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{' '}}
+	default:
+		msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}
+	}
+	_, cmd := m.Update(msg)
+	settle(m, cmd)
+}
+
+func settle(m *Model, cmd tea.Cmd) {
+	queue := []tea.Cmd{cmd}
+	for n := 0; len(queue) > 0 && n < 50; n++ {
+		c := queue[0]
+		queue = queue[1:]
+		if c == nil {
+			continue
+		}
+		done := make(chan tea.Msg, 1)
+		go func() { done <- c() }()
+		var msg tea.Msg
+		select {
+		case msg = <-done:
+		case <-time.After(5 * time.Second):
+			panic("a command did not finish")
+		}
+		switch msg := msg.(type) {
+		case nil:
+		case tea.BatchMsg:
+			queue = append(queue, msg...)
+		default:
+			_, next := m.Update(msg)
+			queue = append(queue, next)
+		}
+	}
+}
+
+func typeIn(m *Model, s string) {
+	for _, r := range s {
+		_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		settle(m, cmd)
+	}
+}
+
+func issue(t *testing.T, p *project, id string) *domain.Issue {
+	t.Helper()
+	tr, err := p.load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tr.Issues[id]
+}
+
+func TestActionMenu(t *testing.T) {
+	p, ids := sample(t)
+	var edits []string
+	m := editable(t, p, &edits)
+	run(m, "6")
+	m.selectInCurrent(ids["survey"])
+	run(m, "a")
+	if m.modal == nil || m.modal.kind != modalMenu {
+		t.Fatal("a does not open the action menu")
+	}
+	v := ansi.Strip(m.View())
+	for _, want := range []string{"Actions · 090600 Survey export tools", "Define", "the Open questions section in issue.md is not empty", "Complete"} {
+		if !strings.Contains(v, want) {
+			t.Fatalf("menu lacks %q:\n%s", want, v)
+		}
+	}
+	run(m, "d")
+	if m.modal == nil || !strings.Contains(m.notice, "Open questions section") {
+		t.Fatalf("unavailable define did not explain itself or closed the menu: %q", m.notice)
+	}
+	run(m, "esc")
+
+	m.selectInCurrent(ids["csv"])
+	run(m, "a")
+	for _, it := range m.modal.items {
+		if it.key == "f" && !strings.Contains(it.reason, "agent") {
+			t.Fatalf("complete on a code issue: reason %q", it.reason)
+		}
+	}
+	run(m, "esc")
+}
+
+func TestCreateRenameAndEdit(t *testing.T) {
+	p, ids := sample(t)
+	edits := []string{"Export rows as XML.\n\n## Open questions"}
+	m := editable(t, p, &edits)
+	run(m, "6")
+	m.selectInCurrent(ids["export"])
+	run(m, "right") // focus Export: new issues become its children
+	run(m, "n")
+	typeIn(m, "XML writer")
+	run(m, "tab")
+	run(m, "right") // kind: manual
+	run(m, "enter")
+	if m.modal != nil {
+		t.Fatalf("create failed: %s", m.modal.err)
+	}
+	id := m.selected()
+	i := issue(t, p, id)
+	if i == nil || i.Title != "XML writer" || i.Kind != domain.KindManual || i.Parent != ids["export"] {
+		t.Fatalf("created issue = %+v (selected %s)", i, id)
+	}
+
+	run(m, "e")
+	if got := issue(t, p, id).Prose; got != "Export rows as XML." {
+		t.Fatalf("requirement after editor = %q", got)
+	}
+	edits = append(edits, issue(t, p, id).Body)
+	run(m, "e")
+	if m.notice != "no changes" {
+		t.Fatalf("unchanged editor text: notice %q", m.notice)
+	}
+
+	run(m, "a")
+	run(m, "t")
+	for range "XML writer" {
+		m.modal.inputs[0], _ = m.modal.inputs[0].Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	}
+	typeIn(m, "XML export")
+	run(m, "enter")
+	if got := issue(t, p, id).Title; got != "XML export" {
+		t.Fatalf("title = %q", got)
+	}
+	if !strings.Contains(issue(t, p, id).History, "edited by human:tester: title") {
+		t.Fatalf("history lacks the human edit:\n%s", issue(t, p, id).History)
+	}
+
+	// Context goes through the record command.
+	edits = append(edits, "Use `encoding/xml`.")
+	run(m, "a")
+	run(m, "c")
+	if got := issue(t, p, id).Context; got != "Use `encoding/xml`." {
+		t.Fatalf("context = %q", got)
+	}
+}
+
+func TestRejectedEditKeepsText(t *testing.T) {
+	p, ids := sample(t)
+	edits := []string{"New text"}
+	m := editable(t, p, &edits)
+	writes := 0
+	inner := m.opts.Write
+	m.opts.Write = func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
+		writes++
+		if writes == 1 {
+			return "", errors.New("disk full")
+		}
+		return inner(plan)
+	}
+	run(m, "6")
+	m.selectInCurrent(ids["survey"])
+	run(m, "e")
+	if !strings.Contains(m.notice, "disk full") || m.pending[ids["survey"]+"|requirement"] != "New text" {
+		t.Fatalf("rejected edit: notice %q pending %q", m.notice, m.pending)
+	}
+	var opened string
+	m.runEditor = func(path string, done func(error) tea.Msg) tea.Cmd {
+		return func() tea.Msg {
+			b, _ := os.ReadFile(path)
+			opened = string(b)
+			return done(nil)
+		}
+	}
+	run(m, "e")
+	if strings.TrimSpace(opened) != "New text" {
+		t.Fatalf("editor reopened with %q, want the rejected text", opened)
+	}
+	if got := issue(t, p, ids["survey"]).Prose; got != "New text" {
+		t.Fatalf("second save did not write: %q", got)
+	}
+}
+
+func TestReparentAndCriteria(t *testing.T) {
+	p, ids := sample(t)
+	var edits []string
+	m := editable(t, p, &edits)
+	run(m, "6")
+	m.selectInCurrent(ids["survey"])
+	run(m, "a")
+	run(m, "m")
+	typeIn(m, "Export")
+	if len(m.modal.picks) != 2 || m.modal.picks[1] != ids["export"] {
+		t.Fatalf("filtered parents = %v", m.modal.picks)
+	}
+	run(m, "down")
+	run(m, "enter")
+	if got := issue(t, p, ids["survey"]).Parent; got != ids["export"] {
+		t.Fatalf("parent = %q", got)
+	}
+	// The issue itself and its descendants are never candidates.
+	m.selectInCurrent(ids["export"])
+	if c := m.parentCandidates(ids["export"], ""); strings.Contains(strings.Join(c, ","), ids["survey"]) || strings.Contains(strings.Join(c, ","), ids["export"]) {
+		t.Fatalf("candidates include the issue or its subtree: %v", c)
+	}
+	m.selectInCurrent(ids["survey"])
+	run(m, "a")
+	run(m, "m")
+	run(m, "enter") // top level
+	if got := issue(t, p, ids["survey"]).Parent; got != "" {
+		t.Fatalf("not moved to top level: %q", got)
+	}
+
+	m.selectInCurrent(ids["csv"])
+	run(m, "a")
+	run(m, "k")
+	run(m, "space")
+	run(m, "down")
+	run(m, "space")
+	run(m, "enter")
+	c := issue(t, p, ids["csv"]).Criteria
+	if c[0].Checked || !c[1].Checked {
+		t.Fatalf("criteria after toggling = %+v", c)
+	}
+}
+
+func TestTransitionsFromTheTUI(t *testing.T) {
+	p, ids := sample(t)
+	var edits []string
+	m := editable(t, p, &edits)
+	run(m, "6")
+
+	// A manual issue through its whole lifecycle.
+	run(m, "n")
+	typeIn(m, "Announce the export")
+	run(m, "tab")
+	run(m, "right")
+	run(m, "enter")
+	id := m.selected()
+	edits = append(edits, "Post a note in the changelog.")
+	run(m, "e")
+	run(m, "a")
+	run(m, "d")
+	if st, _ := stateOf(t, p, id); st != domain.StateDefined {
+		t.Fatalf("after define: %s", st)
+	}
+	p.record(id, domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "add", Text: "note posted"}}})
+	m.Update(loadedMsg(func() loadedMsg { tr, err := p.load(); return loadedMsg{tr, err} }()))
+	run(m, "a")
+	run(m, "r")
+	p.op(id, domain.OpClaim, domain.Input{})
+	m.Update(loadedMsg(func() loadedMsg { tr, err := p.load(); return loadedMsg{tr, err} }()))
+	run(m, "a")
+	run(m, "k")
+	run(m, "space")
+	run(m, "enter")
+	run(m, "a")
+	run(m, "f")
+	run(m, "enter") // no documentation decision yet
+	if m.modal == nil || !strings.Contains(m.modal.err, "--docs") {
+		t.Fatalf("complete without documentation: modal %+v", m.modal)
+	}
+	run(m, "tab")
+	typeIn(m, "announcement only")
+	run(m, "enter")
+	if st, _ := stateOf(t, p, id); st != domain.StateDone {
+		t.Fatalf("after complete: %s (modal %+v)", st, m.modal)
+	}
+	if r := issue(t, p, id).Resolution; r.By != "human:tester" {
+		t.Fatalf("completed by %q", r.By)
+	}
+
+	// Acknowledge a stale change, then drop with a reason.
+	p.do(func(tr *domain.Tree, now time.Time) (*domain.Change, error) {
+		body := "Write rows as JSON, one object per row."
+		return tr.PlanEdit(ids["json"], domain.EditInput{Actor: "test/1", Now: now, Body: &body})
+	})
+	m.Update(loadedMsg(func() loadedMsg { tr, err := p.load(); return loadedMsg{tr, err} }()))
+	m.selectInCurrent(ids["json"])
+	run(m, "a")
+	run(m, "a")
+	if _, stale := stateOf(t, p, ids["json"]); stale {
+		t.Fatal("acknowledge did not clear staleness")
+	}
+	run(m, "a")
+	run(m, "x")
+	typeIn(m, "not needed")
+	run(m, "enter")
+	if st, _ := stateOf(t, p, ids["json"]); st != domain.StateDropped {
+		t.Fatalf("after drop: %s", st)
+	}
+	if r := issue(t, p, ids["json"]).Resolution; r.Reason != "not needed" {
+		t.Fatalf("drop reason = %q", r.Reason)
+	}
+}
+
+func stateOf(t *testing.T, p *project, id string) (domain.State, bool) {
+	t.Helper()
+	tr, err := p.load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tr.State(id), tr.Stale(id)
+}

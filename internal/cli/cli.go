@@ -260,18 +260,21 @@ func one(name string, pos []string) (string, error) {
 
 // afterWrite stages or commits the touched paths according to config.
 func (a *app) afterWrite(t *domain.Tree, msg string, paths []string) {
-	if len(paths) == 0 || !gitx.IsRepo(a.store.Root) {
-		return
-	}
-	var err error
-	if t != nil && t.Project.Config.CommitMode == domain.CommitAll {
-		err = gitx.Commit(a.store.Root, msg, paths)
-	} else {
-		err = gitx.Stage(a.store.Root, paths)
-	}
-	if err != nil {
+	if err := record(a.store.Root, t, msg, paths); err != nil {
 		fmt.Fprintf(a.errw, "prep: warning: %v\n", err)
 	}
+}
+
+// record stages written paths, or commits them in commit mode all. Outside
+// a git repository it does nothing.
+func record(root string, t *domain.Tree, msg string, paths []string) error {
+	if len(paths) == 0 || !gitx.IsRepo(root) {
+		return nil
+	}
+	if t != nil && t.Project.Config.CommitMode == domain.CommitAll {
+		return gitx.Commit(root, msg, paths)
+	}
+	return gitx.Stage(root, paths)
 }
 
 func formatDiag(d domain.Diagnostic) string {
