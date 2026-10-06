@@ -139,7 +139,7 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 			continue
 		}
 		if !d.IsDir() || !domain.ValidID(d.Name()) {
-			diag(domain.CodeBadID, domain.SevError, domain.ClassManual, "", "issues/"+d.Name(), "issue directories are named by their ID (YYYYMMDD-HHMMSS); use prep new", "%s is not a valid issue directory", d.Name())
+			diag(domain.CodeBadID, domain.SevError, domain.ClassManual, "", "issues/"+d.Name(), "issue directories are named by their ID; use prep new", "%s is not a valid issue directory: issue IDs are ULIDs (26 characters of Crockford base32)", d.Name())
 			continue
 		}
 		i, ds, err := s.loadIssue(d.Name())
@@ -275,7 +275,7 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 		for _, b := range bs {
 			n := b.Name()
 			name := strings.TrimSuffix(n, ".md")
-			if b.IsDir() || !strings.HasSuffix(n, ".md") || !domain.ValidID(name) {
+			if b.IsDir() || !strings.HasSuffix(n, ".md") || !domain.ValidStamp(name) {
 				diag(domain.CodeRecordInvalid, domain.SevError, domain.ClassManual, "baselines/"+n, "baselines are written by prep define and prep ack", "unexpected baseline entry %s", n)
 				continue
 			}

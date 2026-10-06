@@ -52,10 +52,11 @@ func (t *Tree) IDs() []string {
 	return ids
 }
 
-var idPattern = regexp.MustCompile(`^\d{8}-\d{6}$`)
+var stampPattern = regexp.MustCompile(`^\d{8}-\d{6}$`)
 
-// ValidID reports whether s has the YYYYMMDD-HHMMSS shape.
-func ValidID(s string) bool { return idPattern.MatchString(s) }
+// ValidStamp reports whether s has the YYYYMMDD-HHMMSS shape of baseline
+// names.
+func ValidStamp(s string) bool { return stampPattern.MatchString(s) }
 
 // Resolve maps a full ID or any unique suffix to an issue ID.
 func (t *Tree) Resolve(ref string) (string, error) {

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"time"
 )
@@ -68,8 +69,9 @@ Conventions for entries: one concept per entry, current state only, bundle-relat
 // PlanBootstrap returns the changes that create the bootstrap issues: a
 // parent and its survey child, both tagged and left open for the user to
 // define. Each change is planned on the tree with the previous ones
-// applied; the caller writes them in order.
-func (t *Tree) PlanBootstrap(actor string, now time.Time) ([]*Change, error) {
+// applied; the caller writes them in order. entropy feeds the issue IDs
+// (nil means crypto/rand).
+func (t *Tree) PlanBootstrap(actor string, now time.Time, entropy io.Reader) ([]*Change, error) {
 	var out []*Change
 	cur := t
 	step := func(c *Change, err error) (*Change, error) {
@@ -80,7 +82,7 @@ func (t *Tree) PlanBootstrap(actor string, now time.Time) ([]*Change, error) {
 		cur = cur.Apply(c)
 		return c, nil
 	}
-	parent, err := step(cur.PlanNew(NewIssueInput{Title: "Bootstrap the knowledge base", Kind: KindManual, Tags: []string{BootstrapTag}, Body: bootstrapParent}, now))
+	parent, err := step(cur.PlanNew(NewIssueInput{Title: "Bootstrap the knowledge base", Kind: KindManual, Tags: []string{BootstrapTag}, Body: bootstrapParent, Entropy: entropy}, now))
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +93,7 @@ func (t *Tree) PlanBootstrap(actor string, now time.Time) ([]*Change, error) {
 	}})); err != nil {
 		return nil, err
 	}
-	survey, err := step(cur.PlanNew(NewIssueInput{Title: "Survey the project into a knowledge map", Kind: KindResearch, Parent: pid, Tags: []string{BootstrapTag}, Body: bootstrapSurvey}, now.Add(time.Second)))
+	survey, err := step(cur.PlanNew(NewIssueInput{Title: "Survey the project into a knowledge map", Kind: KindResearch, Parent: pid, Tags: []string{BootstrapTag}, Body: bootstrapSurvey, Entropy: entropy}, now.Add(time.Second)))
 	if err != nil {
 		return nil, err
 	}

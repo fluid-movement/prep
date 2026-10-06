@@ -86,7 +86,7 @@ func (a *app) bootstrap() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs, err := t.PlanBootstrap(a.actor, a.now())
+	cs, err := t.PlanBootstrap(a.actor, a.now(), a.entropy)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func cmdNew(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	in := domain.NewIssueInput{Title: *title, Kind: domain.Kind(*kind), Body: text, Tags: splitTags(tags), Priority: *priority}
+	in := domain.NewIssueInput{Title: *title, Kind: domain.Kind(*kind), Body: text, Tags: splitTags(tags), Priority: *priority, Entropy: a.entropy}
 	if *parent != "" {
 		if in.Parent, err = t.Resolve(*parent); err != nil {
 			return err

@@ -57,7 +57,7 @@ func TestCompareAndSwapRejectsConcurrentEdit(t *testing.T) {
 }
 
 func TestRoundTripIsCanonical(t *testing.T) {
-	raw := "---\ntitle: X\nkind: code\nparent: 20261005-120000\ndepends_on:\n  - 20261005-120001\n---\n\nProse line.\n\n## Open questions\n\n- why?\n"
+	raw := "---\ntitle: X\nkind: code\nparent: 01M45YYRG0AP2P2A41FRCHGR0Q\ndepends_on:\n  - 01M45YYSF8MH8F910XSA7Q366A\n---\n\nProse line.\n\n## Open questions\n\n- why?\n"
 	i := &domain.Issue{}
 	if err := parseIssue(raw, i); err != nil {
 		t.Fatal(err)

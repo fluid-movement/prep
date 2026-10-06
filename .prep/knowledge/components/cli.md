@@ -35,4 +35,4 @@ Applies when adding or changing commands.
 - `prep show --json` carries the issue's fields plus `history` (the work log text), `context`, `findings`, derived state, relations, progress and the effective Definition of Done.
 - `prep tui` is a read command that needs a terminal (stdin and stdout); it opens the [TUI](/components/tui.md), and `--gallery` shows the [TUI design system](/components/tui-design-system.md). `prep views` lists saved views in config order.
 - `prep skill` prints the embedded `internal/cli/skill.md`; `.claude/skills/prep/SKILL.md` must stay identical (tested).
-- Tests in `cli_test.go` drive whole lifecycles through `Main` with a fake clock.
+- Tests in `cli_test.go` drive whole lifecycles through `Main` with a fake clock; the package variables `clock` and `entropy` (nil: `crypto/rand`) feed `prep new` and the bootstrap issues their IDs, and tests read IDs from the commands' output.

@@ -22,7 +22,7 @@ func TestWatchReportsChanges(t *testing.T) {
 			t.Fatalf("no change reported after %s", what)
 		}
 	}
-	sub := filepath.Join(dir, "issues", "20260102-090000")
+	sub := filepath.Join(dir, "issues", "01KDYYYSM08C9CDRA20DXH61HN")
 	if err := os.MkdirAll(sub, 0o755); err != nil {
 		t.Fatal(err)
 	}

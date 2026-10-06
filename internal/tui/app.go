@@ -1202,10 +1202,11 @@ func (m *Model) issueRow(id string) ui.Row {
 	return r
 }
 
-// shortID shows the time part of an ID; any unique suffix resolves in the CLI.
+// shortID shows the last 6 characters of an ID, which are random in a
+// ULID; any unique suffix resolves in the CLI.
 func shortID(id string) string {
-	if k := strings.LastIndexByte(id, '-'); k >= 0 {
-		return id[k+1:]
+	if len(id) > 6 {
+		return id[len(id)-6:]
 	}
 	return id
 }

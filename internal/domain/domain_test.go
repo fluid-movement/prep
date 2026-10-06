@@ -43,8 +43,8 @@ func TestParseFilter(t *testing.T) {
 }
 
 func TestEffectiveDoDCascades(t *testing.T) {
-	p := &Issue{ID: "20261005-120000", Title: "P", Kind: KindCode, DoDAdd: []string{"changelog"}}
-	c := &Issue{ID: "20261005-120001", Title: "C", Kind: KindCode, Parent: p.ID, DoDOptOuts: []OptOut{{Item: "tests pass", Reason: "docs only"}}, DoDAdd: []string{"screenshots"}}
+	p := &Issue{ID: "01M45YYRG0AP2P2A41FRCHGR0Q", Title: "P", Kind: KindCode, DoDAdd: []string{"changelog"}}
+	c := &Issue{ID: "01M45YYSF8MH8F910XSA7Q366A", Title: "C", Kind: KindCode, Parent: p.ID, DoDOptOuts: []OptOut{{Item: "tests pass", Reason: "docs only"}}, DoDAdd: []string{"screenshots"}}
 	tr := NewTree(Project{DoD: []string{"tests pass", "lint clean"}}, []*Issue{p, c}, nil, nil)
 	items, opt := tr.EffectiveDoD(c.ID)
 	want := []string{"lint clean", "changelog", "screenshots"}
@@ -87,9 +87,9 @@ func TestKnowledgeViewQueries(t *testing.T) {
 		{Path: "/components/tui.md", Type: "component", Title: "TUI", Status: "draft", Scope: []string{"internal/tui/*.go"}},
 		{Path: "/decisions/stack.md", Type: "decision", Title: "Stack choice", Status: "stable"},
 	}
-	done := &Issue{ID: "20260102-090000", Title: "A", Kind: KindCode, ContextLinks: []string{"/components/cli.md", "/missing.md"},
+	done := &Issue{ID: "01KDYYYSM08C9CDRA20DXH61HN", Title: "A", Kind: KindCode, ContextLinks: []string{"/components/cli.md", "/missing.md"},
 		Resolution: &Resolution{Outcome: "done", Documentation: &Documentation{Entries: []string{"/components/tui.md", "/components/cli.md"}}}}
-	later := &Issue{ID: "20260102-100000", Title: "B", Kind: KindCode,
+	later := &Issue{ID: "01KDZ2CN80NAXMQZ9SREPYAMQQ", Title: "B", Kind: KindCode,
 		Resolution: &Resolution{Outcome: "done", Documentation: &Documentation{Entries: []string{"/components/tui.md"}}}}
 	tree := NewTree(Project{}, []*Issue{done, later}, entries, nil)
 

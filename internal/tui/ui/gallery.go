@@ -64,12 +64,12 @@ func Gallery(t *theme.Theme, width int) string {
 
 	section("List rows")
 	rows := []Row{
-		{ID: "152616", State: domain.StateOpen, Kind: domain.KindCode, Note: Progress(t, 1, 4), Title: "TUI: human client next to the harness"},
-		{ID: "152617", State: domain.StateDefined, Kind: domain.KindCode, Note: Note(t, "blocked", ToneWarning), Title: "TUI issue views: prep tui, tabs, list, detail pane, live reload"},
-		{ID: "190543", State: domain.StateInProgress, Kind: domain.KindCode, Title: "TUI design system: tokens, styles, components, gallery"},
-		{ID: "152623", State: domain.StateReady, Kind: domain.KindDecision, Note: Note(t, "stale", ToneError), Title: "Decide the install and update flow", Tags: []string{"release", "install"}, Priority: domain.PriorityHigh},
-		{ID: "185825", State: domain.StateDone, Kind: domain.KindResearch, Title: "Cloud sessions without the prep binary"},
-		{ID: "152629", State: domain.StateDropped, Kind: domain.KindManual, Title: "Free-form tags"},
+		{ID: "T4QF2N", State: domain.StateOpen, Kind: domain.KindCode, Note: Progress(t, 1, 4), Title: "TUI: human client next to the harness"},
+		{ID: "9HCXWA", State: domain.StateDefined, Kind: domain.KindCode, Note: Note(t, "blocked", ToneWarning), Title: "TUI issue views: prep tui, tabs, list, detail pane, live reload"},
+		{ID: "MZ3K7D", State: domain.StateInProgress, Kind: domain.KindCode, Title: "TUI design system: tokens, styles, components, gallery"},
+		{ID: "VB8R1E", State: domain.StateReady, Kind: domain.KindDecision, Note: Note(t, "stale", ToneError), Title: "Decide the install and update flow", Tags: []string{"release", "install"}, Priority: domain.PriorityHigh},
+		{ID: "2YJ6PG", State: domain.StateDone, Kind: domain.KindResearch, Title: "Cloud sessions without the prep binary"},
+		{ID: "QK0D5S", State: domain.StateDropped, Kind: domain.KindManual, Title: "Free-form tags"},
 	}
 	for k, r := range rows {
 		b.WriteString(ListRow(t, r, k == 2, width) + "\n")
@@ -77,12 +77,12 @@ func Gallery(t *theme.Theme, width int) string {
 
 	section("Tree rows")
 	tree := []Row{
-		{ID: "152616", State: domain.StateOpen, Kind: domain.KindCode, Title: "TUI: human client next to the harness", Dimmed: true},
-		{ID: "152617", State: domain.StateDone, Kind: domain.KindCode, Title: "TUI issue views"},
-		{ID: "190543", State: domain.StateDone, Kind: domain.KindCode, Note: Progress(t, 1, 2), Title: "TUI design system"},
-		{ID: "191550", State: domain.StateOpen, Kind: domain.KindCode, Title: "TUI theming"},
-		{ID: "191558", State: domain.StateInProgress, Kind: domain.KindCode, Title: "Replace the purple accent"},
-		{ID: "053645", State: domain.StateDefined, Kind: domain.KindCode, Note: Note(t, "blocked", ToneWarning), Title: "TUI hierarchy"},
+		{ID: "T4QF2N", State: domain.StateOpen, Kind: domain.KindCode, Title: "TUI: human client next to the harness", Dimmed: true},
+		{ID: "9HCXWA", State: domain.StateDone, Kind: domain.KindCode, Title: "TUI issue views"},
+		{ID: "MZ3K7D", State: domain.StateDone, Kind: domain.KindCode, Note: Progress(t, 1, 2), Title: "TUI design system"},
+		{ID: "F7NW3H", State: domain.StateOpen, Kind: domain.KindCode, Title: "TUI theming"},
+		{ID: "XA4M9C", State: domain.StateInProgress, Kind: domain.KindCode, Title: "Replace the purple accent"},
+		{ID: "R2GT6V", State: domain.StateDefined, Kind: domain.KindCode, Note: Note(t, "blocked", ToneWarning), Title: "TUI hierarchy"},
 	}
 	prefixes := TreePrefixes([]int{0, 1, 1, 2, 2, 1})
 	for k, r := range tree {
@@ -91,10 +91,10 @@ func Gallery(t *theme.Theme, width int) string {
 	}
 
 	section("Link rows")
-	b.WriteString(LinkRow(t, "parent", domain.StateOpen, "152616", "TUI: human client next to the harness", false, width) + "\n")
-	b.WriteString(LinkRow(t, "child", domain.StateInProgress, "053645", "TUI hierarchy: tree mode, parent focus, navigable relations", true, width) + "\n")
-	b.WriteString(LinkRow(t, "depends on", domain.StateDone, "152617", "TUI issue views", false, width) + "\n")
-	b.WriteString(LinkRow(t, "blocks", domain.StateDefined, "190544", "TUI filter bar, stale diff, check output, settings", false, width))
+	b.WriteString(LinkRow(t, "parent", domain.StateOpen, "T4QF2N", "TUI: human client next to the harness", false, width) + "\n")
+	b.WriteString(LinkRow(t, "child", domain.StateInProgress, "R2GT6V", "TUI hierarchy: tree mode, parent focus, navigable relations", true, width) + "\n")
+	b.WriteString(LinkRow(t, "depends on", domain.StateDone, "9HCXWA", "TUI issue views", false, width) + "\n")
+	b.WriteString(LinkRow(t, "blocks", domain.StateDefined, "J8EPK0", "TUI filter bar, stale diff, check output, settings", false, width))
 
 	section("Diff")
 	oldReq := []string{"Export rows as CSV.", "", "Quote fields that contain separators."}
@@ -102,7 +102,7 @@ func Gallery(t *theme.Theme, width int) string {
 	b.WriteString(Diff(t, DiffLines(oldReq, newReq), width))
 
 	section("Diagnostics")
-	b.WriteString(DiagnosticRow(t, Diagnostic{Error: true, Code: "I019", Where: "20261005-152620 · decisions.md", Message: "decision D1 has no date", Fix: "entries are '## <id>: <title>' followed by date: YYYY-MM-DD", Class: "manual"}, width) + "\n")
+	b.WriteString(DiagnosticRow(t, Diagnostic{Error: true, Code: "I019", Where: "01K6W3Y8GZ5M0T7C2RNB4QHXDE · decisions.md", Message: "decision D1 has no date", Fix: "entries are '## <id>: <title>' followed by date: YYYY-MM-DD", Class: "manual"}, width) + "\n")
 	b.WriteString(DiagnosticRow(t, Diagnostic{Code: "K005", Where: "components/cli.md", Message: "scoped paths changed since 0da33f5: internal/cli/cli.go", Fix: "re-check the entry against the code, update it and confirmed_commit", Class: "guided"}, width))
 
 	section("Menu and modal")
@@ -113,8 +113,8 @@ func Gallery(t *theme.Theme, width int) string {
 		MenuRow(t, "d", "Define", "the Open questions section is not empty", false, false, w-4),
 		MenuRow(t, "f", "Complete", "code issues are completed by an agent", false, false, w-4),
 	}, "\n")
-	b.WriteString(Modal(t, "Actions · 152618 TUI editing and transitions", menu, w) + "\n")
-	b.WriteString(Modal(t, "Drop 152629", Field(t, "Reason", "› not needed any more", true)+"\n\n"+Field(t, "Kind", "code", false), w))
+	b.WriteString(Modal(t, "Actions · 6DWQ1B TUI editing and transitions", menu, w) + "\n")
+	b.WriteString(Modal(t, "Drop QK0D5S", Field(t, "Reason", "› not needed any more", true)+"\n\n"+Field(t, "Kind", "code", false), w))
 
 	section("Panes")
 	left, right := Split(width, 0.5, 20, 20)

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,15 +28,16 @@ var update = flag.Bool("update", false, "rewrite golden files")
 func testTheme() *theme.Theme { return theme.New(true, colorprofile.TrueColor) }
 
 // project builds a fixture through the domain and the markdown store with a
-// fixed clock, so IDs and dates are stable.
+// fixed clock and seeded entropy, so IDs and dates are stable.
 type project struct {
-	t   *testing.T
-	dir string
-	now time.Time
+	t    *testing.T
+	dir  string
+	now  time.Time
+	rand io.Reader
 }
 
 func newProject(t *testing.T) *project {
-	p := &project{t: t, dir: t.TempDir(), now: time.Date(2026, 1, 2, 9, 0, 0, 0, time.UTC)}
+	p := &project{t: t, dir: t.TempDir(), now: time.Date(2026, 1, 2, 9, 0, 0, 0, time.UTC), rand: rand.NewChaCha8([32]byte{})}
 	if _, err := mdstore.Open(p.dir).Init(); err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +68,7 @@ func (p *project) do(plan func(*domain.Tree, time.Time) (*domain.Change, error))
 
 func (p *project) issue(title string, kind domain.Kind, body, parent string, deps ...string) string {
 	return p.do(func(t *domain.Tree, now time.Time) (*domain.Change, error) {
-		return t.PlanNew(domain.NewIssueInput{Title: title, Kind: kind, Body: body, Parent: parent, DependsOn: deps}, now)
+		return t.PlanNew(domain.NewIssueInput{Title: title, Kind: kind, Body: body, Parent: parent, DependsOn: deps, Entropy: p.rand}, now)
 	})
 }
 
@@ -514,7 +517,7 @@ func TestHierarchy(t *testing.T) {
 	}
 	// Links show by shape: the parent as a breadcrumb, what waits on this
 	// issue behind an arrow, a child parent with its progress.
-	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "↑ Export") || !strings.Contains(v, "→ unblocks ◐ 090300 ■■■■■ 0/1 JSON writer") {
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "↑ Export") || !strings.Contains(v, "→ unblocks ◐ "+shortID(ids["json"])+" ■■■■■ 0/1 JSON writer") {
 		t.Fatalf("relations block missing:\n%s", v)
 	}
 	keys(m, "o", "2") // the second link: → unblocks JSON writer
@@ -750,7 +753,7 @@ func TestActionMenu(t *testing.T) {
 	}
 	// Only what applies is listed: survey has open questions, so no Define.
 	v := ansi.Strip(m.View().Content)
-	for _, want := range []string{"Actions · 090600 Survey export tools", "Edit requirement", "Set priority", "Drop"} {
+	for _, want := range []string{"Actions · " + shortID(ids["survey"]) + " Survey export tools", "Edit requirement", "Set priority", "Drop"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("menu lacks %q:\n%s", want, v)
 		}
@@ -865,14 +868,14 @@ func TestRelationsByShape(t *testing.T) {
 	run(m, "6")
 	m.selectInCurrent(ids["export"])
 	v := ansi.Strip(m.View().Content)
-	for _, want := range []string{"Children ■■■■■ 0/2", "├─ ▶ 090200 CSV writer", "└─ ◐ 090300 ■■■■■ 0/1 JSON writer"} {
+	for _, want := range []string{"Children ■■■■■ 0/2", "├─ ▶ " + shortID(ids["csv"]) + " CSV writer", "└─ ◐ " + shortID(ids["json"]) + " ■■■■■ 0/1 JSON writer"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("children tree lacks %q:\n%s", want, v)
 		}
 	}
 	m.selectInCurrent(ids["json"])
 	v = ansi.Strip(m.View().Content)
-	for _, want := range []string{"↑ Export", "← needs ▶ 090200 CSV writer", "└─ ○ 090400 JSON schema"} {
+	for _, want := range []string{"↑ Export", "← needs ▶ " + shortID(ids["csv"]) + " CSV writer", "└─ ○ " + shortID(ids["schema"]) + " JSON schema"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("relations lack %q:\n%s", want, v)
 		}

@@ -14,7 +14,7 @@ confirmed_commit: 59d8dabc013e8cf26eac11f3b6cc9d2d88b4011b
 
 Applies when changing file formats or write behavior. Format details: [Storage format](/conventions/storage-format.md).
 
-- `Load` reads every file on every run (no cache) and records a SHA-256 per file. Format-level problems become diagnostics (unknown files, frontmatter errors, non-canonical files, missing schema files).
+- `Load` reads every file on every run (no cache) and records a SHA-256 per file. Issue directories must be ULIDs (`domain.ValidID`, else I001 naming the ULID shape); baseline files must be timestamps (`domain.ValidStamp`). Format-level problems become diagnostics (unknown files, frontmatter errors, non-canonical files, missing schema files).
 - Writes go through a temp file plus rename; before writing, the current content hash must equal the one read at load (absent for new files), else `E_CONFLICT`.
 - `requirementBody` builds the issue.md body from requirement text for `prep new` and `prep edit`: it keeps the text's own `## Open questions` section and appends an empty one only when missing. An edit rewrites issue.md from the edited fields under the same compare-and-swap.
 - Record writes: context.md and findings.md are rewritten; decisions are appended by `renderDecision` (`date:` directly under the heading); acceptance operations are applied line by line by `applyAcceptance`, so text between criteria survives. Appends and line edits read the file under compare-and-swap first.

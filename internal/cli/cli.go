@@ -51,6 +51,7 @@ type app struct {
 	root      string
 	actor     string
 	now       func() time.Time
+	entropy   io.Reader // random bits of new issue IDs
 
 	store  *mdstore.Store
 	kstore *okf.Store
@@ -103,12 +104,15 @@ func init() {
 	}
 }
 
-// clock is replaced in tests.
-var clock = time.Now
+// clock and entropy are replaced in tests; nil entropy means crypto/rand.
+var (
+	clock   = time.Now
+	entropy io.Reader
+)
 
 // Main runs the CLI and returns the exit code.
 func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	a := &app{out: stdout, errw: stderr, stdin: stdin, now: clock}
+	a := &app{out: stdout, errw: stderr, stdin: stdin, now: clock, entropy: entropy}
 	a.actor = os.Getenv("PREP_ACTOR")
 	a.root = os.Getenv("PREP_ROOT")
 	rest, err := a.globalFlags(args)

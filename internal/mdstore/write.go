@@ -293,7 +293,7 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 		bs, _ := os.ReadDir(s.abs(dir + "/baselines"))
 		for _, b := range bs {
 			name := strings.TrimSuffix(b.Name(), ".md")
-			if b.IsDir() || !domain.ValidID(name) {
+			if b.IsDir() || !domain.ValidStamp(name) {
 				continue
 			}
 			if err := try(dir+"/baselines/"+b.Name(), func(raw string) (string, bool) {

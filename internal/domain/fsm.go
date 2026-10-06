@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
 	"time"
@@ -322,10 +323,10 @@ func joinKinds() string {
 	return strings.Join(parts, ", ")
 }
 
-// Stamp formats a time as an ID-style timestamp.
+// Stamp formats a time as a baseline name.
 func Stamp(t time.Time) string { return t.UTC().Format("20060102-150405") }
 
-// nextStamp returns a timestamp after `after`, starting from now.
+// nextStamp returns the first timestamp from now on that is not taken.
 func nextStamp(now time.Time, taken func(string) bool) string {
 	ts := now.UTC().Truncate(time.Second)
 	for taken(Stamp(ts)) {
@@ -391,12 +392,13 @@ type NewIssueInput struct {
 	Parent    string
 	DependsOn []string
 	Tags      []string
-	Priority  string // a level name; empty or medium leaves it unset
-	Body      string // requirement prose
+	Priority  string    // a level name; empty or medium leaves it unset
+	Body      string    // requirement prose
+	Entropy   io.Reader // random bits of the ID; nil means crypto/rand
 }
 
 // PlanNew validates a new issue and returns its creation change. The ID is
-// generated from the clock; agents never invent IDs.
+// a ULID generated from the clock; agents never invent IDs.
 func (t *Tree) PlanNew(in NewIssueInput, now time.Time) (*Change, error) {
 	var unmet []Unmet
 	if strings.TrimSpace(in.Title) == "" {
@@ -408,7 +410,10 @@ func (t *Tree) PlanNew(in NewIssueInput, now time.Time) (*Change, error) {
 	if len(unmet) > 0 {
 		return nil, &Error{Code: ErrUsage, Message: "cannot create issue", Unmet: unmet}
 	}
-	id := nextStamp(now, func(s string) bool { return t.Issues[s] != nil })
+	id, err := nextULID(now, in.Entropy, t.IDs())
+	if err != nil {
+		return nil, err
+	}
 	tags, err := NormalizeTags(in.Tags)
 	if err != nil {
 		return nil, &Error{Code: ErrUsage, Message: "cannot create issue", Unmet: []Unmet{{GateTags, err.Error()}}}
