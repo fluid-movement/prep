@@ -1,2 +1,1 @@
 - [x] prep setup and the Claude Code plugin are done
-- [ ] On a machine with Claude Code, install.sh followed by a new Claude Code session in a prep project shows the prime briefing from the plugin

@@ -1,0 +1,3 @@
+- [ ] The release workflow published v0.1.0 with archives for macOS and Linux (amd64, arm64) and checksums.txt; plugin.json and marketplace.json carry 0.1.0
+- [ ] On a machine with Claude Code, curl -fsSL .../install.sh | sh installs prep and runs prep setup, and a new Claude Code session in a prep project shows the prime briefing from the plugin pinned to v0.1.0
+- [ ] The README explains what prep is and how to install, set up and update it
