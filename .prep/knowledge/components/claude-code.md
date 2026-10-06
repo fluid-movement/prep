@@ -11,7 +11,7 @@ scope:
   - .claude-plugin
   - internal/setup/claudecode
   - .claude/skills
-confirmed_commit: 49d0f022f7cfc364bd4e30e9647245823689b4ad
+confirmed_commit: ef0b7a5e1768f9f873dbf9891de53857c4a4bc56
 ---
 
 # Claude Code integration
