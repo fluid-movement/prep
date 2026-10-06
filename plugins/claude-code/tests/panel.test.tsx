@@ -32,6 +32,7 @@ const prime = (claims: { id: string; title: string; by: string }[] = []) => ({
 })
 
 const show = (id: string) => ({
+  priority: id === CHILD ? 'high' : 'medium',
   state: 'in_progress',
   stale: false,
   blocked: false,
@@ -83,7 +84,7 @@ const tree = {
   issues: [
     summary(PARENT, 'TUI parent', 'open', { children: 1, progress: { done: 0, dropped: 0, total: 1 } }),
     summary(CHILD, 'Side panel', 'in_progress', { parent: PARENT, depth: 1, stale: true }),
-    summary(OTHER, 'Other work', 'ready', { actionable: true }),
+    summary(OTHER, 'Other work', 'ready', { actionable: true, priority: 'critical' }),
   ],
 }
 
@@ -290,6 +291,7 @@ describe('panel', () => {
       CHILD,
       '#integration',
       'in_progress',
+      '!high',
       'step implement',
       `prep complete ${CHILD} --commit <ref>`,
       '1 acceptance criteria unchecked',
@@ -369,6 +371,7 @@ describe('views', () => {
     expect(text).toContain('  in_progress')
     expect(text).toContain('stale')
     expect(text).toContain('actionable')
+    expect(text).toContain('!crit')
     expect(text).not.toContain('step implement')
 
     await ui.press({ key: 'tab-live' })

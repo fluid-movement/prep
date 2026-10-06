@@ -28,6 +28,7 @@ type summary struct {
 	Parent     string           `json:"parent,omitempty"`
 	DependsOn  []string         `json:"depends_on,omitempty"`
 	Tags       []string         `json:"tags,omitempty"`
+	Priority   domain.Priority  `json:"priority"`
 	Children   int              `json:"children"`
 	Progress   *domain.Progress `json:"progress,omitempty"`
 	Depth      int              `json:"depth,omitempty"`
@@ -36,7 +37,7 @@ type summary struct {
 func summarize(t *domain.Tree, id string) summary {
 	i := t.Issues[id]
 	s := summary{ID: id, Title: i.Title, Kind: i.Kind, State: t.State(id), Stale: t.Stale(id), Blocked: t.Blocked(id),
-		Actionable: t.Actionable(id), Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags, Children: len(t.Children(id))}
+		Actionable: t.Actionable(id), Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags, Priority: i.Priority.Effective(), Children: len(t.Children(id))}
 	if s.Children > 0 {
 		p := t.ChildProgress(id)
 		s.Progress = &p
@@ -68,8 +69,35 @@ func (a *app) printSummaries(ss []summary) {
 	}
 	for _, s := range ss {
 		indent := strings.Repeat("  ", s.Depth)
-		a.printf("%s  %-11s %-8s %-18s %s%s%s\n", s.ID, s.State, s.Kind, s.flags(), indent, s.Title, tagSuffix(s.Tags))
+		a.printf("%s  %-11s %-8s %-18s %s%s%s%s\n", s.ID, s.State, s.Kind, s.flags(), indent, priorityMark(s.Priority), s.Title, tagSuffix(s.Tags))
 	}
+}
+
+// byPriority orders summaries as Tree.ByPriority orders their IDs.
+func byPriority(t *domain.Tree, ss []summary) []summary {
+	at := map[string]summary{}
+	ids := make([]string, len(ss))
+	for k, s := range ss {
+		at[s.ID], ids[k] = s, s.ID
+	}
+	out := make([]summary, 0, len(ss))
+	for _, id := range t.ByPriority(ids) {
+		out = append(out, at[id])
+	}
+	return out
+}
+
+// priorityMark prefixes a title in text output; medium, the default, has none.
+func priorityMark(p domain.Priority) string {
+	switch p.Effective() {
+	case domain.PriorityCritical:
+		return "!crit "
+	case domain.PriorityHigh:
+		return "!high "
+	case domain.PriorityLow:
+		return "low "
+	}
+	return ""
 }
 
 func cmdList(a *app, args []string) error {
@@ -217,7 +245,7 @@ func cmdShow(a *app, args []string) error {
 	s := summarize(t, id)
 	if a.json {
 		a.emit(map[string]any{
-			"issue": i, "dir": mdstore.IssueDir(id), "state": s.State, "stale": s.Stale, "blocked": s.Blocked,
+			"issue": i, "dir": mdstore.IssueDir(id), "priority": i.Priority.Effective(), "state": s.State, "stale": s.Stale, "blocked": s.Blocked,
 			"actionable": s.Actionable, "children": nonNil(t.Children(id)), "blocks": nonNil(t.Blocks(id)),
 			"progress": s.Progress, "definition_of_done": nonNil(dod), "dod_opt_outs": opt,
 			"context": i.Context, "findings": i.Findings, "history": i.History,
@@ -238,6 +266,9 @@ func cmdShow(a *app, args []string) error {
 	}
 	if len(i.Tags) > 0 {
 		a.printf("tags: %s\n", strings.Join(i.Tags, ", "))
+	}
+	if i.Priority.Effective() != domain.PriorityMedium {
+		a.printf("priority: %s\n", i.Priority)
 	}
 	for _, d := range i.DependsOn {
 		a.printf("depends on: %s [%s] %s\n", d, t.State(d), titleOf(t, d))
@@ -540,6 +571,7 @@ func cmdPrime(a *app, args []string) error {
 			b.Claims = append(b.Claims, claimSummary{ID: id, Title: i.Title, By: i.Claim.By, Since: i.Claim.At})
 		}
 	}
+	b.Next, b.Stale = byPriority(t, b.Next), byPriority(t, b.Stale)
 	b.Parents, b.Next, b.Stale = cap(b.Parents), cap(b.Next), cap(b.Stale)
 	if len(b.Claims) > *max {
 		b.Claims = b.Claims[:*max]
@@ -576,7 +608,7 @@ func cmdPrime(a *app, args []string) error {
 			if s.Progress != nil {
 				extra = fmt.Sprintf(" (%d/%d resolved)", s.Progress.Done+s.Progress.Dropped, s.Progress.Total)
 			}
-			a.printf("  %s [%s] %s%s\n", s.ID, s.State, s.Title, extra)
+			a.printf("  %s [%s] %s%s%s\n", s.ID, s.State, priorityMark(s.Priority), s.Title, extra)
 		}
 	}
 	section("Top-level parents", b.Parents)

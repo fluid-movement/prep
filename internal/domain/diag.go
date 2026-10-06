@@ -66,6 +66,7 @@ const (
 	CodeStaleInProgress    = "I024"
 	CodeContextLinkMissing = "I025"
 	CodeTagInvalid         = "I026"
+	CodePriorityInvalid    = "I027"
 
 	// Knowledge base.
 	CodeKnowledgeFrontmatter = "K001"

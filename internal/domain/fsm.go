@@ -52,6 +52,7 @@ const (
 	GateReason        = "G_REASON"
 	GateActor         = "G_ACTOR"
 	GateTags          = "G_TAGS"
+	GatePriority      = "G_PRIORITY"
 )
 
 // Input carries the arguments of a transition. Nil fields in guide mode mean
@@ -96,6 +97,7 @@ type IssueEdit struct {
 	Parent    string
 	DependsOn []string
 	Tags      []string
+	Priority  Priority
 	Body      *string // new requirement text; nil keeps the current one
 	Fields    []string
 }
@@ -386,6 +388,7 @@ type NewIssueInput struct {
 	Parent    string
 	DependsOn []string
 	Tags      []string
+	Priority  string // a level name; empty or medium leaves it unset
 	Body      string // requirement prose
 }
 
@@ -407,7 +410,11 @@ func (t *Tree) PlanNew(in NewIssueInput, now time.Time) (*Change, error) {
 	if err != nil {
 		return nil, &Error{Code: ErrUsage, Message: "cannot create issue", Unmet: []Unmet{{GateTags, err.Error()}}}
 	}
-	issue := &Issue{ID: id, Title: strings.TrimSpace(in.Title), Kind: in.Kind, Parent: in.Parent, DependsOn: in.DependsOn, Tags: tags, Prose: strings.TrimSpace(in.Body)}
+	prio, err := ParsePriority(in.Priority)
+	if err != nil {
+		return nil, &Error{Code: ErrUsage, Message: "cannot create issue", Unmet: []Unmet{{GatePriority, err.Error()}}}
+	}
+	issue := &Issue{ID: id, Title: strings.TrimSpace(in.Title), Kind: in.Kind, Parent: in.Parent, DependsOn: in.DependsOn, Tags: tags, Priority: prio, Prose: strings.TrimSpace(in.Body)}
 	return &Change{Op: "new", IssueID: id, NewIssue: issue}, nil
 }
 
@@ -420,20 +427,22 @@ type EditInput struct {
 	Parent    *string
 	DependsOn *[]string
 	Tags      *[]string
+	Priority  *string // a level name; medium or empty unsets it
 	Body      *string // requirement text, including its Open questions section
 }
 
 // PlanEdit validates an edit of an unresolved issue's title, kind, parent,
-// dependencies or requirement and returns the change. Existence, cycles and
+// dependencies or requirement and returns the change. Tags and priority are
+// metadata: an edit of only those also works on resolved issues. Existence, cycles and
 // self-dependencies are left to CheckWrite, which validates the edited tree.
 func (t *Tree) PlanEdit(id string, in EditInput) (*Change, error) {
 	i := t.Issues[id]
-	tagsOnly := in.Tags != nil && in.Title == nil && in.Kind == nil && in.Parent == nil && in.DependsOn == nil && in.Body == nil
-	if s := t.State(id); s.Terminal() && !tagsOnly {
+	metaOnly := (in.Tags != nil || in.Priority != nil) && in.Title == nil && in.Kind == nil && in.Parent == nil && in.DependsOn == nil && in.Body == nil
+	if s := t.State(id); s.Terminal() && !metaOnly {
 		return nil, &Error{Code: ErrGate, Message: fmt.Sprintf("cannot edit %s", id),
-			Unmet: []Unmet{{GateState, fmt.Sprintf("edit requires an unresolved issue, issue is %s; only --tag works on resolved issues", s)}}}
+			Unmet: []Unmet{{GateState, fmt.Sprintf("edit requires an unresolved issue, issue is %s; only --tag and --priority work on resolved issues", s)}}}
 	}
-	e := &IssueEdit{Title: i.Title, Kind: i.Kind, Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags}
+	e := &IssueEdit{Title: i.Title, Kind: i.Kind, Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags, Priority: i.Priority}
 	var unmet []Unmet
 	if in.Title != nil {
 		e.Title = strings.TrimSpace(*in.Title)
@@ -474,13 +483,21 @@ func (t *Tree) PlanEdit(id string, in EditInput) (*Change, error) {
 		e.Tags = tags
 		e.Fields = append(e.Fields, "tags")
 	}
+	if in.Priority != nil {
+		p, err := ParsePriority(*in.Priority)
+		if err != nil {
+			unmet = append(unmet, Unmet{GatePriority, err.Error()})
+		}
+		e.Priority = p
+		e.Fields = append(e.Fields, "priority")
+	}
 	if in.Body != nil {
 		b := *in.Body
 		e.Body = &b
 		e.Fields = append(e.Fields, "requirement")
 	}
 	if len(e.Fields) == 0 {
-		unmet = append(unmet, Unmet{GateRequirement, "nothing to edit: pass --title, --kind, --parent, --depends-on, --tag, --body or --body-file"})
+		unmet = append(unmet, Unmet{GateRequirement, "nothing to edit: pass --title, --kind, --parent, --depends-on, --tag, --priority, --body or --body-file"})
 	}
 	if len(unmet) > 0 {
 		return nil, &Error{Code: ErrUsage, Message: fmt.Sprintf("cannot edit %s", id), Unmet: unmet}
@@ -519,7 +536,7 @@ func (t *Tree) Apply(c *Change) *Tree {
 				cp.Resolution = &r
 			}
 			if e := c.Edit; e != nil {
-				cp.Title, cp.Kind, cp.Parent, cp.DependsOn, cp.Tags = e.Title, e.Kind, e.Parent, e.DependsOn, e.Tags
+				cp.Title, cp.Kind, cp.Parent, cp.DependsOn, cp.Tags, cp.Priority = e.Title, e.Kind, e.Parent, e.DependsOn, e.Tags, e.Priority
 				if e.Body != nil {
 					cp.Body = *e.Body
 				}

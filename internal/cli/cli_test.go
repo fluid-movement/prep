@@ -682,11 +682,96 @@ func TestTags(t *testing.T) {
 	// Tags can change on resolved issues; nothing else can.
 	h.ok("drop", b, "--reason", "not needed")
 	h.ok("edit", b, "--tag", "archive")
-	h.fails("only --tag works", "edit", b, "--title", "x", "--json")
+	h.fails("only --tag and --priority work", "edit", b, "--title", "x", "--json")
 
 	// Hand edits with malformed tags are reported.
 	h.replace(b, "issue.md", "  - archive", "  - Not Valid")
 	h.fails("I026", "check")
+}
+
+func TestPriorities(t *testing.T) {
+	h := newHarness(t)
+	low := h.newIssue("--title", "Polish", "--kind", "code", "--body", "Polish.", "--priority", "low")
+	mid := h.newIssue("--title", "Export", "--kind", "code", "--body", "Export.")
+	crit := h.newIssue("--title", "Fix data loss", "--kind", "code", "--body", "Fix it.", "--priority", "Critical")
+	high := h.newIssue("--title", "Import", "--kind", "code", "--body", "Import.", "--priority", "medium")
+	h.fails("G_PRIORITY", "new", "--title", "x", "--kind", "code", "--priority", "urgent", "--json")
+
+	// Medium is the default and never written; other levels are.
+	if got := h.read(mid, "issue.md") + h.read(high, "issue.md"); strings.Contains(got, "priority") {
+		t.Fatalf("medium written:\n%s", got)
+	}
+	if got := h.read(crit, "issue.md"); !strings.Contains(got, "priority: critical\n") {
+		t.Fatalf("critical not written:\n%s", got)
+	}
+
+	// Editing priority is metadata: no staleness, works when resolved.
+	h.ok("define", high)
+	h.ok("edit", high, "--priority", "high")
+	h.expectState(high, "defined", false)
+	if got := listIDs(h, "list"); strings.Join(got, " ") != strings.Join([]string{crit, high, mid, low}, " ") {
+		t.Fatalf("list not ordered by priority then ID: %v", got)
+	}
+	if got := listIDs(h, "list", "--priority", "high,critical"); len(got) != 2 || got[0] != crit || got[1] != high {
+		t.Fatalf("list --priority = %v", got)
+	}
+	if got := listIDs(h, "list", "--priority", "medium"); len(got) != 1 || got[0] != mid {
+		t.Fatalf("--priority medium should match unset: %v", got)
+	}
+	h.fails("--priority must be one of", "list", "--priority", "urgent")
+	if out := h.ok("list"); !strings.Contains(out, "!crit Fix data loss") || !strings.Contains(out, "low Polish") || strings.Contains(out, "!high Export") {
+		t.Fatalf("list marks:\n%s", out)
+	}
+
+	var shown struct {
+		Priority string `json:"priority"`
+	}
+	h.jsonOf(&shown, "show", mid)
+	if shown.Priority != "medium" {
+		t.Fatalf("show --json priority = %q", shown.Priority)
+	}
+	if out := h.ok("show", crit); !strings.Contains(out, "priority: critical") {
+		t.Fatalf("show text:\n%s", out)
+	}
+
+	// prep next and prime order actionable work by priority.
+	for _, id := range []string{low, mid, crit} {
+		h.ok("define", id)
+		h.enrich(id)
+		h.ok("ready", id)
+	}
+	if got := listIDs(h, "next"); strings.Join(got, " ") != strings.Join([]string{crit, mid, low}, " ") {
+		t.Fatalf("next = %v", got)
+	}
+	var pr struct {
+		Next []struct {
+			ID       string `json:"id"`
+			Priority string `json:"priority"`
+		} `json:"next"`
+	}
+	h.jsonOf(&pr, "prime")
+	if len(pr.Next) != 3 || pr.Next[0].ID != crit || pr.Next[0].Priority != "critical" || pr.Next[2].ID != low {
+		t.Fatalf("prime next = %+v", pr.Next)
+	}
+
+	// Siblings in tree layouts follow priority too.
+	parent := h.newIssue("--title", "Parent", "--kind", "code")
+	a := h.newIssue("--title", "First child", "--kind", "code", "--parent", parent)
+	b := h.newIssue("--title", "Second child", "--kind", "code", "--parent", parent, "--priority", "high")
+	if got := listIDs(h, "list", "--tree", "--under", parent); len(got) != 3 || got[0] != parent || got[1] != b || got[2] != a {
+		t.Fatalf("tree siblings = %v", got)
+	}
+
+	// Resolved issues still take a priority; unset with medium.
+	h.ok("drop", low, "--reason", "not needed")
+	h.ok("edit", low, "--priority", "medium")
+	if strings.Contains(h.read(low, "issue.md"), "priority") {
+		t.Fatalf("--priority medium did not unset:\n%s", h.read(low, "issue.md"))
+	}
+
+	// Hand edits with unknown levels are reported.
+	h.replace(crit, "issue.md", "priority: critical", "priority: urgent")
+	h.fails("I027", "check")
 }
 
 func TestBootstrap(t *testing.T) {

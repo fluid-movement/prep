@@ -5,7 +5,9 @@
 package domain
 
 import (
+	"fmt"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -24,6 +26,72 @@ const (
 
 // Kinds is the closed list of issue kinds.
 var Kinds = []Kind{KindCode, KindManual, KindResearch, KindDecision}
+
+// Priority orders work: critical before high before medium before low. The
+// empty priority is medium, which storage never writes.
+type Priority string
+
+const (
+	PriorityCritical Priority = "critical"
+	PriorityHigh     Priority = "high"
+	PriorityMedium   Priority = "medium"
+	PriorityLow      Priority = "low"
+)
+
+// Priorities is the closed list of priority levels, most important first.
+var Priorities = []Priority{PriorityCritical, PriorityHigh, PriorityMedium, PriorityLow}
+
+// Effective returns the level, medium for an unset priority.
+func (p Priority) Effective() Priority {
+	if p == "" {
+		return PriorityMedium
+	}
+	return p
+}
+
+// Valid reports whether p is unset or one of the levels.
+func (p Priority) Valid() bool {
+	_, ok := p.level()
+	return ok
+}
+
+// Rank orders priorities, 0 for critical. Unset is medium, and an unknown
+// level ranks with medium so a typo does not hide an issue.
+func (p Priority) Rank() int {
+	if k, ok := p.level(); ok {
+		return k
+	}
+	return PriorityMedium.Rank()
+}
+
+func (p Priority) level() (int, bool) {
+	for k, v := range Priorities {
+		if p.Effective() == v {
+			return k, true
+		}
+	}
+	return 0, false
+}
+
+// ParsePriority reads a level from user input; medium and empty both mean unset.
+func ParsePriority(s string) (Priority, error) {
+	p := Priority(strings.ToLower(strings.TrimSpace(s)))
+	if p == "" || p == PriorityMedium {
+		return "", nil
+	}
+	if !p.Valid() {
+		return "", fmt.Errorf("priority must be one of %s", joinPriorities())
+	}
+	return p, nil
+}
+
+func joinPriorities() string {
+	parts := make([]string, len(Priorities))
+	for k, p := range Priorities {
+		parts[k] = string(p)
+	}
+	return strings.Join(parts, ", ")
+}
 
 // Valid reports whether k is one of the built-in kinds.
 func (k Kind) Valid() bool {
@@ -154,6 +222,8 @@ type Issue struct {
 	Parent    string   `json:"parent,omitempty"`
 	DependsOn []string `json:"depends_on,omitempty"`
 	Tags      []string `json:"tags,omitempty"`
+	// Priority as stored: empty means medium. Output carries Effective().
+	Priority Priority `json:"-"`
 
 	// Body is the normalized requirement text that baselines snapshot.
 	Body string `json:"-"`

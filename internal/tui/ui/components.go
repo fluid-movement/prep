@@ -129,6 +129,22 @@ type Row struct {
 	Tree   string   // tree lines before the title, such as "│  ├─ "; see TreePrefix
 	Dimmed bool     // context row: shown for structure, not part of the result
 	Tags   []string // shown after the title
+	// Priority marks the title unless it is medium (or unset).
+	Priority domain.Priority
+}
+
+// PriorityMark renders a priority before a title: critical in the error
+// tone, high in the warning tone, low subtle; medium has no mark.
+func PriorityMark(t *theme.Theme, p domain.Priority) string {
+	switch p.Effective() {
+	case domain.PriorityCritical:
+		return Note(t, "!crit", ToneError) + " "
+	case domain.PriorityHigh:
+		return Note(t, "!high", ToneWarning) + " "
+	case domain.PriorityLow:
+		return t.S.Subtle.Render("low") + " "
+	}
+	return ""
 }
 
 // ListRow renders one issue row: marker, ID, state, kind, tree lines, note,
@@ -160,6 +176,7 @@ func ListRow(t *theme.Theme, r Row, selected bool, width int) string {
 		if selected {
 			title = t.S.Heading.Render(r.Title)
 		}
+		title = PriorityMark(t, r.Priority) + title
 	}
 	if len(r.Tags) > 0 {
 		title += t.S.Subtle.Render("  #" + strings.Join(r.Tags, " #"))

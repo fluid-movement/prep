@@ -98,6 +98,7 @@ function drawIssue(kit: Kit, show: PrepShow, guide: PrepGuide, issues: PrepSumma
         </Text>
         <Text>
           <Text color={STATE[show.state] ?? 'text'}>{show.state}</Text>
+          {priorityMark(kit, show.priority, ' · ')}
           <Text dimColor>{` · step ${guide.step} · ${source}`}</Text>
         </Text>
         {show.stale && <Text color="warning">stale: the requirement changed since its baseline</Text>}
@@ -257,6 +258,21 @@ function section(kit: Kit, title: string, body: RenderChildren, color?: Color): 
   )
 }
 
+// Only deviations from medium draw the eye, in the TUI's tones.
+const PRIORITY: Record<string, { label: string; color: Color }> = {
+  critical: { label: '!crit', color: 'error' },
+  high: { label: '!high', color: 'warning' },
+  low: { label: 'low', color: 'subtle' },
+}
+
+/** The priority before a title (or after a separator); nothing for medium. */
+function priorityMark(kit: Kit, priority: string | undefined, before = ''): RenderElement | null {
+  const { Text } = kit
+  const p = PRIORITY[priority ?? 'medium']
+  if (!p) return null
+  return before ? <Text color={p.color}>{`${before}${p.label}`}</Text> : <Text color={p.color}>{`${p.label} `}</Text>
+}
+
 /** One issue as a row: state, title, progress. */
 function row(kit: Kit, s: PrepSummary, note?: string): RenderElement {
   const { Text } = kit
@@ -264,6 +280,7 @@ function row(kit: Kit, s: PrepSummary, note?: string): RenderElement {
   return (
     <Text wrap="truncate-end">
       <Text color={STATE[s.state] ?? 'text'}>{pad(s.state)}</Text>
+      {priorityMark(kit, s.priority)}
       {s.title}
       <Text dimColor>{progress + (note ? ` (${note})` : '')}</Text>
     </Text>
@@ -279,6 +296,7 @@ function treeRow(kit: Kit, s: PrepSummary): RenderElement {
     <Text wrap="truncate-end">
       {'  '.repeat(s.depth ?? 0)}
       <Text color={STATE[s.state] ?? 'text'}>{pad(s.state)}</Text>
+      {priorityMark(kit, s.priority)}
       {s.title}
       <Text dimColor>{progress}</Text>
       {marks.length > 0 && <Text color={s.stale || s.blocked ? 'warning' : 'success'}>{` ${marks.join(' ')}`}</Text>}
@@ -294,6 +312,7 @@ function relation(kit: Kit, label: string, s: PrepSummary | undefined, id: strin
     <Text wrap="truncate-end">
       <Text dimColor>{`${label} `}</Text>
       <Text color={STATE[s.state] ?? 'text'}>{`${s.state} `}</Text>
+      {priorityMark(kit, s.priority)}
       {s.title}
       <Text dimColor>{progress}</Text>
     </Text>

@@ -643,6 +643,37 @@ func TestActionMenu(t *testing.T) {
 	run(m, "esc")
 }
 
+func TestSetPriority(t *testing.T) {
+	p, ids := sample(t)
+	var edits []string
+	m := editable(t, p, &edits)
+	run(m, "6")
+	m.selectInCurrent(ids["csv"])
+	run(m, "a")
+	run(m, "i")
+	if m.modal == nil || m.modal.heading != "Priority" {
+		t.Fatal("i does not open the priority menu")
+	}
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "Priority · ") || !strings.Contains(v, "Medium (current)") {
+		t.Fatalf("priority menu:\n%s", v)
+	}
+	run(m, "c")
+	if got := issue(t, p, ids["csv"]).Priority; got != domain.PriorityCritical {
+		t.Fatalf("priority = %q", got)
+	}
+	v := ansi.Strip(m.View())
+	if !strings.Contains(v, "!crit") || !strings.Contains(v, "priority critical") {
+		t.Fatalf("row mark or detail missing:\n%s", v)
+	}
+	// Medium unsets the priority again.
+	run(m, "a")
+	run(m, "i")
+	run(m, "m")
+	if got := issue(t, p, ids["csv"]).Priority; got != "" {
+		t.Fatalf("medium did not unset: %q", got)
+	}
+}
+
 func TestCreateRenameAndEdit(t *testing.T) {
 	p, ids := sample(t)
 	edits := []string{"Export rows as XML.\n\n## Open questions"}

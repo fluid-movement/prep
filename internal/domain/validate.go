@@ -36,6 +36,9 @@ func Validate(t *Tree) []Diagnostic {
 			e(CodeKindInvalid, ClassManual, "issue.md", "set kind to one of "+joinKinds(), "kind %q is invalid", i.Kind)
 		}
 
+		if !i.Priority.Valid() {
+			e(CodePriorityInvalid, ClassManual, "issue.md", "set priority to one of "+joinPriorities()+" (prep edit --priority)", "priority %q is invalid", i.Priority)
+		}
 		for _, tag := range i.Tags {
 			if !ValidTag(tag) {
 				e(CodeTagInvalid, ClassManual, "issue.md", "use lowercase letters, digits and . _ - / (prep edit --tag)", "tag %q is malformed", tag)

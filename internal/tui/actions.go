@@ -49,6 +49,7 @@ type modal struct {
 	items   []action
 	checks  []bool
 	picks   []string // reparent candidates; "" is top-level
+	heading string   // a menu's title in place of "Actions"
 	err     string
 }
 
@@ -152,6 +153,7 @@ func (m *Model) actions() []action {
 		action{key: "c", label: "Edit context", reason: edit, run: func() tea.Cmd { return m.editText(id, "context") }},
 		action{key: "k", label: "Check criteria", reason: crit, run: m.openCriteria},
 		action{key: "m", label: "Move to another parent", reason: edit, run: m.openReparent},
+		action{key: "i", label: "Set priority", run: m.openPriority},
 		action{key: "d", label: "Define", reason: m.gate(id, domain.OpDefine), run: m.transition(id, domain.OpDefine, "defined")},
 		action{key: "r", label: "Mark ready", reason: m.gate(id, domain.OpReady), run: m.transition(id, domain.OpReady, "marked ready")},
 		action{key: "a", label: "Acknowledge change", reason: m.gate(id, domain.OpAck), run: m.transition(id, domain.OpAck, "acknowledged")},
@@ -184,6 +186,30 @@ func (m *Model) transition(id string, op domain.Op, done string) func() tea.Cmd 
 func (m *Model) openCreate() tea.Cmd {
 	m.modal = &modal{kind: modalCreate, inputs: []textinput.Model{m.newInput("what should change", "")}}
 	return m.modal.inputs[0].Focus()
+}
+
+// openPriority offers the four levels as a menu, the current one selected.
+// Priority is metadata, so it can change on resolved issues too.
+func (m *Model) openPriority() tea.Cmd {
+	id := m.selected()
+	cur := m.tree.Issues[id].Priority.Effective()
+	d := &modal{kind: modalMenu, id: id, heading: "Priority"}
+	for k, p := range domain.Priorities {
+		label := strings.ToUpper(string(p[:1])) + string(p[1:])
+		if p == cur {
+			label += " (current)"
+			d.cursor = k
+		}
+		d.items = append(d.items, action{key: string(p[:1]), label: label, run: func() tea.Cmd {
+			level := string(p)
+			actor, now := m.opts.Actor, m.now()
+			return m.write("priority "+level+" "+shortID(id), func(t *domain.Tree) (*domain.Change, error) {
+				return t.PlanEdit(id, domain.EditInput{Actor: actor, Now: now, Priority: &level})
+			}, false)
+		}})
+	}
+	m.modal = d
+	return nil
 }
 
 func (m *Model) openRename() tea.Cmd {
@@ -527,9 +553,13 @@ func (m *Model) modalView(width, height int) string {
 	var body []string
 	switch d.kind {
 	case modalMenu:
-		title = "Actions · " + title
+		heading := "Actions"
+		if d.heading != "" {
+			heading = d.heading
+		}
+		title = heading + " · " + title
 		if d.id == "" {
-			title = "Actions"
+			title = heading
 		}
 		for k, it := range d.items {
 			body = append(body, ui.MenuRow(m.th, it.key, it.label, it.reason, it.reason == "", k == d.cursor, inner))

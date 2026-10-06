@@ -16,12 +16,15 @@ export type PrepSummary = {
   tags?: string[]
   children: number
   progress?: PrepProgress
+  /** critical, high, medium or low; always present. */
+  priority?: string
   /** Nesting in prep list --tree. */
   depth?: number
 }
 
 /** prep show <id> --json, the fields the panel reads. */
 export type PrepShow = {
+  priority?: string
   state: string
   stale: boolean
   blocked: boolean

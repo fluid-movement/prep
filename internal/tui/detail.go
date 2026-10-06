@@ -32,6 +32,9 @@ func detailMarkdown(t *domain.Tree, id string) string {
 
 	p("# %s\n\n", i.Title)
 	meta := []string{"**" + ui.StateLabel(t.State(id)) + "**", string(i.Kind), "`" + id + "`"}
+	if p := i.Priority.Effective(); p != domain.PriorityMedium {
+		meta = append(meta, "priority **"+string(p)+"**")
+	}
 	if t.Stale(id) {
 		meta = append(meta, "**stale**: the requirement changed since the newest baseline")
 	}

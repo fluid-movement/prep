@@ -1,0 +1,4 @@
+- [x] priority is stored in issue.md frontmatter (critical, high, low; medium is never written), set by prep new and prep edit --priority, editable in any state without making the issue stale; an invalid stored value is a prep check error
+- [x] prep next, prep prime's lists, prep list and tree layouts order by priority then ID; prep list --priority filters and works in saved views and the TUI filter bar
+- [x] prep list, prep show and their JSON carry the priority; the TUI rows, detail and a Set priority action show and change it; the side panel shows it
+- [x] Knowledge entries (storage format, domain, CLI, TUI, Claude Code, out-of-scope) describe priorities

@@ -13,6 +13,7 @@ type Filter struct {
 	States     []State
 	Kinds      []Kind
 	Tags       []string
+	Priorities []Priority // effective levels; medium matches unset
 	Under      []string
 	Stale      *bool
 	Actionable *bool
@@ -84,6 +85,18 @@ func ParseFilter(args []string) (Filter, error) {
 					f.Tags = append(f.Tags, strings.ToLower(strings.TrimSpace(s)))
 				}
 			}
+		case "priority":
+			var v string
+			if v, err = takeVal(); err == nil {
+				for _, s := range strings.Split(v, ",") {
+					p := Priority(strings.ToLower(strings.TrimSpace(s)))
+					if !p.Valid() || p == "" {
+						err = fmt.Errorf("--priority must be one of %s", joinPriorities())
+						break
+					}
+					f.Priorities = append(f.Priorities, p)
+				}
+			}
 		case "under":
 			var v string
 			if v, err = takeVal(); err == nil {
@@ -148,6 +161,9 @@ func (t *Tree) Query(f Filter) ([]string, error) {
 		if len(f.Tags) > 0 && !anyTag(f.Tags, i.Tags) {
 			continue
 		}
+		if len(f.Priorities) > 0 && !hasPriority(f.Priorities, i.Priority) {
+			continue
+		}
 		if under != nil && !under[id] {
 			continue
 		}
@@ -179,7 +195,36 @@ func (t *Tree) Query(f Filter) ([]string, error) {
 		}
 		out = append(out, id)
 	}
-	return out, nil
+	return t.ByPriority(out), nil
+}
+
+// ByPriority orders IDs by priority, most important first, then by ID. It
+// returns a new slice; IDs stay chronological everywhere else.
+func (t *Tree) ByPriority(ids []string) []string {
+	out := append([]string(nil), ids...)
+	rank := func(id string) int {
+		if i := t.Issues[id]; i != nil {
+			return i.Priority.Rank()
+		}
+		return PriorityMedium.Rank()
+	}
+	sort.SliceStable(out, func(a, b int) bool {
+		ra, rb := rank(out[a]), rank(out[b])
+		if ra != rb {
+			return ra < rb
+		}
+		return out[a] < out[b]
+	})
+	return out
+}
+
+func hasPriority(ps []Priority, p Priority) bool {
+	for _, x := range ps {
+		if x.Effective() == p.Effective() {
+			return true
+		}
+	}
+	return false
 }
 
 func hasKind(ks []Kind, k Kind) bool {
@@ -212,7 +257,8 @@ func (t *Tree) WithAncestors(ids []string) []string {
 // Depth returns the number of ancestors of an issue.
 func (t *Tree) Depth(id string) int { return len(t.Ancestors(id)) }
 
-// TreeOrder orders ids depth first under their parents, roots chronological.
+// TreeOrder orders ids depth first under their parents; roots and siblings
+// by priority, then ID.
 func (t *Tree) TreeOrder(ids []string) []string {
 	set := map[string]bool{}
 	for _, id := range ids {
@@ -229,11 +275,11 @@ func (t *Tree) TreeOrder(ids []string) []string {
 		if set[id] {
 			out = append(out, id)
 		}
-		for _, c := range t.children[id] {
+		for _, c := range t.ByPriority(t.children[id]) {
 			walk(c)
 		}
 	}
-	for _, id := range t.IDs() {
+	for _, id := range t.ByPriority(t.IDs()) {
 		p := t.Issues[id].Parent
 		if p == "" || t.Issues[p] == nil || !set[p] {
 			// a root of the displayed forest

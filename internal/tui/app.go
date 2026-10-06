@@ -861,7 +861,7 @@ func toneIf(cond bool, t ui.Tone) ui.Tone {
 
 var (
 	listKeys   = []ui.Key{{Keys: "↑↓", Desc: "move"}, {Keys: "enter", Desc: "details"}, {Keys: "a", Desc: "actions"}, {Keys: "/", Desc: "filter"}, {Keys: "→/←", Desc: "into/out of parent"}, {Keys: "p", Desc: "parent"}, {Keys: "t", Desc: "tree/flat"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "tab/1-9", Desc: "views"}, {Keys: "q", Desc: "quit"}}
-	filterKeys = []ui.Key{{Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
+	filterKeys = []ui.Key{{Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
 	pageKeys   = []ui.Key{{Keys: "↑↓ pgup/pgdn", Desc: "scroll"}, {Keys: "esc", Desc: "back"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "q", Desc: "quit"}}
 	detailKeys = []ui.Key{{Keys: "a", Desc: "actions"}, {Keys: "tab", Desc: "next link"}, {Keys: "enter", Desc: "open"}, {Keys: "⌫", Desc: "back"}, {Keys: "↑↓", Desc: "scroll"}, {Keys: "esc", Desc: "list"}, {Keys: "p", Desc: "parent"}, {Keys: "y", Desc: "copy id"}, {Keys: "q", Desc: "quit"}}
 )
@@ -965,7 +965,7 @@ func (m *Model) row(r row) ui.Row {
 func (m *Model) issueRow(id string) ui.Row {
 	t := m.tree
 	i := t.Issues[id]
-	r := ui.Row{ID: shortID(id), State: t.State(id), Kind: i.Kind, Title: i.Title, Tags: i.Tags}
+	r := ui.Row{ID: shortID(id), State: t.State(id), Kind: i.Kind, Title: i.Title, Tags: i.Tags, Priority: i.Priority}
 	switch {
 	case len(t.Children(id)) > 0:
 		p := t.ChildProgress(id)

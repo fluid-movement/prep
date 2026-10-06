@@ -16,7 +16,7 @@ Applies when a request touches one of these topics.
 - Cross-project view: single project only.
 - Orchestrating implementation: prep records work but never runs agents.
 - Approval or permission system: harness permissions handle it.
-- Focus or active goal, priorities, goal ordering: none for now.
+- Focus or active goal, goal ordering: none for now. Priorities are in scope since 20261006-090120: fixed levels per issue, no ranking between issues.
 - How work inside a step happens: the user's and agent's choice.
 - User-level config beyond personal choices: `~/.config/prep` holds only the user's choices, such as integrated harnesses ([Harness setup](/components/setup.md)); project behavior stays in the project config.
 - Hosted or database storage: possible through the storage port, markdown only for now.

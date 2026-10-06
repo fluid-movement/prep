@@ -18,6 +18,7 @@ type issueFM struct {
 	Parent    string   `yaml:"parent,omitempty"`
 	DependsOn []string `yaml:"depends_on,omitempty"`
 	Tags      []string `yaml:"tags,omitempty"`
+	Priority  string   `yaml:"priority,omitempty"`
 }
 
 type baselineFM struct {
@@ -110,13 +111,19 @@ func parseIssue(raw string, i *domain.Issue) error {
 	i.Parent = f.Parent
 	i.DependsOn = f.DependsOn
 	i.Tags = f.Tags
+	i.Priority = domain.Priority(f.Priority)
 	i.Body = normalize(body)
 	i.Prose, i.OpenQuestions = splitOpenQuestions(i.Body)
 	return nil
 }
 
 func renderIssue(i *domain.Issue) string {
-	return withFrontmatter(encodeYAML(issueFM{Title: i.Title, Kind: string(i.Kind), Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags}), i.Body)
+	// Medium is the default and never written; an invalid level is kept for prep check to report.
+	prio := string(i.Priority)
+	if i.Priority.Effective() == domain.PriorityMedium {
+		prio = ""
+	}
+	return withFrontmatter(encodeYAML(issueFM{Title: i.Title, Kind: string(i.Kind), Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags, Priority: prio}), i.Body)
 }
 
 // requirementBody is the body of issue.md for a requirement given as text.

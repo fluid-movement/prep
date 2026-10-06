@@ -29,7 +29,7 @@ States (never stored): resolution.md → done/dropped; claim.md with valid ready
 | drop | any unresolved state | reason |
 
 - **Record writes** are not transitions either: `prep context`, `decide`, `criterion`, `dod`, `findings` and `log` work on any unresolved issue and never change state; `prep guide` names them in its instructions and Write list.
-- **Edit** is not a transition: `prep edit` changes title, kind, parent, dependencies or requirement of any unresolved issue and appends a history line; it never changes state, but a requirement or kind edit makes a defined issue stale.
+- **Edit** is not a transition: `prep edit` changes title, kind, parent, dependencies, tags, priority or requirement of any unresolved issue (tags and priority also on resolved ones) and appends a history line; it never changes state, but a requirement or kind edit makes a defined issue stale.
 - **Define and enrich** have different owners. Define settles what and why, and the user has authority over the requirement; it needs prose and an empty Open questions section. Enrich settles how: the agent drafts context, decisions and criteria, the user agrees, and `prep ready` signs off against the newest baseline. Code may be read during define only to test whether a requirement makes sense. Expected enrichment differs by kind: code needs context from the codebase, research states the question, scope and what counts as answered, decision states the question and options, manual is optional.
 - **Stale**: requirement (issue.md body) or kind differs from the newest baseline. Ack for trivial changes; define plus re-enrichment for real ones.
 - **Actionable**: ready, not stale, dependencies done, unclaimed, not a parent. **Blocked**: unresolved dependencies.

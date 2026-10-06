@@ -117,6 +117,7 @@ func cmdNew(a *app, args []string) error {
 	fs.Var(&deps, "depends-on", "dependency id (repeatable)")
 	var tags multi
 	fs.Var(&tags, "tag", "tag (repeatable or comma-separated)")
+	priority := fs.String("priority", "", "critical, high, medium or low")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -134,7 +135,7 @@ func cmdNew(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	in := domain.NewIssueInput{Title: *title, Kind: domain.Kind(*kind), Body: text, Tags: splitTags(tags)}
+	in := domain.NewIssueInput{Title: *title, Kind: domain.Kind(*kind), Body: text, Tags: splitTags(tags), Priority: *priority}
 	if *parent != "" {
 		if in.Parent, err = t.Resolve(*parent); err != nil {
 			return err
@@ -189,6 +190,7 @@ func cmdEdit(a *app, args []string) error {
 	fs.Var(&deps, "depends-on", "dependency id (repeatable, replaces the list; '' clears it)")
 	var tags multi
 	fs.Var(&tags, "tag", "tag (repeatable or comma-separated, replaces the list; '' clears it)")
+	priority := fs.String("priority", "", "critical, high, medium or low (medium unsets it)")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -249,6 +251,9 @@ func cmdEdit(a *app, args []string) error {
 			list = []string{}
 		}
 		in.Tags = &list
+	}
+	if set["priority"] {
+		in.Priority = priority
 	}
 	if set["body"] || set["body-file"] {
 		text, err := a.readBody(*body, *bodyFile)

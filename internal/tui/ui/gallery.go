@@ -67,7 +67,7 @@ func Gallery(t *theme.Theme, width int) string {
 		{ID: "152616", State: domain.StateOpen, Kind: domain.KindCode, Note: Progress(t, 1, 4), Title: "TUI: human client next to the harness"},
 		{ID: "152617", State: domain.StateDefined, Kind: domain.KindCode, Note: Note(t, "blocked", ToneWarning), Title: "TUI issue views: prep tui, tabs, list, detail pane, live reload"},
 		{ID: "190543", State: domain.StateInProgress, Kind: domain.KindCode, Title: "TUI design system: tokens, styles, components, gallery"},
-		{ID: "152623", State: domain.StateReady, Kind: domain.KindDecision, Note: Note(t, "stale", ToneError), Title: "Decide the install and update flow", Tags: []string{"release", "install"}},
+		{ID: "152623", State: domain.StateReady, Kind: domain.KindDecision, Note: Note(t, "stale", ToneError), Title: "Decide the install and update flow", Tags: []string{"release", "install"}, Priority: domain.PriorityHigh},
 		{ID: "185825", State: domain.StateDone, Kind: domain.KindResearch, Title: "Cloud sessions without the prep binary"},
 		{ID: "152629", State: domain.StateDropped, Kind: domain.KindManual, Title: "Free-form tags"},
 	}
