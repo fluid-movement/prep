@@ -11,7 +11,7 @@ scope:
   - internal/userconfig
   - internal/cli/setup.go
   - internal/tui/checklist.go
-confirmed_commit: 2cde71a6de8c4d95e07837a979a8277e02e8e532
+confirmed_commit: 884b9df14abbbe072d6e002df41b945b4931079e
 ---
 
 # Harness setup and user configuration
