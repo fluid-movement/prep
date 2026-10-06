@@ -3,5 +3,4 @@
 commit_mode: off
 views:
   Unresolved: --state open,defined,ready,in_progress
-  In Pro
   All: ""
