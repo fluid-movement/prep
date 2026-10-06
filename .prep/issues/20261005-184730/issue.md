@@ -1,6 +1,8 @@
 ---
 title: 'prep edit: change title, kind, parent, dependencies and requirement'
 kind: code
+tags:
+  - cli
 ---
 
 The CLI is prep's API: every change to the data goes through a command, and commands carry content, not files. The storage adapter decides how it is represented; markdown is one adapter. Today title, kind, parent, dependencies and the requirement of an existing issue can only be changed by editing issue.md.

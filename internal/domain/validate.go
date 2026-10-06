@@ -36,6 +36,12 @@ func Validate(t *Tree) []Diagnostic {
 			e(CodeKindInvalid, ClassManual, "issue.md", "set kind to one of "+joinKinds(), "kind %q is invalid", i.Kind)
 		}
 
+		for _, tag := range i.Tags {
+			if !ValidTag(tag) {
+				e(CodeTagInvalid, ClassManual, "issue.md", "use lowercase letters, digits and . _ - / (prep edit --tag)", "tag %q is malformed", tag)
+			}
+		}
+
 		// Parent relation.
 		if i.Parent != "" {
 			if t.Issues[i.Parent] == nil {

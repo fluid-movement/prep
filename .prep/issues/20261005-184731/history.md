@@ -5,3 +5,5 @@
 - 2026-10-05T19:02:24Z claude-code/2.1.289: Context and findings now require --body or --body-file, so a bare call cannot silently clear the record.
 
 - 2026-10-05T19:02:24Z claude-code/2.1.289: Found that history appends re-read history.md without compare-and-swap; all appends now check the hash first.
+
+- 2026-10-06T06:48:43Z edited by claude-code/2.1.289: tags

@@ -43,6 +43,9 @@ func detailMarkdown(t *domain.Tree, id string) string {
 		meta = append(meta, fmt.Sprintf("%d/%d children resolved", pr.Done+pr.Dropped, pr.Total))
 	}
 	p("%s\n", strings.Join(meta, " · "))
+	if len(i.Tags) > 0 {
+		p("\n%s\n", "#"+strings.Join(i.Tags, " #"))
+	}
 
 	section("Requirement", i.Prose)
 	section("Open questions", i.OpenQuestions)

@@ -22,6 +22,7 @@ type summary struct {
 	Actionable bool             `json:"actionable"`
 	Parent     string           `json:"parent,omitempty"`
 	DependsOn  []string         `json:"depends_on,omitempty"`
+	Tags       []string         `json:"tags,omitempty"`
 	Children   int              `json:"children"`
 	Progress   *domain.Progress `json:"progress,omitempty"`
 	Depth      int              `json:"depth,omitempty"`
@@ -30,7 +31,7 @@ type summary struct {
 func summarize(t *domain.Tree, id string) summary {
 	i := t.Issues[id]
 	s := summary{ID: id, Title: i.Title, Kind: i.Kind, State: t.State(id), Stale: t.Stale(id), Blocked: t.Blocked(id),
-		Actionable: t.Actionable(id), Parent: i.Parent, DependsOn: i.DependsOn, Children: len(t.Children(id))}
+		Actionable: t.Actionable(id), Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags, Children: len(t.Children(id))}
 	if s.Children > 0 {
 		p := t.ChildProgress(id)
 		s.Progress = &p
@@ -62,7 +63,7 @@ func (a *app) printSummaries(ss []summary) {
 	}
 	for _, s := range ss {
 		indent := strings.Repeat("  ", s.Depth)
-		a.printf("%s  %-11s %-8s %-18s %s%s\n", s.ID, s.State, s.Kind, s.flags(), indent, s.Title)
+		a.printf("%s  %-11s %-8s %-18s %s%s%s\n", s.ID, s.State, s.Kind, s.flags(), indent, s.Title, tagSuffix(s.Tags))
 	}
 }
 
@@ -229,6 +230,9 @@ func cmdShow(a *app, args []string) error {
 	}
 	for _, c := range t.Children(id) {
 		a.printf("child: %s [%s] %s\n", c, t.State(c), titleOf(t, c))
+	}
+	if len(i.Tags) > 0 {
+		a.printf("tags: %s\n", strings.Join(i.Tags, ", "))
 	}
 	for _, d := range i.DependsOn {
 		a.printf("depends on: %s [%s] %s\n", d, t.State(d), titleOf(t, d))
@@ -577,4 +581,12 @@ func cmdVersion(a *app, args []string) error {
 	}
 	a.printf("prep %s (schema %d)\n", Version, domain.SchemaVersion)
 	return nil
+}
+
+// tagSuffix renders tags after a title as "  #a #b".
+func tagSuffix(tags []string) string {
+	if len(tags) == 0 {
+		return ""
+	}
+	return "  #" + strings.Join(tags, " #")
 }

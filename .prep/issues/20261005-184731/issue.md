@@ -1,6 +1,8 @@
 ---
 title: Write commands for enrichment and work records
 kind: code
+tags:
+  - cli
 ---
 
 The CLI is prep's API: every change to the data goes through a command that carries content, and the storage adapter decides the representation. Agents today write context, decisions, acceptance criteria, Definition of Done changes, history and findings by editing files, and prep guide lists file paths under Write. Each record gets a write command that matches its semantics, with --json and validation before writing:

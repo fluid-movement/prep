@@ -153,6 +153,7 @@ type Issue struct {
 	Kind      Kind     `json:"kind"`
 	Parent    string   `json:"parent,omitempty"`
 	DependsOn []string `json:"depends_on,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
 
 	// Body is the normalized requirement text that baselines snapshot.
 	Body string `json:"-"`

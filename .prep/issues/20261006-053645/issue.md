@@ -2,6 +2,8 @@
 title: 'TUI hierarchy: tree mode, parent focus, navigable relations'
 kind: code
 parent: 20261005-152616
+tags:
+  - tui
 ---
 
 Parents and children are visible and navigable in the TUI, so the user can see where an issue sits and move along the hierarchy without leaving the screen.

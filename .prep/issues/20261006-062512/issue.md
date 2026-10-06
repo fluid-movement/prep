@@ -2,6 +2,8 @@
 title: Improve the TUI editing experience
 kind: code
 parent: 20261005-152616
+tags:
+  - tui
 ---
 
 Editing issues in the TUI works but is not yet pleasant to use: dialogs replace the screen instead of appearing over it, the action menu is long, and text fields are single-line inputs or a round trip through $EDITOR. Editing by hand is not a priority while agents do most writing; this issue collects the improvements for when it becomes one.

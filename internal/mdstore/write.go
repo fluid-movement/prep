@@ -117,7 +117,7 @@ func (s *Store) Apply(c *domain.Change) ([]string, error) {
 		if err := parseIssue(raw, &i); err != nil {
 			return touched, fmt.Errorf("%s: %w", rel, err)
 		}
-		i.Title, i.Kind, i.Parent, i.DependsOn = e.Title, e.Kind, e.Parent, e.DependsOn
+		i.Title, i.Kind, i.Parent, i.DependsOn, i.Tags = e.Title, e.Kind, e.Parent, e.DependsOn, e.Tags
 		if e.Body != nil {
 			i.Body = requirementBody(*e.Body)
 		}

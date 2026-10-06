@@ -17,6 +17,7 @@ type issueFM struct {
 	Kind      string   `yaml:"kind"`
 	Parent    string   `yaml:"parent,omitempty"`
 	DependsOn []string `yaml:"depends_on,omitempty"`
+	Tags      []string `yaml:"tags,omitempty"`
 }
 
 type baselineFM struct {
@@ -108,13 +109,14 @@ func parseIssue(raw string, i *domain.Issue) error {
 	i.Kind = domain.Kind(f.Kind)
 	i.Parent = f.Parent
 	i.DependsOn = f.DependsOn
+	i.Tags = f.Tags
 	i.Body = normalize(body)
 	i.Prose, i.OpenQuestions = splitOpenQuestions(i.Body)
 	return nil
 }
 
 func renderIssue(i *domain.Issue) string {
-	return withFrontmatter(encodeYAML(issueFM{Title: i.Title, Kind: string(i.Kind), Parent: i.Parent, DependsOn: i.DependsOn}), i.Body)
+	return withFrontmatter(encodeYAML(issueFM{Title: i.Title, Kind: string(i.Kind), Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags}), i.Body)
 }
 
 // requirementBody is the body of issue.md for a requirement given as text.

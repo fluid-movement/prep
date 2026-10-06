@@ -2,6 +2,9 @@
 title: 'TUI design system: tokens, styles, components, gallery'
 kind: code
 parent: 20261005-152616
+tags:
+  - tui
+  - design
 ---
 
 The TUI gets a small design system before any screen is built, the way a frontend team works: screens compose components and never style text themselves, so visual changes happen in one place and UI iterations stay fast.

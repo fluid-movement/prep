@@ -76,6 +76,8 @@ func cmdNew(a *app, args []string) error {
 	bodyFile := fs.String("body-file", "", "read the requirement from a file (- for stdin)")
 	var deps multi
 	fs.Var(&deps, "depends-on", "dependency id (repeatable)")
+	var tags multi
+	fs.Var(&tags, "tag", "tag (repeatable or comma-separated)")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -93,7 +95,7 @@ func cmdNew(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	in := domain.NewIssueInput{Title: *title, Kind: domain.Kind(*kind), Body: text}
+	in := domain.NewIssueInput{Title: *title, Kind: domain.Kind(*kind), Body: text, Tags: splitTags(tags)}
 	if *parent != "" {
 		if in.Parent, err = t.Resolve(*parent); err != nil {
 			return err
@@ -146,6 +148,8 @@ func cmdEdit(a *app, args []string) error {
 	bodyFile := fs.String("body-file", "", "read the new requirement from a file (- for stdin)")
 	var deps multi
 	fs.Var(&deps, "depends-on", "dependency id (repeatable, replaces the list; '' clears it)")
+	var tags multi
+	fs.Var(&tags, "tag", "tag (repeatable or comma-separated, replaces the list; '' clears it)")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -199,6 +203,13 @@ func cmdEdit(a *app, args []string) error {
 			}
 		}
 		in.DependsOn = &list
+	}
+	if set["tag"] {
+		list := splitTags(tags)
+		if list == nil {
+			list = []string{}
+		}
+		in.Tags = &list
 	}
 	if set["body"] || set["body-file"] {
 		text, err := a.readBody(*body, *bodyFile)
@@ -493,4 +504,18 @@ func recordCmd(op domain.Op) func(*app, []string) error {
 		a.reportWrite(writeResult{OK: true, Op: string(op), ID: id, Files: files})
 		return nil
 	}
+}
+
+// splitTags flattens repeated and comma-separated --tag values; an empty
+// value contributes nothing, so --tag ” clears.
+func splitTags(vals []string) []string {
+	var out []string
+	for _, v := range vals {
+		for _, t := range strings.Split(v, ",") {
+			if t = strings.TrimSpace(t); t != "" {
+				out = append(out, t)
+			}
+		}
+	}
+	return out
 }

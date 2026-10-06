@@ -2,6 +2,9 @@
 title: 'TUI theming: choose and customize themes'
 kind: code
 parent: 20261005-152616
+tags:
+  - tui
+  - theming
 ---
 
 Users choose how the TUI looks. The design system's palette becomes one theme among several: prep ships a few built-in themes and users can define their own by overriding tokens (text, muted, subtle, accent, border, selection, success, warning, error, issue states and kinds) for dark and light backgrounds. Components keep reading tokens from the theme, so a theme changes every screen and the gallery at once. NO_COLOR and terminals without color support keep working.

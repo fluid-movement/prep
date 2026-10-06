@@ -19,7 +19,7 @@ Applies when editing files in `.prep` by hand or changing the markdown adapter. 
 - `project.md`: frontmatter `schema`; bullets under `## Definition of Done` are the project DoD.
 - `config.yaml`: `commit_mode` (`off` | `all`), `views` (name → query flags).
 - `issues/<YYYYMMDD-HHMMSS>/`: allowed entries are issue.md, acceptance.md, context.md, decisions.md, history.md, findings.md (research only), baselines/, ready.md, claim.md, resolution.md, attachments/. Anything else is an error.
-- `issue.md`: frontmatter `title`, `kind`, `parent`, `depends_on` (in that order, nothing else). The body is the requirement; `## Open questions` holds unresolved questions.
+- `issue.md`: frontmatter `title`, `kind`, `parent`, `depends_on`, `tags` (in that order, nothing else); tags are lowercase letters, digits and `. _ - /`. The body is the requirement; `## Open questions` holds unresolved questions.
 - `acceptance.md`: `- [ ]` / `- [x]` criteria; optional `## Definition of Done` with additions and `- opt-out: <item> — <reason>`.
 - `context.md`: free prose; `[text](/path.md)` links knowledge entries; backticked paths count as touched files for retrieval.
 - `decisions.md`: entries `## <id>: <title>` followed by `date: YYYY-MM-DD`, optional `supersedes: <id>` and `outcome: true`, then the rationale and alternatives. Append-only. Blank lines between the heading and the metadata lines are accepted when reading; `prep fmt` removes them (canonical form: metadata directly under the heading).

@@ -1,6 +1,8 @@
 ---
 title: 'Claude Code integration: SessionStart hook and slash commands'
 kind: code
+tags:
+  - integration
 ---
 
 Claude Code runs prep prime at session start through a SessionStart hook, so every session opens with the briefing. The hook runs only when the prep binary is on PATH and stays silent otherwise; installing the binary in cloud sessions waits for the install and update flow.

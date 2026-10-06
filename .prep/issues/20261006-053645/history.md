@@ -3,3 +3,5 @@
 - 2026-10-06T05:41:30Z claude-code/2.1.289: Relation rows first reused the full list row and left about six characters of title in the detail pane; added the compact ui.LinkRow.
 
 - 2026-10-06T05:41:30Z claude-code/2.1.289: The fixture's nested child first went under the claimed CSV writer, which made it a parent the domain refuses to claim; nested it under the defined JSON writer instead.
+
+- 2026-10-06T06:48:42Z edited by claude-code/2.1.289: tags

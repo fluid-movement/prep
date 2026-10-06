@@ -51,6 +51,7 @@ const (
 	GateDocEntry      = "G_DOC_ENTRY"
 	GateReason        = "G_REASON"
 	GateActor         = "G_ACTOR"
+	GateTags          = "G_TAGS"
 )
 
 // Input carries the arguments of a transition. Nil fields in guide mode mean
@@ -94,6 +95,7 @@ type IssueEdit struct {
 	Kind      Kind
 	Parent    string
 	DependsOn []string
+	Tags      []string
 	Body      *string // new requirement text; nil keeps the current one
 	Fields    []string
 }
@@ -383,6 +385,7 @@ type NewIssueInput struct {
 	Kind      Kind
 	Parent    string
 	DependsOn []string
+	Tags      []string
 	Body      string // requirement prose
 }
 
@@ -400,7 +403,11 @@ func (t *Tree) PlanNew(in NewIssueInput, now time.Time) (*Change, error) {
 		return nil, &Error{Code: ErrUsage, Message: "cannot create issue", Unmet: unmet}
 	}
 	id := nextStamp(now, func(s string) bool { return t.Issues[s] != nil })
-	issue := &Issue{ID: id, Title: strings.TrimSpace(in.Title), Kind: in.Kind, Parent: in.Parent, DependsOn: in.DependsOn, Prose: strings.TrimSpace(in.Body)}
+	tags, err := NormalizeTags(in.Tags)
+	if err != nil {
+		return nil, &Error{Code: ErrUsage, Message: "cannot create issue", Unmet: []Unmet{{GateTags, err.Error()}}}
+	}
+	issue := &Issue{ID: id, Title: strings.TrimSpace(in.Title), Kind: in.Kind, Parent: in.Parent, DependsOn: in.DependsOn, Tags: tags, Prose: strings.TrimSpace(in.Body)}
 	return &Change{Op: "new", IssueID: id, NewIssue: issue}, nil
 }
 
@@ -412,6 +419,7 @@ type EditInput struct {
 	Kind      *Kind
 	Parent    *string
 	DependsOn *[]string
+	Tags      *[]string
 	Body      *string // requirement text, including its Open questions section
 }
 
@@ -420,11 +428,12 @@ type EditInput struct {
 // self-dependencies are left to CheckWrite, which validates the edited tree.
 func (t *Tree) PlanEdit(id string, in EditInput) (*Change, error) {
 	i := t.Issues[id]
-	if s := t.State(id); s.Terminal() {
+	tagsOnly := in.Tags != nil && in.Title == nil && in.Kind == nil && in.Parent == nil && in.DependsOn == nil && in.Body == nil
+	if s := t.State(id); s.Terminal() && !tagsOnly {
 		return nil, &Error{Code: ErrGate, Message: fmt.Sprintf("cannot edit %s", id),
-			Unmet: []Unmet{{GateState, fmt.Sprintf("edit requires an unresolved issue, issue is %s", s)}}}
+			Unmet: []Unmet{{GateState, fmt.Sprintf("edit requires an unresolved issue, issue is %s; only --tag works on resolved issues", s)}}}
 	}
-	e := &IssueEdit{Title: i.Title, Kind: i.Kind, Parent: i.Parent, DependsOn: i.DependsOn}
+	e := &IssueEdit{Title: i.Title, Kind: i.Kind, Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags}
 	var unmet []Unmet
 	if in.Title != nil {
 		e.Title = strings.TrimSpace(*in.Title)
@@ -457,13 +466,21 @@ func (t *Tree) PlanEdit(id string, in EditInput) (*Change, error) {
 		}
 		e.Fields = append(e.Fields, "depends_on")
 	}
+	if in.Tags != nil {
+		tags, err := NormalizeTags(*in.Tags)
+		if err != nil {
+			unmet = append(unmet, Unmet{GateTags, err.Error()})
+		}
+		e.Tags = tags
+		e.Fields = append(e.Fields, "tags")
+	}
 	if in.Body != nil {
 		b := *in.Body
 		e.Body = &b
 		e.Fields = append(e.Fields, "requirement")
 	}
 	if len(e.Fields) == 0 {
-		unmet = append(unmet, Unmet{GateRequirement, "nothing to edit: pass --title, --kind, --parent, --depends-on, --body or --body-file"})
+		unmet = append(unmet, Unmet{GateRequirement, "nothing to edit: pass --title, --kind, --parent, --depends-on, --tag, --body or --body-file"})
 	}
 	if len(unmet) > 0 {
 		return nil, &Error{Code: ErrUsage, Message: fmt.Sprintf("cannot edit %s", id), Unmet: unmet}
@@ -502,7 +519,7 @@ func (t *Tree) Apply(c *Change) *Tree {
 				cp.Resolution = &r
 			}
 			if e := c.Edit; e != nil {
-				cp.Title, cp.Kind, cp.Parent, cp.DependsOn = e.Title, e.Kind, e.Parent, e.DependsOn
+				cp.Title, cp.Kind, cp.Parent, cp.DependsOn, cp.Tags = e.Title, e.Kind, e.Parent, e.DependsOn, e.Tags
 				if e.Body != nil {
 					cp.Body = *e.Body
 				}
@@ -562,4 +579,29 @@ func (t *Tree) CheckWrite(c *Change) error {
 		return &Error{Code: ErrInvalid, Message: "the write would produce invalid state", Diags: introduced}
 	}
 	return nil
+}
+
+var tagRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._/-]*$`)
+
+// ValidTag reports whether a tag has the allowed form: lowercase letters,
+// digits and . _ - /, starting with a letter or digit.
+func ValidTag(tag string) bool { return tagRe.MatchString(tag) }
+
+// NormalizeTags lowercases and deduplicates tags, keeping their order, and
+// rejects malformed ones.
+func NormalizeTags(in []string) ([]string, error) {
+	var out []string
+	for _, t := range in {
+		t = strings.ToLower(strings.TrimSpace(t))
+		if t == "" {
+			continue
+		}
+		if !ValidTag(t) {
+			return nil, fmt.Errorf("tag %q: use lowercase letters, digits and . _ - /", t)
+		}
+		if !contains(out, t) {
+			out = append(out, t)
+		}
+	}
+	return out, nil
 }

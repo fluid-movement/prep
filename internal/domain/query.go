@@ -12,6 +12,7 @@ import (
 type Filter struct {
 	States     []State
 	Kinds      []Kind
+	Tags       []string
 	Under      []string
 	Stale      *bool
 	Actionable *bool
@@ -76,6 +77,13 @@ func ParseFilter(args []string) (Filter, error) {
 					f.Kinds = append(f.Kinds, kd)
 				}
 			}
+		case "tag":
+			var v string
+			if v, err = takeVal(); err == nil {
+				for _, s := range strings.Split(v, ",") {
+					f.Tags = append(f.Tags, strings.ToLower(strings.TrimSpace(s)))
+				}
+			}
 		case "under":
 			var v string
 			if v, err = takeVal(); err == nil {
@@ -135,6 +143,9 @@ func (t *Tree) Query(f Filter) ([]string, error) {
 			continue
 		}
 		if len(f.Kinds) > 0 && !hasKind(f.Kinds, i.Kind) {
+			continue
+		}
+		if len(f.Tags) > 0 && !anyTag(f.Tags, i.Tags) {
 			continue
 		}
 		if under != nil && !under[id] {
@@ -263,4 +274,13 @@ func ViewNames(c Config) []string {
 	}
 	sort.Strings(rest)
 	return append(out, rest...)
+}
+
+func anyTag(want, have []string) bool {
+	for _, w := range want {
+		if contains(have, w) {
+			return true
+		}
+	}
+	return false
 }

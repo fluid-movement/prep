@@ -636,3 +636,47 @@ func TestKnowledgeCommands(t *testing.T) {
 		t.Fatalf("scope not cleared:\n%s", got)
 	}
 }
+
+func TestTags(t *testing.T) {
+	h := newHarness(t)
+	a := h.newIssue("--title", "Export", "--kind", "code", "--body", "Export rows.", "--tag", "Release", "--tag", "csv,io")
+	b := h.newIssue("--title", "Import", "--kind", "code", "--body", "Import rows.")
+	if got := h.read(a, "issue.md"); !strings.Contains(got, "tags:\n  - release\n  - csv\n  - io\n") {
+		t.Fatalf("tags not written lowercased in order:\n%s", got)
+	}
+	h.fails("G_TAGS", "new", "--title", "x", "--kind", "code", "--tag", "two words", "--json")
+
+	if got := listIDs(h, "list", "--tag", "csv"); len(got) != 1 || got[0] != a {
+		t.Fatalf("list --tag csv = %v", got)
+	}
+	if got := listIDs(h, "list", "--tag", "nope,io"); len(got) != 1 {
+		t.Fatalf("comma-separated --tag should OR: %v", got)
+	}
+	if out := h.ok("list"); !strings.Contains(out, "Export  #release #csv #io") {
+		t.Fatalf("list does not show tags:\n%s", out)
+	}
+	if out := h.ok("show", a); !strings.Contains(out, "tags: release, csv, io") {
+		t.Fatalf("show does not show tags:\n%s", out)
+	}
+
+	// Tags are not part of the requirement: changing them never makes an issue stale.
+	h.ok("define", a)
+	h.ok("edit", a, "--tag", "export")
+	h.expectState(a, "defined", false)
+	if got := listIDs(h, "list", "--tag", "export"); len(got) != 1 || got[0] != a {
+		t.Fatalf("edit did not replace tags: %v", got)
+	}
+	h.ok("edit", a, "--tag", "")
+	if strings.Contains(h.read(a, "issue.md"), "tags:") {
+		t.Fatalf("--tag '' did not clear:\n%s", h.read(a, "issue.md"))
+	}
+
+	// Tags can change on resolved issues; nothing else can.
+	h.ok("drop", b, "--reason", "not needed")
+	h.ok("edit", b, "--tag", "archive")
+	h.fails("only --tag works", "edit", b, "--title", "x", "--json")
+
+	// Hand edits with malformed tags are reported.
+	h.replace(b, "issue.md", "  - archive", "  - Not Valid")
+	h.fails("I026", "check")
+}

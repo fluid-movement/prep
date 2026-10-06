@@ -65,6 +65,7 @@ const (
 	CodeResolvedChildOpen  = "I023" // done parent with unresolved children
 	CodeStaleInProgress    = "I024"
 	CodeContextLinkMissing = "I025"
+	CodeTagInvalid         = "I026"
 
 	// Knowledge base.
 	CodeKnowledgeFrontmatter = "K001"

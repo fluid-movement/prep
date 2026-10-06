@@ -1,6 +1,9 @@
 ---
 title: Write commands for knowledge entries
 kind: code
+tags:
+  - cli
+  - knowledge
 ---
 
 The CLI is prep's API, and the knowledge base sits behind its own store port (the OKF adapter today), so agents create and update knowledge entries through commands rather than writing files under .prep/knowledge. A prep knowledge command group holds them:

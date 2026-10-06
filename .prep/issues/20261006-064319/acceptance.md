@@ -1,0 +1,5 @@
+- [x] prep new --tag and prep edit --tag set tags; edit replaces the list and --tag '' clears it; malformed tags are rejected
+- [x] prep list --tag filters (repeated or comma-separated values OR), saved views can use it, and prep list and prep show display tags
+- [x] The TUI shows tags in rows and the detail, and its filter bar accepts --tag
+- [x] Tags never make an issue stale; prep check reports malformed tags as I026
+- [x] Knowledge entries updated

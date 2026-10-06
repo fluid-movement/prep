@@ -126,8 +126,9 @@ type Row struct {
 	Kind   domain.Kind
 	Note   string // progress, "blocked", "stale"; pre-rendered by the caller
 	Title  string
-	Tree   string // tree lines before the title, such as "│  ├─ "; see TreePrefix
-	Dimmed bool   // context row: shown for structure, not part of the result
+	Tree   string   // tree lines before the title, such as "│  ├─ "; see TreePrefix
+	Dimmed bool     // context row: shown for structure, not part of the result
+	Tags   []string // shown after the title
 }
 
 // ListRow renders one issue row: marker, ID, state, kind, tree lines, note,
@@ -159,6 +160,9 @@ func ListRow(t *theme.Theme, r Row, selected bool, width int) string {
 		if selected {
 			title = t.S.Heading.Render(r.Title)
 		}
+	}
+	if len(r.Tags) > 0 {
+		title += t.S.Subtle.Render("  #" + strings.Join(r.Tags, " #"))
 	}
 	line := Fit(head+title, width)
 	if selected {

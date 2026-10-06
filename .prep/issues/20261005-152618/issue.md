@@ -4,6 +4,8 @@ kind: code
 parent: 20261005-152616
 depends_on:
   - 20261005-152617
+tags:
+  - tui
 ---
 
 The TUI becomes a client that can change the data, not only show it. Every change goes through the same domain planning and validation as the CLI's write commands, recorded with a human actor, so the TUI cannot produce anything the CLI would reject.

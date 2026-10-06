@@ -3,6 +3,9 @@ title: Bootstrap the knowledge base of an existing project
 kind: code
 depends_on:
   - 20261006-064319
+tags:
+  - knowledge
+  - adoption
 ---
 
 prep is often adopted in a project that already has code, so the knowledge base starts empty while agents need it from the first issue. Bootstrapping maps the project into knowledge entries in steps small enough for an agent session and a human review, and it is triggered by the state of the knowledge base, not by a command the user has to remember.
