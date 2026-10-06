@@ -1,0 +1,21 @@
+---
+title: Bootstrap the knowledge base of an existing project
+kind: code
+depends_on:
+  - 01M47Z7KTRTK53BZ5031FC10YA
+tags:
+  - knowledge
+  - adoption
+---
+
+prep is often adopted in a project that already has code, so the knowledge base starts empty while agents need it from the first issue. Bootstrapping maps the project into knowledge entries in steps small enough for an agent session and a human review, and it is triggered by the state of the knowledge base, not by a command the user has to remember.
+
+- The knowledge base counts as bootstrapped once /overview.md exists. prep init no longer writes a placeholder overview, so every fresh .prep starts unbootstrapped, with or without code in the repository.
+- While it is not bootstrapped, prep says so wherever agents look: prep prime leads with it and prep guide shows it for every issue, both naming the next step. prep knowledge new refuses every entry except /overview.md, so entries cannot accumulate before the map exists.
+- prep init creates the bootstrap issue right away; a write command, prep knowledge bootstrap, creates it later when it is missing (after upgrading prep, or when the overview was deleted). The bootstrap issue carries the bootstrap tag, which is how prep recognizes it.
+- The bootstrap issue is a parent. Its first child is a research survey, already enriched, whose findings are the map: what the project is and the proposed entries (type, path, title, one-line description, scope), drawn from the code and existing documentation such as the README, ADRs, design documents and CI configuration. The user reviews the map before the survey completes; completing it writes /overview.md as a draft, which marks the knowledge base bootstrapped.
+- Each area of the map becomes another child of the bootstrap issue that writes its entries with prep knowledge new as draft, scoped and confirmed at the surveyed commit, so every write fits one agent session. Entries become stable once the user has reviewed them.
+- In an empty repository the survey is short: the overview describes what the project is meant to become.
+- Importing existing work items is a separate issue (01M47YPC2G69C52S5FWP6H42PH).
+
+## Open questions

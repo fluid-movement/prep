@@ -1,0 +1,19 @@
+---
+title: Improve the TUI editing experience
+kind: code
+parent: 01M46AREE07YNNVPBA8F4MT56D
+tags:
+  - tui
+---
+
+Editing issues in the TUI works but is not yet pleasant: dialogs replace the screen instead of appearing over it, the action menu is long, text fields are single-line inputs or a round trip through $EDITOR, and the settings screen is read-only although the design meant the project configuration to be editable there. With 0.1.0 the TUI should be a good place for the human side of the work, so editing gets the attention it lacked.
+
+- Keys are melodies: every action is a short sequence of unshifted letters (a i l sets priority low), never a chord with shift or ctrl, except ctrl+s and ctrl+e inside a text field where letters are text. Arrows and enter are the fallback.
+- Creating an issue is a wizard, one step at a time: the title (enter continues), the kind (its letter, c m r d, or arrows and enter), then the requirement (optional; ctrl+s creates). Each step shows where it is (1/3); esc goes back a step and cancels on the first. The parent is the focused parent, as today.
+- Longer text (requirement, context) is edited inline in a multi-line editor inside the dialog; ctrl+e hands the current text to $EDITOR and back, for long edits. Titles, reasons and other short values stay single-line. Rejected writes keep the text, as today.
+- Dialogs appear over the current screen, centered, with the screen behind them dimmed, so the list and detail stay in view as context.
+- Frequent actions have short sequences from the list and the detail: e opens an edit menu (r requirement, c context, t title), i the priority picker, n a new issue. Lifecycle transitions are the agents' work; the action menu still offers the ones that apply to a human (dropping, completing a manual issue), and it lists only actions that apply to the selected issue in its state.
+- The footer shows only the essential keys of the current screen; ? opens a dialog with the full keymap of the current screen, grouped, including the menus' letter sequences. Keys that do nothing in the current situation say why (tab in the detail without linked issues says so).
+- The settings screen becomes editable: the commit mode (off or all) and the saved views (add, rename, change the query, reorder, delete). Changes are validated like the CLI validates config.yaml (an invalid query is rejected with its error) and written to config.yaml; the tabs follow the new views right away.
+
+## Open questions

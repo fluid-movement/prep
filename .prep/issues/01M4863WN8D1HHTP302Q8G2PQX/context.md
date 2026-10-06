@@ -1,0 +1,17 @@
+Depends on 01M48N7E9GRPWH1SKX5MTB931Y (Charm v2 migration); the APIs below are v2 (`charm.land/bubbletea/v2`, `charm.land/lipgloss/v2`).
+
+Knowledge: [TUI](/components/tui.md) (screens, layout, keys, tests), [TUI editing and keys](/components/tui-editing.md) (menus, dialogs, keymap, settings screen), [TUI design system](/components/tui-design-system.md) (Pane, Tabs, Modal, Overlay), [Harness setup and user configuration](/components/setup.md) (`internal/userconfig`), [Stack](/decisions/stack.md).
+
+Current state (v1, before the migration):
+- `Run` in `internal/tui/app.go` already starts the program with `tea.WithMouseCellMotion()` (as does the gallery in `tui.go`), so the TUI already captures the mouse, and plain text selection is already blocked today. `Update` handles `tea.MouseMsg` only by passing it to the detail viewport (`m.vp`) when the detail has focus, or to the page viewport (`m.page`) on the check, settings and knowledge screens.
+- Layout: the header is line 0 (`prep `, then `ui.Tabs`, labels with `Padding(0, 1)` joined by `│`, then the check counts). The body starts on line 1 and has height `bodyHeight()`. Below it is a one-line footer. `ui.Split(m.w, listRatio, minListW, minDetailW)` gives the list and detail widths. When the detail width is 0, only the focused pane shows. `ui.Pane` draws a top border carrying the title, body lines padded by `theme.Pad`, and a bottom border.
+- List pane (`listPane`): the optional filter bar comes first, then the rows from `m.offset[tab]`. Detail pane (`detailPane`): `relationBlock` lines above the viewport. Each internal `line` carries `rel`, its index into `relations(id)` (-1 for a heading). The breadcrumb and the `… n more` lines are not links.
+- Dialogs: `modalView` builds a `ui.Modal`, and `ui.Overlay` centers it over the body by string splicing. Clickable lines are menu rows, reparent picks (windowed from `start`), criteria lines, the wizard's kind options, and form fields.
+- Knowledge screen (`knowledge.go`): `knowledgeList` rows and the `knowState.vp` viewport. Settings screen (`settingsPane`): rows by `m.setIdx` inside `pagePane`, so the page viewport's offset applies.
+- `userconfig.Config` holds only `harnesses`, and `Load` rejects unknown keys. `internal/cli/tui.go` builds `tui.Options`.
+
+Approach (D4, D5, D2):
+- `View` composes the screen as Lip Gloss layers. Header tabs, list rows, relation lines, knowledge and settings rows, and the panes get ID'd layers at their drawn positions. The dialog is a layer with a higher Z that has ID'd child layers for its entries. `ui` components that place sub-elements (`Tabs`, `Modal`) return layers, or their offsets, next to their strings, so positions come from the code that draws them. Rows inside viewports (settings) subtract the viewport offset.
+- The model keeps the last compositor. A new `mouse.go` handles `tea.MouseClickMsg` (left button) and `tea.MouseWheelMsg` with `Hit` and calls the key functions: `switchTab`, cursor moves, `jump`, `runAction`, toggles and so on.
+- Mouse setting: `userconfig.Config` gets `tui: {mouse: bool}` (missing means on), `Options` gets `Mouse` and `SaveMouse`, `View` sets `MouseMode`, and the settings screen gets a user-level row.
+- Tests send click and wheel messages through `Update` on the existing fixtures at 110×28 and 80×24, after a `View` so the compositor exists. Settings goldens change for the new row; the other goldens stay unchanged.

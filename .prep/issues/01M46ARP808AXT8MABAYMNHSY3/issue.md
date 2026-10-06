@@ -1,0 +1,18 @@
+---
+title: Install and update
+kind: code
+depends_on:
+  - 01M46ARN8RW78DATMQV6P9NVYK
+tags:
+  - install
+---
+
+Implement the install and update flow decided in 01M46ARN8RW78DATMQV6P9NVYK, so prep can be installed without a Go toolchain and kept current with one command.
+
+- Releases: pushing a version tag (v0.1.0) builds prep for macOS, Linux and Windows on amd64 and arm64 with GoReleaser and publishes the archives and a checksums file as a GitHub Release. The binary reports the tag as its version.
+- Install script: install.sh in the repository downloads the right archive for the machine from the latest release (or a given version), verifies its checksum, and installs prep into ~/.local/bin or PREP_BINDIR, telling the user when that directory is not on PATH. It works with curl | sh.
+- prep update replaces the running binary with the latest release after verifying the checksum, and prep update --check only reports whether a newer version exists. When prep was installed by Homebrew or go install, or is a development build, it names the right command instead of replacing anything.
+- go install github.com/fluid-movement/prep/cmd/prep@latest keeps working.
+- The README explains installing and updating.
+
+## Open questions

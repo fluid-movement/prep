@@ -1,0 +1,20 @@
+---
+title: Claude Code plugin for prep
+kind: code
+parent: 01M486FES0NQA47N0EH8T3NWCD
+depends_on:
+  - 01M48721G8Y21HT0ZGAXB5QZF2
+tags:
+  - integration
+  - install
+---
+
+The Claude Code integration is a plugin served from the prep repository, which doubles as its own marketplace, and is installed per user by prep setup. It makes every Claude Code session on the machine prep-aware.
+
+- The plugin holds the prep skill (the same text the binary embeds), a SessionStart hook, and the status, next and guide commands (today's /prep-status, /prep-next and /prep-guide), laid out so the TUI mod (01M46ARKA817KMB2C92WMNH2QP) can join the same plugin later.
+- The hook runs prep prime and passes the plugin's version. Outside a prep project, or when the binary is missing, it stays silent. When the plugin and binary versions differ, prime says so and names prep update.
+- Every release publishes the plugin with the binary's version; setup installs the plugin version that matches the installed binary, and prep update moves both together.
+- The Claude Code implementation of the setup interface detects claude on PATH, reads the installed plugin version from Claude Code, and installs, updates and removes the plugin with Claude Code's plugin commands at user scope.
+- This repository drops its own project hook and slash commands in favour of the plugin and keeps .claude/skills/prep/SKILL.md only as the static copy for cloud sessions, which do not load plugins (01M46PWX38AZN55Q6T8TE93959 decides their future).
+
+## Open questions

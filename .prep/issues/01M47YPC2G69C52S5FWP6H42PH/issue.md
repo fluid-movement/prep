@@ -1,0 +1,11 @@
+---
+title: Import existing work items when adopting prep
+kind: code
+parent: 01M48FAKAG2X998F2ZHE1MHVTC
+tags:
+  - adoption
+---
+
+Projects that adopt prep usually have work tracked elsewhere: TODO comments, GitHub issues, other trackers, plain lists. Which sources matter is project-specific, so prep does not build importers per source. Instead it guides an agent through a one-time import: the agent reads whatever sources the project uses, proposes the items to bring in, and on approval creates each as an open issue with prep new, so it goes through the define gate like everything else. Each imported issue names its source (a link or a file and line) in its requirement, and re-running the import skips items whose source is already referenced. After the import, prep is the source of truth; nothing is kept in sync. Separate from the knowledge survey because the sources and the review differ.
+
+## Open questions

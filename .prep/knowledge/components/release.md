@@ -17,7 +17,7 @@ confirmed_commit: 4ab8b4e482cdb4a9f26dc676acbaeacf47ba7c05
 
 # Release, install and update
 
-Applies when changing how prep is built for distribution, installed or updated. Decided in 20261005-152623.
+Applies when changing how prep is built for distribution, installed or updated. Decided in 01M46ARN8RW78DATMQV6P9NVYK.
 
 - **Release**: pushing a `v*` tag runs `.github/workflows/release.yml`, which tests and then runs GoReleaser (`.goreleaser.yaml`): darwin, linux and windows on amd64 and arm64, `CGO_ENABLED=0`, `-trimpath`, version stamped into `internal/cli.Version` from the tag. Archives are `prep_<version>_<os>_<arch>.tar.gz` (zip on Windows) plus `checksums.txt` (sha256). The archive name is a contract with `update.ArchiveName` and `install.sh`.
 - **Preparing a release**: `just release vX.Y.Z` sets the version in the Claude Code plugin manifests, runs the tests, commits and creates an annotated tag; pushing the tag (`git push origin main vX.Y.Z`) publishes. The release workflow first checks that both manifests carry the tag's version.

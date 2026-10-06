@@ -1,0 +1,13 @@
+---
+title: Collision-free issue IDs (ULID)
+kind: code
+parent: 01M48FAKAG2X998F2ZHE1MHVTC
+tags:
+  - storage
+---
+
+Issue IDs are second-resolution timestamps, so two branches can create issues with the same ID; when they merge, both issues' files land in the same directory and git either reports conflicts or silently mixes two issues. Instead of detecting that after the fact, prep new creates IDs that cannot collide: ULIDs (a 48-bit millisecond timestamp and 80 random bits in Crockford base32, 26 characters, sortable by creation time).
+
+ULIDs replace the timestamp format entirely. prep has not been released and this repository is its only user, so there is no compatibility to keep and no migration to ship: the schema version stays as it is, ULIDs become the only valid issue ID, and this repository's issues are converted once with a throwaway script that is not part of prep. Each issue gets a ULID whose time part is its old timestamp (so the order stays), its directory is renamed, and every reference to its old ID in .prep (parent and dependency fields, records, requirements, context, logs, knowledge entries) is rewritten. Where space is short (TUI rows, footers, commit subjects) a ULID shows as its last 6 characters, and every command accepts any unique suffix of an ID, as it does today.
+
+## Open questions
