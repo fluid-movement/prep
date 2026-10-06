@@ -53,6 +53,7 @@ const (
 	GateActor         = "G_ACTOR"
 	GateTags          = "G_TAGS"
 	GatePriority      = "G_PRIORITY"
+	GateConfig        = "G_CONFIG"
 )
 
 // Input carries the arguments of a transition. Nil fields in guide mode mean
@@ -86,7 +87,9 @@ type Change struct {
 	// adapter rendered from it, used to validate before writing.
 	Knowledge      *KnowledgeEdit `json:"-"`
 	KnowledgeEntry *Entry         `json:"-"`
-	History        string         `json:"-"`
+	// Config is a new project configuration (settings).
+	Config  *Config `json:"-"`
+	History string  `json:"-"`
 }
 
 // IssueEdit is the new content of an issue's requirement record after
@@ -574,7 +577,11 @@ func (t *Tree) Apply(c *Change) *Tree {
 	if c.KnowledgeEntry != nil {
 		entries = append(entries, c.KnowledgeEntry)
 	}
-	return NewTree(t.Project, issues, entries, nil)
+	p := t.Project
+	if c.Config != nil {
+		p.Config = *c.Config
+	}
+	return NewTree(p, issues, entries, nil)
 }
 
 // CheckWrite validates the tree after a change and rejects the write when it

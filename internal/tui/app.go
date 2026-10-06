@@ -134,6 +134,8 @@ type Model struct {
 	diagDone bool
 
 	modal         *modal
+	confirm       string            // a pending second key press: issue|op for >, delete|view in settings
+	setIdx        int               // selected settings row: 0 commit mode, then the views
 	pending       map[string]string // issue|field: edited text a rejected write left
 	pendingSelect string            // issue to select after the next load
 	noticeTone    ui.Tone
@@ -407,6 +409,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleWrote(msg)
 	case editedMsg:
 		return m, m.handleEdited(msg)
+	case areaEditedMsg:
+		return m, m.handleAreaEdited(msg)
 	case clearNoticeMsg:
 		if m.notice == msg.notice {
 			m.notice = ""
@@ -437,6 +441,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	s := k.String()
+	// A second press confirms; any other key cancels the question.
+	if m.confirm != "" && s != ">" && !(m.screen == screenSettings && s == "d") {
+		m.confirm, m.notice = "", ""
+	}
+	// The settings screen takes digits for its rows (view n is tab n).
+	if m.screen == screenSettings && m.tree != nil && len(s) == 1 && s >= "1" && s <= "9" {
+		return m.settingsKey(s)
+	}
 	// Keys that work in both panes.
 	switch s {
 	case "q", "ctrl+c":
@@ -485,6 +497,9 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			m.screen = screenIssues
 			return nil
 		}
+		if m.screen == screenSettings && m.tree != nil {
+			return m.settingsKey(s)
+		}
 		var cmd tea.Cmd
 		m.page, cmd = m.page.Update(k)
 		return cmd
@@ -503,7 +518,18 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		}
 		return nil
 	case "e":
-		return m.editText(m.selected(), "requirement")
+		return m.openText(m.selected(), "requirement")
+	case "E":
+		return m.openText(m.selected(), "context")
+	case "K":
+		return m.directCriteria()
+	case "i":
+		if m.tree != nil && m.selected() != "" {
+			return m.openPriority()
+		}
+		return nil
+	case ">":
+		return m.nextTransition()
 	}
 	if m.focus == focusDetail {
 		return m.detailKey(s, k)
@@ -806,8 +832,6 @@ func (m *Model) View() string {
 	switch {
 	case m.tree == nil:
 		body = ui.Empty(m.th, "Could not load .prep", fmt.Sprint(m.err), m.w, bodyH)
-	case m.modal != nil:
-		body = m.modalView(m.w, bodyH)
 	case m.screen == screenCheck:
 		body = m.checkPane(m.w, bodyH)
 	case m.screen == screenSettings:
@@ -822,6 +846,10 @@ func (m *Model) View() string {
 		default:
 			body = lipgloss.JoinHorizontal(lipgloss.Top, m.listPane(listW, bodyH), m.detailPane(detailW, bodyH))
 		}
+	}
+	if m.modal != nil && m.tree != nil {
+		// Dialogs float over the screen they act on.
+		body = ui.Overlay(m.th, body, m.modalView(m.w, bodyH), m.w, bodyH)
 	}
 	return header + "\n" + body + "\n" + footer
 }
@@ -860,10 +888,11 @@ func toneIf(cond bool, t ui.Tone) ui.Tone {
 }
 
 var (
-	listKeys   = []ui.Key{{Keys: "↑↓", Desc: "move"}, {Keys: "enter", Desc: "details"}, {Keys: "a", Desc: "actions"}, {Keys: "/", Desc: "filter"}, {Keys: "→/←", Desc: "into/out of parent"}, {Keys: "p", Desc: "parent"}, {Keys: "t", Desc: "tree/flat"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "tab/1-9", Desc: "views"}, {Keys: "q", Desc: "quit"}}
-	filterKeys = []ui.Key{{Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
-	pageKeys   = []ui.Key{{Keys: "↑↓ pgup/pgdn", Desc: "scroll"}, {Keys: "esc", Desc: "back"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "q", Desc: "quit"}}
-	detailKeys = []ui.Key{{Keys: "a", Desc: "actions"}, {Keys: "tab", Desc: "next link"}, {Keys: "enter", Desc: "open"}, {Keys: "⌫", Desc: "back"}, {Keys: "↑↓", Desc: "scroll"}, {Keys: "esc", Desc: "list"}, {Keys: "p", Desc: "parent"}, {Keys: "y", Desc: "copy id"}, {Keys: "q", Desc: "quit"}}
+	listKeys     = []ui.Key{{Keys: "↑↓", Desc: "move"}, {Keys: "enter", Desc: "details"}, {Keys: "a", Desc: "actions"}, {Keys: ">", Desc: "next step"}, {Keys: "n", Desc: "new"}, {Keys: "e/E", Desc: "requirement/context"}, {Keys: "K", Desc: "criteria"}, {Keys: "i", Desc: "priority"}, {Keys: "/", Desc: "filter"}, {Keys: "→/←", Desc: "into/out of parent"}, {Keys: "p", Desc: "parent"}, {Keys: "t", Desc: "tree/flat"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "tab/1-9", Desc: "views"}, {Keys: "q", Desc: "quit"}}
+	filterKeys   = []ui.Key{{Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
+	settingsKeys = []ui.Key{{Keys: "↑↓/1-9", Desc: "select"}, {Keys: "space", Desc: "commit mode"}, {Keys: "enter", Desc: "edit view"}, {Keys: "n", Desc: "add view"}, {Keys: "d d", Desc: "delete"}, {Keys: "J/K", Desc: "move"}, {Keys: "esc", Desc: "back"}}
+	pageKeys     = []ui.Key{{Keys: "↑↓ pgup/pgdn", Desc: "scroll"}, {Keys: "esc", Desc: "back"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "q", Desc: "quit"}}
+	detailKeys   = []ui.Key{{Keys: "a", Desc: "actions"}, {Keys: ">", Desc: "next step"}, {Keys: "e/E", Desc: "requirement/context"}, {Keys: "K", Desc: "criteria"}, {Keys: "i", Desc: "priority"}, {Keys: "tab", Desc: "next link"}, {Keys: "enter", Desc: "open"}, {Keys: "⌫", Desc: "back"}, {Keys: "↑↓", Desc: "scroll"}, {Keys: "esc", Desc: "list"}, {Keys: "p", Desc: "parent"}, {Keys: "y", Desc: "copy id"}, {Keys: "q", Desc: "quit"}}
 )
 
 func (m *Model) footer() string {
@@ -876,6 +905,8 @@ func (m *Model) footer() string {
 		return ui.Fit(ui.Error(m.th, m.err.Error()), m.w)
 	case m.filtering:
 		return ui.KeyHelp(m.th, filterKeys, m.w)
+	case m.screen == screenSettings && m.tree != nil:
+		return ui.KeyHelp(m.th, settingsKeys, m.w)
 	case m.screen != screenIssues:
 		return ui.KeyHelp(m.th, pageKeys, m.w)
 	case m.focus == focusDetail:
@@ -1112,31 +1143,45 @@ func (m *Model) checkPane(w, h int) string {
 }
 
 // settingsPane shows the project configuration, read-only.
+// settingsPane lists the editable settings as rows: the commit mode, then
+// the saved views numbered like the tabs they show as. The schema and the
+// project's Definition of Done follow, read-only.
 func (m *Model) settingsPane(w, h int) string {
 	inner := w - 2 - 2*theme.Pad
 	p := m.tree.Project
-	var b strings.Builder
-	fmt.Fprintf(&b, "## Project\n\n- Schema version: %d\n- Commit mode: `%s`\n", p.Schema, p.Config.CommitMode)
-	b.WriteString("\n## Saved views\n\n")
-	for _, n := range domain.ViewNames(p.Config) {
+	m.setIdx = clamp(m.setIdx, 0, m.settingsRows()-1)
+	row := func(k int, key, label, value string) string {
+		sel := k == m.setIdx
+		marker := "  "
+		if sel {
+			marker = m.th.R.NewStyle().Foreground(m.th.C.Accent).Render("▌ ")
+		}
+		line := marker + m.th.R.NewStyle().Foreground(m.th.C.Accent).Bold(true).Render(fmt.Sprintf("%-3s", key)) +
+			m.th.S.Body.Render(fmt.Sprintf("%-18s", ui.Fit(label, 17))) + m.th.S.Muted.Render(value)
+		line = ui.Fit(line, inner)
+		if sel {
+			return m.th.R.NewStyle().Background(m.th.C.Selection).Width(inner).Render(line)
+		}
+		return line
+	}
+	var b []string
+	b = append(b, m.th.S.Heading.Render("Project"), "", row(0, "␣", "Commit mode", p.Config.CommitMode+"  (off stages .prep changes, all commits each write)"), "",
+		m.th.S.Heading.Render("Saved views"), "")
+	for k, n := range domain.ViewNames(p.Config) {
 		flags := p.Config.Views[n]
 		if flags == "" {
 			flags = "(all issues)"
 		}
-		fmt.Fprintf(&b, "- **%s**: `%s`\n", n, flags)
+		b = append(b, row(k+1, fmt.Sprint(k+1), n, flags))
 	}
+	b = append(b, "", m.th.S.Subtle.Render(fmt.Sprintf("Schema version %d.", p.Schema)))
 	if len(p.DoD) > 0 {
-		b.WriteString("\n## Definition of Done\n\n")
+		b = append(b, "", m.th.S.Heading.Render("Definition of Done"), m.th.S.Subtle.Render("edit in .prep/project.md"), "")
 		for _, d := range p.DoD {
-			b.WriteString("- " + d + "\n")
+			b = append(b, ui.Fit("- "+d, inner))
 		}
 	}
-	b.WriteString("\nEdit `.prep/config.yaml` and `.prep/project.md`; changes appear here when saved.\n")
-	doc, err := ui.Markdown(m.th, b.String(), inner)
-	if err != nil {
-		doc = ui.Error(m.th, err.Error())
-	}
-	return m.pagePane("Settings", doc, w, h)
+	return m.pagePane("Settings", strings.Join(b, "\n"), w, h)
 }
 
 func (m *Model) pagePane(title, body string, w, h int) string {

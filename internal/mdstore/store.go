@@ -351,6 +351,42 @@ func viewOrder(raw string) []string {
 	return nil
 }
 
+// renderConfig writes config.yaml from a configuration: the comment lines
+// that lead the current file (or the default header), the commit mode and
+// the views in their order, so the file reads like the one prep init wrote.
+func renderConfig(current string, cfg domain.Config) (string, error) {
+	var header []string
+	for _, l := range strings.Split(current, "\n") {
+		if !strings.HasPrefix(l, "#") {
+			break
+		}
+		header = append(header, l)
+	}
+	if len(header) == 0 {
+		header = strings.Split(strings.TrimSpace(DefaultConfig[:strings.Index(DefaultConfig, "commit_mode")]), "\n")
+	}
+	scalar := func(v string) *yaml.Node { return &yaml.Node{Kind: yaml.ScalarNode, Value: v} }
+	views := &yaml.Node{Kind: yaml.MappingNode}
+	for _, n := range cfg.ViewOrder {
+		v := scalar(cfg.Views[n])
+		if v.Value == "" {
+			v.Style = yaml.DoubleQuotedStyle
+		}
+		views.Content = append(views.Content, scalar(n), v)
+	}
+	root := &yaml.Node{Kind: yaml.MappingNode, Content: []*yaml.Node{scalar("commit_mode"), scalar(cfg.CommitMode)}}
+	if len(cfg.ViewOrder) > 0 {
+		root.Content = append(root.Content, scalar("views"), views)
+	}
+	var b strings.Builder
+	enc := yaml.NewEncoder(&b)
+	enc.SetIndent(2)
+	if err := enc.Encode(root); err != nil {
+		return "", err
+	}
+	return strings.Join(header, "\n") + "\n" + b.String(), nil
+}
+
 // DefaultConfig is written by prep init.
 const DefaultConfig = `# prep project configuration (project-level only).
 # commit_mode: off stages .prep changes; all commits each tool operation.

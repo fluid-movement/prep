@@ -956,7 +956,7 @@ func TestClaudeCodePlugin(t *testing.T) {
 	}
 	for path, v := range map[string]any{
 		filepath.Join(root, "plugins", "claude-code", ".claude-plugin", "plugin.json"): &plugin,
-		filepath.Join(root, ".claude-plugin", "marketplace.json"):                       &market,
+		filepath.Join(root, ".claude-plugin", "marketplace.json"):                      &market,
 	} {
 		b, err := os.ReadFile(path)
 		if err != nil {

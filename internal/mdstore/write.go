@@ -89,6 +89,21 @@ func (s *Store) Apply(c *domain.Change) ([]string, error) {
 		touched = append(touched, rel)
 		return s.write(rel, content)
 	}
+	if c.Config != nil {
+		rel := Dir + "/config.yaml"
+		current, _, err := s.read(rel)
+		if err != nil {
+			return touched, err
+		}
+		out, err := renderConfig(current, *c.Config)
+		if err != nil {
+			return touched, err
+		}
+		touched = append(touched, rel)
+		if err := s.write(rel, out); err != nil {
+			return touched, err
+		}
+	}
 	if c.NewIssue != nil {
 		if _, err := os.Stat(s.abs(dir)); err == nil {
 			return nil, &domain.Error{Code: domain.ErrConflict, Message: fmt.Sprintf("issue directory %s already exists", dir)}

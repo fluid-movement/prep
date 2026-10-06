@@ -3,6 +3,7 @@ package tui
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -183,6 +184,31 @@ func TestScreenSnapshots(t *testing.T) {
 	keys(narrow, "6", "down", "enter")
 	checkSize(t, narrow.View(), 80, 24)
 	golden(t, "screen-80x24-detail", narrow.View())
+
+	// Dialogs float over the dimmed screen; the inline editor and the
+	// editable settings at both sizes.
+	for _, size := range [][2]int{{110, 28}, {80, 24}} {
+		w, h := size[0], size[1]
+		var edits []string
+		m := editable(t, p, &edits)
+		m.Update(tea.WindowSizeMsg{Width: w, Height: h})
+		keys(m, "6", "down", "n")
+		typeIn(m, "Stream rows")
+		run(m, "tab")
+		run(m, "tab")
+		typeIn(m, "Rows go to stdout.")
+		checkSize(t, m.View(), w, h)
+		golden(t, fmt.Sprintf("dialog-create-%dx%d", w, h), m.View())
+		run(m, "esc")
+		run(m, "e")
+		checkSize(t, m.View(), w, h)
+		golden(t, fmt.Sprintf("dialog-requirement-%dx%d", w, h), m.View())
+		run(m, "esc")
+		run(m, "s")
+		run(m, "3")
+		checkSize(t, m.View(), w, h)
+		golden(t, fmt.Sprintf("settings-%dx%d", w, h), m.View())
+	}
 }
 
 func TestTabsAndSelection(t *testing.T) {
@@ -544,6 +570,16 @@ func editable(t *testing.T, p *project, edits *[]string) *Model {
 	return m
 }
 
+// viaEditor opens a text dialog with key, takes the next text from the
+// editor hook (ctrl+e) and saves it (ctrl+s).
+func viaEditor(m *Model, key ...string) {
+	for _, k := range key {
+		run(m, k)
+	}
+	run(m, "ctrl+e")
+	run(m, "ctrl+s")
+}
+
 // run sends a key and runs the commands it returns until they settle,
 // skipping timers, the way the Bubble Tea runtime would.
 func run(m *Model, k string) {
@@ -561,6 +597,14 @@ func run(m *Model, k string) {
 		msg = tea.KeyMsg{Type: tea.KeyRight}
 	case "space":
 		msg = tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{' '}}
+	case "up":
+		msg = tea.KeyMsg{Type: tea.KeyUp}
+	case "shift+up":
+		msg = tea.KeyMsg{Type: tea.KeyShiftUp}
+	case "ctrl+e":
+		msg = tea.KeyMsg{Type: tea.KeyCtrlE}
+	case "ctrl+s":
+		msg = tea.KeyMsg{Type: tea.KeyCtrlS}
 	default:
 		msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}
 	}
@@ -621,26 +665,180 @@ func TestActionMenu(t *testing.T) {
 	if m.modal == nil || m.modal.kind != modalMenu {
 		t.Fatal("a does not open the action menu")
 	}
+	// Only what applies is listed: survey has open questions, so no Define.
 	v := ansi.Strip(m.View())
-	for _, want := range []string{"Actions · 090600 Survey export tools", "Define", "the Open questions section in issue.md is not empty", "Complete"} {
+	for _, want := range []string{"Actions · 090600 Survey export tools", "Edit requirement", "Set priority", "Drop"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("menu lacks %q:\n%s", want, v)
 		}
 	}
-	run(m, "d")
-	if m.modal == nil || !strings.Contains(m.notice, "Open questions section") {
-		t.Fatalf("unavailable define did not explain itself or closed the menu: %q", m.notice)
+	for _, gone := range []string{"Define", "Mark ready", "Complete"} {
+		if strings.Contains(v, gone) {
+			t.Fatalf("menu lists %q, which does not apply:\n%s", gone, v)
+		}
+	}
+	// The dialog floats over the screen: the list stays visible behind it.
+	if !strings.Contains(v, "Choose the default format") {
+		t.Fatalf("screen behind the dialog is gone:\n%s", v)
 	}
 	run(m, "esc")
+
+	// The direct key says why a transition does not apply.
+	run(m, ">")
+	if !strings.Contains(m.notice, "Open questions section") {
+		t.Fatalf("> on an issue with open questions: notice %q", m.notice)
+	}
 
 	m.selectInCurrent(ids["csv"])
 	run(m, "a")
 	for _, it := range m.modal.items {
-		if it.key == "f" && !strings.Contains(it.reason, "agent") {
-			t.Fatalf("complete on a code issue: reason %q", it.reason)
+		if it.key == "f" {
+			t.Fatalf("complete listed for an agent's code issue")
 		}
 	}
 	run(m, "esc")
+}
+
+func TestDirectKeys(t *testing.T) {
+	p, ids := sample(t)
+	edits := []string{"Write rows with a header line."}
+	m := editable(t, p, &edits)
+	run(m, "6")
+
+	// > names the next transition and runs it on the second press.
+	m.selectInCurrent(ids["json"])
+	if st, _ := stateOf(t, p, ids["json"]); st != domain.StateDefined {
+		t.Fatalf("fixture: json is %s", st)
+	}
+	m.selectInCurrent(ids["schema"])
+	run(m, ">")
+	if !strings.Contains(m.notice, "define 090400? press > again") {
+		t.Fatalf("first >: notice %q", m.notice)
+	}
+	run(m, "down") // any other key cancels
+	run(m, "up")
+	if m.confirm != "" {
+		t.Fatal("another key did not cancel the confirmation")
+	}
+	run(m, ">")
+	run(m, ">")
+	if st, _ := stateOf(t, p, ids["schema"]); st != domain.StateDefined {
+		t.Fatalf("after > >: %s", st)
+	}
+
+	// E edits the context inline; text typed in the dialog is saved with ctrl+s.
+	m.selectInCurrent(ids["schema"])
+	run(m, "E")
+	if m.modal == nil || m.modal.kind != modalText || m.modal.field != "context" {
+		t.Fatalf("E opened %+v", m.modal)
+	}
+	typeIn(m, "Use JSON Schema 2020-12.")
+	run(m, "ctrl+s")
+	if got := issue(t, p, ids["schema"]).Context; got != "Use JSON Schema 2020-12." {
+		t.Fatalf("context = %q", got)
+	}
+
+	// K opens the checklist, or says why not; i opens the priority picker.
+	run(m, "K")
+	if m.modal != nil || !strings.Contains(m.notice, "no criteria yet") {
+		t.Fatalf("K without criteria: modal %v notice %q", m.modal, m.notice)
+	}
+	run(m, "i")
+	run(m, "h")
+	if got := issue(t, p, ids["schema"]).Priority; got != domain.PriorityHigh {
+		t.Fatalf("i h: priority %q", got)
+	}
+}
+
+func TestCreateWithRequirement(t *testing.T) {
+	p, _ := sample(t)
+	edits := []string{"Rows go to stdout.\n\nOne per line."}
+	m := editable(t, p, &edits)
+	run(m, "6")
+	run(m, "n")
+	typeIn(m, "Stream rows")
+	run(m, "tab")
+	run(m, "tab") // to the requirement
+	typeIn(m, "Rows go")
+	run(m, "enter") // a new line, not a submit
+	if m.modal == nil {
+		t.Fatal("enter in the requirement submitted the dialog")
+	}
+	run(m, "ctrl+e") // replaced by the editor's text
+	run(m, "ctrl+s")
+	if m.modal != nil {
+		t.Fatalf("create failed: %s", m.modal.err)
+	}
+	i := issue(t, p, m.selected())
+	if i.Title != "Stream rows" || i.Prose != "Rows go to stdout.\n\nOne per line." {
+		t.Fatalf("created %q with requirement %q", i.Title, i.Prose)
+	}
+}
+
+func TestEditSettings(t *testing.T) {
+	p, _ := sample(t)
+	var edits []string
+	m := editable(t, p, &edits)
+	run(m, "s")
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "Commit mode") || !strings.Contains(v, "6  All") {
+		t.Fatalf("settings screen:\n%s", v)
+	}
+	cfg := func() domain.Config {
+		tr, err := p.load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return tr.Project.Config
+	}
+
+	run(m, "space")
+	if cfg().CommitMode != domain.CommitAll {
+		t.Fatalf("space did not toggle the commit mode: %q", cfg().CommitMode)
+	}
+	run(m, "space")
+
+	// Add a view; an invalid query is rejected and the dialog stays open.
+	run(m, "n")
+	typeIn(m, "Hot")
+	run(m, "tab")
+	typeIn(m, "--priority urgent")
+	run(m, "enter")
+	if m.modal == nil || !strings.Contains(m.modal.err, "--priority must be one of") {
+		t.Fatalf("invalid query: modal %+v", m.modal)
+	}
+	for range "urgent" {
+		m.modal.inputs[1], _ = m.modal.inputs[1].Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	}
+	typeIn(m, "high")
+	run(m, "enter")
+	if c := cfg(); c.Views["Hot"] != "--priority high" || c.ViewOrder[len(c.ViewOrder)-1] != "Hot" {
+		t.Fatalf("added view: %+v", c)
+	}
+	if m.tabs[len(m.tabs)-1].name != "Hot" {
+		t.Fatal("tabs did not follow the new view")
+	}
+
+	// Digits select the view row; J moves it, enter renames, d d deletes.
+	run(m, "6") // All
+	run(m, "J")
+	if c := cfg(); c.ViewOrder[5] != "Hot" || c.ViewOrder[6] != "All" {
+		t.Fatalf("after J: %v", c.ViewOrder)
+	}
+	run(m, "6") // Hot now
+	run(m, "enter")
+	typeIn(m, "ter")
+	run(m, "enter")
+	if c := cfg(); c.Views["Hotter"] != "--priority high" || c.ViewOrder[5] != "Hotter" {
+		t.Fatalf("after rename: %+v", c)
+	}
+	run(m, "d")
+	if !strings.Contains(m.notice, `delete view "Hotter"? press d again`) {
+		t.Fatalf("first d: %q", m.notice)
+	}
+	run(m, "d")
+	if c := cfg(); len(c.ViewOrder) != 6 || c.Views["Hotter"] != "" {
+		t.Fatalf("after d d: %+v", c)
+	}
 }
 
 func TestSetPriority(t *testing.T) {
@@ -695,12 +893,12 @@ func TestCreateRenameAndEdit(t *testing.T) {
 		t.Fatalf("created issue = %+v (selected %s)", i, id)
 	}
 
-	run(m, "e")
+	viaEditor(m, "e")
 	if got := issue(t, p, id).Prose; got != "Export rows as XML." {
 		t.Fatalf("requirement after editor = %q", got)
 	}
 	edits = append(edits, issue(t, p, id).Body)
-	run(m, "e")
+	viaEditor(m, "e")
 	if m.notice != "no changes" {
 		t.Fatalf("unchanged editor text: notice %q", m.notice)
 	}
@@ -721,8 +919,7 @@ func TestCreateRenameAndEdit(t *testing.T) {
 
 	// Context goes through the record command.
 	edits = append(edits, "Use `encoding/xml`.")
-	run(m, "a")
-	run(m, "c")
+	viaEditor(m, "a", "c")
 	if got := issue(t, p, id).Context; got != "Use `encoding/xml`." {
 		t.Fatalf("context = %q", got)
 	}
@@ -743,10 +940,11 @@ func TestRejectedEditKeepsText(t *testing.T) {
 	}
 	run(m, "6")
 	m.selectInCurrent(ids["survey"])
-	run(m, "e")
-	if !strings.Contains(m.notice, "disk full") || m.pending[ids["survey"]+"|requirement"] != "New text" {
-		t.Fatalf("rejected edit: notice %q pending %q", m.notice, m.pending)
+	viaEditor(m, "e")
+	if m.modal == nil || !strings.Contains(m.modal.err, "disk full") || m.pending[ids["survey"]+"|requirement"] != "New text" {
+		t.Fatalf("rejected edit: modal %+v pending %q", m.modal, m.pending)
 	}
+	run(m, "esc")
 	var opened string
 	m.runEditor = func(path string, done func(error) tea.Msg) tea.Cmd {
 		return func() tea.Msg {
@@ -755,7 +953,7 @@ func TestRejectedEditKeepsText(t *testing.T) {
 			return done(nil)
 		}
 	}
-	run(m, "e")
+	viaEditor(m, "e")
 	if strings.TrimSpace(opened) != "New text" {
 		t.Fatalf("editor reopened with %q, want the rejected text", opened)
 	}
@@ -821,7 +1019,7 @@ func TestTransitionsFromTheTUI(t *testing.T) {
 	run(m, "enter")
 	id := m.selected()
 	edits = append(edits, "Post a note in the changelog.")
-	run(m, "e")
+	viaEditor(m, "e")
 	run(m, "a")
 	run(m, "d")
 	if st, _ := stateOf(t, p, id); st != domain.StateDefined {

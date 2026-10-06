@@ -17,7 +17,7 @@ confirmed_commit: 51db3fd5336871f85130e1345cc3e52d12de26db
 Applies when editing files in `.prep` by hand or changing the markdown adapter. Schema version 1.
 
 - `project.md`: frontmatter `schema`; bullets under `## Definition of Done` are the project DoD.
-- `config.yaml`: `commit_mode` (`off` | `all`), `views` (name → query flags).
+- `config.yaml`: leading `#` comment lines, `commit_mode` (`off` | `all`), `views` (name → query flags, in tab order). The TUI settings rewrite it in this form, keeping the leading comments; other comments are not kept.
 - `issues/<YYYYMMDD-HHMMSS>/`: allowed entries are issue.md, acceptance.md, context.md, decisions.md, history.md, findings.md (research only), baselines/, ready.md, claim.md, resolution.md, attachments/. Anything else is an error.
 - `issue.md`: frontmatter `title`, `kind`, `parent`, `depends_on`, `tags`, `priority` (in that order, nothing else); tags are lowercase letters, digits and `. _ - /`; priority is `critical`, `high` or `low`, absent meaning medium (medium is never written; added within schema 1). The body is the requirement; `## Open questions` holds unresolved questions.
 - `acceptance.md`: `- [ ]` / `- [x]` criteria; optional `## Definition of Done` with additions and `- opt-out: <item> — <reason>`.

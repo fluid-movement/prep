@@ -17,3 +17,9 @@ Settings edits are a domain Change (PlanConfig) validated by CheckWrite and writ
 date: 2026-10-06
 
 The user likes the melody of a i l for setting a low priority: every action stays reachable as a short, stable sequence of letters that turns into muscle memory, and arrows plus enter are only the fallback. So menus and pickers keep fixed mnemonic letters (the priority picker c h m l, the action menu's letters), direct keys shorten frequent sequences without changing them (i l works as well as a i l), and new dialogs (settings, the > confirmation) follow the same pattern: no list that can only be scrolled. Alternative: arrow-driven menus and pickers, which cannot become muscle memory.
+
+## D5: Key assignments for direct actions, criteria on K
+date: 2026-10-06
+supersedes: D2
+
+As D2, except that check criteria is K: k and j already move the cursor (vim keys) in the list and detail. K echoes the action menu's k (Check criteria), so the letter of the sequence stays the same. Direct keys: E context, K criteria, i priority, > next transition; n and e as before.

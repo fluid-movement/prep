@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/cursor"
+	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -28,6 +29,8 @@ const (
 	modalCriteria
 	modalDrop
 	modalComplete
+	modalText     // requirement or context, inline
+	modalViewEdit // a saved view's name and query
 )
 
 // action is one entry of the action menu.
@@ -50,6 +53,9 @@ type modal struct {
 	checks  []bool
 	picks   []string // reparent candidates; "" is top-level
 	heading string   // a menu's title in place of "Actions"
+	field   string   // modalText: requirement or context; modalViewEdit: the view's old name
+	before  string   // modalText: the stored text, to tell whether anything changed
+	area    textarea.Model
 	err     string
 }
 
@@ -120,8 +126,16 @@ func (m *Model) handleWrote(msg wroteMsg) tea.Cmd {
 
 // --- action menu ---
 
+// openMenu lists the actions that apply to the selected issue now; the
+// direct keys explain why an action does not apply.
 func (m *Model) openMenu() tea.Cmd {
-	m.modal = &modal{kind: modalMenu, id: m.selected(), items: m.actions()}
+	var items []action
+	for _, a := range m.actions() {
+		if a.reason == "" {
+			items = append(items, a)
+		}
+	}
+	m.modal = &modal{kind: modalMenu, id: m.selected(), items: items}
 	return nil
 }
 
@@ -149,8 +163,8 @@ func (m *Model) actions() []action {
 	}
 	return append(items,
 		action{key: "t", label: "Edit title", reason: edit, run: m.openRename},
-		action{key: "e", label: "Edit requirement", reason: edit, run: func() tea.Cmd { return m.editText(id, "requirement") }},
-		action{key: "c", label: "Edit context", reason: edit, run: func() tea.Cmd { return m.editText(id, "context") }},
+		action{key: "e", label: "Edit requirement", reason: edit, run: func() tea.Cmd { return m.openText(id, "requirement") }},
+		action{key: "c", label: "Edit context", reason: edit, run: func() tea.Cmd { return m.openText(id, "context") }},
 		action{key: "k", label: "Check criteria", reason: crit, run: m.openCriteria},
 		action{key: "m", label: "Move to another parent", reason: edit, run: m.openReparent},
 		action{key: "i", label: "Set priority", run: m.openPriority},
@@ -183,8 +197,11 @@ func (m *Model) transition(id string, op domain.Op, done string) func() tea.Cmd 
 
 // --- dialogs ---
 
+// openCreate asks for title, kind and requirement in one dialog.
 func (m *Model) openCreate() tea.Cmd {
-	m.modal = &modal{kind: modalCreate, inputs: []textinput.Model{m.newInput("what should change", "")}}
+	m.modal = &modal{kind: modalCreate, field: "requirement", inputs: []textinput.Model{m.newInput("what should change", "")}}
+	m.modal.area = m.newArea("the requirement: what and why (optional)", "", m.dialogInner())
+	m.modal.area.SetHeight(textHeight - 2)
 	return m.modal.inputs[0].Focus()
 }
 
@@ -341,12 +358,25 @@ func (m *Model) modalKey(k tea.KeyMsg) tea.Cmd {
 		d.picks = m.parentCandidates(d.id, d.inputs[0].Value())
 		d.cursor = clamp(d.cursor, 0, len(d.picks)-1)
 		return cmd
+	case modalText:
+		switch s {
+		case "ctrl+s":
+			return m.saveText()
+		case "ctrl+e":
+			return m.handOff()
+		}
+		var cmd tea.Cmd
+		d.area, cmd = d.area.Update(k)
+		return cmd
 	}
 
-	// Forms: tab moves between fields, enter submits.
+	// Forms: tab moves between fields, enter submits; ctrl+s submits from
+	// anywhere, so enter can start a new line in the create dialog's text.
 	fields := len(d.inputs)
+	area := -1 // index of the multi-line field, if any
 	if d.kind == modalCreate {
-		fields++ // the kind selector
+		fields += 2 // the kind selector and the requirement
+		area = fields - 1
 	}
 	switch s {
 	case "tab", "shift+tab":
@@ -362,9 +392,26 @@ func (m *Model) modalKey(k tea.KeyMsg) tea.Cmd {
 				d.inputs[k].Blur()
 			}
 		}
+		if d.focus == area {
+			return d.area.Focus()
+		}
+		d.area.Blur()
 		return nil
-	case "enter":
+	case "ctrl+s":
 		return m.submit()
+	case "ctrl+e":
+		if d.focus == area {
+			return m.handOff()
+		}
+	case "enter":
+		if d.focus != area {
+			return m.submit()
+		}
+	}
+	if d.focus == area {
+		var cmd tea.Cmd
+		d.area, cmd = d.area.Update(k)
+		return cmd
 	}
 	if d.kind == modalCreate && d.focus == len(d.inputs) {
 		switch s {
@@ -393,10 +440,12 @@ func (m *Model) submit() tea.Cmd {
 	actor, now := m.opts.Actor, m.now()
 	switch d.kind {
 	case modalCreate:
-		title, kind, parent := d.inputs[0].Value(), kinds[d.kindIdx], m.scopeTop()
+		title, kind, parent, body := d.inputs[0].Value(), kinds[d.kindIdx], m.scopeTop(), strings.TrimSpace(d.area.Value())
 		return m.write("created "+strings.TrimSpace(title), func(t *domain.Tree) (*domain.Change, error) {
-			return t.PlanNew(domain.NewIssueInput{Title: title, Kind: kind, Parent: parent}, now)
+			return t.PlanNew(domain.NewIssueInput{Title: title, Kind: kind, Parent: parent, Body: body}, now)
 		}, true)
+	case modalViewEdit:
+		return m.saveViewEdit()
 	case modalRename:
 		id, title := d.id, d.inputs[0].Value()
 		return m.write("renamed "+shortID(id), func(t *domain.Tree) (*domain.Change, error) {
@@ -528,6 +577,8 @@ var (
 	formKeys     = []ui.Key{{Keys: "enter", Desc: "save"}, {Keys: "tab", Desc: "next field"}, {Keys: "esc", Desc: "cancel"}}
 	pickKeys     = []ui.Key{{Keys: "type", Desc: "filter"}, {Keys: "↑↓", Desc: "move"}, {Keys: "enter", Desc: "move here"}, {Keys: "esc", Desc: "cancel"}}
 	criteriaKeys = []ui.Key{{Keys: "↑↓", Desc: "move"}, {Keys: "space", Desc: "toggle"}, {Keys: "enter", Desc: "save"}, {Keys: "esc", Desc: "cancel"}}
+	textKeys     = []ui.Key{{Keys: "ctrl+s", Desc: "save"}, {Keys: "ctrl+e", Desc: "$EDITOR"}, {Keys: "esc", Desc: "cancel"}}
+	createKeys   = []ui.Key{{Keys: "ctrl+s", Desc: "create"}, {Keys: "enter", Desc: "create (title, kind)"}, {Keys: "tab", Desc: "next field"}, {Keys: "ctrl+e", Desc: "$EDITOR"}, {Keys: "esc", Desc: "cancel"}}
 )
 
 func (m *Model) modalKeys() []ui.Key {
@@ -538,6 +589,10 @@ func (m *Model) modalKeys() []ui.Key {
 		return pickKeys
 	case modalCriteria:
 		return criteriaKeys
+	case modalText:
+		return textKeys
+	case modalCreate:
+		return createKeys
 	}
 	return formKeys
 }
@@ -579,7 +634,17 @@ func (m *Model) modalView(width, height int) string {
 			}
 		}
 		body = append(body, ui.Field(m.th, "Title", d.inputs[0].View(), d.focus == 0), "", ui.Field(m.th, "Kind  ←/→", kindLine, d.focus == 1), "",
-			m.th.S.Subtle.Render("Write the requirement next with e."))
+			ui.Field(m.th, "Requirement", d.area.View(), d.focus == 2))
+	case modalText:
+		title = map[string]string{"requirement": "Requirement", "context": "Context"}[d.field] + " · " + title
+		body = append(body, d.area.View())
+	case modalViewEdit:
+		title = "Add view"
+		if d.field != "" {
+			title = "View · " + d.field
+		}
+		body = append(body, ui.Field(m.th, "Name", d.inputs[0].View(), d.focus == 0), "", ui.Field(m.th, "Query", d.inputs[1].View(), d.focus == 1), "",
+			m.th.S.Subtle.Render("prep list flags; empty lists all issues."))
 	case modalRename:
 		title = "Rename · " + title
 		body = append(body, ui.Field(m.th, "Title", d.inputs[0].View(), true))
@@ -624,5 +689,5 @@ func (m *Model) modalView(width, height int) string {
 	if d.err != "" {
 		body = append(body, "", ui.Error(m.th, strings.ReplaceAll(d.err, "\n", " ")))
 	}
-	return ui.Center(m.th, ui.Modal(m.th, title, strings.Join(body, "\n"), w), width, height)
+	return ui.Modal(m.th, title, strings.Join(body, "\n"), w)
 }

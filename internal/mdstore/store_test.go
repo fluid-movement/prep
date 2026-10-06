@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -81,5 +82,57 @@ func TestDecisionsTolerateBlankLines(t *testing.T) {
 	}
 	if canonicalDecisions(want) != want {
 		t.Fatal("canonical form is not stable")
+	}
+}
+
+func TestConfigRoundTrip(t *testing.T) {
+	root := t.TempDir()
+	s := Open(root)
+	if _, err := s.Init(); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := s.LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tree := domain.NewTree(domain.Project{Config: cfg}, nil, nil, nil)
+	apply := func(cfg domain.Config) {
+		t.Helper()
+		c, err := tree.PlanConfig(cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Open(root).Apply(c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	read := func() string {
+		b, err := os.ReadFile(filepath.Join(root, Dir, "config.yaml"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+
+	// Writing the configuration unchanged reproduces the file prep init wrote.
+	apply(cfg)
+	if got := read(); got != DefaultConfig {
+		t.Fatalf("unchanged config rewritten as\n%s\nwant\n%s", got, DefaultConfig)
+	}
+
+	// Order, renames, new views and the commit mode survive a load.
+	cfg.CommitMode = domain.CommitAll
+	cfg.ViewOrder = []string{"Mine: urgent", "All", "Actionable"}
+	cfg.Views = map[string]string{"Mine: urgent": "--priority critical,high  --tag ui", "All": "", "Actionable": "--actionable"}
+	apply(cfg)
+	got, err := Open(root).LoadConfig()
+	if err != nil {
+		t.Fatalf("%v\n%s", err, read())
+	}
+	if got.CommitMode != domain.CommitAll || strings.Join(got.ViewOrder, "|") != "Mine: urgent|All|Actionable" || got.Views["Mine: urgent"] != "--priority critical,high --tag ui" {
+		t.Fatalf("loaded %+v from\n%s", got, read())
+	}
+	if !strings.HasPrefix(read(), "# prep project configuration") {
+		t.Fatalf("header lost:\n%s", read())
 	}
 }

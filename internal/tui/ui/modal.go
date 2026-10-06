@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/fluid-movement/prep/internal/tui/theme"
 )
@@ -13,6 +14,43 @@ import (
 func Modal(t *theme.Theme, title, body string, width int) string {
 	h := strings.Count(body, "\n") + 1
 	return Pane{Title: title, Body: body, Focused: true, Width: width, Height: h + 2}.View(t)
+}
+
+// Overlay draws a block centered over a background of width×height cells.
+// The background keeps its text but loses its colors and is drawn in the
+// subtle tone, so a dialog stands out while the screen behind stays readable.
+func Overlay(t *theme.Theme, background, block string, width, height int) string {
+	bg := strings.Split(background, "\n")
+	for len(bg) < height {
+		bg = append(bg, "")
+	}
+	bg = bg[:height]
+	fg := strings.Split(block, "\n")
+	bw := 0
+	for _, l := range fg {
+		bw = max(bw, ansi.StringWidth(l))
+	}
+	bw = min(bw, width)
+	top := max(0, (height-len(fg))/2)
+	left := max(0, (width-bw)/2)
+	out := make([]string, height)
+	for y, line := range bg {
+		plain := ansi.Strip(line)
+		if w := ansi.StringWidth(plain); w < width {
+			plain += strings.Repeat(" ", width-w)
+		}
+		k := y - top
+		if k < 0 || k >= len(fg) {
+			out[y] = t.S.Subtle.Render(ansi.Truncate(plain, width, ""))
+			continue
+		}
+		mid := ansi.Truncate(fg[k], bw, "")
+		if w := ansi.StringWidth(mid); w < bw {
+			mid += strings.Repeat(" ", bw-w)
+		}
+		out[y] = t.S.Subtle.Render(ansi.Truncate(plain, left, "")) + mid + t.S.Subtle.Render(ansi.TruncateLeft(ansi.Truncate(plain, width, ""), left+bw, ""))
+	}
+	return strings.Join(out, "\n")
 }
 
 // Center places a block in the middle of an area.
