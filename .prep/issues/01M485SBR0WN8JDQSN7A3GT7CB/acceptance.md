@@ -2,4 +2,4 @@
 - [x] Storage format, domain and TUI knowledge entries and the skill describe ULIDs
 - [x] The TUI shows a ULID as its last 6 characters, and commands accept any unique suffix of an ID
 - [x] ValidID accepts only ULIDs and prep check reports any other issue directory as I001 with a message naming the ULID shape; fixtures, goldens and the contract corpus use ULIDs
-- [ ] This repository's issues are converted once by a throwaway script (not committed): ULIDs keep each issue's creation time and order, directories are renamed, every old ID in .prep is rewritten, prep check is clean, and the conversion is its own commit
+- [x] This repository's issues are converted once by a throwaway script (not committed): ULIDs keep each issue's creation time and order, directories are renamed, every old ID in .prep is rewritten, prep check is clean, and the conversion is its own commit
