@@ -3,6 +3,7 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/fluid-movement/prep/internal/domain"
@@ -124,6 +125,7 @@ func knowledgeConfirm(a *app, args []string) error {
 				paths = append(paths, p)
 			}
 		}
+		sort.Strings(paths)
 	}
 	var all []string
 	var done []string
