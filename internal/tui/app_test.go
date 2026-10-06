@@ -95,6 +95,7 @@ func sample(t *testing.T) (*project, map[string]string) {
 	ids["export"] = p.issue("Export", domain.KindCode, "Export data in several formats.", "")
 	ids["csv"] = p.issue("CSV writer", domain.KindCode, "Write rows as CSV with a header line.", ids["export"])
 	ids["json"] = p.issue("JSON writer", domain.KindCode, "Write rows as JSON.", ids["export"], ids["csv"])
+	ids["schema"] = p.issue("JSON schema", domain.KindCode, "Publish a JSON schema for the output.", ids["json"])
 	ids["format"] = p.issue("Choose the default format", domain.KindDecision, "Pick the default export format.", "")
 	ids["survey"] = p.issue("Survey export tools", domain.KindResearch, "Which tools do users export to?\n\n## Open questions\n\n- Which tools matter most?", "")
 
@@ -135,6 +136,14 @@ func keys(m *Model, ks ...string) {
 			msg = tea.KeyMsg{Type: tea.KeyDown}
 		case "pgdown":
 			msg = tea.KeyMsg{Type: tea.KeyPgDown}
+		case "right":
+			msg = tea.KeyMsg{Type: tea.KeyRight}
+		case "left":
+			msg = tea.KeyMsg{Type: tea.KeyLeft}
+		case "end":
+			msg = tea.KeyMsg{Type: tea.KeyEnd}
+		case "backspace":
+			msg = tea.KeyMsg{Type: tea.KeyBackspace}
 		default:
 			msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}
 		}
@@ -187,7 +196,7 @@ func TestTabsAndSelection(t *testing.T) {
 	if got := strings.Join(names, ","); got != "Attention,Actionable,In progress,To enrich,To define,All" {
 		t.Fatalf("tabs in config order = %s", got)
 	}
-	keys(m, "3")
+	keys(m, "3", "down")
 	if m.current().name != "In progress" || m.selected() != ids["csv"] {
 		t.Fatalf("In progress tab: %s selected %s", m.current().name, m.selected())
 	}
@@ -195,7 +204,7 @@ func TestTabsAndSelection(t *testing.T) {
 	if m.current().name != "All" {
 		t.Fatalf("tab cycling reached %s", m.current().name)
 	}
-	keys(m, "down", "down", "down", "down", "down", "down", "down")
+	keys(m, "down", "down", "down", "down", "down", "down", "down", "down")
 	if m.selected() != ids["survey"] {
 		t.Fatalf("cursor not clamped to the last issue: %s", m.selected())
 	}
@@ -216,7 +225,7 @@ func TestTabsAndSelection(t *testing.T) {
 	if m.selected() != sel {
 		t.Fatalf("selection moved from %s to %s after reload", sel, m.selected())
 	}
-	if v := ansi.Strip(m.View()); !strings.Contains(v, "All 6") {
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "All 7") {
 		t.Fatalf("tab count not updated:\n%s", v)
 	}
 }
@@ -230,8 +239,6 @@ func TestDetailContent(t *testing.T) {
 	doc := detailMarkdown(tr, ids["csv"])
 	for _, want := range []string{
 		"# CSV writer", "**in progress** · code · `" + ids["csv"] + "`",
-		"- Parent: `" + ids["export"] + "` Export · open",
-		"- Blocks: `" + ids["json"] + "` JSON writer · defined",
 		"## Requirement", "## Context", "see CLI (`/components/cli.md`)",
 		"### D1: Use encoding/csv", "- [x] **1.** writes a header", "- [ ] **2.** quotes fields",
 		"## Definition of Done", "## History", "test/1: header done",
@@ -303,5 +310,112 @@ func golden(t *testing.T, name, got string) {
 	}
 	if string(want) != got {
 		t.Errorf("%s differs from the golden file; run prep tui to check and go test ./internal/tui/... -update if intended", name)
+	}
+}
+
+func rowIDs(m *Model) []string {
+	var out []string
+	for _, r := range m.current().rows {
+		out = append(out, r.id)
+	}
+	return out
+}
+
+func TestHierarchy(t *testing.T) {
+	p, ids := sample(t)
+	m := screen(t, p, 120, 30)
+	keys(m, "6")
+
+	// Tree mode by default: children under their parent, with tree lines.
+	want := []string{ids["export"], ids["csv"], ids["json"], ids["schema"], ids["format"], ids["survey"]}
+	if got := rowIDs(m); strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("tree order = %v, want %v", got, want)
+	}
+	var prefixes []string
+	for _, r := range m.current().rows {
+		prefixes = append(prefixes, r.prefix)
+	}
+	if got := strings.Join(prefixes, "|"); got != "|├─ |└─ |   └─ ||" {
+		t.Fatalf("tree prefixes = %q", got)
+	}
+
+	// A view matching a child shows its parent as dimmed context, uncounted.
+	keys(m, "3")
+	tb := m.current()
+	if tb.count != 1 || len(tb.rows) != 2 || !tb.rows[0].context || tb.rows[0].id != ids["export"] || tb.rows[1].context {
+		t.Fatalf("In progress rows = %+v, count %d", tb.rows, tb.count)
+	}
+
+	// Focusing parents narrows the list and shows a breadcrumb; left goes up.
+	keys(m, "6", "g", "right")
+	if got := rowIDs(m); strings.Join(got, ",") != strings.Join([]string{ids["export"], ids["csv"], ids["json"], ids["schema"]}, ",") {
+		t.Fatalf("focused Export rows = %v", got)
+	}
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "All › Export") {
+		t.Fatalf("breadcrumb missing:\n%s", v)
+	}
+	keys(m, "down", "down", "right")
+	if got := rowIDs(m); len(got) != 2 || got[0] != ids["json"] || got[1] != ids["schema"] {
+		t.Fatalf("nested focus rows = %v", got)
+	}
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "All › Export › JSON writer") {
+		t.Fatalf("nested breadcrumb missing:\n%s", v)
+	}
+	keys(m, "left")
+	if m.selected() != ids["json"] || len(m.current().rows) != 4 {
+		t.Fatalf("left did not return to Export with JSON writer selected: %s", m.selected())
+	}
+	keys(m, "esc")
+	if m.selected() != ids["export"] || len(m.current().rows) != 6 {
+		t.Fatalf("esc did not return to All with Export selected: %s", m.selected())
+	}
+	// right on an issue without children opens the detail.
+	keys(m, "end", "right")
+	if m.focus != focusDetail {
+		t.Fatal("right on a leaf does not open the detail")
+	}
+	keys(m, "esc")
+
+	// t toggles flat: issues in ID order, no tree lines.
+	keys(m, "t")
+	if got := rowIDs(m); got[2] != ids["json"] || m.current().rows[1].prefix != "" {
+		t.Fatalf("flat rows = %v", got)
+	}
+	keys(m, "t")
+
+	// p jumps to the parent; outside the current view it switches to All.
+	keys(m, "g", "down", "down", "down", "p")
+	if m.selected() != ids["json"] {
+		t.Fatalf("p selected %s, want JSON writer", m.selected())
+	}
+	keys(m, "t", "3", "p")
+	if m.current().name != "All" || m.selected() != ids["export"] {
+		t.Fatalf("p outside the view: tab %s selected %s", m.current().name, m.selected())
+	}
+	keys(m, "t", "p")
+	if m.notice == "" {
+		t.Fatal("p on a top-level issue gives no notice")
+	}
+
+	// Relations in the detail: tab moves, enter opens, backspace returns.
+	keys(m, "6", "g", "down", "enter")
+	var got []string
+	for _, r := range m.relations(m.selected()) {
+		got = append(got, r.label+":"+r.id)
+	}
+	wantRels := []string{"parent:" + ids["export"], "blocks:" + ids["json"]}
+	if strings.Join(got, ",") != strings.Join(wantRels, ",") {
+		t.Fatalf("relations = %v, want %v", got, wantRels)
+	}
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "Related 1/2") {
+		t.Fatalf("relations block missing:\n%s", v)
+	}
+	keys(m, "tab", "enter")
+	if m.selected() != ids["json"] || m.focus != focusDetail {
+		t.Fatalf("enter on a relation selected %s", m.selected())
+	}
+	keys(m, "backspace")
+	if m.selected() != ids["csv"] {
+		t.Fatalf("backspace returned to %s", m.selected())
 	}
 }

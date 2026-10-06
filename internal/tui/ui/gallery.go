@@ -75,6 +75,27 @@ func Gallery(t *theme.Theme, width int) string {
 		b.WriteString(ListRow(t, r, k == 2, width) + "\n")
 	}
 
+	section("Tree rows")
+	tree := []Row{
+		{ID: "152616", State: domain.StateOpen, Kind: domain.KindCode, Title: "TUI: human client next to the harness", Dimmed: true},
+		{ID: "152617", State: domain.StateDone, Kind: domain.KindCode, Title: "TUI issue views"},
+		{ID: "190543", State: domain.StateDone, Kind: domain.KindCode, Note: Progress(t, 1, 2), Title: "TUI design system"},
+		{ID: "191550", State: domain.StateOpen, Kind: domain.KindCode, Title: "TUI theming"},
+		{ID: "191558", State: domain.StateInProgress, Kind: domain.KindCode, Title: "Replace the purple accent"},
+		{ID: "053645", State: domain.StateDefined, Kind: domain.KindCode, Note: Note(t, "blocked", ToneWarning), Title: "TUI hierarchy"},
+	}
+	prefixes := TreePrefixes([]int{0, 1, 1, 2, 2, 1})
+	for k, r := range tree {
+		r.Tree = prefixes[k]
+		b.WriteString(ListRow(t, r, k == 4, width) + "\n")
+	}
+
+	section("Link rows")
+	b.WriteString(LinkRow(t, "parent", domain.StateOpen, "152616", "TUI: human client next to the harness", false, width) + "\n")
+	b.WriteString(LinkRow(t, "child", domain.StateInProgress, "053645", "TUI hierarchy: tree mode, parent focus, navigable relations", true, width) + "\n")
+	b.WriteString(LinkRow(t, "depends on", domain.StateDone, "152617", "TUI issue views", false, width) + "\n")
+	b.WriteString(LinkRow(t, "blocks", domain.StateDefined, "190544", "TUI filter bar, stale diff, check output, settings", false, width))
+
 	section("Panes")
 	left, right := Split(width, 0.5, 20, 20)
 	body := "Requirement prose\n" + t.S.Muted.Render("muted second line") + "\nA line long enough to be clipped at the pane's inner width, ending here."

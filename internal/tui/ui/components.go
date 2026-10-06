@@ -121,31 +121,44 @@ func Tabs(t *theme.Theme, tabs []Tab, active, width int) string {
 
 // Row is the data of one issue list row.
 type Row struct {
-	ID    string
-	State domain.State
-	Kind  domain.Kind
-	Note  string // progress, "blocked", "stale"; pre-rendered by the caller
-	Title string
+	ID     string
+	State  domain.State
+	Kind   domain.Kind
+	Note   string // progress, "blocked", "stale"; pre-rendered by the caller
+	Title  string
+	Tree   string // tree lines before the title, such as "│  ├─ "; see TreePrefix
+	Dimmed bool   // context row: shown for structure, not part of the result
 }
 
-// ListRow renders one issue row: marker, ID, state, kind, note, title. The
-// selected row gets the selection background across the full width.
+// ListRow renders one issue row: marker, ID, state, kind, tree lines, note,
+// title. The selected row gets the selection background across the full
+// width; a dimmed row renders entirely in the subtle color.
 func ListRow(t *theme.Theme, r Row, selected bool, width int) string {
 	marker := "  "
 	if selected {
 		marker = t.R.NewStyle().Foreground(t.C.Accent).Render("▌ ")
 	}
-	id := t.S.Muted.Render(r.ID)
-	if selected {
-		id = t.R.NewStyle().Foreground(t.C.Accent).Render(r.ID)
-	}
-	head := marker + id + " " + StateBadge(t, r.State) + KindTag(t, r.Kind)
-	if r.Note != "" {
-		head += r.Note + " "
-	}
-	title := t.S.Body.Render(r.Title)
-	if selected {
-		title = t.S.Heading.Render(r.Title)
+	tree := t.S.Subtle.Render(r.Tree)
+	var head, title string
+	switch {
+	case r.Dimmed:
+		g := stateGlyphs[r.State]
+		plain := fmt.Sprintf("%s %-*s%-*s", r.ID, BadgeWidth, g+" "+StateLabel(r.State), KindWidth, r.Kind)
+		head = marker + t.S.Subtle.Render(plain) + tree
+		title = t.S.Subtle.Render(r.Title)
+	default:
+		id := t.S.Muted.Render(r.ID)
+		if selected {
+			id = t.R.NewStyle().Foreground(t.C.Accent).Render(r.ID)
+		}
+		head = marker + id + " " + StateBadge(t, r.State) + KindTag(t, r.Kind) + tree
+		if r.Note != "" {
+			head += r.Note + " "
+		}
+		title = t.S.Body.Render(r.Title)
+		if selected {
+			title = t.S.Heading.Render(r.Title)
+		}
 	}
 	line := Fit(head+title, width)
 	if selected {
@@ -253,4 +266,30 @@ func Fit(s string, width int) string {
 		return s
 	}
 	return ansi.Truncate(s, width, "…")
+}
+
+// LinkWidth is the label column of a link row.
+const LinkWidth = 11
+
+// LinkRow renders a compact navigable link to an issue: relation label,
+// state glyph, ID and title. Used where a full list row is too wide.
+func LinkRow(t *theme.Theme, label string, state domain.State, id, title string, selected bool, width int) string {
+	marker := "  "
+	idStyle, titleStyle := t.S.Muted, t.S.Body
+	if selected {
+		marker = t.R.NewStyle().Foreground(t.C.Accent).Render("▌ ")
+		idStyle, titleStyle = t.R.NewStyle().Foreground(t.C.Accent), t.S.Heading
+	}
+	g, ok := stateGlyphs[state]
+	if !ok {
+		g = "?"
+	}
+	line := marker + t.S.Subtle.Width(LinkWidth).Render(label) +
+		t.R.NewStyle().Foreground(t.State(state)).Render(g) + " " +
+		idStyle.Render(id) + " " + titleStyle.Render(title)
+	line = Fit(line, width)
+	if selected {
+		return t.R.NewStyle().Background(t.C.Selection).Width(width).Render(line)
+	}
+	return line
 }

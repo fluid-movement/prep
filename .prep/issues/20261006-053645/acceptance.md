@@ -1,6 +1,6 @@
-- [ ] Tree mode shows children indented under parents with tree lines; context ancestors are dimmed and not counted; t toggles flat
-- [ ] right on a parent focuses it with a breadcrumb; left/esc go back up; nested parents work
-- [ ] p jumps to the parent, switching to All when needed
-- [ ] The detail lists parent, children, dependencies and blocked issues as rows; tab/shift+tab select, enter opens, backspace goes back
-- [ ] The gallery shows tree prefixes and context rows; goldens updated
-- [ ] Footer keys match the focused pane; snapshot and navigation tests pass
+- [x] Tree mode shows children indented under parents with tree lines; context ancestors are dimmed and not counted; t toggles flat
+- [x] right on a parent focuses it with a breadcrumb; left/esc go back up; nested parents work
+- [x] p jumps to the parent, switching to All when needed
+- [x] The detail lists parent, children, dependencies and blocked issues as rows; tab/shift+tab select, enter opens, backspace goes back
+- [x] The gallery shows tree prefixes and context rows; goldens updated
+- [x] Footer keys match the focused pane; snapshot and navigation tests pass

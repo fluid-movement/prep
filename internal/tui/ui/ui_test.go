@@ -98,3 +98,13 @@ func golden(t *testing.T, name, got string) {
 		t.Errorf("%s differs from the golden file; check prep tui --gallery and run go test ./internal/tui/... -update if the change is intended", name)
 	}
 }
+
+func TestTreePrefixes(t *testing.T) {
+	got := TreePrefixes([]int{0, 1, 2, 2, 1, 2, 0, 1})
+	want := []string{"", "├─ ", "│  ├─ ", "│  └─ ", "└─ ", "   └─ ", "", "└─ "}
+	for k := range want {
+		if got[k] != want[k] {
+			t.Errorf("row %d: %q, want %q", k, got[k], want[k])
+		}
+	}
+}

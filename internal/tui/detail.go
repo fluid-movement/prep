@@ -29,13 +29,6 @@ func detailMarkdown(t *domain.Tree, id string) string {
 		}
 		p("\n## %s\n\n%s\n", title, strings.TrimSpace(body))
 	}
-	ref := func(other string) string {
-		o := t.Issues[other]
-		if o == nil {
-			return fmt.Sprintf("`%s` (missing)", other)
-		}
-		return fmt.Sprintf("`%s` %s · %s", other, o.Title, ui.StateLabel(t.State(other)))
-	}
 
 	p("# %s\n\n", i.Title)
 	meta := []string{"**" + ui.StateLabel(t.State(id)) + "**", string(i.Kind), "`" + id + "`"}
@@ -50,23 +43,6 @@ func detailMarkdown(t *domain.Tree, id string) string {
 		meta = append(meta, fmt.Sprintf("%d/%d children resolved", pr.Done+pr.Dropped, pr.Total))
 	}
 	p("%s\n", strings.Join(meta, " · "))
-
-	var rel []string
-	if i.Parent != "" {
-		rel = append(rel, "- Parent: "+ref(i.Parent))
-	}
-	for _, d := range i.DependsOn {
-		rel = append(rel, "- Depends on: "+ref(d))
-	}
-	for _, d := range t.Blocks(id) {
-		rel = append(rel, "- Blocks: "+ref(d))
-	}
-	for _, c := range t.Children(id) {
-		rel = append(rel, "- Child: "+ref(c))
-	}
-	if len(rel) > 0 {
-		p("\n%s\n", strings.Join(rel, "\n"))
-	}
 
 	section("Requirement", i.Prose)
 	section("Open questions", i.OpenQuestions)
