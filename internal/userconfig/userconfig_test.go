@@ -39,3 +39,27 @@ func TestDefaultLocation(t *testing.T) {
 		t.Fatalf("path = %s", p)
 	}
 }
+
+func TestTUIMouseChoice(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	off := false
+	p, err := Save(Config{Harnesses: []string{"claude-code"}, TUI: TUI{Mouse: &off}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(p)
+	if !strings.Contains(string(b), "tui:\n  mouse: false\n") {
+		t.Fatalf("file:\n%s", b)
+	}
+	c, err := Load()
+	if err != nil || c.TUI.Mouse == nil || *c.TUI.Mouse || len(c.Harnesses) != 1 {
+		t.Fatalf("load: %+v %v", c, err)
+	}
+	// Unset stays out of the file, so the default (on) can change later.
+	if _, err := Save(Config{}); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(p); strings.Contains(string(b), "tui") {
+		t.Fatalf("unset mouse written:\n%s", b)
+	}
+}

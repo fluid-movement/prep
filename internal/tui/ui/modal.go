@@ -28,13 +28,18 @@ func Overlay(t *theme.Theme, background, block string, width, height int) string
 	for y := range bg[:height] {
 		bg[y] = t.S.Subtle.Render(ansi.Truncate(bg[y], width, "") + strings.Repeat(" ", max(0, width-ansi.StringWidth(bg[y]))))
 	}
-	top := max(0, (height-lipgloss.Height(block))/2)
-	left := max(0, (width-lipgloss.Width(block))/2)
+	left, top := OverlayAt(lipgloss.Width(block), lipgloss.Height(block), width, height)
 	layers := lipgloss.NewCompositor(
 		lipgloss.NewLayer(strings.Join(bg[:height], "\n")),
 		lipgloss.NewLayer(block).X(left).Y(top).Z(1),
 	)
 	return lipgloss.NewCanvas(width, height).Compose(layers).Render()
+}
+
+// OverlayAt is where Overlay puts a block of bw×bh cells over an area of
+// width×height: its top-left corner, centered.
+func OverlayAt(bw, bh, width, height int) (x, y int) {
+	return max(0, (width-bw)/2), max(0, (height-bh)/2)
 }
 
 // Center places a block in the middle of an area.

@@ -107,10 +107,7 @@ type Tab struct {
 func Tabs(t *theme.Theme, tabs []Tab, active, width int) string {
 	var parts []string
 	for k, tb := range tabs {
-		label := tb.Label
-		if tb.Count >= 0 {
-			label += " " + fmt.Sprint(tb.Count)
-		}
+		label := tb.label()
 		if k == active {
 			parts = append(parts, lipgloss.NewStyle().Foreground(t.C.Accent).Background(t.C.Selection).Bold(true).Padding(0, 1).Render(label))
 		} else {
@@ -118,6 +115,29 @@ func Tabs(t *theme.Theme, tabs []Tab, active, width int) string {
 		}
 	}
 	return Fit(strings.Join(parts, t.S.Subtle.Render("│")), width)
+}
+
+func (tb Tab) label() string {
+	if tb.Count >= 0 {
+		return tb.Label + " " + fmt.Sprint(tb.Count)
+	}
+	return tb.Label
+}
+
+// TabSpans returns where each tab of a Tabs bar starts and how wide it is,
+// in cells from the bar's left edge, so callers can tell which tab a
+// pointer is on. Tabs cut off by the width are left out.
+func TabSpans(tabs []Tab, width int) (x, w []int) {
+	at := 0
+	for _, tb := range tabs {
+		tw := ansi.StringWidth(tb.label()) + 2 // Padding(0, 1)
+		if at+tw > width {
+			break
+		}
+		x, w = append(x, at), append(w, tw)
+		at += tw + 1 // the │ between tabs
+	}
+	return x, w
 }
 
 // Row is the data of one issue list row.

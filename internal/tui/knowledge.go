@@ -198,7 +198,9 @@ func (m *Model) knowledgePane(w, h int) string {
 		}
 		return m.knowledgeList(paths, err, w, h)
 	}
-	return lipgloss.JoinHorizontal(lipgloss.Top, m.knowledgeList(paths, err, listW, h), m.entryPane(entryW, h))
+	list := m.knowledgeList(paths, err, listW, h)
+	m.at.x += listW
+	return lipgloss.JoinHorizontal(lipgloss.Top, list, m.entryPane(entryW, h))
 }
 
 func (m *Model) knowledgeList(paths []string, err error, w, h int) string {
@@ -244,6 +246,7 @@ func (m *Model) knowledgeList(paths []string, err error, w, h int) string {
 		m.know.offset = off
 		var lines []string
 		for k := off; k < len(paths) && k < off+rows; k++ {
+			m.mark(fmt.Sprintf("know:%d", k), paneInner.x, paneInner.y+len(bar)+k-off, inner, 1)
 			lines = append(lines, m.knowledgeRow(paths[k], k == c, inner))
 		}
 		body = strings.Join(lines, "\n")
@@ -251,6 +254,7 @@ func (m *Model) knowledgeList(paths []string, err error, w, h int) string {
 	if len(bar) > 0 {
 		body = strings.Join(bar, "\n") + "\n" + body
 	}
+	m.pane("knowledge", w, h)
 	return ui.Pane{Title: title, Body: body, Focused: !m.know.onEntry, Width: w, Height: h}.View(m.th)
 }
 
@@ -283,6 +287,7 @@ func (m *Model) knowledgeRow(path string, selected bool, width int) string {
 // issues that changed it.
 func (m *Model) entryPane(w, h int) string {
 	inner := w - 2 - 2*theme.Pad
+	m.pane("entry", w, h)
 	e := m.tree.Knowledge[m.know.path]
 	if e == nil {
 		return ui.Pane{Title: "Entry", Body: ui.Empty(m.th, "Nothing selected", "", inner, h-2), Width: w, Height: h}.View(m.th)

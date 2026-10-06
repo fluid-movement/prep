@@ -15,6 +15,7 @@ import (
 	"github.com/fluid-movement/prep/internal/mdstore"
 	"github.com/fluid-movement/prep/internal/okf"
 	"github.com/fluid-movement/prep/internal/tui"
+	"github.com/fluid-movement/prep/internal/userconfig"
 )
 
 func cmdTUI(a *app, args []string) error {
@@ -63,11 +64,15 @@ func cmdTUI(a *app, args []string) error {
 		}
 		return c.IssueID, nil
 	}
+	// A broken user configuration leaves the mouse on; prep setup reports it.
+	ucfg, _ := userconfig.Load()
 	return tui.Run(tui.Options{
-		Actor: humanActor(),
-		Write: write,
-		Load:  func() (*domain.Tree, error) { return load(false) },
-		Watch: filepath.Join(root, mdstore.Dir),
+		NoMouse:   ucfg.TUI.Mouse != nil && !*ucfg.TUI.Mouse,
+		SaveMouse: saveMouse,
+		Actor:     humanActor(),
+		Write:     write,
+		Load:      func() (*domain.Tree, error) { return load(false) },
+		Watch:     filepath.Join(root, mdstore.Dir),
 		Check: func() ([]domain.Diagnostic, error) {
 			t, err := load(true)
 			if err != nil {
@@ -76,6 +81,18 @@ func cmdTUI(a *app, args []string) error {
 			return domain.Validate(t), nil
 		},
 	}, os.Stdin, os.Stdout)
+}
+
+// saveMouse records the TUI's mouse capture choice in the user
+// configuration, keeping its other choices.
+func saveMouse(on bool) error {
+	c, err := userconfig.Load()
+	if err != nil {
+		return err
+	}
+	c.TUI.Mouse = &on
+	_, err = userconfig.Save(c)
+	return err
 }
 
 // humanActor names the person using the TUI. The domain treats human:

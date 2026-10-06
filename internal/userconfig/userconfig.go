@@ -20,6 +20,15 @@ import (
 type Config struct {
 	// Harnesses lists the harnesses prep integrates with, by name.
 	Harnesses []string `yaml:"harnesses"`
+	// TUI holds the terminal UI's choices.
+	TUI TUI `yaml:"tui,omitempty"`
+}
+
+// TUI is the terminal UI's part of the user configuration.
+type TUI struct {
+	// Mouse false turns mouse capture off, so the terminal selects text
+	// with a plain drag; unset means on.
+	Mouse *bool `yaml:"mouse,omitempty"`
 }
 
 // Path returns the config file location.

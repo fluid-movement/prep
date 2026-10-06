@@ -35,6 +35,11 @@ type Options struct {
 	Write func(plan func(*domain.Tree) (*domain.Change, error)) (string, error)
 	// Actor records who writes, human:<name> for the TUI.
 	Actor string
+	// NoMouse starts with mouse capture off (the user's tui.mouse choice).
+	NoMouse bool
+	// SaveMouse records the user's mouse capture choice; nil keeps a
+	// toggle for this session only.
+	SaveMouse func(on bool) error
 }
 
 // Run starts the issue views.
@@ -142,6 +147,10 @@ type Model struct {
 	pending       map[string]string // issue|field: edited text a rejected write left
 	pendingSelect string            // issue to select after the next load
 	noticeTone    ui.Tone
+	mouse         bool              // capture the mouse: clicks and the wheel act
+	hits          []*lipgloss.Layer // clickable regions of the last render, by ID
+	panes         []*lipgloss.Layer // the panes of the last render, for the wheel
+	at            point             // where the pane being rendered starts
 	runEditor     func(path string, done func(error) tea.Msg) tea.Cmd
 	after         func(time.Duration, func(time.Time) tea.Msg) tea.Cmd // tea.Tick; tests drop timers
 }
@@ -154,7 +163,7 @@ func NewModel(th *theme.Theme, opts Options) *Model {
 	in.SetStyles(inputStyles(th))
 	m := &Model{th: th, opts: opts, treeMode: true, scope: map[string][]string{}, cursor: map[string]int{}, offset: map[string]int{},
 		vp: newViewport(), page: newViewport(), know: knowState{vp: newViewport()}, filters: map[string]string{}, input: in,
-		pending: map[string]string{}, runEditor: execEditor, after: tea.Tick}
+		pending: map[string]string{}, mouse: !opts.NoMouse, runEditor: execEditor, after: tea.Tick}
 	m.apply(opts.Load())
 	return m
 }
@@ -453,16 +462,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.key(msg)
 	case tea.MouseMsg:
-		if m.screen != screenIssues {
-			var cmd tea.Cmd
-			m.page, cmd = m.page.Update(msg)
-			return m, cmd
-		}
-		if m.focus == focusDetail {
-			var cmd tea.Cmd
-			m.vp, cmd = m.vp.Update(msg)
-			return m, cmd
-		}
+		return m, m.mouseMsg(msg)
 	}
 	return m, nil
 }
@@ -870,11 +870,14 @@ func (m *Model) listHeight() int { return max(1, m.bodyHeight()-2) }
 func (m *Model) View() tea.View {
 	v := tea.NewView(m.render())
 	v.AltScreen = true
-	v.MouseMode = tea.MouseModeCellMotion
+	if m.mouse {
+		v.MouseMode = tea.MouseModeCellMotion
+	}
 	return v
 }
 
 func (m *Model) render() string {
+	m.hits, m.panes = nil, nil
 	if m.w == 0 || m.h == 0 {
 		return ui.Loading(m.th, "Starting …")
 	}
@@ -886,12 +889,16 @@ func (m *Model) render() string {
 	case m.tree == nil:
 		body = ui.Empty(m.th, "Could not load .prep", fmt.Sprint(m.err), m.w, bodyH)
 	case m.screen == screenCheck:
+		m.at = point{0, headerLines}
 		body = m.checkPane(m.w, bodyH)
 	case m.screen == screenSettings:
+		m.at = point{0, headerLines}
 		body = m.settingsPane(m.w, bodyH)
 	case m.screen == screenKnowledge:
+		m.at = point{0, headerLines}
 		body = m.knowledgePane(m.w, bodyH)
 	default:
+		m.at = point{0, headerLines}
 		listW, detailW := ui.Split(m.w, listRatio, minListW, minDetailW)
 		switch {
 		case detailW == 0 && m.focus == focusDetail:
@@ -899,12 +906,22 @@ func (m *Model) render() string {
 		case detailW == 0:
 			body = m.listPane(m.w, bodyH)
 		default:
-			body = lipgloss.JoinHorizontal(lipgloss.Top, m.listPane(listW, bodyH), m.detailPane(detailW, bodyH))
+			list := m.listPane(listW, bodyH)
+			m.at.x = listW
+			body = lipgloss.JoinHorizontal(lipgloss.Top, list, m.detailPane(detailW, bodyH))
 		}
 	}
 	if m.modal != nil && m.tree != nil {
 		// Dialogs float over the screen they act on.
-		body = ui.Overlay(m.th, body, m.modalView(m.w, bodyH), m.w, bodyH)
+		block := m.modalView(m.w, bodyH)
+		bw, bh := lipgloss.Width(block), lipgloss.Height(block)
+		x, y := ui.OverlayAt(bw, bh, m.w, bodyH)
+		y += headerLines
+		m.markAt("dialog", x, y, bw, bh, zDialog)
+		for _, e := range m.modal.marks {
+			m.markAt(e.id, x+paneInner.x+e.x, y+paneInner.y+e.line, e.w, e.h, zEntry)
+		}
+		body = ui.Overlay(m.th, body, block, m.w, bodyH)
 	}
 	return header + "\n" + body + "\n" + footer
 }
@@ -929,6 +946,10 @@ func (m *Model) header() string {
 	}
 	tabsW := m.w - lipgloss.Width(name) - lipgloss.Width(status)
 	line := name + ui.Tabs(m.th, tabs, m.active, tabsW)
+	xs, ws := ui.TabSpans(tabs, tabsW)
+	for k := range xs {
+		m.markAt(fmt.Sprintf("tab:%d", k), lipgloss.Width(name)+xs[k], 0, ws[k], 1, zRow)
+	}
 	if status != "" {
 		line += strings.Repeat(" ", max(0, m.w-lipgloss.Width(line)-lipgloss.Width(status))) + status
 	}
@@ -993,7 +1014,7 @@ var (
 	}, screenBindings)
 	settingsBindings = []binding{
 		bind("Settings", "↑↓ j k 1-9", "select (n is view n)", false),
-		bind("Settings", "space", "toggle the commit mode", true),
+		bind("Settings", "space", "toggle the commit mode or the mouse", true),
 		bind("Settings", "enter", "edit the view", true),
 		bind("Settings", "n", "add a view", true),
 		bind("Settings", "d d", "delete the view", true),
@@ -1143,6 +1164,7 @@ func (m *Model) listPane(w, h int) string {
 		m.offset[tb.name] = off
 		var lines []string
 		for k := off; k < len(tb.rows) && k < off+rows; k++ {
+			m.mark(fmt.Sprintf("row:%d", k), paneInner.x, paneInner.y+len(bar)+k-off, inner, 1)
 			lines = append(lines, ui.ListRow(m.th, m.row(tb.rows[k]), k == c, inner))
 		}
 		body = strings.Join(lines, "\n")
@@ -1150,6 +1172,7 @@ func (m *Model) listPane(w, h int) string {
 	if len(bar) > 0 {
 		body = strings.Join(bar, "\n") + "\n" + body
 	}
+	m.pane("list", w, h)
 	return ui.Pane{Title: title, Body: body, Focused: m.focus == focusList, Width: w, Height: h}.View(m.th)
 }
 
@@ -1194,9 +1217,11 @@ func shortID(id string) string {
 // breadcrumb, children as a tree under their progress, dependencies as
 // arrows ("← needs" what this waits on, "→ unblocks" what waits on it).
 // The block is display only; o opens a numbered menu of the same links.
-func (m *Model) relationBlock(id string, rels []relation, inner int) []string {
+//
+// links holds, per returned line, the index into rels it shows, or -1.
+func (m *Model) relationBlock(id string, rels []relation, inner int) (out []string, links []int) {
 	if len(rels) == 0 {
-		return nil
+		return nil, nil
 	}
 	sub := m.th.S.Subtle
 	var path []string
@@ -1221,9 +1246,9 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) []string {
 			children = append(children, k)
 		}
 	}
-	var out []string
 	if len(path) > 0 {
 		out = append(out, ui.Fit(sub.Render("↑ ")+strings.Join(path, sub.Render(" › ")), inner))
+		links = append(links, -1)
 	}
 	if len(children) > 0 {
 		p := m.tree.ChildProgress(id)
@@ -1253,24 +1278,32 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) []string {
 	}
 	for n := 0; n < len(lines) && n < maxRelations; n++ {
 		out = append(out, lines[n].text)
+		links = append(links, lines[n].rel)
 	}
 	if hidden := len(lines) - maxRelations; hidden > 0 {
 		out = append(out, sub.Render(fmt.Sprintf("  … %d more · o lists all", hidden)))
+		links = append(links, -1)
 	}
-	return append(out, "")
+	return append(out, ""), append(links, -1)
 }
 
 func (m *Model) detailPane(w, h int) string {
 	id := m.selected()
 	inner := w - 2 - 2*theme.Pad
 	focused := m.focus == focusDetail
+	m.pane("detail", w, h)
 	if id == "" {
 		return ui.Pane{Title: "Details", Body: ui.Empty(m.th, "Nothing selected", "", inner, h-2), Focused: focused, Width: w, Height: h}.View(m.th)
 	}
 
 	// Relations: a fixed block of rows above the scrolling document.
 	rels := m.relations(id)
-	block := m.relationBlock(id, rels, inner)
+	block, links := m.relationBlock(id, rels, inner)
+	for n, rel := range links {
+		if rel >= 0 && paneInner.y+n < h-1 {
+			m.mark(fmt.Sprintf("rel:%d", rel), paneInner.x, paneInner.y+n, inner, 1)
+		}
+	}
 
 	key := fmt.Sprintf("%s|%d|%d", id, inner, m.gen)
 	if key != m.docKey {
@@ -1392,15 +1425,23 @@ func (m *Model) settingsPane(w, h int) string {
 		return line
 	}
 	var b []string
-	b = append(b, m.th.S.Heading.Render("Project"), "", row(0, "␣", "Commit mode", p.Config.CommitMode+"  (off stages .prep changes, all commits each write)"), "",
-		m.th.S.Heading.Render("Saved views"), "")
+	rowLines := map[int]int{} // settings row → its line in b, for clicks
+	addRow := func(k int, key, label, value string) {
+		rowLines[k] = len(b)
+		b = append(b, row(k, key, label, value))
+	}
+	b = append(b, m.th.S.Heading.Render("Project"), "")
+	addRow(0, "␣", "Commit mode", p.Config.CommitMode+"  (off stages .prep changes, all commits each write)")
+	b = append(b, "", m.th.S.Heading.Render("Saved views"), "")
 	for k, n := range domain.ViewNames(p.Config) {
 		flags := p.Config.Views[n]
 		if flags == "" {
 			flags = "(all issues)"
 		}
-		b = append(b, row(k+1, fmt.Sprint(k+1), n, flags))
+		addRow(k+1, fmt.Sprint(k+1), n, flags)
 	}
+	b = append(b, "", m.th.S.Heading.Render("You")+"  "+m.th.S.Subtle.Render("your user configuration, not the project's"), "")
+	addRow(m.settingsRows()-1, "␣", "Mouse", map[bool]string{true: "on", false: "off"}[m.mouse]+"  (clicks and the wheel; off lets the terminal select text)")
 	b = append(b, "", m.th.S.Subtle.Render(fmt.Sprintf("Schema version %d.", p.Schema)))
 	if len(p.DoD) > 0 {
 		b = append(b, "", m.th.S.Heading.Render("Definition of Done"), m.th.S.Subtle.Render("edit in .prep/project.md"), "")
@@ -1408,10 +1449,17 @@ func (m *Model) settingsPane(w, h int) string {
 			b = append(b, ui.Fit("- "+d, inner))
 		}
 	}
-	return m.pagePane("Settings", strings.Join(b, "\n"), w, h)
+	out := m.pagePane("Settings", strings.Join(b, "\n"), w, h)
+	for k, line := range rowLines {
+		if y := line - m.page.YOffset(); y >= 0 && y < h-2 {
+			m.mark(fmt.Sprintf("set:%d", k), paneInner.x, paneInner.y+y, inner, 1)
+		}
+	}
+	return out
 }
 
 func (m *Model) pagePane(title, body string, w, h int) string {
+	m.pane("page", w, h)
 	m.page.SetWidth(w - 2 - 2*theme.Pad)
 	m.page.SetHeight(h - 2)
 	m.page.SetContent(body)

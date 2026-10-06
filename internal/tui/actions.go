@@ -60,6 +60,15 @@ type modal struct {
 	before  string   // modalText: the stored text, to tell whether anything changed
 	area    textarea.Model
 	err     string
+	marks   []entryMark // clickable entries of the last render
+}
+
+// entryMark is a clickable entry in a dialog's body: its ID, the body line
+// it starts on, its column and its size in cells.
+type entryMark struct {
+	id      string
+	line, x int
+	w, h    int
 }
 
 var kinds = []domain.Kind{domain.KindCode, domain.KindManual, domain.KindResearch, domain.KindDecision}
@@ -679,6 +688,19 @@ func (m *Model) modalView(width, height int) string {
 		title = shortID(d.id) + " " + m.tree.Issues[d.id].Title
 	}
 	var body []string
+	d.marks = nil
+	// next is the body line the next element starts on; mark makes h lines
+	// from there clickable, w cells from column x.
+	next := func() int {
+		line := 0
+		for _, b := range body {
+			line += strings.Count(b, "\n") + 1
+		}
+		return line
+	}
+	mark := func(id string, line, x, w, h int) {
+		d.marks = append(d.marks, entryMark{id: id, line: line, x: x, w: w, h: h})
+	}
 	switch d.kind {
 	case modalMenu:
 		heading := "Actions"
@@ -690,6 +712,7 @@ func (m *Model) modalView(width, height int) string {
 			title = heading
 		}
 		for k, it := range d.items {
+			mark(fmt.Sprintf("menu:%d", k), next(), 0, inner, 1)
 			body = append(body, ui.MenuRow(m.th, it.key, it.label, it.reason, it.reason == "", k == d.cursor, inner))
 		}
 	case modalCreate:
@@ -702,10 +725,16 @@ func (m *Model) modalView(width, height int) string {
 		}
 		switch d.step {
 		case 0:
+			mark("field:0", next(), 0, inner, 2)
 			body = append(body, ui.Field(m.th, "Title", d.inputs[0].View(), true), "", m.th.S.Subtle.Render("enter continues"))
 		case 1:
 			var opts []string
+			body = append(body, done("Title", d.inputs[0].Value()), "")
+			x := 0
 			for k, kd := range kinds {
+				w := len(kd) + 2                                   // " code ", one space between options
+				mark(fmt.Sprintf("kind:%d", k), next()+1, x, w, 1) // under the field label
+				x += w + 1
 				letter, rest := string(kd)[:1], string(kd)[1:]
 				label := lipgloss.NewStyle().Foreground(m.th.C.Accent).Bold(true).Render(letter) + m.th.S.Body.Render(rest)
 				if k == d.kindIdx {
@@ -715,7 +744,7 @@ func (m *Model) modalView(width, height int) string {
 				}
 				opts = append(opts, label)
 			}
-			body = append(body, done("Title", d.inputs[0].Value()), "", ui.Field(m.th, "Kind", strings.Join(opts, " "), true), "",
+			body = append(body, ui.Field(m.th, "Kind", strings.Join(opts, " "), true), "",
 				m.th.S.Subtle.Render("its letter picks it · arrows and enter work too · esc goes back"))
 		default:
 			body = append(body, done("Title", d.inputs[0].Value()), done("Kind", string(kinds[d.kindIdx])), "",
@@ -745,27 +774,35 @@ func (m *Model) modalView(width, height int) string {
 		if d.field != "" {
 			title = "View · " + d.field
 		}
-		body = append(body, ui.Field(m.th, "Name", d.inputs[0].View(), d.focus == 0), "", ui.Field(m.th, "Query", d.inputs[1].View(), d.focus == 1), "",
+		mark("field:0", next(), 0, inner, 2)
+		body = append(body, ui.Field(m.th, "Name", d.inputs[0].View(), d.focus == 0), "")
+		mark("field:1", next(), 0, inner, 2)
+		body = append(body, ui.Field(m.th, "Query", d.inputs[1].View(), d.focus == 1), "",
 			m.th.S.Subtle.Render("prep list flags; empty lists all issues."))
 	case modalRename:
 		title = "Rename · " + title
+		mark("field:0", next(), 0, inner, 2)
 		body = append(body, ui.Field(m.th, "Title", d.inputs[0].View(), true))
 	case modalDrop:
 		title = "Drop · " + title
+		mark("field:0", next(), 0, inner, 2)
 		body = append(body, ui.Field(m.th, "Reason", d.inputs[0].View(), true))
 	case modalComplete:
 		title = "Complete · " + title
-		body = append(body, m.th.S.Muted.Render("Documentation decision: the knowledge entries this changed, or why none."), "",
-			ui.Field(m.th, "Knowledge entries", d.inputs[0].View(), d.focus == 0), "",
-			ui.Field(m.th, "No impact because", d.inputs[1].View(), d.focus == 1))
+		body = append(body, m.th.S.Muted.Render("Documentation decision: the knowledge entries this changed, or why none."), "")
+		mark("field:0", next(), 0, inner, 2)
+		body = append(body, ui.Field(m.th, "Knowledge entries", d.inputs[0].View(), d.focus == 0), "")
+		mark("field:1", next(), 0, inner, 2)
+		body = append(body, ui.Field(m.th, "No impact because", d.inputs[1].View(), d.focus == 1))
 	case modalCriteria:
 		title = "Criteria · " + title
 		for k, c := range m.tree.Issues[d.id].Criteria {
-			mark := "[ ]"
+			box := "[ ]"
 			if k < len(d.checks) && d.checks[k] {
-				mark = "[x]"
+				box = "[x]"
 			}
-			line := ui.Fit(fmt.Sprintf("%s %d. %s", mark, k+1, c.Text), inner-2)
+			mark(fmt.Sprintf("crit:%d", k), next(), 0, inner, 1)
+			line := ui.Fit(fmt.Sprintf("%s %d. %s", box, k+1, c.Text), inner-2)
 			if k == d.cursor {
 				line = lipgloss.NewStyle().Background(m.th.C.Selection).Width(inner).Render(lipgloss.NewStyle().Foreground(m.th.C.Accent).Render("▌ ") + line)
 			} else {
@@ -781,6 +818,7 @@ func (m *Model) modalView(width, height int) string {
 		for k := start; k < len(d.picks) && k < start+rows; k++ {
 			id := d.picks[k]
 			sel := k == d.cursor
+			mark(fmt.Sprintf("pick:%d", k), next(), 0, inner, 1)
 			if id == "" {
 				body = append(body, ui.MenuRow(m.th, "", "(top level)", "no parent", true, sel, inner))
 				continue

@@ -1,9 +1,9 @@
-- [ ] Clicking a tab switches to that view; from the check, settings or knowledge screen it also returns to the issue views
-- [ ] Clicking an issue row selects it; clicking the selected row opens its detail like enter
-- [ ] Clicking a relation line in the detail follows that link like o <n>, and backspace returns
-- [ ] Clicking inside the list or detail pane focuses it; the wheel scrolls the pane under the pointer (list: selection moves one row per tick), in the two-pane and the narrow layout
-- [ ] Knowledge screen rows and settings rows select on click and activate on a click on the selected row; the wheel scrolls the entry and page viewports
-- [ ] In dialogs, menu entries run on click (an unavailable one shows its reason), reparent picks and kind options select, criteria toggle, form fields take focus; clicks outside a dialog do nothing and the help dialog closes on click
-- [ ] Mouse capture defaults to on, is stored per user as tui.mouse in the user configuration, can be toggled from a user-level row on the settings screen, and applies immediately and on the next start; a missing user config or key means on
-- [ ] Keyboard behavior is unchanged: existing key tests and goldens pass unchanged apart from the settings goldens gaining the mouse row
-- [ ] Tests drive tea.MouseMsg through Update for tabs, rows, relations, pane focus, wheel, knowledge and settings rows, and each dialog kind, at 110x28 and 80x24
+- [x] Clicking a tab switches to that view; from the check, settings or knowledge screen it also returns to the issue views
+- [x] Clicking an issue row selects it; clicking the selected row opens its detail like enter
+- [x] Clicking a relation line in the detail follows that link like o <n>, and backspace returns
+- [x] Clicking inside the list or detail pane focuses it; the wheel scrolls the pane under the pointer (list: selection moves one row per tick), in the two-pane and the narrow layout
+- [x] Knowledge screen rows and settings rows select on click and activate on a click on the selected row; the wheel scrolls the entry and page viewports
+- [x] In dialogs, menu entries run on click (an unavailable one shows its reason), reparent picks and kind options select, criteria toggle, form fields take focus; clicks outside a dialog do nothing and the help dialog closes on click
+- [x] Mouse capture defaults to on, is stored per user as tui.mouse in the user configuration, can be toggled from a user-level row on the settings screen, and applies immediately and on the next start; a missing user config or key means on
+- [x] Keyboard behavior is unchanged: existing key tests and goldens pass unchanged apart from the settings goldens gaining the mouse row
+- [x] Tests drive tea.MouseMsg through Update for tabs, rows, relations, pane focus, wheel, knowledge and settings rows, and each dialog kind, at 110x28 and 80x24
