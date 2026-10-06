@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -21,6 +22,9 @@ type Options struct {
 	Load func() (*domain.Tree, error)
 	// Watch is the directory to watch for changes (.prep); empty disables it.
 	Watch string
+	// Check returns every diagnostic, including knowledge drift. It is slower
+	// than Load (git), so it runs only for the check screen.
+	Check func() ([]domain.Diagnostic, error)
 }
 
 // Run starts the issue views.
@@ -48,6 +52,14 @@ const (
 	footerLines  = 1
 	maxRelations = 6
 	noticeFor    = 2 * time.Second
+)
+
+type screen int
+
+const (
+	screenIssues screen = iota
+	screenCheck
+	screenSettings
 )
 
 type focus int
@@ -101,11 +113,30 @@ type Model struct {
 	back     []string // previously shown issues, for backspace
 	notice   string
 	changes  <-chan struct{}
+
+	filters   map[string]string // per tab name: the applied filter text
+	filtering bool              // the filter bar has the keyboard
+	input     textinput.Model
+	filterErr string
+
+	screen   screen
+	page     viewport.Model // check and settings screens
+	diags    []domain.Diagnostic
+	diagErr  error
+	diagDone bool
 }
 
 // NewModel loads the project once and builds the screen state.
 func NewModel(th *theme.Theme, opts Options) *Model {
-	m := &Model{th: th, opts: opts, treeMode: true, scope: map[string][]string{}, cursor: map[string]int{}, offset: map[string]int{}, vp: viewport.New(0, 0)}
+	in := textinput.New()
+	in.Prompt = "/ "
+	in.Placeholder = "--kind code --state open or words in titles"
+	in.PromptStyle = th.S.Title
+	in.TextStyle = th.S.Body
+	in.PlaceholderStyle = th.S.Subtle
+	in.Cursor.Style = th.R.NewStyle().Foreground(th.C.Accent)
+	m := &Model{th: th, opts: opts, treeMode: true, scope: map[string][]string{}, cursor: map[string]int{}, offset: map[string]int{},
+		vp: viewport.New(0, 0), page: viewport.New(0, 0), filters: map[string]string{}, input: in}
 	m.apply(opts.Load())
 	return m
 }
@@ -116,6 +147,10 @@ type loadedMsg struct {
 }
 type changedMsg struct{}
 type clearNoticeMsg struct{ notice string }
+type checkedMsg struct {
+	diags []domain.Diagnostic
+	err   error
+}
 
 func (m *Model) Init() tea.Cmd { return m.waitForChange() }
 
@@ -136,6 +171,16 @@ func (m *Model) reload() tea.Cmd {
 	return func() tea.Msg {
 		t, err := m.opts.Load()
 		return loadedMsg{t, err}
+	}
+}
+
+func (m *Model) runCheck() tea.Cmd {
+	if m.opts.Check == nil {
+		return nil
+	}
+	return func() tea.Msg {
+		ds, err := m.opts.Check()
+		return checkedMsg{ds, err}
 	}
 }
 
@@ -172,7 +217,7 @@ func (m *Model) rebuild() {
 			}
 		}
 		m.scope[n] = sc
-		tb := buildTab(m.tree, n, m.tree.Project.Config.Views[n], sc, m.treeMode)
+		tb := buildTab(m.tree, n, m.tree.Project.Config.Views[n], m.filters[n], sc, m.treeMode)
 		c := m.cursor[n]
 		if id, ok := selected[n]; ok {
 			if k := tb.index(id); k >= 0 {
@@ -189,7 +234,7 @@ func (m *Model) rebuild() {
 
 // buildTab queries a view, narrows it to the focused parent's subtree, and
 // lays it out flat or as a tree with context ancestors.
-func buildTab(t *domain.Tree, name, flags string, scope []string, treeMode bool) tab {
+func buildTab(t *domain.Tree, name, flags, filter string, scope []string, treeMode bool) tab {
 	tb := tab{name: name, flags: flags}
 	f, err := domain.ParseFilter(strings.Fields(flags))
 	var ids []string
@@ -201,6 +246,28 @@ func buildTab(t *domain.Tree, name, flags string, scope []string, treeMode bool)
 		return tb
 	}
 	tb.count = len(ids)
+	if filter != "" {
+		ff, err := parseFilterText(filter)
+		var keep []string
+		if err == nil {
+			keep, err = t.Query(ff)
+		}
+		if err != nil {
+			tb.err = err
+			return tb
+		}
+		in := map[string]bool{}
+		for _, id := range keep {
+			in[id] = true
+		}
+		var kept []string
+		for _, id := range ids {
+			if in[id] {
+				kept = append(kept, id)
+			}
+		}
+		ids = kept
+	}
 
 	root := ""
 	inScope := map[string]bool{}
@@ -265,6 +332,31 @@ func buildTab(t *domain.Tree, name, flags string, scope []string, treeMode bool)
 	return tb
 }
 
+// parseFilterText reads filter bar input: prep list flags, with bare words
+// joined into one --text phrase (repeated --text flags would OR).
+func parseFilterText(s string) (domain.Filter, error) {
+	var args, words []string
+	fields := strings.Fields(s)
+	for k := 0; k < len(fields); k++ {
+		f := fields[k]
+		if !strings.HasPrefix(f, "--") {
+			words = append(words, f)
+			continue
+		}
+		args = append(args, f)
+		name := strings.TrimPrefix(f, "--")
+		takesValue := !strings.Contains(name, "=") && (name == "state" || name == "kind" || name == "under" || name == "text")
+		if takesValue && k+1 < len(fields) {
+			k++
+			args = append(args, fields[k])
+		}
+	}
+	if len(words) > 0 {
+		args = append(args, "--text", strings.Join(words, " "))
+	}
+	return domain.ParseFilter(args)
+}
+
 func (tb *tab) index(id string) int {
 	for k, r := range tb.rows {
 		if r.id == id {
@@ -283,6 +375,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.reload(), m.waitForChange())
 	case loadedMsg:
 		m.apply(msg.tree, msg.err)
+		if m.screen == screenCheck && msg.err == nil {
+			return m, m.runCheck()
+		}
+		return m, nil
+	case checkedMsg:
+		m.diags, m.diagErr, m.diagDone = msg.diags, msg.err, true
 		return m, nil
 	case clearNoticeMsg:
 		if m.notice == msg.notice {
@@ -290,8 +388,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case tea.KeyMsg:
+		if m.filtering {
+			return m, m.filterKey(msg)
+		}
 		return m, m.key(msg)
 	case tea.MouseMsg:
+		if m.screen != screenIssues {
+			var cmd tea.Cmd
+			m.page, cmd = m.page.Update(msg)
+			return m, cmd
+		}
 		if m.focus == focusDetail {
 			var cmd tea.Cmd
 			m.vp, cmd = m.vp.Update(msg)
@@ -330,7 +436,32 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			return m.flash("tree view")
 		}
 		return m.flash("flat view")
-	case "p":
+	case "c", "s":
+		target := screenCheck
+		if s == "s" {
+			target = screenSettings
+		}
+		if m.screen == target {
+			m.screen = screenIssues
+			return nil
+		}
+		m.screen = target
+		m.page.GotoTop()
+		if target == screenCheck {
+			return m.runCheck()
+		}
+		return nil
+	}
+	if m.screen != screenIssues {
+		if s == "esc" {
+			m.screen = screenIssues
+			return nil
+		}
+		var cmd tea.Cmd
+		m.page, cmd = m.page.Update(k)
+		return cmd
+	}
+	if s == "p" {
 		return m.jumpToParent()
 	}
 	if m.focus == focusDetail {
@@ -371,6 +502,16 @@ func (m *Model) listKey(s string) tea.Cmd {
 			m.scope[tb.name] = sc[:len(sc)-1]
 			m.rebuild()
 			m.selectInCurrent(up)
+		} else if s == "esc" && m.filters[tb.name] != "" {
+			m.setFilter(tb.name, "")
+		}
+		return nil
+	case "/":
+		if tb != nil {
+			m.filtering, m.filterErr = true, ""
+			m.input.SetValue(m.filters[tb.name])
+			m.input.CursorEnd()
+			return m.input.Focus()
 		}
 		return nil
 	}
@@ -394,6 +535,48 @@ func (m *Model) listKey(s string) tea.Cmd {
 	}
 	m.cursor[tb.name] = clamp(c, 0, len(tb.rows)-1)
 	return nil
+}
+
+// filterKey handles keys while the filter bar is open.
+func (m *Model) filterKey(k tea.KeyMsg) tea.Cmd {
+	tb := m.current()
+	switch k.String() {
+	case "ctrl+c":
+		return tea.Quit
+	case "esc":
+		m.filtering, m.filterErr = false, ""
+		m.input.Blur()
+		if tb != nil {
+			m.setFilter(tb.name, "")
+		}
+		return nil
+	case "enter":
+		text := strings.TrimSpace(m.input.Value())
+		if text != "" {
+			if _, err := parseFilterText(text); err != nil {
+				m.filterErr = err.Error()
+				return nil
+			}
+		}
+		m.filtering, m.filterErr = false, ""
+		m.input.Blur()
+		if tb != nil {
+			m.setFilter(tb.name, text)
+		}
+		return nil
+	}
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(k)
+	return cmd
+}
+
+func (m *Model) setFilter(tab, text string) {
+	if text == "" {
+		delete(m.filters, tab)
+	} else {
+		m.filters[tab] = text
+	}
+	m.rebuild()
 }
 
 func (m *Model) detailKey(s string, k tea.KeyMsg) tea.Cmd {
@@ -575,6 +758,10 @@ func (m *Model) View() string {
 	switch {
 	case m.tree == nil:
 		body = ui.Empty(m.th, "Could not load .prep", fmt.Sprint(m.err), m.w, bodyH)
+	case m.screen == screenCheck:
+		body = m.checkPane(m.w, bodyH)
+	case m.screen == screenSettings:
+		body = m.settingsPane(m.w, bodyH)
 	default:
 		listW, detailW := ui.Split(m.w, listRatio, minListW, minDetailW)
 		switch {
@@ -595,11 +782,37 @@ func (m *Model) header() string {
 	for _, tb := range m.tabs {
 		tabs = append(tabs, ui.Tab{Label: tb.name, Count: tb.count})
 	}
-	return ui.Fit(name+ui.Tabs(m.th, tabs, m.active, m.w-lipgloss.Width(name)), m.w)
+	status := ""
+	if m.diagDone {
+		errs, warns := 0, 0
+		for _, d := range m.diags {
+			if d.Severity == domain.SevError {
+				errs++
+			} else {
+				warns++
+			}
+		}
+		status = " " + ui.Note(m.th, fmt.Sprintf("✕ %d", errs), toneIf(errs > 0, ui.ToneError)) + " " + ui.Note(m.th, fmt.Sprintf("▲ %d", warns), toneIf(warns > 0, ui.ToneWarning))
+	}
+	tabsW := m.w - lipgloss.Width(name) - lipgloss.Width(status)
+	line := name + ui.Tabs(m.th, tabs, m.active, tabsW)
+	if status != "" {
+		line += strings.Repeat(" ", max(0, m.w-lipgloss.Width(line)-lipgloss.Width(status))) + status
+	}
+	return ui.Fit(line, m.w)
+}
+
+func toneIf(cond bool, t ui.Tone) ui.Tone {
+	if cond {
+		return t
+	}
+	return ui.ToneMuted
 }
 
 var (
-	listKeys   = []ui.Key{{Keys: "↑↓", Desc: "move"}, {Keys: "enter", Desc: "details"}, {Keys: "→/←", Desc: "into/out of parent"}, {Keys: "p", Desc: "parent"}, {Keys: "t", Desc: "tree/flat"}, {Keys: "tab/1-9", Desc: "views"}, {Keys: "y", Desc: "copy id"}, {Keys: "q", Desc: "quit"}}
+	listKeys   = []ui.Key{{Keys: "↑↓", Desc: "move"}, {Keys: "enter", Desc: "details"}, {Keys: "/", Desc: "filter"}, {Keys: "→/←", Desc: "into/out of parent"}, {Keys: "p", Desc: "parent"}, {Keys: "t", Desc: "tree/flat"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "tab/1-9", Desc: "views"}, {Keys: "q", Desc: "quit"}}
+	filterKeys = []ui.Key{{Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
+	pageKeys   = []ui.Key{{Keys: "↑↓ pgup/pgdn", Desc: "scroll"}, {Keys: "esc", Desc: "back"}, {Keys: "c", Desc: "check"}, {Keys: "s", Desc: "settings"}, {Keys: "q", Desc: "quit"}}
 	detailKeys = []ui.Key{{Keys: "tab", Desc: "next link"}, {Keys: "enter", Desc: "open"}, {Keys: "⌫", Desc: "back"}, {Keys: "↑↓", Desc: "scroll"}, {Keys: "esc", Desc: "list"}, {Keys: "p", Desc: "parent"}, {Keys: "y", Desc: "copy id"}, {Keys: "q", Desc: "quit"}}
 )
 
@@ -609,6 +822,10 @@ func (m *Model) footer() string {
 		return ui.Fit(ui.Note(m.th, m.notice, ui.ToneAccent), m.w)
 	case m.err != nil:
 		return ui.Fit(ui.Error(m.th, m.err.Error()), m.w)
+	case m.filtering:
+		return ui.KeyHelp(m.th, filterKeys, m.w)
+	case m.screen != screenIssues:
+		return ui.KeyHelp(m.th, pageKeys, m.w)
 	case m.focus == focusDetail:
 		return ui.KeyHelp(m.th, detailKeys, m.w)
 	}
@@ -624,6 +841,9 @@ func (m *Model) listTitle(tb *tab) string {
 	if len(parts) == 1 && tb.flags != "" {
 		title += "  " + tb.flags
 	}
+	if f := m.filters[tb.name]; f != "" {
+		title += "  / " + f
+	}
 	if !m.treeMode {
 		title += "  (flat)"
 	}
@@ -638,6 +858,16 @@ func (m *Model) listPane(w, h int) string {
 	}
 	inner := w - 2 - 2*theme.Pad
 	rows := h - 2
+	var bar []string
+	if m.filtering {
+		m.input.Width = max(1, inner-lipgloss.Width(m.input.Prompt)-1)
+		bar = append(bar, m.input.View())
+		if m.filterErr != "" {
+			bar = append(bar, ui.Error(m.th, m.filterErr))
+		}
+		bar = append(bar, "")
+		rows = max(1, rows-len(bar))
+	}
 	var body string
 	switch {
 	case tb == nil:
@@ -660,6 +890,9 @@ func (m *Model) listPane(w, h int) string {
 			lines = append(lines, ui.ListRow(m.th, m.row(tb.rows[k]), k == c, inner))
 		}
 		body = strings.Join(lines, "\n")
+	}
+	if len(bar) > 0 {
+		body = strings.Join(bar, "\n") + "\n" + body
 	}
 	return ui.Pane{Title: title, Body: body, Focused: m.focus == focusList, Width: w, Height: h}.View(m.th)
 }
@@ -736,6 +969,9 @@ func (m *Model) detailPane(w, h int) string {
 		if err != nil {
 			doc = ui.Error(m.th, err.Error())
 		}
+		if d := m.staleDiff(id, inner); d != "" {
+			doc = d + "\n\n" + doc
+		}
 		sameIssue := strings.HasPrefix(m.docKey, id+"|")
 		m.vp.SetContent(doc)
 		if !sameIssue {
@@ -757,4 +993,105 @@ func clamp(v, lo, hi int) int {
 		return lo
 	}
 	return min(max(v, lo), hi)
+}
+
+// staleDiff renders what changed in a stale issue's requirement and kind
+// since its newest baseline.
+func (m *Model) staleDiff(id string, width int) string {
+	i := m.tree.Issues[id]
+	b := i.LatestBaseline()
+	if b == nil || !m.tree.Stale(id) {
+		return ""
+	}
+	lines := []string{ui.Note(m.th, "Changed since baseline "+b.Name, ui.ToneWarning)}
+	if b.Kind != i.Kind {
+		lines = append(lines, ui.Diff(m.th, []ui.DiffLine{{Op: '-', Text: "kind: " + string(b.Kind)}, {Op: '+', Text: "kind: " + string(i.Kind)}}, width))
+	}
+	if b.Requirement != i.Body {
+		lines = append(lines, ui.Diff(m.th, ui.DiffLines(strings.Split(b.Requirement, "\n"), strings.Split(i.Body, "\n")), width))
+	}
+	lines = append(lines, m.th.S.Subtle.Render("prep ack for a trivial change, prep define to re-enrich"))
+	return strings.Join(lines, "\n")
+}
+
+// checkPane shows every diagnostic of the last check run.
+func (m *Model) checkPane(w, h int) string {
+	inner := w - 2 - 2*theme.Pad
+	var body string
+	switch {
+	case m.opts.Check == nil:
+		body = ui.Empty(m.th, "Check is not available", "", inner, h-2)
+	case !m.diagDone:
+		body = ui.Loading(m.th, "Running prep check …")
+	case m.diagErr != nil:
+		body = ui.Error(m.th, m.diagErr.Error())
+	case len(m.diags) == 0:
+		body = ui.Empty(m.th, "No problems", "prep check finds no errors or warnings", inner, h-2)
+	default:
+		var errs, warns []string
+		for _, d := range m.diags {
+			where := d.Issue
+			if d.File != "" {
+				if where != "" {
+					where += " · "
+				}
+				where += d.File
+			}
+			row := ui.DiagnosticRow(m.th, ui.Diagnostic{Error: d.Severity == domain.SevError, Code: d.Code, Where: where, Message: d.Message, Fix: d.Fix, Class: string(d.Class)}, inner)
+			if d.Severity == domain.SevError {
+				errs = append(errs, row)
+			} else {
+				warns = append(warns, row)
+			}
+		}
+		var parts []string
+		if len(errs) > 0 {
+			parts = append(parts, m.th.S.Heading.Render(fmt.Sprintf("Errors (%d)", len(errs))), strings.Join(errs, "\n\n"))
+		}
+		if len(warns) > 0 {
+			if len(parts) > 0 {
+				parts = append(parts, "")
+			}
+			parts = append(parts, m.th.S.Heading.Render(fmt.Sprintf("Warnings (%d)", len(warns))), strings.Join(warns, "\n\n"))
+		}
+		body = strings.Join(parts, "\n")
+	}
+	return m.pagePane("Check", body, w, h)
+}
+
+// settingsPane shows the project configuration, read-only.
+func (m *Model) settingsPane(w, h int) string {
+	inner := w - 2 - 2*theme.Pad
+	p := m.tree.Project
+	var b strings.Builder
+	fmt.Fprintf(&b, "## Project\n\n- Schema version: %d\n- Commit mode: `%s`\n", p.Schema, p.Config.CommitMode)
+	b.WriteString("\n## Saved views\n\n")
+	for _, n := range domain.ViewNames(p.Config) {
+		flags := p.Config.Views[n]
+		if flags == "" {
+			flags = "(all issues)"
+		}
+		fmt.Fprintf(&b, "- **%s**: `%s`\n", n, flags)
+	}
+	if len(p.DoD) > 0 {
+		b.WriteString("\n## Definition of Done\n\n")
+		for _, d := range p.DoD {
+			b.WriteString("- " + d + "\n")
+		}
+	}
+	b.WriteString("\nEdit `.prep/config.yaml` and `.prep/project.md`; changes appear here when saved.\n")
+	doc, err := ui.Markdown(m.th, b.String(), inner)
+	if err != nil {
+		doc = ui.Error(m.th, err.Error())
+	}
+	return m.pagePane("Settings", doc, w, h)
+}
+
+func (m *Model) pagePane(title, body string, w, h int) string {
+	m.page.Width, m.page.Height = w-2-2*theme.Pad, h-2
+	m.page.SetContent(body)
+	if m.page.TotalLineCount() > m.page.Height {
+		title += fmt.Sprintf("  %d%%", int(m.page.ScrollPercent()*100))
+	}
+	return ui.Pane{Title: title, Body: m.page.View(), Focused: true, Width: w, Height: h}.View(m.th)
 }

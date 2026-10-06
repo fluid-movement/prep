@@ -96,6 +96,15 @@ func Gallery(t *theme.Theme, width int) string {
 	b.WriteString(LinkRow(t, "depends on", domain.StateDone, "152617", "TUI issue views", false, width) + "\n")
 	b.WriteString(LinkRow(t, "blocks", domain.StateDefined, "190544", "TUI filter bar, stale diff, check output, settings", false, width))
 
+	section("Diff")
+	oldReq := []string{"Export rows as CSV.", "", "Quote fields that contain separators."}
+	newReq := []string{"Export rows as CSV and JSON.", "", "Quote fields that contain separators.", "", "Write a header line first; long lines wrap with a hanging indent so the sign column stays clear."}
+	b.WriteString(Diff(t, DiffLines(oldReq, newReq), width))
+
+	section("Diagnostics")
+	b.WriteString(DiagnosticRow(t, Diagnostic{Error: true, Code: "I019", Where: "20261005-152620 · decisions.md", Message: "decision D1 has no date", Fix: "entries are '## <id>: <title>' followed by date: YYYY-MM-DD", Class: "manual"}, width) + "\n")
+	b.WriteString(DiagnosticRow(t, Diagnostic{Code: "K005", Where: "components/cli.md", Message: "scoped paths changed since 0da33f5: internal/cli/cli.go", Fix: "re-check the entry against the code, update it and confirmed_commit", Class: "guided"}, width))
+
 	section("Panes")
 	left, right := Split(width, 0.5, 20, 20)
 	body := "Requirement prose\n" + t.S.Muted.Render("muted second line") + "\nA line long enough to be clipped at the pane's inner width, ending here."

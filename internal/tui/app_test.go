@@ -151,7 +151,7 @@ func keys(m *Model, ks ...string) {
 	}
 }
 
-func screen(t *testing.T, p *project, w, h int) *Model {
+func openModel(t *testing.T, p *project, w, h int) *Model {
 	t.Helper()
 	m := NewModel(testTheme(), Options{Load: p.load})
 	m.Update(tea.WindowSizeMsg{Width: w, Height: h})
@@ -174,12 +174,12 @@ func checkSize(t *testing.T, view string, w, h int) {
 func TestScreenSnapshots(t *testing.T) {
 	p, _ := sample(t)
 
-	wide := screen(t, p, 110, 28)
+	wide := openModel(t, p, 110, 28)
 	keys(wide, "6", "down")
 	checkSize(t, wide.View(), 110, 28)
 	golden(t, "screen-110x28", wide.View())
 
-	narrow := screen(t, p, 80, 24)
+	narrow := openModel(t, p, 80, 24)
 	keys(narrow, "6", "down", "enter")
 	checkSize(t, narrow.View(), 80, 24)
 	golden(t, "screen-80x24-detail", narrow.View())
@@ -187,7 +187,7 @@ func TestScreenSnapshots(t *testing.T) {
 
 func TestTabsAndSelection(t *testing.T) {
 	p, ids := sample(t)
-	m := screen(t, p, 110, 28)
+	m := openModel(t, p, 110, 28)
 
 	var names []string
 	for _, tb := range m.tabs {
@@ -257,7 +257,7 @@ func TestDetailContent(t *testing.T) {
 
 func TestLoadErrorKeepsData(t *testing.T) {
 	p, _ := sample(t)
-	m := screen(t, p, 110, 28)
+	m := openModel(t, p, 110, 28)
 	m.Update(loadedMsg{nil, errors.New("issue.md: bad frontmatter")})
 	v := ansi.Strip(m.View())
 	if !strings.Contains(v, "bad frontmatter") || !strings.Contains(v, "Attention") {
@@ -323,7 +323,7 @@ func rowIDs(m *Model) []string {
 
 func TestHierarchy(t *testing.T) {
 	p, ids := sample(t)
-	m := screen(t, p, 120, 30)
+	m := openModel(t, p, 120, 30)
 	keys(m, "6")
 
 	// Tree mode by default: children under their parent, with tree lines.
@@ -417,5 +417,117 @@ func TestHierarchy(t *testing.T) {
 	keys(m, "backspace")
 	if m.selected() != ids["csv"] {
 		t.Fatalf("backspace returned to %s", m.selected())
+	}
+}
+
+func typeText(m *Model, s string) {
+	for _, r := range s {
+		m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+}
+
+func TestFilterBar(t *testing.T) {
+	p, ids := sample(t)
+	m := openModel(t, p, 120, 30)
+	keys(m, "6", "t", "/")
+	if !m.filtering {
+		t.Fatal("/ does not open the filter bar")
+	}
+	typeText(m, "--kind decision")
+	keys(m, "enter")
+	if got := rowIDs(m); len(got) != 1 || got[0] != ids["format"] {
+		t.Fatalf("--kind decision rows = %v", got)
+	}
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "/ --kind decision") {
+		t.Fatalf("filter missing from the pane title:\n%s", v)
+	}
+
+	// Bare words match titles; the filter narrows the tab, never widens it.
+	keys(m, "/")
+	m.input.SetValue("")
+	typeText(m, "writer")
+	keys(m, "enter")
+	if got := rowIDs(m); len(got) != 2 || got[0] != ids["csv"] || got[1] != ids["json"] {
+		t.Fatalf("text filter rows = %v", got)
+	}
+	keys(m, "3")
+	keys(m, "/")
+	typeText(m, "--state defined")
+	keys(m, "enter")
+	if got := rowIDs(m); len(got) != 0 {
+		t.Fatalf("filter widened In progress: %v", got)
+	}
+
+	// A parse error keeps the bar open; esc clears the filter.
+	keys(m, "/")
+	m.input.SetValue("--bogus")
+	keys(m, "enter")
+	if !m.filtering || m.filterErr == "" {
+		t.Fatal("invalid filter accepted")
+	}
+	keys(m, "esc")
+	if m.filtering || m.filters["In progress"] != "" || len(rowIDs(m)) != 1 {
+		t.Fatalf("esc did not clear the filter: %v", rowIDs(m))
+	}
+}
+
+func TestStaleDiff(t *testing.T) {
+	p, ids := sample(t)
+	p.do(func(tr *domain.Tree, now time.Time) (*domain.Change, error) {
+		body := "Write rows as JSON lines."
+		kind := domain.KindManual
+		return tr.PlanEdit(ids["json"], domain.EditInput{Actor: "test/1", Now: now, Body: &body, Kind: &kind})
+	})
+	m := openModel(t, p, 120, 40)
+	keys(m, "6")
+	m.selectInCurrent(ids["json"])
+	v := ansi.Strip(m.View())
+	for _, want := range []string{"Changed since baseline", "- kind: code", "+ kind: manual", "- Write rows as JSON.", "+ Write rows as JSON lines."} {
+		if !strings.Contains(v, want) {
+			t.Fatalf("stale diff lacks %q:\n%s", want, v)
+		}
+	}
+}
+
+func TestCheckAndSettingsScreens(t *testing.T) {
+	p, ids := sample(t)
+	if err := os.WriteFile(filepath.Join(p.dir, ".prep", "issues", ids["survey"], "notes.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	m := NewModel(testTheme(), Options{Load: p.load, Check: func() ([]domain.Diagnostic, error) {
+		calls++
+		tr, err := p.load()
+		if err != nil {
+			return nil, err
+		}
+		return domain.Validate(tr), nil
+	}})
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
+
+	cmd := m.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("c")})
+	if m.screen != screenCheck || cmd == nil {
+		t.Fatal("c does not open the check screen")
+	}
+	m.Update(cmd())
+	v := ansi.Strip(m.View())
+	if calls != 1 || !strings.Contains(v, "Errors (1)") || !strings.Contains(v, "notes.txt") || !strings.Contains(v, "✕ 1") {
+		t.Fatalf("check screen (calls %d):\n%s", calls, v)
+	}
+	keys(m, "esc")
+	if m.screen != screenIssues {
+		t.Fatal("esc does not leave the check screen")
+	}
+
+	keys(m, "s")
+	v = ansi.Strip(m.View())
+	for _, want := range []string{"Settings", "Commit mode", "Attention", "--stale", "Definition of Done"} {
+		if !strings.Contains(v, want) {
+			t.Fatalf("settings lacks %q:\n%s", want, v)
+		}
+	}
+	keys(m, "s")
+	if m.screen != screenIssues {
+		t.Fatal("s does not toggle the settings screen")
 	}
 }

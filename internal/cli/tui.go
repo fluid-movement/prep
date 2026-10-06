@@ -9,6 +9,7 @@ import (
 
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/mdstore"
+	"github.com/fluid-movement/prep/internal/okf"
 	"github.com/fluid-movement/prep/internal/tui"
 )
 
@@ -27,8 +28,21 @@ func cmdTUI(a *app, args []string) error {
 	if err := a.open(); err != nil {
 		return err
 	}
+	// Loads run in background goroutines, sometimes two at once (reload and
+	// check), so each builds its own stores instead of sharing the app's.
+	root := a.store.Root
+	load := func(drift bool) (*domain.Tree, error) {
+		return domain.Load(mdstore.Open(root), &okf.Store{Root: root}, drift)
+	}
 	return tui.Run(tui.Options{
-		Load:  func() (*domain.Tree, error) { return a.load(false) },
-		Watch: filepath.Join(a.store.Root, mdstore.Dir),
+		Load:  func() (*domain.Tree, error) { return load(false) },
+		Watch: filepath.Join(root, mdstore.Dir),
+		Check: func() ([]domain.Diagnostic, error) {
+			t, err := load(true)
+			if err != nil {
+				return nil, err
+			}
+			return domain.Validate(t), nil
+		},
 	}, os.Stdin, os.Stdout)
 }

@@ -49,6 +49,24 @@
   [38;2;163;163;178mdepends on[0m [38;2;22;121;62m✓[0m [38;2;92;92;105m152617[0m [38;2;30;30;38mTUI issue views[0m
   [38;2;163;163;178mblocks[0m     [38;2;31;95;173m◐[0m [38;2;92;92;105m190544[0m [38;2;30;30;38mTUI filter bar, stale diff, check output, settings[0m
 
+[1;38;2;194;65;12mDiff[0m
+[38;2;190;18;60m- [0m[38;2;190;18;60mExport rows as CSV.[0m
+[38;2;22;121;62m+ [0m[38;2;22;121;62mExport rows as CSV and JSON.[0m
+[38;2;92;92;105m[0m
+[38;2;92;92;105m  [0m[38;2;92;92;105mQuote fields that contain separators.[0m
+[38;2;22;121;62m+[0m
+[38;2;22;121;62m+ [0m[38;2;22;121;62mWrite a header line first; long lines wrap with a hanging indent so the sign[0m
+[38;2;22;121;62m  [0m[38;2;22;121;62mcolumn stays clear.[0m
+
+[1;38;2;194;65;12mDiagnostics[0m
+[1;38;2;190;18;60m✕ I019[0m  [38;2;92;92;105m20261005-152620 · decisions.md[0m
+  [38;2;30;30;38mdecision D1 has no date[0m
+  [38;2;163;163;178mmanual · fix: entries are '## <id>: <title>' followed by date: YYYY-MM-DD[0m
+[1;38;2;154;91;0m▲ K005[0m  [38;2;92;92;105mcomponents/cli.md[0m
+  [38;2;30;30;38mscoped paths changed since 0da33f5: internal/cli/cli.go[0m
+  [38;2;163;163;178mguided · fix: re-check the entry against the code, update it and[0m
+  [38;2;163;163;178mconfirmed_commit[0m
+
 [1;38;2;194;65;12mPanes[0m
 [38;2;194;65;12m╭─[0m [1;38;2;194;65;12mFocused pane[0m [38;2;194;65;12m───────────────────────╮[0m[38;2;210;210;220m╭─[0m [38;2;92;92;105mUnfocused pane[0m [38;2;210;210;220m─────────────────────╮[0m
 [38;2;194;65;12m│[0m Requirement prose                    [38;2;194;65;12m│[0m[38;2;210;210;220m│[0m Requirement prose                    [38;2;210;210;220m│[0m

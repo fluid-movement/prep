@@ -1,5 +1,5 @@
-- [ ] / opens a filter bar that accepts prep list flags and bare words as text; it narrows the current tab by intersection, shows in the pane title, and esc clears it
-- [ ] A stale issue shows a colored line diff of the newest baseline against the current requirement, and a kind change, at the top of its detail
-- [ ] c opens a check screen with every diagnostic grouped by severity, including knowledge drift, with code, location, message and fix; the header shows error and warning counts
-- [ ] s opens a read-only settings screen with schema, commit mode, saved views in order and the project Definition of Done
-- [ ] Diff and diagnostic components are in the gallery; goldens updated; tests cover filter, diff, check and settings
+- [x] / opens a filter bar that accepts prep list flags and bare words as text; it narrows the current tab by intersection, shows in the pane title, and esc clears it
+- [x] A stale issue shows a colored line diff of the newest baseline against the current requirement, and a kind change, at the top of its detail
+- [x] c opens a check screen with every diagnostic grouped by severity, including knowledge drift, with code, location, message and fix; the header shows error and warning counts
+- [x] s opens a read-only settings screen with schema, commit mode, saved views in order and the project Definition of Done
+- [x] Diff and diagnostic components are in the gallery; goldens updated; tests cover filter, diff, check and settings

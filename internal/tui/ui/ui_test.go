@@ -108,3 +108,14 @@ func TestTreePrefixes(t *testing.T) {
 		}
 	}
 }
+
+func TestDiffLines(t *testing.T) {
+	got := DiffLines([]string{"a", "b", "c"}, []string{"a", "x", "c", "d"})
+	var s []string
+	for _, l := range got {
+		s = append(s, string(l.Op)+l.Text)
+	}
+	if strings.Join(s, ",") != " a,-b,+x, c,+d" {
+		t.Fatalf("diff = %v", s)
+	}
+}
