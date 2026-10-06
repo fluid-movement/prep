@@ -68,6 +68,7 @@ const (
 	screenIssues screen = iota
 	screenCheck
 	screenSettings
+	screenKnowledge
 )
 
 type focus int
@@ -132,6 +133,7 @@ type Model struct {
 	diagDone bool
 
 	modal         *modal
+	know          knowState
 	confirm       string            // a pending second key press: delete|view in settings
 	moving        bool              // settings: the selected view moves with j/k
 	setIdx        int               // selected settings row: 0 commit mode, then the views
@@ -211,6 +213,7 @@ func (m *Model) apply(t *domain.Tree, err error) {
 	m.tree, m.err = t, nil
 	m.gen++
 	m.rebuild()
+	m.syncKnowledge()
 	if id := m.pendingSelect; id != "" && t.Issues[id] != nil {
 		m.pendingSelect = ""
 		m.jump(id, false)
@@ -397,7 +400,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.reload(), m.waitForChange())
 	case loadedMsg:
 		m.apply(msg.tree, msg.err)
-		if m.screen == screenCheck && msg.err == nil {
+		if (m.screen == screenCheck || m.screen == screenKnowledge) && msg.err == nil {
 			return m, m.runCheck()
 		}
 		return m, nil
@@ -478,6 +481,15 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			return m.flash("tree view")
 		}
 		return m.flash("flat view")
+	case "b":
+		if m.tree == nil {
+			return nil
+		}
+		if m.screen == screenKnowledge {
+			m.screen = screenIssues
+			return nil
+		}
+		return m.openKnowledge("")
 	case "c", "s":
 		target := screenCheck
 		if s == "s" {
@@ -495,12 +507,15 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	if m.screen != screenIssues {
-		if s == "esc" && !m.moving {
+		if s == "esc" && !m.moving && m.screen != screenKnowledge {
 			m.screen = screenIssues
 			return nil
 		}
 		if m.screen == screenSettings && m.tree != nil {
 			return m.settingsKey(s)
+		}
+		if m.screen == screenKnowledge && m.tree != nil {
+			return m.knowledgeKey(s, k)
 		}
 		var cmd tea.Cmd
 		m.page, cmd = m.page.Update(k)
@@ -611,12 +626,21 @@ func (m *Model) filterKey(k tea.KeyMsg) tea.Cmd {
 	case "esc":
 		m.filtering, m.filterErr = false, ""
 		m.input.Blur()
+		if m.screen == screenKnowledge {
+			m.know.filter = ""
+			m.syncKnowledge()
+			return nil
+		}
 		if tb != nil {
 			m.setFilter(tb.name, "")
 		}
 		return nil
 	case "enter":
 		text := strings.TrimSpace(m.input.Value())
+		if m.screen == screenKnowledge {
+			m.knowledgeFilterKey(text)
+			return nil
+		}
 		if text != "" {
 			if _, err := parseFilterText(text); err != nil {
 				m.filterErr = err.Error()
@@ -806,6 +830,9 @@ func (m *Model) relations(id string) []relation {
 	for _, b := range m.tree.Blocks(id) {
 		out = append(out, relation{"blocks", b})
 	}
+	for _, p := range m.tree.IssueEntries(id) {
+		out = append(out, relation{"knowledge", p})
+	}
 	return out
 }
 
@@ -830,6 +857,8 @@ func (m *Model) View() string {
 		body = m.checkPane(m.w, bodyH)
 	case m.screen == screenSettings:
 		body = m.settingsPane(m.w, bodyH)
+	case m.screen == screenKnowledge:
+		body = m.knowledgePane(m.w, bodyH)
 	default:
 		listW, detailW := ui.Split(m.w, listRatio, minListW, minDetailW)
 		switch {
@@ -911,6 +940,7 @@ var (
 	screenBindings = []binding{
 		bind("Screens", "c", "check", false),
 		bind("Screens", "s", "settings", false),
+		bind("Screens", "b", "knowledge", false),
 		bind("Screens", "r", "reload", false),
 		bind("Screens", "?", "all keys", true),
 		bind("Screens", "q", "quit", true),
@@ -957,9 +987,24 @@ func concat(lists ...[]binding) []binding {
 	return out
 }
 
+var knowledgeBindings = []binding{
+	bind("Knowledge", "↑↓ j k", "select an entry", false),
+	bind("Knowledge", "enter → l", "read the entry (arrows scroll, esc back)", false),
+	bind("Knowledge", "f", "filter: --type --status --scope, words match titles", true),
+	bind("Knowledge", "a", "only entries that need an agent's attention", true),
+	bind("Knowledge", "o", "go to an issue that changed the entry", true),
+	bind("Knowledge", "⌫", "back to the issue you came from", false),
+	bind("Knowledge", "esc b", "back to the issues", true),
+	bind("Screens", "c", "check", false),
+	bind("Screens", "?", "all keys", true),
+	bind("Screens", "q", "quit", true),
+}
+
 // bindings is the keymap of what the screen shows now.
 func (m *Model) bindings() []binding {
 	switch {
+	case m.screen == screenKnowledge && m.tree != nil:
+		return knowledgeBindings
 	case m.screen == screenSettings && m.tree != nil:
 		return settingsBindings
 	case m.screen != screenIssues:
@@ -1156,6 +1201,9 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) []string {
 			lines = append(lines, link(k, lead))
 		case "blocks":
 			lines = append(lines, link(k, sub.Render("→ unblocks ")))
+		case "knowledge":
+			e := m.tree.Knowledge[r.id]
+			lines = append(lines, line{ui.Fit("  "+sub.Render("≡ knows ")+m.th.S.Muted.Render(fmt.Sprintf("%-10s", e.Type))+m.th.S.Body.Render(e.Title), inner), k})
 		}
 	}
 	for n := 0; n < len(lines) && n < maxRelations; n++ {

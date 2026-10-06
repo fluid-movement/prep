@@ -173,9 +173,11 @@ func (m *Model) openLinks() tea.Cmd {
 	if len(rels) == 0 {
 		return m.flash("no linked issues: no parent, children or dependencies")
 	}
-	lead := map[string]string{"path": "↑ ", "child": "├ ", "depends on": "← needs ", "blocks": "→ unblocks "}
+	lead := map[string]string{"path": "↑ ", "child": "├ ", "depends on": "← needs ", "blocks": "→ unblocks ", "knowledge": "≡ "}
 	// Children first after the path, as the detail draws them.
-	order := func(l string) int { return map[string]int{"path": 0, "child": 1, "depends on": 2, "blocks": 3}[l] }
+	order := func(l string) int {
+		return map[string]int{"path": 0, "child": 1, "depends on": 2, "blocks": 3, "knowledge": 4}[l]
+	}
 	sorted := append([]relation(nil), rels...)
 	slices.SortStableFunc(sorted, func(a, b relation) int { return order(a.label) - order(b.label) })
 	keys := "123456789bcdfghjklmnrstuvwxyz"
@@ -185,6 +187,14 @@ func (m *Model) openLinks() tea.Cmd {
 			break
 		}
 		target := r.id
+		if r.label == "knowledge" {
+			e := m.tree.Knowledge[target]
+			d.items = append(d.items, action{key: keys[n : n+1], label: lead[r.label] + e.Title + "  " + e.Path, run: func() tea.Cmd {
+				m.back = append(m.back, id)
+				return m.openKnowledge(target)
+			}})
+			continue
+		}
 		d.items = append(d.items, action{key: keys[n : n+1], label: lead[r.label] + shortID(target) + " " + m.tree.Issues[target].Title,
 			run: func() tea.Cmd { return m.jump(target, true) }})
 	}

@@ -1,6 +1,9 @@
 package domain
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestScopeMatch(t *testing.T) {
 	cases := []struct {
@@ -75,5 +78,44 @@ func TestPlanConfigValidates(t *testing.T) {
 	}
 	if got := tree.Apply(c).Project.Config; got.CommitMode != CommitAll || got.Views["Hot"] != "--priority high" {
 		t.Fatalf("applied config = %+v", got)
+	}
+}
+
+func TestKnowledgeViewQueries(t *testing.T) {
+	entries := []*Entry{
+		{Path: "/components/cli.md", Type: "component", Title: "CLI", Status: "stable", Scope: []string{"internal/cli"}},
+		{Path: "/components/tui.md", Type: "component", Title: "TUI", Status: "draft", Scope: []string{"internal/tui/*.go"}},
+		{Path: "/decisions/stack.md", Type: "decision", Title: "Stack choice", Status: "stable"},
+	}
+	done := &Issue{ID: "20260102-090000", Title: "A", Kind: KindCode, ContextLinks: []string{"/components/cli.md", "/missing.md"},
+		Resolution: &Resolution{Outcome: "done", Documentation: &Documentation{Entries: []string{"/components/tui.md", "/components/cli.md"}}}}
+	later := &Issue{ID: "20260102-100000", Title: "B", Kind: KindCode,
+		Resolution: &Resolution{Outcome: "done", Documentation: &Documentation{Entries: []string{"/components/tui.md"}}}}
+	tree := NewTree(Project{}, []*Issue{done, later}, entries, nil)
+
+	if got := tree.EntryIssues("/components/tui.md"); strings.Join(got, ",") != later.ID+","+done.ID {
+		t.Fatalf("EntryIssues = %v, want newest first", got)
+	}
+	if got := tree.IssueEntries(done.ID); strings.Join(got, ",") != "/components/cli.md,/components/tui.md" {
+		t.Fatalf("IssueEntries = %v", got)
+	}
+	for args, want := range map[string]string{
+		"--type component":          "/components/cli.md,/components/tui.md",
+		"--status draft":            "/components/tui.md",
+		"--scope internal":          "/components/cli.md,/components/tui.md",
+		"--scope internal/cli/x.go": "/components/cli.md",
+		"stack":                     "/decisions/stack.md",
+		"--type decision,component --status stable": "/components/cli.md,/decisions/stack.md",
+	} {
+		f, err := ParseKnowledgeFilter(strings.Fields(args))
+		if err != nil {
+			t.Fatalf("%s: %v", args, err)
+		}
+		if got := strings.Join(tree.QueryKnowledge(f), ","); got != want {
+			t.Errorf("%s: %s, want %s", args, got, want)
+		}
+	}
+	if _, err := ParseKnowledgeFilter([]string{"--type", "nope"}); err == nil {
+		t.Error("unknown type accepted")
 	}
 }

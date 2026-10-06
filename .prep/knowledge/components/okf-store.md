@@ -15,6 +15,7 @@ confirmed_commit: 3f507f8eea6dba16070e7e432d4f9995d0bbed98
 Applies when changing how knowledge entries are read, checked or written. Conventions: [Knowledge base conventions](/conventions/knowledge-base.md).
 
 - Walks `.prep/knowledge/**.md` except `index.md`; frontmatter is parsed loosely because OKF allows custom keys.
+- `parseEntry` keeps the text after the frontmatter as `Entry.Body` (trimmed), for display; validation and retrieval do not read it.
 - Links: markdown link targets ending in `.md`; absolute ones are bundle-relative, relative ones resolve against the entry's directory; external links are ignored.
 - Drift (only in `prep check` and `prep knowledge confirm --drifted`): `git diff --name-only <confirmed_commit> -- <scope>` against the working tree; an unknown commit (for example after a squash merge) is a warning.
 - Index files (`index.go`): `IndexFiles` computes an OKF `index.md` for every directory holding entries (Entries section `* [Title](/path) - description`, Directories section with entry counts; the root adds `okf_version: "0.2"` frontmatter). `WriteIndexes` writes changed ones atomically and removes unneeded ones; it runs after every knowledge write and from `prep fmt` and `prep fix`. `Load` reports missing, outdated or unneeded index files as K007 and skips the reserved `log.md`.

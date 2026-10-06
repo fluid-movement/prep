@@ -1,0 +1,4 @@
+- [x] The issue detail lists the knowledge entries in play (context links; for finished issues the entries the resolution changed) as links that o opens in the knowledge screen
+- [x] b opens the knowledge screen: entries listed by title with type and status, filterable with f (--type, --status, --scope, words in the title); the selected entry renders with its metadata and the issues that changed it
+- [x] Entries needing an agent's attention (drift, broken links, size) are marked once the check has run and a toggle lists only them; nothing in the TUI edits knowledge
+- [x] Snapshots and tests cover the screen, the filter, the attention marks and the links from issues; the TUI knowledge entries describe the screen

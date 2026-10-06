@@ -107,7 +107,7 @@ func parseEntry(bpath, raw string) (*domain.Entry, error) {
 	if err := yaml.Unmarshal([]byte(fm), &m); err != nil {
 		return nil, fmt.Errorf("frontmatter: %v", strings.TrimPrefix(err.Error(), "yaml: "))
 	}
-	e := &domain.Entry{Path: bpath, Size: len(raw)}
+	e := &domain.Entry{Path: bpath, Size: len(raw), Body: strings.TrimSpace(body)}
 	str := func(k string) string {
 		if v, ok := m[k]; ok && v != nil {
 			return strings.TrimSpace(fmt.Sprint(v))

@@ -287,6 +287,8 @@ type Entry struct {
 	ConfirmedCommit string   `json:"confirmed_commit,omitempty"`
 	Links           []string `json:"-"`
 	Size            int      `json:"-"`
+	// Body is the entry's text after the frontmatter, for display.
+	Body string `json:"-"`
 	// Drifted lists scoped paths changed since ConfirmedCommit, computed by the adapter.
 	Drifted []string `json:"drifted,omitempty"`
 	// DriftErr is set when drift could not be computed (e.g. unknown commit).

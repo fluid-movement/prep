@@ -123,6 +123,112 @@ func sample(t *testing.T) (*project, map[string]string) {
 	return p, ids
 }
 
+// knowledgeSample is sample with a knowledge base: the CLI entry has a
+// broken link (the check flags it), the format decision is documented by a
+// completed issue (a backlink).
+func knowledgeSample(t *testing.T) (*project, map[string]string) {
+	p, ids := sample(t)
+	write := func(rel, content string) {
+		path := filepath.Join(p.dir, ".prep", "knowledge", rel)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("components/cli.md", "---\ntype: component\ntitle: CLI\ndescription: Commands, flags and output.\nstatus: stable\nscope:\n  - internal/cli\n---\n\n# CLI\n\nCommands live in `cli.go`. See [Gone](/components/gone.md).\n")
+	write("decisions/format.md", "---\ntype: decision\ntitle: Default export format\ndescription: Why CSV is the default.\nstatus: draft\n---\n\n# Default export format\n\nCSV, because spreadsheets open it.\n")
+	ids["doc"] = p.issue("Document the format", domain.KindManual, "Write down why CSV is the default.", "")
+	p.op(ids["doc"], domain.OpDefine, domain.Input{})
+	p.record(ids["doc"], domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "add", Text: "written"}}})
+	p.op(ids["doc"], domain.OpReady, domain.Input{})
+	p.op(ids["doc"], domain.OpClaim, domain.Input{})
+	p.record(ids["doc"], domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "check", Index: 1}}})
+	p.op(ids["doc"], domain.OpComplete, domain.Input{Docs: []string{"/decisions/format.md"}})
+	return p, ids
+}
+
+// withCheck gives a model the check the CLI runs, without drift.
+func withCheck(m *Model, p *project) *Model {
+	m.opts.Check = func() ([]domain.Diagnostic, error) {
+		t, err := p.load()
+		if err != nil {
+			return nil, err
+		}
+		return domain.Validate(t), nil
+	}
+	return m
+}
+
+func TestKnowledgeScreen(t *testing.T) {
+	p, ids := knowledgeSample(t)
+	m := withCheck(openModel(t, p, 120, 30), p)
+	run(m, "b")
+	if m.screen != screenKnowledge {
+		t.Fatal("b did not open the knowledge screen")
+	}
+	v := ansi.Strip(m.View())
+	for _, want := range []string{"component  stable     ! CLI", "decision   draft        Default export format"} {
+		if !strings.Contains(v, want) {
+			t.Fatalf("knowledge list lacks %q:\n%s", want, v)
+		}
+	}
+
+	// a lists only what needs an agent's attention: the broken link.
+	run(m, "a")
+	if paths, _ := m.knowledgePaths(); len(paths) != 1 || paths[0] != "/components/cli.md" {
+		t.Fatalf("attention-only = %v", paths)
+	}
+	v = ansi.Strip(m.View())
+	if !strings.Contains(v, "Needs an agent's attention") || !strings.Contains(v, "K003 broken link to /components/gone.md") {
+		t.Fatalf("entry lacks its finding:\n%s", v)
+	}
+	run(m, "a")
+
+	// f filters by type; the entry shows its body and who changed it.
+	run(m, "f")
+	typeIn(m, "--type decision")
+	run(m, "enter")
+	if paths, _ := m.knowledgePaths(); len(paths) != 1 || m.know.path != "/decisions/format.md" {
+		t.Fatalf("filtered = %v, selected %s", paths, m.know.path)
+	}
+	v = ansi.Strip(m.View())
+	if !strings.Contains(v, "CSV, because spreadsheets open it.") || !strings.Contains(v, "Document the format") {
+		t.Fatalf("entry lacks body or backlink:\n%s", v)
+	}
+	run(m, "o")
+	run(m, "1")
+	if m.screen != screenIssues || m.selected() != ids["doc"] {
+		t.Fatalf("o 1 went to %s on screen %d", m.selected(), m.screen)
+	}
+}
+
+func TestKnowledgeFromAnIssue(t *testing.T) {
+	p, ids := knowledgeSample(t)
+	m := openModel(t, p, 120, 30)
+	run(m, "6")
+	m.selectInCurrent(ids["csv"])
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "≡ knows component CLI") {
+		t.Fatalf("issue detail lacks its knowledge:\n%s", v)
+	}
+	run(m, "o")
+	var key string
+	for _, it := range m.modal.items {
+		if strings.Contains(it.label, "/components/cli.md") {
+			key = it.key
+		}
+	}
+	run(m, key)
+	if m.screen != screenKnowledge || m.know.path != "/components/cli.md" {
+		t.Fatalf("o %s: screen %d entry %s", key, m.screen, m.know.path)
+	}
+	run(m, "backspace")
+	if m.screen != screenIssues || m.selected() != ids["csv"] {
+		t.Fatalf("backspace: screen %d issue %s", m.screen, m.selected())
+	}
+}
+
 func keys(m *Model, ks ...string) {
 	for _, k := range ks {
 		var msg tea.KeyMsg
@@ -216,6 +322,11 @@ func TestScreenSnapshots(t *testing.T) {
 		run(m, "3")
 		checkSize(t, m.View(), w, h)
 		golden(t, fmt.Sprintf("settings-%dx%d", w, h), m.View())
+		kp, _ := knowledgeSample(t)
+		k := withCheck(openModel(t, kp, w, h), kp)
+		run(k, "b")
+		checkSize(t, k.View(), w, h)
+		golden(t, fmt.Sprintf("knowledge-%dx%d", w, h), k.View())
 	}
 }
 
