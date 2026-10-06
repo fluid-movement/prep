@@ -19,5 +19,6 @@ Applies when changing file formats or write behavior. Format details: [Storage f
 - `requirementBody` builds the issue.md body from requirement text for `prep new` and `prep edit`: it keeps the text's own `## Open questions` section and appends an empty one only when missing. An edit rewrites issue.md from the edited fields under the same compare-and-swap.
 - Record writes: context.md and findings.md are rewritten; decisions are appended by `renderDecision` (`date:` directly under the heading); acceptance operations are applied line by line by `applyAcceptance`, so text between criteria survives. Appends and line edits read the file under compare-and-swap first.
 - `LoadConfig` also records the order of the `views:` keys (`Config.ViewOrder`) from the YAML node; issue loading keeps `history.md` as `Issue.History`.
+- `Init` writes `project.md`, `config.yaml` and `.gitkeep` files for `issues/` and `knowledge/`; it no longer writes a placeholder overview, because the overview marks a bootstrapped knowledge base.
 - `Fmt` re-renders every parseable file canonically (`--check` reports only); `Fix` adds missing empty schema files and removes duplicate dependencies.
 - The contract corpus in `testdata/contract` (valid and broken trees with an `expect` file of diagnostic codes) runs in `contract_test.go` and is the test suite for any future adapter.

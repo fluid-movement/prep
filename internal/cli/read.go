@@ -363,6 +363,9 @@ func cmdGuide(a *app, args []string) error {
 		a.emit(g)
 		return nil
 	}
+	for _, al := range g.Alerts {
+		a.printf("! %s\n\n", al)
+	}
 	a.printf("%s  %s\n", g.ID, g.Title)
 	a.printf("kind: %s   state: %s", g.Kind, g.State)
 	if g.Stale {
@@ -473,6 +476,7 @@ type primeBrief struct {
 	Stale      []summary      `json:"stale"`
 	Claims     []claimSummary `json:"claims"`
 	Check      checkSummary   `json:"check"`
+	Bootstrap  string         `json:"bootstrap,omitempty"` // alert while the knowledge base is not bootstrapped
 	Hint       string         `json:"hint"`
 }
 
@@ -535,9 +539,13 @@ func cmdPrime(a *app, args []string) error {
 			b.Check.Warnings++
 		}
 	}
+	b.Bootstrap = t.BootstrapAlert()
 	if a.json {
 		a.emit(b)
 		return nil
+	}
+	if b.Bootstrap != "" {
+		a.printf("! %s\n\n", b.Bootstrap)
 	}
 	a.printf("prep: %d issues, %d actionable; check: %d errors, %d warnings\n", b.Issues, b.Actionable, b.Check.Errors, b.Check.Warnings)
 	section := func(title string, ss []summary) {

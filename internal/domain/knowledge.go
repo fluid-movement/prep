@@ -55,6 +55,9 @@ func (t *Tree) PlanKnowledge(in KnowledgeEdit) (*Change, error) {
 	case in.Type == nil && in.Title == nil && in.Description == nil && in.Status == nil && in.Scope == nil && in.ConfirmedCommit == nil && in.Body == nil:
 		return nil, &Error{Code: ErrUsage, Message: "nothing to change: pass a field, --scope or --body"}
 	}
+	if in.New && p != OverviewEntry && !t.Bootstrapped() {
+		return nil, &Error{Code: ErrGate, Message: "cannot create " + p, Unmet: []Unmet{{GateBootstrap, t.BootstrapAlert() + " Entries come after the overview."}}}
+	}
 	if in.ConfirmedCommit != nil && *in.ConfirmedCommit != "" {
 		scope := t.scopeOf(p, in.Scope)
 		if len(scope) == 0 {

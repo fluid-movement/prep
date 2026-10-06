@@ -1,0 +1,5 @@
+- [x] A fresh prep init has no overview and creates the bootstrap parent and the survey child, tagged bootstrap, with requirement, context and criteria; --no-bootstrap skips them
+- [x] While /overview.md is missing, prep prime leads with an alert, prep guide shows it for every issue, and prep knowledge new refuses every entry except /overview.md
+- [x] prep knowledge bootstrap creates the issues when they are missing and reports otherwise
+- [x] Writing /overview.md makes the project bootstrapped: alerts disappear and knowledge new works
+- [x] Tests pass; knowledge entries and the skill describe bootstrapping

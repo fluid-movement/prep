@@ -50,6 +50,11 @@ func (a *app) reportWrite(r writeResult) {
 }
 
 func cmdInit(a *app, args []string) error {
+	fs := flag.NewFlagSet("init", flag.ContinueOnError)
+	noBootstrap := fs.Bool("no-bootstrap", false, "do not create the knowledge base bootstrap issues")
+	if _, err := parse(fs, args); err != nil {
+		return err
+	}
 	dir := a.root
 	if dir == "" {
 		dir = "."
@@ -63,8 +68,42 @@ func cmdInit(a *app, args []string) error {
 	}
 	a.store = st
 	a.afterWrite(nil, "prep: init", files)
+	if !*noBootstrap {
+		more, err := a.bootstrap()
+		if err != nil {
+			return err
+		}
+		files = append(files, more...)
+	}
 	a.reportWrite(writeResult{OK: true, Op: "init", Files: files})
 	return nil
+}
+
+// bootstrap creates the knowledge base bootstrap issues, one change after
+// the other through the write pipeline.
+func (a *app) bootstrap() ([]string, error) {
+	t, err := a.load(false)
+	if err != nil {
+		return nil, err
+	}
+	cs, err := t.PlanBootstrap(a.actor, a.now())
+	if err != nil {
+		return nil, err
+	}
+	var files []string
+	for _, c := range cs {
+		if err := t.CheckWrite(c); err != nil {
+			return files, err
+		}
+		fs, err := a.store.Apply(c)
+		if err != nil {
+			return files, err
+		}
+		files = append(files, fs...)
+		t = t.Apply(c)
+	}
+	a.afterWrite(t, "prep: bootstrap the knowledge base", files)
+	return files, nil
 }
 
 func cmdNew(a *app, args []string) error {

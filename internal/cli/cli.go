@@ -56,7 +56,7 @@ var commands []command
 
 func init() {
 	commands = []command{
-		{"init", true, "init                       create .prep in the current directory", cmdInit},
+		{"init", true, "init [--no-bootstrap]      create .prep and the knowledge base bootstrap issues", cmdInit},
 		{"prime", false, "prime [--max N]            session-start briefing: parents, actionable count, alerts", cmdPrime},
 		{"guide", false, "guide <id>                 step contract: state, transitions, unmet gates, inputs, outputs", cmdGuide},
 		{"list", false, "list [query flags]         query issues: --state --kind --tag --under --stale --actionable --blocked --parent --leaf --top --text --tree --view", cmdList},
@@ -72,7 +72,7 @@ func init() {
 		{"dod", true, "dod <id>                   Definition of Done: --add item, --opt-out item --reason text, --remove item", recordCmd(domain.OpDoD)},
 		{"findings", true, "findings <id>              replace a research issue's findings: --body text | --body-file path|-", recordCmd(domain.OpFindings)},
 		{"log", true, "log <id> <text>            append a line to the work log", recordCmd(domain.OpLog)},
-		{"knowledge", true, "knowledge new|update|confirm  knowledge entries: new <entry> --type --title --description --body..., update <entry> [fields], confirm <entry>... | --drifted", cmdKnowledge},
+		{"knowledge", true, "knowledge new|update|confirm|bootstrap  entries: new <entry> --type --title --description --body..., update <entry> [fields], confirm <entry>... | --drifted, bootstrap", cmdKnowledge},
 		{"define", true, "define <id>                write a requirement baseline (open questions must be empty)", opCmd(domain.OpDefine)},
 		{"ack", true, "ack <id>                   acknowledge a trivial requirement change: new baseline, enrichment stays valid", opCmd(domain.OpAck)},
 		{"ready", true, "ready <id> [--note]        sign off enrichment against the newest baseline", opCmd(domain.OpReady)},

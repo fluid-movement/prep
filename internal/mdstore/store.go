@@ -379,7 +379,7 @@ func (s *Store) Init() ([]string, error) {
 		{Dir + "/project.md", DefaultProject()},
 		{Dir + "/config.yaml", DefaultConfig},
 		{Dir + "/issues/.gitkeep", ""},
-		{Dir + "/knowledge/overview.md", defaultOverview},
+		{Dir + "/knowledge/.gitkeep", ""},
 	}
 	for _, f := range files {
 		if _, err := os.Stat(s.abs(f.rel)); err == nil {
@@ -393,15 +393,3 @@ func (s *Store) Init() ([]string, error) {
 	}
 	return written, nil
 }
-
-const defaultOverview = `---
-type: overview
-title: Project overview
-description: Entry point to the knowledge base; links to every other entry.
-status: draft
----
-
-# Project overview
-
-Describe what the project is and link the entries that document it.
-`

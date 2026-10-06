@@ -146,6 +146,7 @@ type Guide struct {
 	Outputs      []Pointer    `json:"outputs"`
 	DoD          []string     `json:"definition_of_done,omitempty"`
 	Diagnostics  []Diagnostic `json:"diagnostics,omitempty"`
+	Alerts       []string     `json:"alerts,omitempty"` // project-wide, such as a missing bootstrap
 }
 
 // BuildGuide assembles the step contract. issueDir maps an ID to its
@@ -212,6 +213,9 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 		}
 	}
 	g.Step, g.Instructions, g.Outputs = stepContract(t, i, s, stale, parent, f)
+	if a := t.BootstrapAlert(); a != "" {
+		g.Alerts = append(g.Alerts, a)
+	}
 	return g
 }
 

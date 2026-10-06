@@ -22,7 +22,8 @@ func newHarness(t *testing.T) *harness {
 	h := &harness{t: t, dir: t.TempDir(), now: time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)}
 	clock = func() time.Time { h.now = h.now.Add(time.Second); return h.now }
 	t.Cleanup(func() { clock = time.Now })
-	h.ok("init")
+	h.ok("init", "--no-bootstrap")
+	h.ok("knowledge", "new", "/overview.md", "--type", "overview", "--title", "Project overview", "--description", "Entry point to the knowledge base.", "--body", "The test project.")
 	return h
 }
 
@@ -679,4 +680,66 @@ func TestTags(t *testing.T) {
 	// Hand edits with malformed tags are reported.
 	h.replace(b, "issue.md", "  - archive", "  - Not Valid")
 	h.fails("I026", "check")
+}
+
+func TestBootstrap(t *testing.T) {
+	h := &harness{t: t, dir: t.TempDir(), now: time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)}
+	clock = func() time.Time { h.now = h.now.Add(time.Second); return h.now }
+	t.Cleanup(func() { clock = time.Now })
+	h.ok("init")
+
+	if _, err := os.Stat(filepath.Join(h.dir, ".prep", "knowledge", "overview.md")); err == nil {
+		t.Fatal("init still writes a placeholder overview")
+	}
+	var issues []summary
+	var r struct {
+		Issues []summary `json:"issues"`
+	}
+	h.jsonOf(&r, "list", "--tag", "bootstrap")
+	issues = r.Issues
+	if len(issues) != 2 || issues[0].Title != "Bootstrap the knowledge base" || issues[1].Kind != "research" || issues[1].Parent != issues[0].ID {
+		t.Fatalf("bootstrap issues = %+v", issues)
+	}
+	survey := issues[1].ID
+	if ctx := h.read(survey, "context.md"); !strings.Contains(ctx, "prep findings "+survey) || !strings.Contains(ctx, "--parent "+issues[0].ID) {
+		t.Fatalf("survey context does not name its issues:\n%s", ctx)
+	}
+	if acc := h.read(survey, "acceptance.md"); !strings.Contains(acc, "/overview.md exists as a draft") {
+		t.Fatalf("survey criteria missing:\n%s", acc)
+	}
+
+	// Not bootstrapped: prime and guide alert, knowledge new waits for the overview.
+	if out := h.ok("prime"); !strings.HasPrefix(out, "! The knowledge base is not bootstrapped yet") || !strings.Contains(out, "prep guide "+survey) {
+		t.Fatalf("prime does not lead with the bootstrap:\n%s", out)
+	}
+	if out := h.ok("guide", issues[0].ID); !strings.Contains(out, "not bootstrapped") {
+		t.Fatalf("guide lacks the alert:\n%s", out)
+	}
+	h.fails("G_BOOTSTRAP", "knowledge", "new", "/components/export.md", "--type", "component", "--title", "Export", "--description", "d", "--body", "b", "--json")
+	h.fails("bootstrap issues already exist", "knowledge", "bootstrap", "--json")
+
+	// Writing the overview bootstraps the project.
+	h.ok("knowledge", "new", "/overview.md", "--type", "overview", "--title", "Demo", "--description", "A demo project.", "--status", "draft", "--body", "What the demo is.")
+	if out := h.ok("prime"); strings.Contains(out, "not bootstrapped") {
+		t.Fatalf("prime still alerts after the overview:\n%s", out)
+	}
+	h.ok("knowledge", "new", "/components/export.md", "--type", "component", "--title", "Export", "--description", "d", "--body", "b")
+	h.fails("already bootstrapped", "knowledge", "bootstrap", "--json")
+
+	// Without the issues, the alert points at prep knowledge bootstrap.
+	g := newHarnessNoBootstrap(t)
+	if out := g.ok("prime"); !strings.Contains(out, "prep knowledge bootstrap") {
+		t.Fatalf("prime without bootstrap issues:\n%s", out)
+	}
+	g.ok("knowledge", "bootstrap")
+	if got := listIDs(g, "list", "--tag", "bootstrap"); len(got) != 2 {
+		t.Fatalf("knowledge bootstrap created %v", got)
+	}
+}
+
+func newHarnessNoBootstrap(t *testing.T) *harness {
+	h := &harness{t: t, dir: t.TempDir(), now: time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)}
+	clock = func() time.Time { h.now = h.now.Add(time.Second); return h.now }
+	h.ok("init", "--no-bootstrap")
+	return h
 }

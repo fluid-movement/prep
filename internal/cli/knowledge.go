@@ -13,7 +13,7 @@ import (
 // cmdKnowledge dispatches the knowledge entry writes: new, update, confirm.
 func cmdKnowledge(a *app, args []string) error {
 	if len(args) == 0 {
-		return usageErr("knowledge needs a subcommand: new, update or confirm")
+		return usageErr("knowledge needs a subcommand: new, update, confirm or bootstrap")
 	}
 	switch args[0] {
 	case "new":
@@ -22,8 +22,10 @@ func cmdKnowledge(a *app, args []string) error {
 		return knowledgeEdit(a, args[1:], false)
 	case "confirm":
 		return knowledgeConfirm(a, args[1:])
+	case "bootstrap":
+		return knowledgeBootstrap(a, args[1:])
 	}
-	return usageErr("unknown knowledge subcommand %q: use new, update or confirm", args[0])
+	return usageErr("unknown knowledge subcommand %q: use new, update, confirm or bootstrap", args[0])
 }
 
 func knowledgeEdit(a *app, args []string, isNew bool) error {
@@ -188,4 +190,33 @@ func (a *app) writeKnowledge(e domain.KnowledgeEdit) ([]string, string, error) {
 	}
 	a.afterWrite(t, fmt.Sprintf("prep: knowledge %s", c.Knowledge.Path), files)
 	return files, c.Knowledge.Path, nil
+}
+
+// knowledgeBootstrap creates the bootstrap issues when the knowledge base
+// is not bootstrapped and none are open.
+func knowledgeBootstrap(a *app, args []string) error {
+	fs := flag.NewFlagSet("knowledge bootstrap", flag.ContinueOnError)
+	if _, err := parse(fs, args); err != nil {
+		return err
+	}
+	t, err := a.load(false)
+	if err != nil {
+		return err
+	}
+	switch {
+	case t.Bootstrapped():
+		return &domain.Error{Code: domain.ErrInvalid, Message: "the knowledge base is already bootstrapped: " + domain.OverviewEntry + " exists"}
+	case t.BootstrapStart() != "":
+		return &domain.Error{Code: domain.ErrInvalid, Message: "bootstrap issues already exist: prep guide " + t.BootstrapStart()}
+	}
+	files, err := a.bootstrap()
+	if err != nil {
+		return err
+	}
+	after, err := a.load(false)
+	if err != nil {
+		return err
+	}
+	a.reportWrite(writeResult{OK: true, Op: "knowledge bootstrap", ID: after.BootstrapStart(), Files: files})
+	return nil
 }
