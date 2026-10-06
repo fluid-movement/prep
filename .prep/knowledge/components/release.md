@@ -12,7 +12,7 @@ scope:
   - install.sh
   - internal/update
   - internal/cli/update.go
-confirmed_commit: 077821dee83ec0ecedad58a2d9c9329615467ecc
+confirmed_commit: a9954a6da2adb6e0ae437aba7beb398833ed3d5c
 ---
 
 
