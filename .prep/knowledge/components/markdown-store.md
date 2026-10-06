@@ -7,7 +7,7 @@ generated:
   by: claude-code/2.1.289
   at: 2026-10-05T00:00:00Z
 scope: internal/mdstore
-confirmed_commit: b6187bcf5752597e6271ee5b0e29df13d2427dfb
+confirmed_commit: 59d8dabc013e8cf26eac11f3b6cc9d2d88b4011b
 ---
 
 # Markdown store
