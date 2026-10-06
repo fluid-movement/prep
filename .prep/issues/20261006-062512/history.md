@@ -17,3 +17,5 @@
 - 2026-10-06T12:26:32Z claude-code/2.1.291: Detail links by shape: breadcrumb for ancestors, children tree with progress, ← needs and → unblocks arrows, no label column (the user's idea)
 
 - 2026-10-06T12:29:20Z claude-code/2.1.291: tab switches views everywhere; o opens a numbered Go to menu of links; relations block display only
+
+- 2026-10-06T12:32:45Z claude-code/2.1.291: Menu rows no longer wrap long labels (the Go to menu looked squished)

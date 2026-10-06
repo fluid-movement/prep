@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/muesli/termenv"
 
 	"github.com/fluid-movement/prep/internal/tui/theme"
@@ -117,5 +118,16 @@ func TestDiffLines(t *testing.T) {
 	}
 	if strings.Join(s, ",") != " a,-b,+x, c,+d" {
 		t.Fatalf("diff = %v", s)
+	}
+}
+
+func TestMenuRowKeepsLongLabelsOnOneLine(t *testing.T) {
+	th := theme.New(lipgloss.NewRenderer(io.Discard))
+	row := MenuRow(th, "1", "├ 152616 TUI: human client next to the harness", "", true, true, 40)
+	if strings.Contains(row, "\n") {
+		t.Fatalf("long label wrapped:\n%s", row)
+	}
+	if w := ansi.StringWidth(row); w != 40 {
+		t.Fatalf("row width %d, want 40", w)
 	}
 }

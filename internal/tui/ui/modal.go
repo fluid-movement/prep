@@ -69,7 +69,15 @@ func MenuRow(t *theme.Theme, key, label, reason string, enabled, selected bool, 
 	if !enabled {
 		keyStyle, labelStyle = t.S.Subtle, t.S.Subtle
 	}
-	line := marker + keyStyle.Width(3).Render(key) + labelStyle.Width(22).Render(label)
+	// Short labels pad to a column so reasons line up; long ones (a linked
+	// issue's title) run on and are cut at the edge, never wrapped.
+	const labelW = 22
+	line := marker + keyStyle.Width(3).Render(key) + labelStyle.Render(label)
+	if w := ansi.StringWidth(label); w < labelW {
+		line += strings.Repeat(" ", labelW-w)
+	} else if reason != "" {
+		line += "  "
+	}
 	if reason != "" {
 		line += t.S.Muted.Render(reason)
 	}
