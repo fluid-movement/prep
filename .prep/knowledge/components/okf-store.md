@@ -7,7 +7,7 @@ generated:
   by: claude-code/2.1.289
   at: 2026-10-05T00:00:00Z
 scope: internal/okf
-confirmed_commit: db27d6b1996f239fe8e18dc951b950ad5cab77ec
+confirmed_commit: 316d841d9ec9da43d344f1ca878ccd20607c7a6f
 ---
 
 # OKF store

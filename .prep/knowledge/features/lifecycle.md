@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/domain/fsm.go
   - internal/domain/tree.go
-confirmed_commit: 86c98f9e49a6fa46e114332c24e3fc2fb8b0f6f8
+confirmed_commit: 316d841d9ec9da43d344f1ca878ccd20607c7a6f
 ---
 
 # Issue lifecycle
