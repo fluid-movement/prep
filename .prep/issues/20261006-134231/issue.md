@@ -1,0 +1,11 @@
+---
+title: Mouse wheel scrolls lists, not their selection
+kind: code
+parent: 20261005-152616
+tags:
+  - tui
+---
+
+The mouse wheel scrolls a list's visible window and leaves its selection where it is; selecting is done by clicking an entry (or with keys). This holds for every list in the TUI: the issue list, the knowledge list, and lists inside dialogs such as the move picker, and for lists added later. Viewports (detail, entry, check and settings pages) keep scrolling their text as before. A key that moves the selection brings it back into view.
+
+## Open questions

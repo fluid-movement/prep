@@ -17,6 +17,9 @@ func TestProgramReadsMouseInput(t *testing.T) {
 	m := NewModel(testTheme(), Options{Load: p.load})
 	m.Update(tea.WindowSizeMsg{Width: 110, Height: 28})
 	x, _ := find(t, m, "All", 0, 110) // before the program owns the model
+	keys(m, "6")
+	rx, ry := find(t, m, "CSV writer", 0, 60)
+	keys(m, "1")
 	in, w := io.Pipe()
 	prog := tea.NewProgram(m, tea.WithInput(in), tea.WithOutput(io.Discard), tea.WithWindowSize(110, 28))
 	done := make(chan error, 1)
@@ -26,8 +29,9 @@ func TestProgramReadsMouseInput(t *testing.T) {
 		time.Sleep(150 * time.Millisecond) // let the program render between inputs
 	}
 	time.Sleep(300 * time.Millisecond)
-	send(fmt.Sprintf("\x1b[<0;%d;1M\x1b[<0;%d;1m", x+1, x+1)) // click the All tab
-	send("\x1b[<65;6;6M")                                     // wheel down over the list
+	send(fmt.Sprintf("\x1b[<0;%d;1M\x1b[<0;%d;1m", x+1, x+1))                 // click the All tab
+	send(fmt.Sprintf("\x1b[<0;%d;%dM\x1b[<0;%d;%dm", rx+1, ry+1, rx+1, ry+1)) // click the CSV writer row
+	send("\x1b[<65;6;6M")                                                     // a wheel notch keeps the selection
 	send("q")
 	select {
 	case err := <-done:
@@ -38,6 +42,6 @@ func TestProgramReadsMouseInput(t *testing.T) {
 		t.Fatal("the program did not quit")
 	}
 	if m.current().name != "All" || m.selected() != ids["csv"] {
-		t.Fatalf("after a click on All and a wheel notch: tab %q, selected %s", m.current().name, m.selected())
+		t.Fatalf("after clicks on All and CSV writer and a wheel notch: tab %q, selected %s", m.current().name, m.selected())
 	}
 }

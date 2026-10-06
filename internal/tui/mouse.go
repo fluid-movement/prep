@@ -178,26 +178,33 @@ func (m *Model) clickDialog(kind string, n int) tea.Cmd {
 	return nil
 }
 
-// wheel scrolls the pane under the pointer, focused or not: the list moves
-// its selection a row per notch, the other panes scroll their text.
+// wheelRows is how far a wheel notch scrolls a list, as far as it scrolls
+// a viewport's text.
+const wheelRows = 3
+
+// wheel scrolls the pane under the pointer, focused or not. Lists scroll
+// their view and keep their selection (a click selects); the other panes
+// scroll their text. Rendering clamps the offsets.
 func (m *Model) wheel(msg tea.MouseWheelMsg) tea.Cmd {
-	if m.modal != nil {
+	step := map[tea.MouseButton]int{tea.MouseWheelDown: wheelRows, tea.MouseWheelUp: -wheelRows}[msg.Button]
+	if d := m.modal; d != nil {
+		if d.kind == modalReparent && step != 0 {
+			d.scroll, d.scrolled = max(0, d.scroll+step), true
+		}
 		return nil
 	}
 	_, name := hitAt(m.panes, msg.X, msg.Y)
-	step := map[tea.MouseButton]int{tea.MouseWheelDown: 1, tea.MouseWheelUp: -1}[msg.Button]
 	var cmd tea.Cmd
 	switch name {
 	case "list":
 		if tb := m.current(); tb != nil && step != 0 {
-			m.cursor[tb.name] = clamp(m.cursor[tb.name]+step, 0, len(tb.rows)-1)
+			m.offset[tb.name], m.wheeled = max(0, m.offset[tb.name]+step), true
 		}
 	case "detail":
 		m.vp, cmd = m.vp.Update(msg)
 	case "knowledge":
-		if paths, _ := m.knowledgePaths(); len(paths) > 0 && step != 0 {
-			m.know.cursor = clamp(m.know.cursor+step, 0, len(paths)-1)
-			m.know.path = paths[m.know.cursor]
+		if step != 0 {
+			m.know.offset, m.wheeled = max(0, m.know.offset+step), true
 		}
 	case "entry":
 		m.know.vp, cmd = m.know.vp.Update(msg)
@@ -205,6 +212,23 @@ func (m *Model) wheel(msg tea.MouseWheelMsg) tea.Cmd {
 		m.page, cmd = m.page.Update(msg)
 	}
 	return cmd
+}
+
+// listOffset is the first visible row of a list of n rows that shows rows
+// at a time: the stored offset kept in range and, when follow is set,
+// moved just enough to show the cursor. After a wheel scroll the view
+// stays where the wheel put it.
+func listOffset(off, cursor, n, rows int, follow bool) int {
+	off = clamp(off, 0, max(0, n-rows))
+	if follow {
+		if cursor < off {
+			off = cursor
+		}
+		if cursor >= off+rows {
+			off = cursor - rows + 1
+		}
+	}
+	return off
 }
 
 // toggleMouse turns mouse capture on or off from the settings screen and

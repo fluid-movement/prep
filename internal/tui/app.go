@@ -148,6 +148,7 @@ type Model struct {
 	pendingSelect string            // issue to select after the next load
 	noticeTone    ui.Tone
 	mouse         bool              // capture the mouse: clicks and the wheel act
+	wheeled       bool              // the wheel scrolled a list: its view stops following the selection until a key
 	hits          []*lipgloss.Layer // clickable regions of the last render, by ID
 	panes         []*lipgloss.Layer // the panes of the last render, for the wheel
 	at            point             // where the pane being rendered starts
@@ -454,7 +455,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.PasteMsg:
 		return m, m.paste(msg)
 	case tea.KeyPressMsg:
+		m.wheeled = false // keys move the selection, so the view follows it again
 		if m.modal != nil {
+			m.modal.scrolled = false
 			return m, m.modalKey(msg)
 		}
 		if m.filtering {
@@ -1154,13 +1157,7 @@ func (m *Model) listPane(w, h int) string {
 		body = ui.Empty(m.th, "No issues in this view", "Issues appear when they match "+orAll(tb.flags), inner, rows)
 	default:
 		c := m.cursor[tb.name]
-		off := clamp(m.offset[tb.name], 0, max(0, len(tb.rows)-rows))
-		if c < off {
-			off = c
-		}
-		if c >= off+rows {
-			off = c - rows + 1
-		}
+		off := listOffset(m.offset[tb.name], c, len(tb.rows), rows, !m.wheeled)
 		m.offset[tb.name] = off
 		var lines []string
 		for k := off; k < len(tb.rows) && k < off+rows; k++ {

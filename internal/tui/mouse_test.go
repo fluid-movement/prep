@@ -2,12 +2,16 @@ package tui
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/tui/ui"
 )
 
@@ -119,22 +123,61 @@ func TestClickTabsRowsAndRelations(t *testing.T) {
 	}
 }
 
-func TestWheelScrollsThePaneUnderThePointer(t *testing.T) {
-	p, _ := sample(t)
+// crowd adds n open issues and n knowledge entries, so lists can scroll.
+func crowd(t *testing.T, p *project, n int) {
+	t.Helper()
+	for k := range n {
+		p.issue(fmt.Sprintf("Extra %02d", k), domain.KindCode, "More work.", "")
+		path := filepath.Join(p.dir, ".prep", "knowledge", "components", fmt.Sprintf("extra%02d.md", k))
+		os.MkdirAll(filepath.Dir(path), 0o755)
+		body := fmt.Sprintf("---\ntype: component\ntitle: Extra %02d\ndescription: More.\nstatus: stable\n---\n\n# Extra %02d\n\nMore.\n", k, k)
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestWheelScrollsListsNotSelections(t *testing.T) {
+	p, ids := sample(t)
+	crowd(t, p, 30)
 	m := openModel(t, p, 110, 28)
 	keys(m, "6")
 	listW, _ := ui.Split(110, listRatio, minListW, minDetailW)
 
-	// The list moves its selection, even when the detail has the focus.
+	// The list scrolls three rows a notch; the selection stays, also out of view.
 	m.focus = focusDetail
-	before := m.cursor["All"]
 	wheel(m, 5, 10, tea.MouseWheelDown)
-	if m.cursor["All"] != before+1 || m.focus != focusDetail {
-		t.Fatalf("wheel over the list: cursor %d → %d, focus %d", before, m.cursor["All"], m.focus)
+	if m.offset["All"] != wheelRows || m.selected() != ids["export"] || m.focus != focusDetail {
+		t.Fatalf("wheel over the list: offset %d, selected %s, focus %d", m.offset["All"], m.selected(), m.focus)
 	}
-	wheel(m, 5, 10, tea.MouseWheelUp)
-	if m.cursor["All"] != before {
-		t.Fatalf("wheel up over the list: cursor %d", m.cursor["All"])
+	for range 3 {
+		wheel(m, 5, 10, tea.MouseWheelDown)
+	}
+	off := m.offset["All"]
+	m.View()
+	if off != 4*wheelRows || m.offset["All"] != off || m.selected() != ids["export"] {
+		t.Fatalf("scrolled list: offset %d after render %d, selected %s", off, m.offset["All"], m.selected())
+	}
+
+	// A click selects a visible row without the view jumping.
+	target := m.current().rows[off+1].id
+	clickText(t, m, m.tree.Issues[target].Title, 0, listW)
+	if m.selected() != target || m.offset["All"] != off {
+		t.Fatalf("click in a scrolled list: selected %s, offset %d", m.selected(), m.offset["All"])
+	}
+
+	// A key moves the selection and brings it back into view.
+	for range 4 {
+		wheel(m, 5, 10, tea.MouseWheelUp)
+	}
+	if m.offset["All"] != 0 {
+		t.Fatalf("wheel up: offset %d", m.offset["All"])
+	}
+	keys(m, "j")
+	m.View()
+	c := m.cursor["All"]
+	if c != off+2 || c < m.offset["All"] || c >= m.offset["All"]+m.listHeight() {
+		t.Fatalf("key after scrolling: cursor %d offset %d", c, m.offset["All"])
 	}
 
 	// The detail scrolls its text while the list keeps the focus.
@@ -144,6 +187,39 @@ func TestWheelScrollsThePaneUnderThePointer(t *testing.T) {
 	wheel(m, listW+10, 10, tea.MouseWheelDown)
 	if m.vp.YOffset() == 0 || m.focus != focusList {
 		t.Fatalf("wheel over the detail: offset %d, focus %d", m.vp.YOffset(), m.focus)
+	}
+
+	// The knowledge list scrolls the same way.
+	keys(m, "b")
+	path := m.know.path
+	wheel(m, 5, 10, tea.MouseWheelDown)
+	m.View()
+	if m.know.offset != wheelRows || m.know.path != path {
+		t.Fatalf("wheel over the knowledge list: offset %d, path %s → %s", m.know.offset, path, m.know.path)
+	}
+}
+
+func TestWheelScrollsTheMovePicker(t *testing.T) {
+	p, ids := sample(t)
+	crowd(t, p, 30)
+	var edits []string
+	m := editable(t, p, &edits)
+	run(m, "6")
+	m.selectInCurrent(ids["csv"])
+	run(m, "a")
+	run(m, "m")
+	m.View()
+	cursor, start := m.modal.cursor, m.modal.scroll
+	wheel(m, 60, 15, tea.MouseWheelDown)
+	m.View()
+	if m.modal.cursor != cursor || m.modal.scroll != start+wheelRows {
+		t.Fatalf("wheel over the picker: cursor %d → %d, first pick %d → %d", cursor, m.modal.cursor, start, m.modal.scroll)
+	}
+	// Clicking a pick scrolled into view selects it.
+	pick := m.modal.picks[m.modal.scroll+1]
+	clickText(t, m, m.tree.Issues[pick].Title, 0, 120)
+	if m.modal.picks[m.modal.cursor] != pick {
+		t.Fatalf("click after scrolling selected %s, want %s", m.modal.picks[m.modal.cursor], pick)
 	}
 }
 

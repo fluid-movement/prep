@@ -1,0 +1,4 @@
+- [x] The wheel over the issue list or the knowledge list scrolls the list by three rows per notch and leaves the selection unchanged, also when the selection scrolls out of view
+- [x] The wheel over an open move dialog scrolls its picks and leaves the selected pick unchanged
+- [x] Clicking a row of a scrolled list selects that row without the view jumping; a key that moves the selection brings it back into view
+- [x] Viewports (detail, knowledge entry, check and settings pages) still scroll their text with the wheel

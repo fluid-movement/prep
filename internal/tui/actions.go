@@ -61,6 +61,10 @@ type modal struct {
 	area    textarea.Model
 	err     string
 	marks   []entryMark // clickable entries of the last render
+	// scroll is the first pick shown; scrolled means the wheel set it, so
+	// it no longer follows the cursor until a key.
+	scroll   int
+	scrolled bool
 }
 
 // entryMark is a clickable entry in a dialog's body: its ID, the body line
@@ -815,6 +819,10 @@ func (m *Model) modalView(width, height int) string {
 		body = append(body, d.inputs[0].View(), "")
 		rows := max(3, height-10)
 		start := clamp(d.cursor-rows/2, 0, max(0, len(d.picks)-rows))
+		if d.scrolled {
+			start = clamp(d.scroll, 0, max(0, len(d.picks)-rows))
+		}
+		d.scroll = start
 		for k := start; k < len(d.picks) && k < start+rows; k++ {
 			id := d.picks[k]
 			sel := k == d.cursor

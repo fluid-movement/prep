@@ -236,13 +236,7 @@ func (m *Model) knowledgeList(paths []string, err error, w, h int) string {
 		body = ui.Empty(m.th, "No entries", "Agents write knowledge as they complete issues", inner, rows)
 	default:
 		c := m.know.cursor
-		off := clamp(m.know.offset, 0, max(0, len(paths)-rows))
-		if c < off {
-			off = c
-		}
-		if c >= off+rows {
-			off = c - rows + 1
-		}
+		off := listOffset(m.know.offset, c, len(paths), rows, !m.wheeled)
 		m.know.offset = off
 		var lines []string
 		for k := off; k < len(paths) && k < off+rows; k++ {
