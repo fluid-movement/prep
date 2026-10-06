@@ -15,6 +15,11 @@ type IssueStore interface {
 type KnowledgeStore interface {
 	// Load reads all entries; with drift it also computes code drift.
 	Load(drift bool) ([]*Entry, []Diagnostic, error)
+	// Render builds the entry a knowledge write would produce, without
+	// writing, so the domain can validate it.
+	Render(*KnowledgeEdit) (*Entry, error)
+	// Apply writes a rendered knowledge write and returns the paths touched.
+	Apply(*KnowledgeEdit) ([]string, error)
 }
 
 // Load builds a tree from both stores.

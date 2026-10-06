@@ -80,7 +80,11 @@ type Change struct {
 	Findings    *string        `json:"-"`
 	Decision    *Decision      `json:"-"`
 	Acceptance  []AcceptanceOp `json:"-"`
-	History     string         `json:"-"`
+	// Knowledge is a knowledge write; KnowledgeEntry is the entry the
+	// adapter rendered from it, used to validate before writing.
+	Knowledge      *KnowledgeEdit `json:"-"`
+	KnowledgeEntry *Entry         `json:"-"`
+	History        string         `json:"-"`
 }
 
 // IssueEdit is the new content of an issue's requirement record after
@@ -526,9 +530,15 @@ func (t *Tree) Apply(c *Change) *Tree {
 	if c.NewIssue != nil {
 		issues = append(issues, c.NewIssue)
 	}
-	entries := make([]*Entry, 0, len(t.Knowledge))
-	for _, e := range t.Knowledge {
+	entries := make([]*Entry, 0, len(t.Knowledge)+1)
+	for p, e := range t.Knowledge {
+		if c.KnowledgeEntry != nil && p == c.KnowledgeEntry.Path {
+			continue
+		}
 		entries = append(entries, e)
+	}
+	if c.KnowledgeEntry != nil {
+		entries = append(entries, c.KnowledgeEntry)
 	}
 	return NewTree(t.Project, issues, entries, nil)
 }

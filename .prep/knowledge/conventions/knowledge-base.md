@@ -16,4 +16,4 @@ Applies when creating or updating an entry in `.prep/knowledge`, typically in th
 - One concept per entry, small (lint warns above 8 KiB). Concept IDs are readable paths; entries are never renamed; links are bundle-relative like `/components/cli.md` and must resolve.
 - Current state only; history lives in the issue that changed it. Precedence when sources disagree: code over knowledge base over old issue decisions; fix the stale entry.
 - Bodies say when the entry applies, use precise references (paths, symbols, commands) and link related entries densely. Start from the [overview](/overview.md).
-- Update `confirmed_commit` whenever an entry is re-checked against its scoped code; `prep check` warns when scoped paths changed since.
+- Write entries with `prep knowledge new` and `prep knowledge update`, not by editing files. After re-checking an entry against its scoped code, run `prep knowledge confirm <entry>` (or `--drifted`) to set `confirmed_commit`; `prep check` warns when scoped paths changed since.

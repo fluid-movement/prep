@@ -88,3 +88,9 @@ func Commit(dir, message string, paths []string) error {
 	_, err := Run(dir, append([]string{"commit", "--quiet", "-m", message, "--only", "--"}, paths...)...)
 	return err
 }
+
+// Head returns the full hash of the current commit.
+func Head(dir string) (string, error) {
+	out, err := Run(dir, "rev-parse", "HEAD")
+	return strings.TrimSpace(out), err
+}

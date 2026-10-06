@@ -72,6 +72,7 @@ func init() {
 		{"dod", true, "dod <id>                   Definition of Done: --add item, --opt-out item --reason text, --remove item", recordCmd(domain.OpDoD)},
 		{"findings", true, "findings <id>              replace a research issue's findings: --body text | --body-file path|-", recordCmd(domain.OpFindings)},
 		{"log", true, "log <id> <text>            append a line to the work log", recordCmd(domain.OpLog)},
+		{"knowledge", true, "knowledge new|update|confirm  knowledge entries: new <entry> --type --title --description --body..., update <entry> [fields], confirm <entry>... | --drifted", cmdKnowledge},
 		{"define", true, "define <id>                write a requirement baseline (open questions must be empty)", opCmd(domain.OpDefine)},
 		{"ack", true, "ack <id>                   acknowledge a trivial requirement change: new baseline, enrichment stays valid", opCmd(domain.OpAck)},
 		{"ready", true, "ready <id> [--note]        sign off enrichment against the newest baseline", opCmd(domain.OpReady)},

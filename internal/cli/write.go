@@ -20,6 +20,7 @@ type writeResult struct {
 	ID    string       `json:"id,omitempty"`
 	State domain.State `json:"state,omitempty"`
 	Stale bool         `json:"stale,omitempty"`
+	Entry string       `json:"entry,omitempty"` // knowledge entry path
 	Files []string     `json:"files"`
 }
 
@@ -38,6 +39,8 @@ func (a *app) reportWrite(r writeResult) {
 		a.printf("%s %s: now %s\n", r.Op, r.ID, r.State)
 	case r.ID != "":
 		a.printf("%s %s\n", r.Op, r.ID)
+	case r.Entry != "":
+		a.printf("%s %s\n", r.Op, r.Entry)
 	default:
 		a.printf("%s: %d files\n", r.Op, len(r.Files))
 	}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -548,4 +549,90 @@ func TestRecordCommands(t *testing.T) {
 	// Resolved issues are refused.
 	h.ok("drop", r, "--reason", "not needed")
 	h.fails("G_STATE", "log", r, "late note", "--json")
+}
+
+func TestKnowledgeCommands(t *testing.T) {
+	h := newHarness(t)
+	git := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-c", "user.email=t@t", "-c", "user.name=t"}, args...)...)
+		cmd.Dir = h.dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	entry := func(p string) string {
+		b, err := os.ReadFile(filepath.Join(h.dir, ".prep", "knowledge", filepath.FromSlash(p)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+
+	h.fails("--title is required", "knowledge", "new", "components/export.md", "--type", "component", "--json")
+	h.fails("K003", "knowledge", "new", "components/export.md", "--type", "component", "--title", "Export", "--description", "Export: formats", "--body", "See [gone](/gone.md).", "--json")
+	h.fails("K002", "knowledge", "new", "components/export.md", "--type", "widget", "--title", "Export", "--description", "d", "--body", "b", "--json")
+	h.ok("knowledge", "new", "components/export.md", "--type", "component", "--title", "Export", "--description", "Export: formats and writers", "--scope", "internal/export/**", "--body", "See the [overview](/overview.md).", "--by", "claude-code/2.0")
+	got := entry("components/export.md")
+	for _, want := range []string{"type: component\ntitle: Export\ndescription: 'Export: formats and writers'\ngenerated:\n  by: claude-code/2.0\n  at: 2026-10-05T", "scope:\n  - internal/export/**\n---\n\nSee the [overview](/overview.md).\n"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("new entry lacks %q:\n%s", want, got)
+		}
+	}
+	h.fails("already exists", "knowledge", "new", "components/export.md", "--type", "component", "--title", "x", "--description", "x", "--body", "x", "--json")
+
+	// Update changes only what is given and keeps keys prep does not model.
+	p := filepath.Join(h.dir, ".prep", "knowledge", "components", "export.md")
+	if err := os.WriteFile(p, []byte(strings.Replace(got, "scope:", "sources:\n  - https://example.com\nscope:", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h.ok("knowledge", "update", "/components/export.md", "--status", "stable", "--body", "Rewritten.")
+	got = entry("components/export.md")
+	for _, want := range []string{"status: stable", "sources:\n  - https://example.com", "title: Export", "\n---\n\nRewritten.\n"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("updated entry lacks %q:\n%s", want, got)
+		}
+	}
+	h.fails("nothing to change", "knowledge", "update", "components/export.md", "--json")
+	h.fails("E_NOT_FOUND", "knowledge", "update", "components/missing.md", "--title", "x", "--json")
+	h.fails("not a valid entry path", "knowledge", "update", "../escape.md", "--title", "x", "--json")
+
+	// Confirm needs git and a scope; --drifted confirms what drifted.
+	h.fails("git repository", "knowledge", "confirm", "components/export.md", "--json")
+	git("init", "-q")
+	git("add", "-A")
+	git("commit", "-qm", "init")
+	h.fails("has no scope", "knowledge", "confirm", "overview.md", "--json")
+	h.ok("knowledge", "confirm", "components/export.md")
+	if !strings.Contains(entry("components/export.md"), "confirmed_commit: ") {
+		t.Fatal("confirm did not set confirmed_commit")
+	}
+	git("commit", "-qam", "confirm")
+	if err := os.MkdirAll(filepath.Join(h.dir, "internal", "export"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(h.dir, "internal", "export", "csv.go"), []byte("package export\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git("add", "-A")
+	git("commit", "-qm", "code")
+	if out := h.ok("check"); !strings.Contains(out, "K005") {
+		t.Fatalf("expected drift:\n%s", out)
+	}
+	var r struct {
+		Entries []string `json:"entries"`
+	}
+	h.jsonOf(&r, "knowledge", "confirm", "--drifted")
+	if len(r.Entries) != 1 || r.Entries[0] != "/components/export.md" {
+		t.Fatalf("confirm --drifted = %v", r.Entries)
+	}
+	if out := h.ok("check"); strings.Contains(out, "K005") {
+		t.Fatalf("drift not cleared:\n%s", out)
+	}
+
+	// Clearing the scope also drops confirmed_commit.
+	h.ok("knowledge", "update", "components/export.md", "--scope", "")
+	if got := entry("components/export.md"); strings.Contains(got, "scope:") || strings.Contains(got, "confirmed_commit") {
+		t.Fatalf("scope not cleared:\n%s", got)
+	}
 }

@@ -274,7 +274,7 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		ins := []string{
 			"Implement against the context and acceptance criteria. Log notable steps with prep log " + i.ID + " <text>.",
 			"Check criteria as they are met with prep criterion " + i.ID + " --check <n> (numbers as prep show lists them). Writes during implementation are reviewed as a batch at completion.",
-			"Documentation step: update or create knowledge entries in .prep/knowledge for what is now true, or decide there is no impact.",
+			"Documentation step: record what is now true with prep knowledge update <entry> (or prep knowledge new <entry> --type --title --description --body-file -), then prep knowledge confirm <entry> once an entry matches its scoped code; or decide there is no impact.",
 		}
 		var outs []Pointer
 		switch {
@@ -290,7 +290,7 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 			ins = append(ins, "Manual issues are completed by the user, usually in the TUI; with the CLI: prep complete "+i.ID+" --no-impact <reason> or --docs <entry>.")
 		}
 		ins = append(ins, "Stopping without finishing: prep release "+i.ID+" --reason <why>.")
-		outs = append(outs, Pointer{f("history.md"), "work log", "prep log " + i.ID + " <text>"}, Pointer{f("acceptance.md"), "checked criteria", "prep criterion " + i.ID + " --check <n>"}, Pointer{".prep/knowledge/", "knowledge entries changed by this issue", ""}, Pointer{f("resolution.md"), "written by prep complete", ""})
+		outs = append(outs, Pointer{f("history.md"), "work log", "prep log " + i.ID + " <text>"}, Pointer{f("acceptance.md"), "checked criteria", "prep criterion " + i.ID + " --check <n>"}, Pointer{".prep/knowledge/", "knowledge entries changed by this issue", "prep knowledge update <entry> --body-file -"}, Pointer{f("resolution.md"), "written by prep complete", ""})
 		return "implement", ins, outs
 	case StateDone, StateDropped:
 		return "resolved", []string{"The issue is resolved; its records are history. Create a new issue for further change."}, nil
