@@ -1,0 +1,5 @@
+- [ ] The repository is a Claude Code marketplace serving the prep plugin with the skill, the SessionStart hook and the status, next and guide commands; claude plugin validate passes
+- [ ] prep setup installs, updates and removes the plugin at user scope through the Claude Code harness implementation, pinned to the binary version
+- [ ] The hook is silent outside prep projects and without the binary, and prime warns when plugin and binary versions differ
+- [ ] just release sets the plugin version and tags; the release workflow refuses a mismatch
+- [ ] This repository uses the plugin instead of its project hook and commands and keeps the cloud skill copy; knowledge updated

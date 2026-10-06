@@ -1,0 +1,5 @@
+- [ ] prep setup offers every registered harness, preselects detected and configured ones, installs the selected and removes the deselected after confirmation, reading keys from the terminal
+- [ ] prep setup --harness, --remove and --refresh work without prompts and support --json
+- [ ] ~/.config/prep/config.yaml (XDG_CONFIG_HOME) records only the chosen harnesses
+- [ ] install.sh runs prep setup when a terminal is attached and prints the command otherwise; prep update runs the new binary's prep setup --refresh
+- [ ] Tests with a fake harness cover selection, removal, refresh and the config file; knowledge updated, including out of scope
