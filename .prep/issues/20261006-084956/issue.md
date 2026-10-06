@@ -1,6 +1,7 @@
 ---
 title: 'Harness integrations: prep setup and the Claude Code plugin'
 kind: code
+parent: 20261006-112434
 tags:
   - install
   - integration

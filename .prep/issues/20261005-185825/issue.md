@@ -1,6 +1,7 @@
 ---
 title: Cloud sessions without the prep binary
 kind: research
+parent: 20261006-112434
 tags:
   - adoption
 ---

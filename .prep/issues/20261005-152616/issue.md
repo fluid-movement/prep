@@ -1,8 +1,10 @@
 ---
 title: 'TUI: human client next to the harness'
 kind: code
+parent: 20261006-112434
 tags:
   - tui
+priority: high
 ---
 
 A terminal UI (Bubble Tea, Bubbles, Lip Gloss, Glamour) that runs next to the agent harness and updates live by watching .prep. It is the human client to the data: reading, editing and a subset of transitions. It uses the same query engine as the CLI so both agree on derived states.
