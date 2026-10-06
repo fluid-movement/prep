@@ -106,7 +106,8 @@ function fakePrep(on: On, project: Project = {}) {
       case 'show':
         return full ? ok(show(full)) : { ...ok({}), exitCode: 1, stdout: '', stderr: `no issue ${ref}` }
       case 'guide':
-        return ok(guide)
+        // A resolved issue: prep writes null for its empty lists.
+        return ok(full === PARENT ? { ...guide, step: 'resolved', transitions: null, knowledge: null } : guide)
       case 'list':
         return ok(list)
     }
@@ -252,6 +253,17 @@ describe('panel', () => {
     text = await drawn($)
     expect(text).toContain('Other work')
     expect(text).toContain('Which colors?')
+  })
+
+  test('draws a resolved issue, whose guide has no transitions', async ($, on) => {
+    fakePrep(on)
+    fakePanes(on)
+    on('tool.call', async () => ({ result: {} as never, text: 'ok' }))
+    await $.session.start(START)
+    await bash($, `prep guide ${PARENT}`)
+    const text = await drawn($)
+    expect(text).toContain('step resolved')
+    expect(text).not.toContain('could not be read')
   })
 
   test('draws status, next step, checklist, DoD, decisions and surroundings', async ($, on) => {

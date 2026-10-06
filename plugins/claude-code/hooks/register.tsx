@@ -35,7 +35,7 @@ async function load($: EngineInterface): Promise<PrepSnapshot> {
   let ref = pinned ?? followed
   let source: PrepSource = pinned ? 'pinned' : 'agent'
   if (ref === null) {
-    const prime = await prep<PrepPrime>($, ['prime'])
+    const prime = normalPrime(await prep<PrepPrime>($, ['prime']))
     if (prime.claims.length === 0) return { view: 'overview', prime }
     ref = prime.claims[0]!.id
     source = 'claimed'
@@ -45,7 +45,17 @@ async function load($: EngineInterface): Promise<PrepSnapshot> {
     prep<PrepGuide>($, ['guide', ref]),
     prep<{ issues: PrepSummary[] }>($, ['list']),
   ])
-  return { view: 'issue', source, show, guide, issues: list.issues }
+  // prep writes null for empty lists (a resolved issue has no transitions).
+  guide.transitions ??= []
+  guide.knowledge ??= []
+  show.blocks ??= []
+  show.children ??= []
+  show.definition_of_done ??= []
+  return { view: 'issue', source, show, guide, issues: list.issues ?? [] }
+}
+
+function normalPrime(p: PrepPrime): PrepPrime {
+  return { ...p, parents: p.parents ?? [], next: p.next ?? [], stale: p.stale ?? [], claims: p.claims ?? [] }
 }
 
 // Refreshes can overlap (a watch line and a tool call); only the newest writes.
@@ -182,6 +192,13 @@ export const register: Register = (on, options) => {
   }).catch(passOn)
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    return drawPanel($.ui.resolve(e), await read($, snapshot))
+    const kit = $.ui.resolve(e)
+    const snap = await read($, snapshot)
+    try {
+      return drawPanel(kit, snap)
+    } catch (err) {
+      // Never an empty pane: say what failed instead.
+      return drawPanel(kit, { view: 'error', message: err instanceof Error ? err.message : String(err) })
+    }
   })
 }
