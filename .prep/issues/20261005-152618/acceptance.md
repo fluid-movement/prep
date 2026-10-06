@@ -1,0 +1,8 @@
+- [ ] a opens an action menu for the selected issue; unavailable actions show the reason from the domain gates
+- [ ] n creates an issue (child of the focused parent when one is focused) and selects it; the title is editable inline
+- [ ] e and the menu edit the requirement and the context in $EDITOR; rejected text is kept and the error shown; unchanged text writes nothing
+- [ ] Reparent through a filterable picker, including top-level
+- [ ] Criteria can be checked and unchecked
+- [ ] define, ready, acknowledge, drop with a reason, and complete of manual, research and decision issues with a documentation decision; code issues are not completable from the TUI
+- [ ] All TUI writes go through the domain planning and CheckWrite with a human actor and are staged or committed like CLI writes
+- [ ] Modal and menu components are in the gallery; tests cover every action
