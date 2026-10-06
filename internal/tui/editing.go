@@ -162,6 +162,10 @@ func (m *Model) openEditMenu() tea.Cmd {
 	return nil
 }
 
+// linkKeys number the entries of link menus: digits, then letters that
+// do not move (j, k, h and l navigate every menu).
+const linkKeys = "123456789bcdfgmnprstuvwxyz"
+
 // openLinks lists the selected issue's links as a numbered menu, in the
 // order the detail shows them: o 3 goes to the third.
 func (m *Model) openLinks() tea.Cmd {
@@ -180,7 +184,7 @@ func (m *Model) openLinks() tea.Cmd {
 	}
 	sorted := append([]relation(nil), rels...)
 	slices.SortStableFunc(sorted, func(a, b relation) int { return order(a.label) - order(b.label) })
-	keys := "123456789bcdfghjklmnrstuvwxyz"
+	keys := linkKeys
 	d := &modal{kind: modalMenu, id: id, heading: "Go to"}
 	for n, r := range sorted {
 		if n >= len(keys) {

@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"time"
 
@@ -940,7 +941,7 @@ var (
 	screenBindings = []binding{
 		bind("Screens", "c", "check", false),
 		bind("Screens", "s", "settings", false),
-		bind("Screens", "b", "knowledge", false),
+		bind("Screens", "b", "knowledge", true),
 		bind("Screens", "r", "reload", false),
 		bind("Screens", "?", "all keys", true),
 		bind("Screens", "q", "quit", true),
@@ -953,10 +954,12 @@ var (
 	}, issueBindings, viewBindings, screenBindings)
 	detailBindings = concat([]binding{
 		bind("Move", "↑↓ pgup pgdn", "scroll", false),
-		bind("Move", "o", "go to a linked issue: its number in the menu", true),
+		bind("Move", "o", "links: go to one by its number", true),
 		bind("Move", "⌫", "back to the previous issue", false),
-		bind("Move", "esc ← h", "back to the list", true),
-	}, issueBindings, viewBindings, screenBindings)
+		bind("Move", "esc", "list (← h too)", true),
+	}, nonEssential(issueBindings, "n"), []binding{
+		bind("Views", "tab 1-9", "switch view", false),
+	}, screenBindings)
 	settingsBindings = []binding{
 		bind("Settings", "↑↓ j k 1-9", "select (n is view n)", false),
 		bind("Settings", "space", "toggle the commit mode", true),
@@ -978,6 +981,17 @@ var (
 	}
 	filterKeys = []ui.Key{{Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
 )
+
+// nonEssential copies bindings with the given keys left out of the footer.
+func nonEssential(bs []binding, keys ...string) []binding {
+	out := append([]binding(nil), bs...)
+	for k := range out {
+		if slices.Contains(keys, out[k].key.Keys) {
+			out[k].essential = false
+		}
+	}
+	return out
+}
 
 func concat(lists ...[]binding) []binding {
 	var out []binding

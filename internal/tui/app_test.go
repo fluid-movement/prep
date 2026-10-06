@@ -919,6 +919,31 @@ func TestRelationsByShape(t *testing.T) {
 	}
 }
 
+func TestMenusMoveWithJK(t *testing.T) {
+	p, ids := sample(t)
+	var edits []string
+	m := editable(t, p, &edits)
+	run(m, "6")
+	m.selectInCurrent(ids["export"])
+	run(m, "o") // Go to: the children
+	run(m, "j")
+	run(m, "j")
+	run(m, "k")
+	if m.modal == nil || m.modal.cursor != 1 {
+		t.Fatalf("j j k in a link menu: modal %+v", m.modal)
+	}
+	run(m, "enter")
+	if m.selected() != ids["json"] {
+		t.Fatalf("enter after j j k went to %s, want the second link", m.selected())
+	}
+	run(m, "esc")
+	run(m, "a")
+	run(m, "j")
+	if m.modal == nil || m.modal.cursor != 1 {
+		t.Fatal("j does not move in the action menu")
+	}
+}
+
 func TestCreateWizard(t *testing.T) {
 	p, _ := sample(t)
 	edits := []string{"Rows go to stdout.\n\nOne per line."}
@@ -1180,7 +1205,7 @@ func TestReparentAndCriteria(t *testing.T) {
 
 	m.selectInCurrent(ids["csv"])
 	run(m, "a")
-	run(m, "k")
+	run(m, "v")
 	run(m, "space")
 	run(m, "down")
 	run(m, "space")
@@ -1218,7 +1243,7 @@ func TestTransitionsFromTheTUI(t *testing.T) {
 	p.op(id, domain.OpClaim, domain.Input{})
 	m.Update(loadedMsg(func() loadedMsg { tr, err := p.load(); return loadedMsg{tr, err} }()))
 	run(m, "a")
-	run(m, "k")
+	run(m, "v")
 	run(m, "space")
 	run(m, "enter")
 	run(m, "a")

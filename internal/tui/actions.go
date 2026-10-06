@@ -168,7 +168,7 @@ func (m *Model) actions() []action {
 		action{key: "t", label: "Edit title", reason: edit, run: m.openRename},
 		action{key: "e", label: "Edit requirement", reason: edit, run: func() tea.Cmd { return m.openText(id, "requirement") }},
 		action{key: "c", label: "Edit context", reason: edit, run: func() tea.Cmd { return m.openText(id, "context") }},
-		action{key: "k", label: "Tick off criteria", reason: crit, run: m.openCriteria},
+		action{key: "v", label: "Tick off criteria (verify)", reason: crit, run: m.openCriteria},
 		action{key: "m", label: "Move to another parent", reason: edit, run: m.openReparent},
 		action{key: "i", label: "Set priority", run: m.openPriority},
 		action{key: "d", label: "Define", reason: m.gate(id, domain.OpDefine), run: m.transition(id, domain.OpDefine, "defined")},
@@ -368,11 +368,11 @@ func (m *Model) modalKey(k tea.KeyMsg) tea.Cmd {
 		m.modal = nil // any key closes it
 		return nil
 	case modalMenu:
-		// Letters run actions, so only arrows move.
+		// Letters run actions; arrows and j/k move (no menu uses j or k).
 		switch s {
-		case "up":
+		case "up", "k":
 			d.cursor = (d.cursor - 1 + len(d.items)) % len(d.items)
-		case "down":
+		case "down", "j":
 			d.cursor = (d.cursor + 1) % len(d.items)
 		case "enter":
 			return m.runAction(d.items[d.cursor])
@@ -388,9 +388,9 @@ func (m *Model) modalKey(k tea.KeyMsg) tea.Cmd {
 		return nil
 	case modalCriteria:
 		switch s {
-		case "up":
+		case "up", "k":
 			d.cursor = clamp(d.cursor-1, 0, len(d.checks)-1)
-		case "down":
+		case "down", "j":
 			d.cursor = clamp(d.cursor+1, 0, len(d.checks)-1)
 		case " ", "x":
 			if len(d.checks) > 0 {
@@ -612,10 +612,10 @@ func (m *Model) handleEdited(msg editedMsg) tea.Cmd {
 // --- rendering ---
 
 var (
-	menuKeys     = []ui.Key{{Keys: "↑↓", Desc: "move"}, {Keys: "enter or key", Desc: "run"}, {Keys: "esc", Desc: "close"}}
+	menuKeys     = []ui.Key{{Keys: "↑↓ j k", Desc: "move"}, {Keys: "enter or key", Desc: "run"}, {Keys: "esc", Desc: "close"}}
 	formKeys     = []ui.Key{{Keys: "enter", Desc: "save"}, {Keys: "tab", Desc: "next field"}, {Keys: "esc", Desc: "cancel"}}
 	pickKeys     = []ui.Key{{Keys: "type", Desc: "filter"}, {Keys: "↑↓", Desc: "move"}, {Keys: "enter", Desc: "move here"}, {Keys: "esc", Desc: "cancel"}}
-	criteriaKeys = []ui.Key{{Keys: "↑↓", Desc: "move"}, {Keys: "space", Desc: "toggle"}, {Keys: "enter", Desc: "save"}, {Keys: "esc", Desc: "cancel"}}
+	criteriaKeys = []ui.Key{{Keys: "↑↓ j k", Desc: "move"}, {Keys: "space", Desc: "toggle"}, {Keys: "enter", Desc: "save"}, {Keys: "esc", Desc: "cancel"}}
 	textKeys     = []ui.Key{{Keys: "ctrl+s", Desc: "save"}, {Keys: "ctrl+e", Desc: "$EDITOR"}, {Keys: "esc", Desc: "cancel"}}
 	createKeys   = []ui.Key{{Keys: "enter", Desc: "continue"}, {Keys: "esc", Desc: "back"}}
 	createLast   = []ui.Key{{Keys: "ctrl+s", Desc: "create"}, {Keys: "ctrl+e", Desc: "$EDITOR"}, {Keys: "esc", Desc: "back"}}

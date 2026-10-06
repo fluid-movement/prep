@@ -172,7 +172,7 @@ func (m *Model) openEntryLinks() tea.Cmd {
 	if len(issues) == 0 {
 		return m.flash("no issue has changed this entry yet")
 	}
-	keys := "123456789bcdfghjklmnrstuvwxyz"
+	keys := linkKeys
 	d := &modal{kind: modalMenu, heading: "Changed by"}
 	for n, id := range issues {
 		if n >= len(keys) {
