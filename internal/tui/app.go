@@ -679,7 +679,8 @@ func (m *Model) listKey(s string) tea.Cmd {
 }
 
 // filterKey handles keys while the filter bar is open: up and down move
-// through the candidates, tab inserts one, enter applies, esc clears.
+// through the candidates, tab or enter inserts one, enter without
+// candidates applies, esc clears.
 func (m *Model) filterKey(k tea.KeyPressMsg) tea.Cmd {
 	tb := m.current()
 	switch k.String() {
@@ -707,6 +708,10 @@ func (m *Model) filterKey(k tea.KeyPressMsg) tea.Cmd {
 		}
 		return nil
 	case "enter":
+		if len(m.comp.items) > 0 {
+			m.insertSuggestion(m.pick)
+			return nil
+		}
 		text := strings.TrimSpace(m.input.Value())
 		if m.screen == screenKnowledge {
 			m.knowledgeFilterKey(text)
@@ -734,7 +739,7 @@ func (m *Model) filterKey(k tea.KeyPressMsg) tea.Cmd {
 // refreshCompletion recomputes the candidates for the issue filter bar
 // after the input changed; the knowledge filter has none.
 func (m *Model) refreshCompletion() {
-	m.comp, m.pick = completion{}, 0
+	m.comp, m.pick, m.filterErr = completion{}, 0, ""
 	if m.screen != screenIssues {
 		return
 	}
@@ -1104,7 +1109,7 @@ var (
 		bind("Screens", "?", "all keys", true),
 		bind("Screens", "q", "quit", true),
 	}
-	filterKeys = []ui.Key{{Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "↑/↓ tab", Desc: "pick a value"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
+	filterKeys = []ui.Key{{Keys: "↑/↓", Desc: "choose"}, {Keys: "enter tab", Desc: "pick, or apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
 )
 
 // nonEssential copies bindings with the given keys left out of the footer.

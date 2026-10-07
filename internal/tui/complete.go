@@ -29,7 +29,8 @@ type completion struct {
 // query: flag names after "--", a list flag's values after the flag (the
 // part after the last comma, skipping values already listed; a leading
 // not- or ! stays, negating the value). Bare words search titles and get no
-// candidates.
+// candidates. A value typed in full has none; a flag typed in full still
+// offers itself, whose insert adds the space before its value.
 func complete(flags []domain.FlagInfo, text string, pos int) completion {
 	runes := []rune(text)
 	pos = min(max(pos, 0), len(runes))
@@ -85,6 +86,12 @@ func complete(flags []domain.FlagInfo, text string, pos int) completion {
 	for _, v := range flag.Values {
 		if !slices.Contains(listed, v.Value) {
 			values = append(values, v)
+		}
+	}
+	// A value typed in full is done: no candidates, so enter applies.
+	for _, v := range values {
+		if bang+v.Value == typed {
+			return completion{}
 		}
 	}
 	var items []suggestion

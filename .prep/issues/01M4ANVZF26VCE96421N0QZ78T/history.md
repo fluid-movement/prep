@@ -1,0 +1,1 @@
+- 2026-10-07T07:58:50Z claude-code/opus-5.5: Done: enter inserts the highlighted suggestion when any show, else applies; complete returns none for a value typed in full; refreshCompletion clears filterErr; key help 'enter tab pick, or apply'. Picker snapshots changed only in the footer.

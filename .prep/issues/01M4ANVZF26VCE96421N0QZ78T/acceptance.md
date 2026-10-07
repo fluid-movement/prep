@@ -1,0 +1,3 @@
+- [x] --sta then enter inserts --state; --state d, down, enter inserts done; a further enter applies --state done
+- [x] A word equal to a candidate shows no suggestions; typing clears the error line
+- [x] Tests cover enter with and without suggestions; README and knowledge updated

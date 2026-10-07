@@ -1,0 +1,1 @@
+`filterKey`, `refreshCompletion` and `filterKeys` in `internal/tui/app.go`; `complete` in `internal/tui/complete.go` drops candidates equal to the typed word. See [TUI filter bar](/components/tui-filter.md).

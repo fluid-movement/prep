@@ -1445,3 +1445,36 @@ func TestFilterBarSuggestsValues(t *testing.T) {
 		t.Fatalf("applied filter %+v, %v", f, err)
 	}
 }
+
+func TestFilterBarEnterPicksThenApplies(t *testing.T) {
+	p, _ := sample(t)
+	m := openModel(t, p, 120, 30)
+	keys(m, "6", "f")
+	typeText(m, "--sta")
+	keys(m, "enter")
+	if m.input.Value() != "--state " || !m.filtering || m.filterErr != "" {
+		t.Fatalf("enter on --sta: %q filtering %v err %q", m.input.Value(), m.filtering, m.filterErr)
+	}
+	typeText(m, "d")
+	keys(m, "down", "enter")
+	if m.input.Value() != "--state done" || len(m.comp.items) != 0 {
+		t.Fatalf("down enter: %q, suggestions %v", m.input.Value(), m.comp.items)
+	}
+	keys(m, "enter")
+	if m.filtering || m.filters[m.current().name] != "--state done" {
+		t.Fatalf("enter without suggestions did not apply: filtering %v, filter %q", m.filtering, m.filters[m.current().name])
+	}
+
+	// An error clears as soon as the input changes.
+	keys(m, "f")
+	m.input.SetValue("--nope x")
+	m.refreshCompletion()
+	keys(m, "enter")
+	if m.filterErr == "" {
+		t.Fatal("no error for --nope")
+	}
+	typeText(m, "y")
+	if m.filterErr != "" {
+		t.Fatalf("error kept after typing: %q", m.filterErr)
+	}
+}
