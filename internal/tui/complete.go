@@ -30,7 +30,9 @@ type completion struct {
 // part after the last comma, skipping values already listed; a leading
 // not- or ! stays, negating the value). Bare words search titles and get no
 // candidates. A value typed in full has none; a flag typed in full still
-// offers itself, whose insert adds the space before its value.
+// offers itself, whose insert adds the space before its value. After a
+// finished flag (its value, or a switch) and a space, the flags not used
+// yet are offered.
 func complete(flags []domain.FlagInfo, text string, pos int) completion {
 	runes := []rune(text)
 	pos = min(max(pos, 0), len(runes))
@@ -53,6 +55,11 @@ func complete(flags []domain.FlagInfo, text string, pos int) completion {
 	}
 
 	prev := strings.Fields(before[:start])
+	if word == "" {
+		if used, done := finished(flags, prev); done {
+			return completion{start: pos, end: pos, items: nextFlags(flags, used)}
+		}
+	}
 	if len(prev) == 0 || !strings.HasPrefix(prev[len(prev)-1], "--") {
 		return completion{}
 	}
@@ -120,4 +127,57 @@ func rank[T any](items []T, text func(T) string, typed string) []T {
 		}
 	}
 	return append(first, rest...)
+}
+
+// finished reads the tokens before the word being typed and reports the
+// flags used so far and whether the last token completes a flag: a list or
+// text flag's value, or a switch. A bare word or a flag still waiting for
+// its value does not.
+func finished(flags []domain.FlagInfo, tokens []string) (map[string]bool, bool) {
+	kinds := map[string]string{}
+	for _, f := range flags {
+		kinds[f.Name] = f.Kind
+	}
+	used := map[string]bool{}
+	done := false
+	for k := 0; k < len(tokens); k++ {
+		name, hasVal := strings.CutPrefix(tokens[k], "--")
+		if !hasVal {
+			done = false // a bare word searches titles
+			continue
+		}
+		name, _, inline := strings.Cut(name, "=")
+		used[name] = true
+		switch kinds[name] {
+		case domain.FlagList, domain.FlagText:
+			if inline {
+				done = true
+			} else if k+1 < len(tokens) {
+				k++
+				done = true
+			} else {
+				done = false // waiting for its value
+			}
+		default:
+			done = true
+		}
+	}
+	return used, done
+}
+
+// nextFlags lists the flags not used yet, in their order, then the ones
+// that can repeat (--under, --text) even when used.
+func nextFlags(flags []domain.FlagInfo, used map[string]bool) []suggestion {
+	repeatable := map[string]bool{"under": true, "text": true}
+	var first, last []suggestion
+	for _, f := range flags {
+		s := suggestion{insert: "--" + f.Name + " ", value: "--" + f.Name, count: -1}
+		switch {
+		case repeatable[f.Name]:
+			last = append(last, s)
+		case !used[f.Name]:
+			first = append(first, s)
+		}
+	}
+	return append(first, last...)
 }

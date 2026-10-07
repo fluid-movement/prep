@@ -1,0 +1,1 @@
+- 2026-10-07T08:01:43Z claude-code/opus-5.5: Done: finished() reads the tokens before the cursor, nextFlags() offers unused flags with --under/--text last. Picked values insert no space, so the picker reopens only when the user types one.

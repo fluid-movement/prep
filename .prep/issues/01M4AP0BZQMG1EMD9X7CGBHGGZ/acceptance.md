@@ -1,0 +1,3 @@
+- [x] After '--state done ' the picker lists the unused flags; --state is not among them; --under and --text come last
+- [x] After a bare word, after '--state ' (waiting for a value) and on empty input no flags are offered
+- [x] Tests in complete_test.go; knowledge and README updated
