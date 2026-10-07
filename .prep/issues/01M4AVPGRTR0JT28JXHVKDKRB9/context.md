@@ -1,0 +1,1 @@
+`Store.Load` in `internal/mdstore/store.go` reports config errors with the file name in the diagnostic; `loadConfigFile` prefixes its errors with the name for callers without a file column. See [Markdown store](/components/markdown-store.md).

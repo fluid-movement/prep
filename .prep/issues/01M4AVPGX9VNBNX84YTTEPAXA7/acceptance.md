@@ -1,0 +1,1 @@
+- [x] Fixed with a test, or removed with vet/staticcheck clean

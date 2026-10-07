@@ -94,12 +94,12 @@ func (a *app) bootstrap() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return a.applyAll(t, cs, "prep: bootstrap the knowledge base")
+	return a.applyAll(t, cs)
 }
 
 // applyAll writes planned changes one after the other through the write
 // pipeline.
-func (a *app) applyAll(t *domain.Tree, cs []*domain.Change, msg string) ([]string, error) {
+func (a *app) applyAll(t *domain.Tree, cs []*domain.Change) ([]string, error) {
 	var files []string
 	for _, c := range cs {
 		if err := t.CheckWrite(c); err != nil {
@@ -135,7 +135,7 @@ func cmdImport(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	files, err := a.applyAll(t, cs, "prep: import existing work")
+	files, err := a.applyAll(t, cs)
 	if err != nil {
 		return err
 	}

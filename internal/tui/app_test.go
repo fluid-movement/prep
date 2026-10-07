@@ -1557,6 +1557,16 @@ func TestLinkModeSelectsInPlace(t *testing.T) {
 		t.Fatalf("enter on the breadcrumb went to %s (link mode %v)", m.selected(), m.linkMode)
 	}
 	run(m, "backspace")
+	// A key without a link leaves link mode and acts as usual: s opens
+	// the settings.
+	run(m, "o")
+	run(m, "s")
+	if m.linkMode || m.screen != screenSettings {
+		t.Fatalf("s in link mode with two links: mode %v, screen %d", m.linkMode, m.screen)
+	}
+	run(m, "esc")
+	run(m, "6")
+	m.selectInCurrent(ids["csv"])
 	// esc leaves link mode and the detail looks as before.
 	run(m, "o")
 	run(m, "esc")

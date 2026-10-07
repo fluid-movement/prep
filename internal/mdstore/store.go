@@ -115,7 +115,8 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 	// when this user's own config replaces it.
 	for _, name := range []string{ConfigDist, ConfigOwn} {
 		if _, ok, err := s.loadConfigFile(name); ok && err != nil {
-			diag(domain.CodeConfigInvalid, domain.SevError, domain.ClassManual, "", name, "fix "+name, "%v", err)
+			// The diagnostic names the file; the message need not repeat it.
+			diag(domain.CodeConfigInvalid, domain.SevError, domain.ClassManual, "", name, "fix "+name, "%s", strings.TrimPrefix(err.Error(), name+": "))
 		}
 	}
 	project.Config, _ = s.LoadConfig()

@@ -572,39 +572,6 @@ func (m *Model) saveCriteria() tea.Cmd {
 
 // --- editor ---
 
-// editText opens the requirement or the context in the user's editor. Text
-// a rejected write left behind is offered again instead of the stored one.
-func (m *Model) editText(id, field string) tea.Cmd {
-	if id == "" || m.tree.Issues[id] == nil {
-		return nil
-	}
-	if m.tree.State(id).Terminal() {
-		return m.flashErr(fmt.Errorf("resolved issues are history"))
-	}
-	i := m.tree.Issues[id]
-	before := i.Body
-	if field == "context" {
-		before = i.Context
-	}
-	text := before
-	if p, ok := m.pending[id+"|"+field]; ok {
-		text = p
-	}
-	f, err := os.CreateTemp("", "prep-"+shortID(id)+"-"+field+"-*.md")
-	if err != nil {
-		return m.flashErr(err)
-	}
-	_, err = f.WriteString(text + "\n")
-	if cerr := f.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil {
-		return m.flashErr(err)
-	}
-	path := f.Name()
-	return m.runEditor(path, func(err error) tea.Msg { return editedMsg{id: id, field: field, path: path, before: before, err: err} })
-}
-
 // execEditor suspends the TUI and runs $VISUAL, $EDITOR or vi on path.
 func execEditor(path string, done func(error) tea.Msg) tea.Cmd {
 	ed := os.Getenv("VISUAL")

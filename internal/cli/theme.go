@@ -105,7 +105,7 @@ func themeNew(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	files, err := a.applyAll(t, []*domain.Change{c}, "")
+	files, err := a.applyAll(t, []*domain.Change{c})
 	if err != nil {
 		return err
 	}

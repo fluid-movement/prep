@@ -195,11 +195,8 @@ func (m *Model) linkKey(s string) (tea.Cmd, bool) {
 	case "enter":
 		return m.followLink(id, rels, targets, m.linkSel), true
 	}
-	if n := strings.Index(linkKeys, s); len(s) == 1 && n >= 0 {
-		if n < len(targets) {
-			return m.followLink(id, rels, targets, n), true
-		}
-		return nil, true
+	if n := strings.Index(linkKeys, s); len(s) == 1 && n >= 0 && n < len(targets) {
+		return m.followLink(id, rels, targets, n), true
 	}
 	m.linkMode = false
 	return nil, false

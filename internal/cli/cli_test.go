@@ -261,8 +261,7 @@ func TestParentCompletesWhenChildrenResolved(t *testing.T) {
 	h.ok("complete", p, "--no-impact", "n/a")
 	h.expectState(p, "done", false)
 
-	var ids []string
-	ids = listIDs(h, "list", "--under", p)
+	ids := listIDs(h, "list", "--under", p)
 	if len(ids) != 1 || ids[0] != c {
 		t.Fatalf("list --under = %v", ids)
 	}
