@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
@@ -26,6 +27,7 @@ const (
 	modalMenu modalKind = iota + 1
 	modalCreate
 	modalRename
+	modalTags
 	modalReparent
 	modalCriteria
 	modalDrop
@@ -187,6 +189,7 @@ func (m *Model) actions() []action {
 		action{key: "v", label: "Tick off criteria (verify)", reason: crit, run: m.openCriteria},
 		action{key: "m", label: "Move to another parent", reason: edit, run: m.openReparent},
 		action{key: "i", label: "Set priority", run: m.openPriority},
+		action{key: "g", label: "Edit tags", run: m.openTags},
 		action{key: "d", label: "Define", reason: m.gate(id, domain.OpDefine), run: m.transition(id, domain.OpDefine, "defined")},
 		action{key: "r", label: "Mark ready", reason: m.gate(id, domain.OpReady), run: m.transition(id, domain.OpReady, "marked ready")},
 		action{key: "a", label: "Acknowledge change", reason: m.gate(id, domain.OpAck), run: m.transition(id, domain.OpAck, "acknowledged")},
@@ -312,6 +315,69 @@ func (m *Model) openRename() tea.Cmd {
 	id := m.selected()
 	m.modal = &modal{kind: modalRename, id: id, inputs: []textinput.Model{m.newInput("title", m.tree.Issues[id].Title)}}
 	return m.modal.inputs[0].Focus()
+}
+
+// openTags edits the selected issue's tags. Tags are metadata, so they
+// change on resolved issues too.
+func (m *Model) openTags() tea.Cmd {
+	id := m.selected()
+	if id == "" || m.tree == nil {
+		return nil
+	}
+	m.modal = &modal{kind: modalTags, id: id, inputs: []textinput.Model{m.newInput("tags, space separated", strings.Join(m.tree.Issues[id].Tags, " "))}}
+	m.modal.inputs[0].CursorEnd()
+	m.tagSuggestions()
+	return m.modal.inputs[0].Focus()
+}
+
+// tagSuggestions offers the tags in use for the word being typed in the
+// tags dialog, as the filter bar does for values: prefix matches first,
+// none for an empty word, a tag typed in full or tags already listed.
+func (m *Model) tagSuggestions() {
+	d := m.modal
+	d.picks, d.cursor = nil, 0
+	before := []rune(d.inputs[0].Value())
+	word := string(before[:min(d.inputs[0].Position(), len(before))])
+	word = word[strings.LastIndexAny(word, " ,")+1:]
+	if word == "" {
+		return
+	}
+	listed := strings.FieldsFunc(d.inputs[0].Value(), func(r rune) bool { return r == ' ' || r == ',' })
+	var tags []string
+	for _, f := range m.tree.QueryFlags() {
+		if f.Name != "tag" {
+			continue
+		}
+		for _, v := range f.Values {
+			if v.Value == word {
+				return
+			}
+			if !slices.Contains(listed, v.Value) {
+				tags = append(tags, v.Value)
+			}
+		}
+	}
+	d.picks = rank(tags, func(s string) string { return s }, word)
+	if len(d.picks) > maxSuggestions {
+		d.picks = d.picks[:maxSuggestions]
+	}
+}
+
+// insertTag replaces the word being typed with the highlighted tag.
+func (m *Model) insertTag() {
+	d := m.modal
+	if d.cursor >= len(d.picks) {
+		return
+	}
+	runes := []rune(d.inputs[0].Value())
+	pos := min(d.inputs[0].Position(), len(runes))
+	start := strings.LastIndexAny(string(runes[:pos]), " ,") + 1
+	start = len([]rune(string(runes[:pos])[:start]))
+	tag := []rune(d.picks[d.cursor] + " ")
+	out := append(append(append([]rune{}, runes[:start]...), tag...), runes[pos:]...)
+	d.inputs[0].SetValue(string(out))
+	d.inputs[0].SetCursor(start + len(tag))
+	m.tagSuggestions()
 }
 
 func (m *Model) openDrop() tea.Cmd {
@@ -443,6 +509,29 @@ func (m *Model) modalKey(k tea.KeyPressMsg) tea.Cmd {
 		d.picks = m.parentCandidates(d.id, d.inputs[0].Value())
 		d.cursor = clamp(d.cursor, 0, len(d.picks)-1)
 		return cmd
+	case modalTags:
+		switch s {
+		case "up":
+			d.cursor = clamp(d.cursor-1, 0, max(0, len(d.picks)-1))
+			return nil
+		case "down":
+			d.cursor = clamp(d.cursor+1, 0, max(0, len(d.picks)-1))
+			return nil
+		case "tab":
+			m.insertTag()
+			return nil
+		case "enter":
+			if len(d.picks) > 0 {
+				m.insertTag()
+				return nil
+			}
+			return m.submit()
+		}
+		var cmd tea.Cmd
+		d.inputs[0], cmd = d.inputs[0].Update(k)
+		d.err = ""
+		m.tagSuggestions()
+		return cmd
 	case modalCreate:
 		return m.createKey(s, k)
 	case modalText:
@@ -502,6 +591,9 @@ func (m *Model) paste(p tea.PasteMsg) tea.Cmd {
 		d.inputs[0], cmd = d.inputs[0].Update(p)
 		d.picks = m.parentCandidates(d.id, d.inputs[0].Value())
 		d.cursor = clamp(d.cursor, 0, len(d.picks)-1)
+	case d.kind == modalTags:
+		d.inputs[0], cmd = d.inputs[0].Update(p)
+		m.tagSuggestions()
 	case d.kind == modalRename || d.kind == modalDrop || d.kind == modalComplete || d.kind == modalViewEdit:
 		d.inputs[d.focus], cmd = d.inputs[d.focus].Update(p)
 	}
@@ -527,6 +619,12 @@ func (m *Model) submit() tea.Cmd {
 		}, true)
 	case modalViewEdit:
 		return m.saveViewEdit()
+	case modalTags:
+		id := d.id
+		tags := strings.FieldsFunc(d.inputs[0].Value(), func(r rune) bool { return r == ' ' || r == ',' })
+		return m.write("tags of "+shortID(id), func(t *domain.Tree) (*domain.Change, error) {
+			return t.PlanEdit(id, domain.EditInput{Actor: actor, Now: now, Tags: &tags})
+		}, true)
 	case modalRename:
 		id, title := d.id, d.inputs[0].Value()
 		return m.write("renamed "+shortID(id), func(t *domain.Tree) (*domain.Change, error) {
@@ -647,6 +745,8 @@ func (m *Model) modalKeys() []ui.Key {
 		return createKeys
 	case modalHelp:
 		return []ui.Key{{Keys: "any key", Desc: "close"}}
+	case modalTags:
+		return []ui.Key{{Keys: "↑/↓", Desc: "choose"}, {Keys: "enter tab", Desc: "pick, or save"}, {Keys: "esc", Desc: "cancel"}}
 	}
 	return formKeys
 }
@@ -751,6 +851,20 @@ func (m *Model) modalView(width, height int) string {
 		mark("field:1", next(), 0, inner, 2)
 		body = append(body, ui.Field(m.th, "Query", d.inputs[1].View(), d.focus == 1), "",
 			m.th.S.Subtle.Render("prep list flags; empty lists all issues."))
+	case modalTags:
+		title = "Tags · " + title
+		mark("field:0", next(), 0, inner, 2)
+		body = append(body, ui.Field(m.th, "Tags", d.inputs[0].View(), true))
+		for k, t := range d.picks {
+			n := 0
+			for _, id := range m.tree.IDs() {
+				if slices.Contains(m.tree.Issues[id].Tags, t) {
+					n++
+				}
+			}
+			body = append(body, ui.Suggestion(m.th, t, n, "", k == d.cursor, inner))
+		}
+		body = append(body, "", m.th.S.Subtle.Render("Saving replaces the tags; empty removes them all."))
 	case modalRename:
 		title = "Rename · " + title
 		mark("field:0", next(), 0, inner, 2)

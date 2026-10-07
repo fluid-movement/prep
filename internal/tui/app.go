@@ -1094,7 +1094,7 @@ func bind(group, keys, desc string, essential bool) binding {
 var (
 	issueBindings = []binding{
 		bind("Issue", "a", "actions (letters run them)", true),
-		bind("Issue", "e", "edit: r requirement · c context · t title", true),
+		bind("Issue", "e", "edit: r requirement · c context · t title · g tags", true),
 		bind("Issue", "i", "priority: c critical · h high · m medium · l low", true),
 		bind("Issue", "n", "new issue (under the focused parent)", true),
 		bind("Issue", "y", "copy the ID", false),

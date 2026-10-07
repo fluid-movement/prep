@@ -1631,3 +1631,56 @@ func TestThemePreviewOnTheIssueScreen(t *testing.T) {
 		t.Fatalf("esc: %s on screen %d", m.th.Palette.Name, m.screen)
 	}
 }
+
+func TestEditTags(t *testing.T) {
+	p, ids := sample(t)
+	var edits []string
+	m := editable(t, p, &edits)
+	run(m, "6")
+	// A resolved issue may change its tags.
+	m.selectInCurrent(ids["format"])
+	run(m, "a")
+	run(m, "g")
+	if m.modal == nil || m.modal.kind != modalTags {
+		t.Fatal("a g did not open the tags dialog")
+	}
+	typeIn(m, "export cli")
+	run(m, "enter")
+	if got := issue(t, p, ids["format"]).Tags; strings.Join(got, " ") != "export cli" {
+		t.Fatalf("saved tags %v", got)
+	}
+
+	// Another issue: typing suggests tags in use; tab inserts, enter saves.
+	m.selectInCurrent(ids["csv"])
+	run(m, "e")
+	run(m, "g")
+	typeIn(m, "ex")
+	if len(m.modal.picks) != 1 || m.modal.picks[0] != "export" {
+		t.Fatalf("suggestions for ex: %v", m.modal.picks)
+	}
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Tags · ") || !strings.Contains(v, "export") {
+		t.Fatalf("tags dialog:\n%s", v)
+	}
+	run(m, "enter") // picks export
+	if m.modal == nil || m.modal.inputs[0].Value() != "export " {
+		t.Fatalf("enter with a suggestion: %q", m.modal.inputs[0].Value())
+	}
+	run(m, "enter") // nothing left to pick: saves
+	if got := issue(t, p, ids["csv"]).Tags; strings.Join(got, " ") != "export" {
+		t.Fatalf("csv tags %v", got)
+	}
+
+	// Invalid tags keep the dialog with the error; empty removes all.
+	run(m, "a")
+	run(m, "g")
+	m.modal.inputs[0].SetValue("not-ready")
+	run(m, "enter")
+	if m.modal == nil || m.modal.err == "" {
+		t.Fatal("not-ready accepted")
+	}
+	m.modal.inputs[0].SetValue("")
+	run(m, "enter")
+	if got := issue(t, p, ids["csv"]).Tags; len(got) != 0 {
+		t.Fatalf("empty field kept tags %v", got)
+	}
+}

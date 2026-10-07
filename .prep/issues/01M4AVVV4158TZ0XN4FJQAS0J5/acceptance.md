@@ -1,0 +1,3 @@
+- [x] a g (and e g on unresolved issues) opens a Tags dialog with the issue's tags; suggestions for the word being typed; up/down, tab or enter insert; enter with nothing to pick saves
+- [x] Saving replaces the tags (empty removes all); invalid tags show the error and keep the dialog
+- [x] Tests cover the dialog and saving on a resolved issue

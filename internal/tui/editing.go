@@ -140,7 +140,7 @@ func (m *Model) handleAreaEdited(msg areaEditedMsg) tea.Cmd {
 }
 
 // openEditMenu offers what can be edited on the selected issue: e r
-// requirement, e c context, e t title.
+// requirement, e c context, e t title, e g tags.
 func (m *Model) openEditMenu() tea.Cmd {
 	id := m.selected()
 	if id == "" || m.tree == nil {
@@ -153,6 +153,7 @@ func (m *Model) openEditMenu() tea.Cmd {
 		{key: "r", label: "Requirement", run: func() tea.Cmd { return m.openText(id, "requirement") }},
 		{key: "c", label: "Context", run: func() tea.Cmd { return m.openText(id, "context") }},
 		{key: "t", label: "Title", run: m.openRename},
+		{key: "g", label: "Tags", run: m.openTags},
 	}}
 	return nil
 }
