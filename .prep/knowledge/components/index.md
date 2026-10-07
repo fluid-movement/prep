@@ -14,5 +14,6 @@
 * [TUI design system](/components/tui-design-system.md) - internal/tui/theme tokens and text styles, internal/tui/ui components, layout helpers, the gallery and golden snapshots; how to change looks or add a component.
 * [TUI editing and keys](/components/tui-editing.md) - How the TUI writes and which keys do what: the write pipeline, action and edit menus, letter melodies, the keymap and ?, dialogs over the screen, inline text editing with $EDITOR hand-off, the create wizard and the editable settings.
 * [TUI filter bar](/components/tui-filter.md) - internal/tui filter bar: query flags and words per tab, and the picker that suggests flags and their values while typing.
+* [TUI knowledge screen](/components/tui-knowledge.md) - internal/tui knowledge screen: entries with attention marks, the entry view, filters and links between issues and entries.
 * [TUI mouse](/components/tui-mouse.md) - How the TUI takes clicks and the wheel: elements marked as Lip Gloss layers while rendering, hit-testing, click semantics, and the per-user mouse capture setting.
 * [TUI](/components/tui.md) - prep tui screens in internal/tui — the issue views (tabs, list, detail and its links), loader injection, live reload with fsnotify, navigation keys, and how screens are tested; editing is in TUI editing and keys.

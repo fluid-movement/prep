@@ -151,6 +151,8 @@ type Model struct {
 	moving        bool              // settings: the selected view moves with j/k
 	setIdx        int               // selected settings row: the theme, the views, then the mouse
 	termLight     bool              // the terminal reported a light background
+	linkMode      bool              // o: the detail's links are selectable in place
+	linkSel       int               // the selected link target in link mode
 	pending       map[string]string // issue|field: edited text a rejected write left
 	pendingSelect string            // issue to select after the next load
 	noticeTone    ui.Tone
@@ -506,6 +508,11 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	s := k.String()
 	if s == "?" {
 		return m.openHelp()
+	}
+	if m.linkMode {
+		if cmd, done := m.linkKey(s); done {
+			return cmd
+		}
 	}
 	// A second press confirms; any other key cancels the question.
 	if m.confirm != "" && !(m.screen == screenSettings && s == "d") {
@@ -1085,7 +1092,7 @@ var (
 		bind("Issue", "n", "new issue (under the focused parent)", true),
 		bind("Issue", "y", "copy the ID", false),
 		bind("Issue", "p", "go to the parent", false),
-		bind("Issue", "o", "go to a linked issue (numbered menu)", false),
+		bind("Issue", "o", "select or follow a link", false),
 	}
 	viewBindings = []binding{
 		bind("Views", "f", "filter (prep list flags; words match titles)", true),
@@ -1108,7 +1115,7 @@ var (
 	}, issueBindings, viewBindings, screenBindings)
 	detailBindings = concat([]binding{
 		bind("Move", "↑↓ pgup pgdn", "scroll", false),
-		bind("Move", "o", "links: go to one by its number", true),
+		bind("Move", "o", "links: j/k select, enter or a link's key goes", true),
 		bind("Move", "⌫", "back to the previous issue", false),
 		bind("Move", "esc", "list (← h too)", true),
 	}, nonEssential(issueBindings, "n"), []binding{
@@ -1133,7 +1140,8 @@ var (
 		bind("Screens", "?", "all keys", true),
 		bind("Screens", "q", "quit", true),
 	}
-	filterKeys = []ui.Key{{Keys: "↑/↓", Desc: "choose"}, {Keys: "enter tab", Desc: "pick, or apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
+	linkModeKeys = []ui.Key{{Keys: "↑/↓ j k", Desc: "select"}, {Keys: "enter", Desc: "go"}, {Keys: "1-9 b c …", Desc: "go to that link"}, {Keys: "esc o", Desc: "leave"}}
+	filterKeys   = []ui.Key{{Keys: "↑/↓", Desc: "choose"}, {Keys: "enter tab", Desc: "pick, or apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
 )
 
 // nonEssential copies bindings with the given keys left out of the footer.
@@ -1207,6 +1215,8 @@ func (m *Model) footer() string {
 		return ui.Fit(ui.Error(m.th, m.err.Error()), m.w)
 	case m.filtering:
 		return ui.KeyHelp(m.th, filterKeys, m.w)
+	case m.linkMode:
+		return ui.KeyHelp(m.th, linkModeKeys, m.w)
 	}
 	return ui.KeyHelp(m.th, essentials(m.bindings()), m.w)
 }
@@ -1325,7 +1335,31 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) (out []stri
 		return nil, nil
 	}
 	sub := m.th.S.Subtle
+	// In link mode every link shows the key that follows it, and the
+	// selected one sits on the selection background.
+	keyOf, selected := map[int]string{}, -1
+	if m.linkMode {
+		targets := linkTargets(rels)
+		for n, k := range targets {
+			if n < len(linkKeys) {
+				keyOf[k] = linkKeys[n : n+1]
+			}
+		}
+		if m.linkSel < len(targets) {
+			selected = targets[m.linkSel]
+		}
+	}
+	mark := func(k int, line string) string {
+		if key, ok := keyOf[k]; ok {
+			line = ui.LinkKey(m.th, key) + strings.TrimPrefix(line, "  ")
+		}
+		if k == selected {
+			return ui.Selected(m.th, line, inner)
+		}
+		return ui.Fit(line, inner)
+	}
 	var path []string
+	parent := -1
 	type line struct {
 		text string
 		rel  int // index into rels, -1 for a heading
@@ -1334,7 +1368,8 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) (out []stri
 	link := func(k int, lead string) line {
 		rid := rels[k].id
 		r := m.issueRow(rid)
-		return line{ui.LinkLine(m.th, ui.Link{Lead: lead, State: m.tree.State(rid), ID: shortID(rid), Priority: m.tree.Issues[rid].Priority, Note: r.Note, Title: m.tree.Issues[rid].Title}, false, inner), k}
+		l := ui.Link{Lead: lead, State: m.tree.State(rid), ID: shortID(rid), Priority: m.tree.Issues[rid].Priority, Note: r.Note, Title: m.tree.Issues[rid].Title, Key: keyOf[k]}
+		return line{ui.LinkLine(m.th, l, k == selected, inner), k}
 	}
 	var children []int
 	for k, r := range rels {
@@ -1343,13 +1378,16 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) (out []stri
 			title := ui.Fit(m.tree.Issues[r.id].Title, 32)
 			title = m.th.S.Muted.Render(title)
 			path = append(path, title)
+			parent = k
 		case "child":
 			children = append(children, k)
 		}
 	}
 	if len(path) > 0 {
-		out = append(out, ui.Fit(sub.Render("↑ ")+strings.Join(path, sub.Render(" › ")), inner))
-		links = append(links, -1)
+		// The breadcrumb stands for the parent: clicking it or picking it
+		// in link mode goes there.
+		out = append(out, mark(parent, sub.Render("↑ ")+strings.Join(path, sub.Render(" › "))))
+		links = append(links, parent)
 	}
 	if len(children) > 0 {
 		p := m.tree.ChildProgress(id)
@@ -1374,15 +1412,26 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) (out []stri
 			lines = append(lines, link(k, sub.Render("→ unblocks ")))
 		case "knowledge":
 			e := m.tree.Knowledge[r.id]
-			lines = append(lines, line{ui.Fit("  "+sub.Render("≡ knows ")+m.th.S.Muted.Render(fmt.Sprintf("%-10s", e.Type))+m.th.S.Body.Render(e.Title), inner), k})
+			lines = append(lines, line{mark(k, "  "+sub.Render("≡ knows ")+m.th.S.Muted.Render(fmt.Sprintf("%-10s", e.Type))+m.th.S.Body.Render(e.Title)), k})
 		}
 	}
-	for n := 0; n < len(lines) && n < maxRelations; n++ {
+	// Up to maxRelations lines; link mode scrolls them to the selection.
+	off := 0
+	for n, l := range lines {
+		if l.rel == selected && selected >= 0 && n >= maxRelations {
+			off = n - maxRelations + 1
+		}
+	}
+	if off > 0 {
+		out = append(out, sub.Render(fmt.Sprintf("  … %d above", off)))
+		links = append(links, -1)
+	}
+	for n := off; n < len(lines) && n < off+maxRelations; n++ {
 		out = append(out, lines[n].text)
 		links = append(links, lines[n].rel)
 	}
-	if hidden := len(lines) - maxRelations; hidden > 0 {
-		out = append(out, sub.Render(fmt.Sprintf("  … %d more · o lists all", hidden)))
+	if hidden := len(lines) - off - maxRelations; hidden > 0 {
+		out = append(out, sub.Render(fmt.Sprintf("  … %d more · o selects", hidden)))
 		links = append(links, -1)
 	}
 	return append(out, ""), append(links, -1)

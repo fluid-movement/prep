@@ -239,10 +239,14 @@ func TestKnowledgeFromAnIssue(t *testing.T) {
 	}
 	run(m, "o")
 	var key string
-	for _, it := range m.modal.items {
-		if strings.Contains(it.label, "/components/cli.md") {
-			key = it.key
+	rels := m.relations(m.selected())
+	for n, k := range linkTargets(rels) {
+		if rels[k].id == "/components/cli.md" {
+			key = linkKeys[n : n+1]
 		}
+	}
+	if v := ansi.Strip(m.View().Content); !m.linkMode || !strings.Contains(v, key+" ≡ knows component CLI") {
+		t.Fatalf("link mode does not show key %q on the knowledge link:\n%s", key, v)
 	}
 	run(m, key)
 	if m.screen != screenKnowledge || m.know.path != "/components/cli.md" {
@@ -956,12 +960,12 @@ func TestMenusMoveWithJK(t *testing.T) {
 	m := editable(t, p, &edits)
 	run(m, "6")
 	m.selectInCurrent(ids["export"])
-	run(m, "o") // Go to: the children
+	run(m, "o") // link mode over the children
 	run(m, "j")
 	run(m, "j")
 	run(m, "k")
-	if m.modal == nil || m.modal.cursor != 1 {
-		t.Fatalf("j j k in a link menu: modal %+v", m.modal)
+	if !m.linkMode || m.linkSel != 1 {
+		t.Fatalf("j j k in link mode: mode %v selection %d, targets %v", m.linkMode, m.linkSel, m.relations(m.selected()))
 	}
 	run(m, "enter")
 	if m.selected() != ids["json"] {
@@ -1516,5 +1520,60 @@ func TestFilterBarFiltersLive(t *testing.T) {
 	keys(m, "enter")
 	if m.filtering || m.filters[m.current().name] != "--kind decision" {
 		t.Fatalf("enter: filtering %v, filter %q", m.filtering, m.filters[m.current().name])
+	}
+}
+
+func TestLinkModeSelectsInPlace(t *testing.T) {
+	p, ids := sample(t)
+	m := openModel(t, p, 110, 28)
+	run(m, "6")
+	m.selectInCurrent(ids["csv"])
+	run(m, "o")
+	v := ansi.Strip(m.View().Content)
+	if !m.linkMode || m.focus != focusDetail || !strings.Contains(v, "1 ↑ Export") || !strings.Contains(v, "2 → unblocks") {
+		t.Fatalf("link mode does not show keys in place:\n%s", v)
+	}
+	golden(t, "links-110x28", m.View().Content)
+	if f := ansi.Strip(m.footer()); !strings.Contains(f, "enter go") {
+		t.Fatalf("footer in link mode: %q", f)
+	}
+	// The breadcrumb is the parent: the first link, enter goes there.
+	run(m, "enter")
+	if m.selected() != ids["export"] || m.linkMode {
+		t.Fatalf("enter on the breadcrumb went to %s (link mode %v)", m.selected(), m.linkMode)
+	}
+	run(m, "backspace")
+	// esc leaves link mode and the detail looks as before.
+	run(m, "o")
+	run(m, "esc")
+	if m.linkMode || strings.Contains(ansi.Strip(m.View().Content), "1 ↑ Export") {
+		t.Fatal("esc did not leave link mode")
+	}
+	// A click on the breadcrumb goes to the parent too.
+	clickText(t, m, "↑ Export", 0, 110)
+	if m.selected() != ids["export"] {
+		t.Fatalf("click on the breadcrumb went to %s", m.selected())
+	}
+}
+
+func TestLinkModeScrollsToTheSelection(t *testing.T) {
+	p, ids := sample(t)
+	for n := range 9 {
+		p.issue(fmt.Sprintf("Part %d", n+1), domain.KindCode, "", ids["export"])
+	}
+	m := openModel(t, p, 110, 40)
+	run(m, "6")
+	m.selectInCurrent(ids["export"])
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "more · o selects") {
+		t.Fatalf("no overflow line:\n%s", v)
+	}
+	run(m, "o")
+	for range 10 {
+		run(m, "j")
+	}
+	v := ansi.Strip(m.View().Content)
+	sel := m.relations(ids["export"])[linkTargets(m.relations(ids["export"]))[m.linkSel]].id
+	if !strings.Contains(v, m.tree.Issues[sel].Title) || !strings.Contains(v, "above") {
+		t.Fatalf("selection %s not scrolled into view:\n%s", m.tree.Issues[sel].Title, v)
 	}
 }

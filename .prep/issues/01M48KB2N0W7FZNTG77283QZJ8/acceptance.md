@@ -1,0 +1,5 @@
+- [x] o shows keys on the link lines and highlights the first; j/k and arrows move; enter follows; esc and o leave
+- [x] A link's key follows it directly (o 3); the breadcrumb is the parent link and is clickable
+- [x] With more links than fit, link mode scrolls the block to the selection
+- [x] Outside link mode the detail renders as before (snapshots unchanged); a link-mode snapshot exists
+- [x] The Go to menu is gone; key help and knowledge updated

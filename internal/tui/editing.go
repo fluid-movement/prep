@@ -160,44 +160,90 @@ func (m *Model) openEditMenu() tea.Cmd {
 // do not move (j, k, h and l navigate every menu).
 const linkKeys = "123456789bcdfgmnprstuvwxyz"
 
-// openLinks lists the selected issue's links as a numbered menu, in the
-// order the detail shows them: o 3 goes to the third.
+// openLinks starts link mode in the detail pane: the link lines show
+// their keys and the first one is highlighted where it is drawn.
 func (m *Model) openLinks() tea.Cmd {
 	id := m.selected()
 	if id == "" || m.tree == nil {
 		return nil
 	}
-	rels := m.relations(id)
-	if len(rels) == 0 {
+	if len(linkTargets(m.relations(id))) == 0 {
 		return m.flash("no linked issues: no parent, children or dependencies")
 	}
-	lead := map[string]string{"path": "↑ ", "child": "├ ", "depends on": "← needs ", "blocks": "→ unblocks ", "knowledge": "≡ "}
-	// Children first after the path, as the detail draws them.
-	order := func(l string) int {
-		return map[string]int{"path": 0, "child": 1, "depends on": 2, "blocks": 3, "knowledge": 4}[l]
-	}
-	sorted := append([]relation(nil), rels...)
-	slices.SortStableFunc(sorted, func(a, b relation) int { return order(a.label) - order(b.label) })
-	keys := linkKeys
-	d := &modal{kind: modalMenu, id: id, heading: "Go to"}
-	for n, r := range sorted {
-		if n >= len(keys) {
-			break
-		}
-		target := r.id
-		if r.label == "knowledge" {
-			e := m.tree.Knowledge[target]
-			d.items = append(d.items, action{key: keys[n : n+1], label: lead[r.label] + e.Title + "  " + e.Path, run: func() tea.Cmd {
-				m.back = append(m.back, id)
-				return m.openKnowledge(target)
-			}})
-			continue
-		}
-		d.items = append(d.items, action{key: keys[n : n+1], label: lead[r.label] + shortID(target) + " " + m.tree.Issues[target].Title,
-			run: func() tea.Cmd { return m.jump(target, true) }})
-	}
-	m.modal = d
+	m.linkMode, m.linkSel, m.focus = true, 0, focusDetail
 	return nil
+}
+
+// linkKey handles keys in link mode: j/k or arrows move, enter follows,
+// a link's key follows it at once, esc or o leave. Other keys leave link
+// mode and do what they do in the detail.
+func (m *Model) linkKey(s string) (tea.Cmd, bool) {
+	id := m.selected()
+	rels := m.relations(id)
+	targets := linkTargets(rels)
+	switch s {
+	case "down", "j": // wraps around, like the menus
+		m.linkSel = (m.linkSel + 1) % max(1, len(targets))
+		return nil, true
+	case "up", "k":
+		m.linkSel = (m.linkSel + len(targets) - 1) % max(1, len(targets))
+		return nil, true
+	case "esc", "o":
+		m.linkMode = false
+		return nil, true
+	case "enter":
+		return m.followLink(id, rels, targets, m.linkSel), true
+	}
+	if n := strings.Index(linkKeys, s); len(s) == 1 && n >= 0 {
+		if n < len(targets) {
+			return m.followLink(id, rels, targets, n), true
+		}
+		return nil, true
+	}
+	m.linkMode = false
+	return nil, false
+}
+
+// followLink goes to the n-th link target and leaves link mode.
+func (m *Model) followLink(id string, rels []relation, targets []int, n int) tea.Cmd {
+	m.linkMode = false
+	if n < 0 || n >= len(targets) {
+		return nil
+	}
+	return m.followRel(id, rels[targets[n]])
+}
+
+// followRel opens a relation: a linked issue, or a knowledge entry.
+func (m *Model) followRel(id string, r relation) tea.Cmd {
+	if r.label == "knowledge" {
+		m.back = append(m.back, id)
+		return m.openKnowledge(r.id)
+	}
+	return m.jump(r.id, true)
+}
+
+// linkTargets lists the relations link mode moves over, as the detail
+// draws them: the parent (the breadcrumb's last step), children, needs,
+// unblocks, knowledge. Ancestors above the parent are reached from it.
+func linkTargets(rels []relation) []int {
+	var out []int
+	parent := -1
+	for k, r := range rels {
+		if r.label == "path" {
+			parent = k
+		}
+	}
+	if parent >= 0 {
+		out = append(out, parent)
+	}
+	for _, label := range []string{"child", "depends on", "blocks", "knowledge"} {
+		for k, r := range rels {
+			if r.label == label {
+				out = append(out, k)
+			}
+		}
+	}
+	return out
 }
 
 // --- keymap ---

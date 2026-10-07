@@ -119,14 +119,11 @@ func (m *Model) click(x, y int) tea.Cmd {
 	case "rel":
 		id := m.selected()
 		rels := m.relations(id)
+		m.linkMode = false
 		if n >= len(rels) {
 			return nil
 		}
-		if r := rels[n]; r.label == "knowledge" {
-			m.back = append(m.back, id)
-			return m.openKnowledge(r.id)
-		}
-		return m.jump(rels[n].id, true)
+		return m.followRel(id, rels[n])
 	case "know":
 		paths, _ := m.knowledgePaths()
 		if n >= len(paths) {

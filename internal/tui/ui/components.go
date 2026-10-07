@@ -325,6 +325,7 @@ type Link struct {
 	Priority domain.Priority
 	Note     string // pre-rendered progress or status, after the ID
 	Title    string
+	Key      string // shown before the link in link mode: the key that follows it
 }
 
 // LinkLine renders a Link with the list's row grammar: state glyph, ID,
@@ -336,6 +337,9 @@ func LinkLine(t *theme.Theme, l Link, selected bool, width int) string {
 	if selected {
 		marker = lipgloss.NewStyle().Foreground(t.C.Accent).Render("▌ ")
 		idStyle, titleStyle = lipgloss.NewStyle().Foreground(t.C.Accent), t.S.Heading
+	}
+	if l.Key != "" {
+		marker = LinkKey(t, l.Key)
 	}
 	g, ok := stateGlyphs[l.State]
 	if !ok {
@@ -351,6 +355,16 @@ func LinkLine(t *theme.Theme, l Link, selected bool, width int) string {
 		return lipgloss.NewStyle().Background(t.C.Selection).Width(width).Render(line)
 	}
 	return line
+}
+
+// LinkKey renders the key that follows a link in link mode, two cells wide.
+func LinkKey(t *theme.Theme, key string) string {
+	return lipgloss.NewStyle().Foreground(t.C.Accent).Bold(true).Render(fmt.Sprintf("%-2s", key))
+}
+
+// Selected puts a pre-rendered line on the selection background.
+func Selected(t *theme.Theme, line string, width int) string {
+	return lipgloss.NewStyle().Background(t.C.Selection).Width(width).Render(Fit(line, width))
 }
 
 // LinkWidth is the label column of a link row.
