@@ -17,7 +17,16 @@ This repository tracks its work with prep. Issues live in `.prep/issues/<id>/`; 
 
 ## Without the binary
 
-If `prep` is not installed (for example in a cloud session), the files are the database and you edit them directly; this is the only case for hand edits:
+If `prep` is not on the PATH (for example in a cloud session), install it first; it takes under a minute:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/fluid-movement/prep/main/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+`| PREP_VERSION=v0.1.0 sh` picks a version. Without network access to GitHub releases, `go install github.com/fluid-movement/prep/cmd/prep@latest` works wherever Go is installed (the binary lands in `$(go env GOPATH)/bin`). Then use the commands above as usual.
+
+Only when both fail are the files the database and you edit them directly. Tell the user that prep could not be installed and that you are editing `.prep` by hand; `prep check` (later, locally or in CI) validates the edits:
 
 - Lifecycle: open (`issue.md`) → defined (`baselines/<timestamp>.md`) → ready (`ready.md`, references the newest baseline) → in progress (`claim.md`) → done or dropped (`resolution.md`). State is derived from which records exist.
 - Define: the requirement is the prose in `issue.md`; an issue can only be defined when its `## Open questions` section is empty.

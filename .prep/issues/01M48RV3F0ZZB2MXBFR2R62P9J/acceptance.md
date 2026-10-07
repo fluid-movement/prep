@@ -1,0 +1,3 @@
+- [x] The skill's section tells the agent to install prep (install.sh, then go install) before any hand edit, and to add the install directory to PATH
+- [x] Hand edits remain the fallback only when both fail, and the agent tells the user so
+- [x] All three copies are identical (tests pass)
