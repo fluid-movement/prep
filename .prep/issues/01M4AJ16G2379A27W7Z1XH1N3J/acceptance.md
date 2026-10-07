@@ -1,0 +1,6 @@
+- [x] Typing --st shows --state and --stale; after --state the states with counts; after --tag the tags in use; after --under the parents with titles, narrowed by typed text including the title
+- [x] Comma lists complete the part after the last comma and skip values already listed
+- [x] up/down move the highlight, tab inserts the candidate, enter applies, esc clears; a click on a candidate inserts it
+- [x] --priority high in the filter bar filters by priority (was a text search)
+- [x] Tests cover the completion function, picker keys and the screen with the picker open (snapshot)
+- [x] README and knowledge describe the picker

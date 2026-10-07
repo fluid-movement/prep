@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -84,4 +85,29 @@ func Field(t *theme.Theme, label, input string, focused bool) string {
 		l = t.S.Title.Render(label)
 	}
 	return l + "\n" + input
+}
+
+// Suggestion renders one candidate under a text input: the value, how many
+// issues it matches (count < 0 shows none) and a label such as an issue
+// title, cut at the width. The selected one carries the selection
+// background, like a selected list row.
+func Suggestion(t *theme.Theme, value string, count int, label string, selected bool, width int) string {
+	const valueW = 18
+	line := "  " + lipgloss.NewStyle().Foreground(t.C.Accent).Render(value)
+	if w := ansi.StringWidth(value); w < valueW {
+		line += strings.Repeat(" ", valueW-w)
+	} else {
+		line += " "
+	}
+	if count >= 0 {
+		line += t.S.Muted.Render(fmt.Sprintf("%4d", count)) + "  "
+	}
+	if label != "" {
+		line += t.S.Body.Render(label)
+	}
+	line = Fit(line, width)
+	if selected {
+		return lipgloss.NewStyle().Background(t.C.Selection).Width(width).Render(line)
+	}
+	return line
 }

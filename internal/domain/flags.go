@@ -9,6 +9,18 @@ const (
 	FlagText = "text" // free text
 )
 
+// FlagKind returns the kind of a query flag (FlagList, FlagBool or
+// FlagText), or "" for an unknown flag; readers of typed queries use it to
+// know which flags take a value.
+func FlagKind(name string) string {
+	for _, f := range NewTree(Project{}, nil, nil, nil).QueryFlags() {
+		if f.Name == name {
+			return f.Kind
+		}
+	}
+	return ""
+}
+
 // FlagInfo describes one query flag and the values it accepts now.
 type FlagInfo struct {
 	Name   string      `json:"name"`

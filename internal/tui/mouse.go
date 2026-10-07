@@ -85,7 +85,12 @@ func (m *Model) click(x, y int) tea.Cmd {
 		return m.clickDialog(kind, n)
 	}
 	if m.filtering {
-		return nil // the filter bar has the keyboard until enter or esc
+		// The filter bar has the keyboard until enter or esc; only its
+		// candidates take clicks.
+		if kind == "sugg" {
+			m.insertSuggestion(n)
+		}
+		return nil
 	}
 	switch kind {
 	case "tab":

@@ -134,6 +134,9 @@ type Model struct {
 	filtering bool              // the filter bar has the keyboard
 	input     textinput.Model
 	filterErr string
+	flagInfo  []domain.FlagInfo // query flags and their values, read when the filter bar opens
+	comp      completion        // candidates for the word being typed
+	pick      int               // highlighted candidate
 
 	screen   screen
 	page     viewport.Model // check and settings screens
@@ -424,7 +427,8 @@ func parseFilterText(s string) (domain.Filter, error) {
 		}
 		args = append(args, f)
 		name := strings.TrimPrefix(f, "--")
-		takesValue := !strings.Contains(name, "=") && (name == "state" || name == "kind" || name == "tag" || name == "under" || name == "text")
+		kind := domain.FlagKind(name)
+		takesValue := !strings.Contains(name, "=") && (kind == domain.FlagList || kind == domain.FlagText)
 		if takesValue && k+1 < len(fields) {
 			k++
 			args = append(args, fields[k])
@@ -646,6 +650,8 @@ func (m *Model) listKey(s string) tea.Cmd {
 			m.filtering, m.filterErr = true, ""
 			m.input.SetValue(m.filters[tb.name])
 			m.input.CursorEnd()
+			m.flagInfo = m.tree.QueryFlags()
+			m.refreshCompletion()
 			return m.input.Focus()
 		}
 		return nil
@@ -672,12 +678,22 @@ func (m *Model) listKey(s string) tea.Cmd {
 	return nil
 }
 
-// filterKey handles keys while the filter bar is open.
+// filterKey handles keys while the filter bar is open: up and down move
+// through the candidates, tab inserts one, enter applies, esc clears.
 func (m *Model) filterKey(k tea.KeyPressMsg) tea.Cmd {
 	tb := m.current()
 	switch k.String() {
 	case "ctrl+c":
 		return tea.Quit
+	case "up":
+		m.pick = clamp(m.pick-1, 0, max(0, len(m.comp.items)-1))
+		return nil
+	case "down":
+		m.pick = clamp(m.pick+1, 0, max(0, len(m.comp.items)-1))
+		return nil
+	case "tab":
+		m.insertSuggestion(m.pick)
+		return nil
 	case "esc":
 		m.filtering, m.filterErr = false, ""
 		m.input.Blur()
@@ -711,7 +727,34 @@ func (m *Model) filterKey(k tea.KeyPressMsg) tea.Cmd {
 	}
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(k)
+	m.refreshCompletion()
 	return cmd
+}
+
+// refreshCompletion recomputes the candidates for the issue filter bar
+// after the input changed; the knowledge filter has none.
+func (m *Model) refreshCompletion() {
+	m.comp, m.pick = completion{}, 0
+	if m.screen != screenIssues {
+		return
+	}
+	m.comp = complete(m.flagInfo, m.input.Value(), m.input.Position())
+	if len(m.comp.items) > maxSuggestions {
+		m.comp.items = m.comp.items[:maxSuggestions]
+	}
+}
+
+// insertSuggestion replaces the typed part with candidate n.
+func (m *Model) insertSuggestion(n int) {
+	if n < 0 || n >= len(m.comp.items) {
+		return
+	}
+	runes := []rune(m.input.Value())
+	ins := []rune(m.comp.items[n].insert)
+	out := append(append(append([]rune{}, runes[:m.comp.start]...), ins...), runes[m.comp.end:]...)
+	m.input.SetValue(string(out))
+	m.input.SetCursor(m.comp.start + len(ins))
+	m.refreshCompletion()
 }
 
 func (m *Model) setFilter(tab, text string) {
@@ -1061,7 +1104,7 @@ var (
 		bind("Screens", "?", "all keys", true),
 		bind("Screens", "q", "quit", true),
 	}
-	filterKeys = []ui.Key{{Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
+	filterKeys = []ui.Key{{Keys: "enter", Desc: "apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "↑/↓ tab", Desc: "pick a value"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
 )
 
 // nonEssential copies bindings with the given keys left out of the footer.
@@ -1171,6 +1214,10 @@ func (m *Model) listPane(w, h int) string {
 		bar = append(bar, m.input.View())
 		if m.filterErr != "" {
 			bar = append(bar, ui.Error(m.th, m.filterErr))
+		}
+		for k, s := range m.comp.items {
+			m.mark(fmt.Sprintf("sugg:%d", k), paneInner.x, paneInner.y+len(bar), inner, 1)
+			bar = append(bar, ui.Suggestion(m.th, s.value, s.count, s.label, k == m.pick, inner))
 		}
 		bar = append(bar, "")
 		rows = max(1, rows-len(bar))

@@ -117,6 +117,14 @@ func Gallery(t *theme.Theme, width int) string {
 	b.WriteString(Modal(t, "Actions · 6DWQ1B TUI editing and transitions", menu, w) + "\n")
 	b.WriteString(Modal(t, "Drop QK0D5S", Field(t, "Reason", "› not needed any more", true)+"\n\n"+Field(t, "Kind", "code", false), w))
 
+	section("Suggestions")
+	sw := min(width, 64)
+	b.WriteString(strings.Join([]string{
+		Suggestion(t, "--state", -1, "", false, sw),
+		Suggestion(t, "in_progress", 2, "", true, sw),
+		Suggestion(t, "01M48KB1NRFQ1A3VWB9SHDM3TM", 8, "Release 0.2.0", false, sw),
+	}, "\n"))
+
 	section("Panes")
 	left, right := Split(width, 0.5, 20, 20)
 	body := "Requirement prose\n" + t.S.Muted.Render("muted second line") + "\nA line long enough to be clipped at the pane's inner width, ending here."

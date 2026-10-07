@@ -336,6 +336,11 @@ func TestScreenSnapshots(t *testing.T) {
 		checkSize(t, m.View().Content, w, h)
 		golden(t, fmt.Sprintf("dialog-requirement-%dx%d", w, h), m.View().Content)
 		run(m, "esc")
+		run(m, "f")
+		typeText(m, "--state ")
+		checkSize(t, m.View().Content, w, h)
+		golden(t, fmt.Sprintf("filter-picker-%dx%d", w, h), m.View().Content)
+		run(m, "esc")
 		run(m, "s")
 		run(m, "3")
 		checkSize(t, m.View().Content, w, h)
@@ -1395,5 +1400,43 @@ func TestUnsetThemeFollowsTheTerminal(t *testing.T) {
 	m.retheme(false, m.th.Profile)
 	if m.th.Palette.Name != "nord" {
 		t.Fatalf("configured nord shows %s", m.th.Palette.Name)
+	}
+}
+
+func TestFilterBarSuggestsValues(t *testing.T) {
+	p, _ := sample(t)
+	m := openModel(t, p, 120, 30)
+	keys(m, "6", "f")
+	typeText(m, "--pri")
+	if len(m.comp.items) != 1 || m.comp.items[0].value != "--priority" {
+		t.Fatalf("--pri suggests %+v", m.comp.items)
+	}
+	keys(m, "tab")
+	if m.input.Value() != "--priority " {
+		t.Fatalf("tab inserted %q", m.input.Value())
+	}
+	v := ansi.Strip(m.View().Content)
+	for _, want := range []string{"critical", "high", "medium", "low"} {
+		if !strings.Contains(v, want) {
+			t.Fatalf("priorities missing from the picker:\n%s", v)
+		}
+	}
+	keys(m, "down", "tab") // high
+	if m.input.Value() != "--priority high" {
+		t.Fatalf("down tab inserted %q", m.input.Value())
+	}
+
+	// A click on a candidate inserts it.
+	typeText(m, " --state ")
+	clickText(t, m, "in_progress", 0, 120)
+	if m.input.Value() != "--priority high --state in_progress" || !m.filtering {
+		t.Fatalf("click inserted %q (filtering %v)", m.input.Value(), m.filtering)
+	}
+
+	// --priority takes its value (it used to become a text search).
+	keys(m, "enter")
+	f, err := parseFilterText(m.filters[m.current().name])
+	if err != nil || len(f.Priorities) != 1 || f.Priorities[0] != domain.PriorityHigh || len(f.Text) != 0 {
+		t.Fatalf("applied filter %+v, %v", f, err)
 	}
 }
