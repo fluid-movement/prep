@@ -1,0 +1,1 @@
+`internal/update/update.go`: `IsRelease` rejects Go pseudo-versions via `pseudoRe`; extend it to `git describe` suffixes. Callers: `pluginAlert` in `internal/cli/read.go` (prime hook), `cmdUpdate` in `internal/cli/update.go`, the plugin pin in `internal/setup/claudecode/claudecode.go`. Test in `internal/update/update_test.go`. See [Release](/components/release.md).

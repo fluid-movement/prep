@@ -1,0 +1,2 @@
+- [x] IsRelease is false for v0.1.0-14-gaa2b6fc, v0.1.0-14-gaa2b6fc-dirty and v0.1.0-dirty, still true for v0.1.0 and v1.0.0-rc.1
+- [x] prep prime --hook shows no version alert for a git describe build

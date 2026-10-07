@@ -163,6 +163,11 @@ func TestNewer(t *testing.T) {
 	if IsRelease("v0.0.0-20261006090120-93aa83c32597") || IsRelease("v0.1.1-0.20261006090120-93aa83c32597") {
 		t.Error("a Go pseudo-version counted as a release")
 	}
+	for _, v := range []string{"v0.1.0-14-gaa2b6fc", "v0.1.0-14-gaa2b6fc-dirty", "v0.1.0-dirty"} {
+		if IsRelease(v) {
+			t.Errorf("git describe build %s counted as a release", v)
+		}
+	}
 }
 
 func TestManaged(t *testing.T) {
