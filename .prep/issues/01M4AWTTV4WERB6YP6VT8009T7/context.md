@@ -1,0 +1,1 @@
+`justfile` install recipe; `internal/setup/claudecode` `Source` honors `PREP_PLUGIN_SOURCE`; refresh re-adds the marketplace and reinstalls. See [Release](/components/release.md), [Claude Code](/components/claude-code.md).

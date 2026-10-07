@@ -14,8 +14,9 @@ Other ways:
 
 ```sh
 go install github.com/fluid-movement/prep/cmd/prep@latest
-# or, from a checkout (needs just): builds with the version stamped in and
+# or, from a checkout (needs just): builds with the version stamped in,
 # copies the binary to ~/.local/bin (override with PREP_BINDIR or bindir=...)
+# and points the harness integrations (the Claude Code plugin) at the checkout
 just install
 ```
 

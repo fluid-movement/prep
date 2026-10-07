@@ -1,0 +1,1 @@
+- [x] just install refreshes the plugin from the checkout and reports it; a failed refresh does not fail the install

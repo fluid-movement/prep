@@ -13,12 +13,18 @@ default:
 build:
     go build -ldflags '{{ldflags}}' -o prep ./cmd/prep
 
-# Build and copy the binary into bindir (default ~/.local/bin)
+# Build and copy the binary into bindir (default ~/.local/bin), then point
+# the harness integrations (the Claude Code plugin) at this checkout
 install: build
     mkdir -p '{{bindir}}'
     install -m 0755 prep '{{bindir}}/prep'
     @echo "installed {{bindir}}/prep ({{version}})"
     @case ":$PATH:" in *":{{bindir}}:"*) ;; *) echo "note: {{bindir}} is not on your PATH";; esac
+    @# A development build has no release to pin the plugin to, so prep setup
+    @# installs it from this checkout; harnesses not set up are left alone.
+    @PREP_PLUGIN_SOURCE='{{justfile_directory()}}' '{{bindir}}/prep' setup --refresh \
+        && echo "harness integrations refreshed from this checkout; restart Claude Code or run /reload-plugins" \
+        || echo "note: prep setup --refresh failed; the binary is installed"
 
 # Remove the installed binary
 uninstall:
