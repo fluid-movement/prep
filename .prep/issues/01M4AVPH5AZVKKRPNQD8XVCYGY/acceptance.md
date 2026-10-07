@@ -1,0 +1,2 @@
+- [x] The skill says prep stages and the agent commits .prep changes with the code, and describes completing before the commit
+- [x] Read and write command lists include flags, views, theme list and theme new; copies in sync

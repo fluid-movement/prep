@@ -1,0 +1,1 @@
+`internal/cli/skill.md` (copied by `just sync-skill` to `.claude/skills/prep/SKILL.md` and the plugin; tests compare the copies). The completion flow is the one from 01M4AVPH9A56WJ4JFMYZT476H0. See [Claude Code](/components/claude-code.md).
