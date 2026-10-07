@@ -36,12 +36,12 @@ export function drawPane(
   onTab: (tab: PrepTab) => void,
 ): RenderElement {
   const { Box, Button } = kit
-  const tabButton = (t: PrepTab, label: string, hotkey: string) => (
+  // Buttons that look like buttons ([ Live ] [ Project ]); the active one
+  // is the primary. Views switch by click or /prep:pane, no hotkeys.
+  const tabButton = (t: PrepTab, label: string) => (
     <Button
       key={`tab-${t}`}
       label={label}
-      hotkey={hotkey}
-      plain
       variant={t === tab ? 'primary' : undefined}
       dimColor={t !== tab}
       onPress={() => onTab(t)}
@@ -50,8 +50,8 @@ export function drawPane(
   return (
     <Box flexDirection="column" gap={1}>
       <Box flexDirection="row" gap={2}>
-        {tabButton('live', 'Live', 'l')}
-        {tabButton('project', 'Project', 'p')}
+        {tabButton('live', 'Live')}
+        {tabButton('project', 'Project')}
       </Box>
       {tab === 'project' ? drawProjectView(kit, project) : drawPanel(kit, live)}
     </Box>

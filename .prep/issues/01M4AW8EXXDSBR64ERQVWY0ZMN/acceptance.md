@@ -1,0 +1,1 @@
+- [x] Live and Project render as buttons, the active one primary, no hotkeys; plugin tests and validate pass

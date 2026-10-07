@@ -1,0 +1,1 @@
+`drawPane` in `plugins/claude-code/hooks/panel.tsx` (Button props: no `plain`, no `hotkey`; `variant: 'primary'` for the active tab), tests in `plugins/claude-code/tests/panel.test.tsx`, `claude plugin validate`/`test`. See [Claude Code](/components/claude-code.md).
