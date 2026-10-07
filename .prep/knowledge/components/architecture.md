@@ -24,6 +24,7 @@ internal/mdstore    issue store adapter: .prep/issues as markdown
 internal/okf        knowledge store adapter: .prep/knowledge as an OKF v0.2 bundle
 internal/gitx       the few git calls (staging, drift, commit evidence)
 internal/watch      fsnotify watcher over .prep (recursive, debounced), shared by prep watch and the TUI
+internal/palette    TUI color tokens, built-in themes, custom theme resolution (no TUI imports)
 internal/tui        human interface: screens (Bubble Tea) loading through an injected loader; theme and ui hold the design system
 internal/setup      harness integrations installed, refreshed and removed by prep setup
 internal/userconfig the user's choices in ~/.config/prep/config.yaml (harnesses, TUI mouse)

@@ -134,6 +134,19 @@ type Config struct {
 	Views map[string]string `json:"views,omitempty"`
 	// ViewOrder lists the view names in the order the config file gives them.
 	ViewOrder []string `json:"view_order,omitempty"`
+	// Theme names the TUI theme; empty means the default.
+	Theme string `json:"theme,omitempty"`
+	// Themes are the user's custom themes by name.
+	Themes map[string]ThemeDef `json:"themes,omitempty"`
+}
+
+// ThemeDef is a custom TUI theme: a base theme and token colors (hex) that
+// override it for dark and light backgrounds. Token names and validation
+// live in internal/palette.
+type ThemeDef struct {
+	Base  string            `json:"base,omitempty" yaml:"base,omitempty"`
+	Dark  map[string]string `json:"dark,omitempty" yaml:"dark,omitempty"`
+	Light map[string]string `json:"light,omitempty" yaml:"light,omitempty"`
 }
 
 // Criterion is one checkable acceptance criterion.

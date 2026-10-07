@@ -12,6 +12,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/fluid-movement/prep/internal/domain"
+	"github.com/fluid-movement/prep/internal/palette"
 	"github.com/fluid-movement/prep/internal/tui/ui"
 )
 
@@ -246,14 +247,14 @@ func (m *Model) helpColumn(lines []string, width int) string {
 
 // --- settings ---
 
-// settingsRows counts the settings rows: the views, and the user's mouse
-// choice last.
-func (m *Model) settingsRows() int { return 1 + len(domain.ViewNames(m.tree.Project.Config)) }
+// settingsRows counts the settings rows: the theme, the views, and the
+// user's mouse choice last.
+func (m *Model) settingsRows() int { return 2 + len(domain.ViewNames(m.tree.Project.Config)) }
 
 // settingsConfig copies the project configuration with its view order spelled out.
 func (m *Model) settingsConfig() domain.Config {
 	c := m.tree.Project.Config
-	cp := domain.Config{Views: map[string]string{}, ViewOrder: domain.ViewNames(c)}
+	cp := domain.Config{Views: map[string]string{}, ViewOrder: domain.ViewNames(c), Theme: c.Theme, Themes: c.Themes}
 	for _, n := range cp.ViewOrder {
 		cp.Views[n] = c.Views[n]
 	}
@@ -265,9 +266,9 @@ func (m *Model) saveSettings(what string, cfg domain.Config, fromModal bool) tea
 }
 
 // settingsKey handles the settings screen: arrows or digits select a row
-// (digit n is view n, the tab it shows as), space or enter toggles the
-// mouse, enter edits a view, n adds one, d d deletes it, and m starts
-// moving it.
+// (digit n is view n, the tab it shows as), t and T switch the theme
+// (space or enter on its row too), space or enter toggles the mouse, enter
+// edits a view, n adds one, d d deletes it, and m starts moving it.
 func (m *Model) settingsKey(s string) tea.Cmd {
 	if m.moving {
 		return m.moveKey(s)
@@ -275,10 +276,10 @@ func (m *Model) settingsKey(s string) tea.Cmd {
 	rows := m.settingsRows()
 	m.setIdx = clamp(m.setIdx, 0, rows-1)
 	cfg := m.settingsConfig()
-	view := m.setIdx // index into cfg.ViewOrder; -1 on the mouse row
+	view := m.setIdx - 1 // index into cfg.ViewOrder; -1 on the theme row
 	onMouse := m.setIdx == rows-1
 	if onMouse {
-		view = -1
+		view = -2
 	}
 	if s != "d" {
 		m.confirm = ""
@@ -289,10 +290,15 @@ func (m *Model) settingsKey(s string) tea.Cmd {
 	case "down", "j":
 		m.setIdx = clamp(m.setIdx+1, 0, rows-1)
 	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
-		m.setIdx = clamp(int(s[0]-'1'), 0, rows-2)
+		m.setIdx = clamp(int(s[0]-'0'), 1, rows-2)
+	case "t", "T":
+		return m.switchTheme(cfg, s == "T")
 	case "space", "enter":
 		if onMouse {
 			return m.toggleMouse()
+		}
+		if view == -1 {
+			return m.switchTheme(cfg, false)
 		}
 		if s == "enter" {
 			name := cfg.ViewOrder[view]
@@ -323,11 +329,24 @@ func (m *Model) settingsKey(s string) tea.Cmd {
 	return nil
 }
 
+// switchTheme selects the next (or previous) theme and saves the choice to
+// the user's own config; the reload re-renders everything in it.
+func (m *Model) switchTheme(cfg domain.Config, back bool) tea.Cmd {
+	names := palette.Names(cfg.Themes)
+	cur := slices.Index(names, m.th.Palette.Name)
+	step := 1
+	if back {
+		step = len(names) - 1
+	}
+	cfg.Theme = names[(cur+step)%len(names)]
+	return m.saveSettings("theme "+cfg.Theme, cfg, false)
+}
+
 // moveKey moves the selected view while in move mode: j/k or arrows move
 // it one place (one write each), enter or esc ends the mode.
 func (m *Model) moveKey(s string) tea.Cmd {
 	cfg := m.settingsConfig()
-	view := m.setIdx
+	view := m.setIdx - 1
 	to := view
 	switch s {
 	case "up", "k":
@@ -344,7 +363,7 @@ func (m *Model) moveKey(s string) tea.Cmd {
 		return nil
 	}
 	cfg.ViewOrder[view], cfg.ViewOrder[to] = cfg.ViewOrder[to], cfg.ViewOrder[view]
-	m.setIdx = to
+	m.setIdx = to + 1
 	return m.saveSettings("moved view "+cfg.ViewOrder[to], cfg, false)
 }
 
@@ -378,7 +397,7 @@ func (m *Model) saveViewEdit() tea.Cmd {
 	cfg.Views[name] = query
 	what := "saved view " + name
 	if old == "" {
-		m.setIdx = len(cfg.ViewOrder) - 1
+		m.setIdx = len(cfg.ViewOrder)
 		what = "added view " + name
 	}
 	return m.saveSettings(what, cfg, true)

@@ -5,47 +5,82 @@ package tui
 import (
 	"io"
 	"os"
+	"slices"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/colorprofile"
 
+	"github.com/fluid-movement/prep/internal/domain"
+	"github.com/fluid-movement/prep/internal/palette"
 	"github.com/fluid-movement/prep/internal/tui/theme"
 	"github.com/fluid-movement/prep/internal/tui/ui"
 )
 
 // RunGallery shows every component in a scrollable view that reflows on
-// resize, without project data.
-func RunGallery(in io.Reader, out io.Writer) error {
-	th := theme.New(true, colorprofile.Detect(out, os.Environ()))
-	_, err := tea.NewProgram(&gallery{th: th}, tea.WithInput(in), tea.WithOutput(out)).Run()
+// resize, without project data. It starts with the configured theme and
+// t/T switch through the built-in themes and the config's custom ones, so
+// a theme can be judged before choosing it.
+func RunGallery(in io.Reader, out io.Writer, cfg domain.Config) error {
+	g := newGallery(cfg, theme.New(true, colorprofile.Detect(out, os.Environ())))
+	_, err := tea.NewProgram(g, tea.WithInput(in), tea.WithOutput(out)).Run()
 	return err
 }
 
 type gallery struct {
-	th    *theme.Theme
-	vp    viewport.Model
-	ready bool
-	width int
+	th     *theme.Theme
+	themes map[string]domain.ThemeDef
+	names  []string
+	vp     viewport.Model
+	ready  bool
+	width  int
 }
 
-var galleryKeys = []ui.Key{{Keys: "↑/↓ pgup/pgdn", Desc: "scroll"}, {Keys: "q", Desc: "quit"}}
+func newGallery(cfg domain.Config, th *theme.Theme) *gallery {
+	g := &gallery{th: th, themes: cfg.Themes, names: palette.Names(cfg.Themes)}
+	if p, err := palette.Resolve(cfg.Theme, cfg.Themes); err == nil {
+		*g.th = *theme.From(p, th.Dark, th.Profile)
+	}
+	return g
+}
+
+// switchTheme shows the next or previous theme.
+func (g *gallery) switchTheme(back bool) {
+	cur := slices.Index(g.names, g.th.Palette.Name)
+	step := 1
+	if back {
+		step = len(g.names) - 1
+	}
+	p, err := palette.Resolve(g.names[(cur+step)%len(g.names)], g.themes)
+	if err != nil {
+		return
+	}
+	*g.th = *theme.From(p, g.th.Dark, g.th.Profile)
+	if g.ready {
+		g.vp.SetContent(ui.Gallery(g.th, g.width-2))
+	}
+}
+
+var galleryKeys = []ui.Key{{Keys: "↑/↓ pgup/pgdn", Desc: "scroll"}, {Keys: "t/T", Desc: "next/previous theme"}, {Keys: "q", Desc: "quit"}}
 
 func (g *gallery) Init() tea.Cmd { return tea.RequestBackgroundColor }
 
 func (g *gallery) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.BackgroundColorMsg:
-		*g.th = *theme.New(msg.IsDark(), g.th.Profile)
+		*g.th = *g.th.Rebuild(msg.IsDark(), g.th.Profile)
 		g.vp.SetContent(ui.Gallery(g.th, g.width-2))
 	case tea.ColorProfileMsg:
-		*g.th = *theme.New(g.th.Dark, msg.Profile)
+		*g.th = *g.th.Rebuild(g.th.Dark, msg.Profile)
 		g.vp.SetContent(ui.Gallery(g.th, g.width-2))
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
 			return g, tea.Quit
+		case "t", "T":
+			g.switchTheme(msg.String() == "T")
+			return g, nil
 		}
 	case tea.WindowSizeMsg:
 		g.width = msg.Width
@@ -74,7 +109,7 @@ func (g *gallery) render() string {
 	if !g.ready {
 		return ui.Loading(g.th, "Rendering gallery …")
 	}
-	header := g.th.S.Title.Render("prep design system") + "  " + g.th.S.Subtle.Render("gallery")
+	header := g.th.S.Title.Render("prep design system") + "  " + g.th.S.Subtle.Render("gallery · theme ") + g.th.S.Heading.Render(g.th.Palette.Name)
 	footer := ui.KeyHelp(g.th, galleryKeys, g.width)
 	body := lipgloss.NewStyle().PaddingLeft(1).Render(g.vp.View())
 	return header + "\n\n" + body + "\n\n" + footer

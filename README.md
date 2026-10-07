@@ -78,6 +78,28 @@ A query takes any number of flags, and an issue must match all of them; a comma-
 
 Change the views freely. In the TUI, `s` opens the settings screen, where views are added, edited, deleted and reordered. `prep views` lists them, and `prep list --view <name>` runs one on the command line.
 
+## Themes
+
+`prep tui` comes with the themes `default`, `high-contrast`, `monochrome`, `pastel`, `catppuccin`, `nord` and `gruvbox`, each for dark and light terminals. `prep tui --gallery` shows every component; `t` and `T` switch to the next and previous theme, so you can compare them. Pick one on the settings screen (`s`, then `t`/`T`) or in your `.prep/config.yaml`:
+
+```yaml
+theme: nord
+```
+
+A custom theme starts from a base and overrides any of its tokens, as hex colors, for dark and light backgrounds:
+
+```yaml
+theme: mine
+themes:
+  mine:
+    base: nord
+    dark:
+      accent: "#FF9E5E"
+      state.ready: "#3DD6C6"
+```
+
+`prep theme new <name> [--from <theme>]` writes a custom theme with every token filled in from the active theme (or `--from`) and selects it, so you see all tokens and only change the ones you want. The tokens are `text`, `muted`, `subtle`, `accent`, `border`, `selection`, `success`, `warning`, `error`, one `state.<state>` per issue state and one `kind.<kind>` per kind. `prep theme list` shows the themes and marks the active one; `prep check` reports unknown tokens, invalid colors and unknown bases. Terminals with 256 or 16 colors get the nearest colors, and `NO_COLOR` turns colors off.
+
 ## Development
 
 ```sh

@@ -1085,3 +1085,28 @@ func TestOwnConfigIsNeverStaged(t *testing.T) {
 		t.Fatalf("status:\n%s", st)
 	}
 }
+
+func TestThemeCommands(t *testing.T) {
+	h := newHarness(t)
+	if out := h.ok("theme", "list"); !strings.Contains(out, "* default ") || !strings.Contains(out, "gruvbox") {
+		t.Fatalf("theme list:\n%s", out)
+	}
+	h.ok("theme", "new", "mine", "--from", "catppuccin")
+	b, err := os.ReadFile(filepath.Join(h.dir, ".prep", "config.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := string(b)
+	if !strings.Contains(cfg, "theme: mine") || !strings.Contains(cfg, `kind.decision: "#EBA0AC"`) || !strings.Contains(cfg, `text: "#4C4F69"`) {
+		t.Fatalf("config.yaml:\n%s", cfg)
+	}
+	if out := h.ok("theme", "list"); !strings.Contains(out, "* mine            custom") {
+		t.Fatalf("theme list:\n%s", out)
+	}
+	h.fails("exists", "theme", "new", "mine")
+	h.fails("built-in", "theme", "new", "nord")
+	h.fails("unknown theme", "theme", "new", "other", "--from", "nope")
+	if out := h.ok("check"); !strings.Contains(out, "0 errors") {
+		t.Fatalf("check:\n%s", out)
+	}
+}

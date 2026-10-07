@@ -1,10 +1,10 @@
-- [ ] Built-in themes default, high-contrast, monochrome, pastel, catppuccin, nord and gruvbox each define every token for dark and light; a test enforces it
-- [ ] default renders exactly as before: existing gallery and screen goldens are unchanged
-- [ ] A custom theme in .prep/config.yaml with base: and a subset of tokens resolves the rest from its base; unknown tokens, invalid colors, unknown bases, cycles and an unknown selected theme are P003 errors naming the file
-- [ ] prep tui --gallery switches themes with t and T, names the active theme in the header, and re-renders every component; it lists custom themes when run in a prep project and built-ins elsewhere
-- [ ] The settings screen has a Theme row; space or enter switches theme live and saves theme: to the user's own config.yaml
-- [ ] Saving settings keeps theme and themes in config.yaml
-- [ ] prep theme list shows built-in and custom themes and marks the active one; prep theme new <name> [--from <theme>] writes every token for dark and light, selects the theme, and refuses existing and built-in names
-- [ ] NO_COLOR and 16/256-color terminals still work with every theme (snapshot or test per profile)
-- [ ] Gallery snapshots exist for each built-in theme, dark and light
-- [ ] README documents themes, the config format and prep theme
+- [x] Built-in themes default, high-contrast, monochrome, pastel, catppuccin, nord and gruvbox each define every token for dark and light; a test enforces it
+- [x] default renders exactly as before: existing gallery and screen goldens are unchanged
+- [x] A custom theme in .prep/config.yaml with base: and a subset of tokens resolves the rest from its base; unknown tokens, invalid colors, unknown bases, cycles and an unknown selected theme are P003 errors naming the file
+- [x] prep tui --gallery switches themes with t and T, names the active theme in the header, and re-renders every component; it lists custom themes when run in a prep project and built-ins elsewhere
+- [x] The settings screen has a Theme row; space or enter switches theme live and saves theme: to the user's own config.yaml
+- [x] Saving settings keeps theme and themes in config.yaml
+- [x] prep theme list shows built-in and custom themes and marks the active one; prep theme new <name> [--from <theme>] writes every token for dark and light, selects the theme, and refuses existing and built-in names
+- [x] NO_COLOR and 16/256-color terminals still work with every theme (snapshot or test per profile)
+- [x] Gallery snapshots exist for each built-in theme, dark and light
+- [x] README documents themes, the config format and prep theme

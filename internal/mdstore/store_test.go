@@ -204,3 +204,59 @@ func TestConfigFallsBackToDist(t *testing.T) {
 		t.Fatalf("invalid configs reported as %q", got)
 	}
 }
+
+func TestConfigKeepsThemes(t *testing.T) {
+	root := t.TempDir()
+	if _, err := Open(root).Init(); err != nil {
+		t.Fatal(err)
+	}
+	own := filepath.Join(root, Dir, "config.yaml")
+	src := "views:\n  All: \"\"\ntheme: mine\nthemes:\n  mine:\n    base: nord\n    dark:\n      accent: \"#123456\"\n"
+	if err := os.WriteFile(own, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Open(root).LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Theme != "mine" || cfg.Themes["mine"].Base != "nord" || cfg.Themes["mine"].Dark["accent"] != "#123456" {
+		t.Fatalf("loaded %+v", cfg)
+	}
+
+	// A settings save (here: a new view) keeps the theme and custom themes.
+	cfg.ViewOrder = append(cfg.ViewOrder, "Hot")
+	cfg.Views["Hot"] = "--priority high"
+	c, err := domain.NewTree(domain.Project{Config: cfg}, nil, nil, nil).PlanConfig(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Open(root).Apply(c); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Open(root).LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Theme != "mine" || got.Themes["mine"].Dark["accent"] != "#123456" || got.Views["Hot"] != "--priority high" {
+		b, _ := os.ReadFile(own)
+		t.Fatalf("after save %+v\n%s", got, b)
+	}
+
+	// An invalid theme is a P003 error naming the file, and is never written.
+	if err := os.WriteFile(own, []byte("theme: nope\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, _, d, err := Open(root).Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d) == 0 || d[0].Code != domain.CodeConfigInvalid || d[0].File != "config.yaml" || !strings.Contains(d[0].Message, `unknown theme "nope"`) {
+		t.Fatalf("diagnostics %+v", d)
+	}
+	cfg.Theme = "nope"
+	if c, err := domain.NewTree(domain.Project{Config: cfg}, nil, nil, nil).PlanConfig(cfg); err == nil {
+		if _, err := Open(root).Apply(c); err == nil {
+			t.Fatal("an unknown theme was written")
+		}
+	}
+}

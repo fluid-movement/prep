@@ -28,7 +28,13 @@ func cmdTUI(a *app, args []string) error {
 		return usageErr("tui needs a terminal; agents use the other commands")
 	}
 	if *gallery {
-		return tui.RunGallery(os.Stdin, os.Stdout)
+		// In a prep project the gallery offers its custom themes and starts
+		// with the chosen one; elsewhere the built-ins.
+		var cfg domain.Config
+		if a.open() == nil {
+			cfg, _ = a.store.LoadConfig()
+		}
+		return tui.RunGallery(os.Stdin, os.Stdout, cfg)
 	}
 	if err := a.open(); err != nil {
 		return err

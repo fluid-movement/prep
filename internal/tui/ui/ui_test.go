@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/fluid-movement/prep/internal/palette"
 	"github.com/fluid-movement/prep/internal/tui/theme"
 )
 
@@ -35,6 +37,55 @@ func TestGallerySnapshots(t *testing.T) {
 				}
 				golden(t, name, got)
 			})
+		}
+	}
+}
+
+// TestThemeGallerySnapshots keeps every built-in theme's look reviewable.
+func TestThemeGallerySnapshots(t *testing.T) {
+	for _, name := range palette.Builtins()[1:] {
+		p, err := palette.Resolve(name, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, dark := range []bool{true, false} {
+			snap := fmt.Sprintf("gallery-%s-%s-80", name, map[bool]string{true: "dark", false: "light"}[dark])
+			t.Run(snap, func(t *testing.T) {
+				golden(t, snap, Gallery(theme.From(p, dark, colorprofile.TrueColor), 80))
+			})
+		}
+	}
+}
+
+// TestThemesFollowTheColorProfile checks what a terminal receives with
+// every theme: Bubble Tea writes through a colorprofile.Writer, which
+// downsamples for 256- and 16-color terminals and drops colors without
+// color support (NO_COLOR).
+func TestThemesFollowTheColorProfile(t *testing.T) {
+	for _, name := range palette.Builtins() {
+		p, _ := palette.Resolve(name, nil)
+		for _, c := range []struct {
+			profile colorprofile.Profile
+			banned  []string
+		}{
+			{colorprofile.ANSI256, []string{"38;2;"}},
+			{colorprofile.ANSI, []string{"38;2;", "38;5;"}},
+			{colorprofile.ASCII, []string{"38;", "48;"}},
+		} {
+			var out bytes.Buffer
+			w := &colorprofile.Writer{Forward: &out, Profile: c.profile}
+			if _, err := w.WriteString(Gallery(theme.From(p, true, c.profile), 80)); err != nil {
+				t.Fatal(err)
+			}
+			got := out.String()
+			if !strings.Contains(got, "State badges") {
+				t.Fatalf("%s with profile %v lost its text", name, c.profile)
+			}
+			for _, b := range c.banned {
+				if strings.Contains(got, b) {
+					t.Errorf("%s with profile %v renders %q", name, c.profile, b)
+				}
+			}
 		}
 	}
 }

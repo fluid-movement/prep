@@ -1021,6 +1021,17 @@ func TestEditSettings(t *testing.T) {
 		return tr.Project.Config
 	}
 
+	// t and T switch the theme live and save it.
+	run(m, "t")
+	if cfg().Theme != "high-contrast" || m.th.Palette.Name != "high-contrast" {
+		t.Fatalf("t: config theme %q, shown %q", cfg().Theme, m.th.Palette.Name)
+	}
+	run(m, "T")
+	if cfg().Theme != "default" || m.th.Palette.Name != "default" {
+		t.Fatalf("T: config theme %q, shown %q", cfg().Theme, m.th.Palette.Name)
+	}
+	run(m, "down")
+
 	// Add a view; an invalid query is rejected and the dialog stays open.
 	run(m, "n")
 	typeIn(m, "Hot")
@@ -1342,5 +1353,27 @@ func TestDetailDoesNotScrollSideways(t *testing.T) {
 	m.Update(tea.MouseWheelMsg{X: 100, Y: 10, Button: tea.MouseWheelRight})
 	if m.vp.XOffset() != 0 {
 		t.Fatalf("detail scrolled sideways: x offset %d", m.vp.XOffset())
+	}
+}
+
+func TestGallerySwitchesThemes(t *testing.T) {
+	cfg := domain.Config{Theme: "mine", Themes: map[string]domain.ThemeDef{"mine": {Base: "nord"}}}
+	g := newGallery(cfg, testTheme())
+	g.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	if g.th.Palette.Name != "mine" || !strings.Contains(ansi.Strip(g.render()), "theme mine") {
+		t.Fatalf("gallery starts with %s", g.th.Palette.Name)
+	}
+	g.Update(keyMsg("t"))
+	if g.th.Palette.Name != "default" {
+		t.Fatalf("t after the last theme: %s", g.th.Palette.Name)
+	}
+	g.Update(keyMsg("t"))
+	if g.th.Palette.Name != "high-contrast" || !strings.Contains(ansi.Strip(g.render()), "theme high-contrast") {
+		t.Fatalf("t: %s", g.th.Palette.Name)
+	}
+	g.Update(keyMsg("T"))
+	g.Update(keyMsg("T"))
+	if g.th.Palette.Name != "mine" {
+		t.Fatalf("T T: %s", g.th.Palette.Name)
 	}
 }

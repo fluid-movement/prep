@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/charmbracelet/colorprofile"
 
 	"github.com/fluid-movement/prep/internal/domain"
+	"github.com/fluid-movement/prep/internal/palette"
 	"github.com/fluid-movement/prep/internal/tui/theme"
 	"github.com/fluid-movement/prep/internal/tui/ui"
 	"github.com/fluid-movement/prep/internal/watch"
@@ -143,7 +145,7 @@ type Model struct {
 	know          knowState
 	confirm       string            // a pending second key press: delete|view in settings
 	moving        bool              // settings: the selected view moves with j/k
-	setIdx        int               // selected settings row: the views, then the mouse
+	setIdx        int               // selected settings row: the theme, the views, then the mouse
 	pending       map[string]string // issue|field: edited text a rejected write left
 	pendingSelect string            // issue to select after the next load
 	noticeTone    ui.Tone
@@ -197,7 +199,25 @@ func (m *Model) retheme(dark bool, profile colorprofile.Profile) {
 	if dark == m.th.Dark && profile == m.th.Profile {
 		return
 	}
-	*m.th = *theme.New(dark, profile)
+	m.setTheme(m.th.Rebuild(dark, profile))
+}
+
+// syncTheme follows the configured theme after a load: a new choice or an
+// edited custom theme re-renders everything. An invalid theme keeps the
+// current one; the check screen reports it.
+func (m *Model) syncTheme() {
+	cfg := m.tree.Project.Config
+	p, err := palette.Resolve(cfg.Theme, cfg.Themes)
+	if err != nil || reflect.DeepEqual(p, m.th.Palette) {
+		return
+	}
+	m.setTheme(theme.From(p, m.th.Dark, m.th.Profile))
+}
+
+// setTheme replaces the theme in place; components hold the same pointer,
+// inputs copy their styles, and cached renders start over.
+func (m *Model) setTheme(th *theme.Theme) {
+	*m.th = *th
 	m.input.SetStyles(inputStyles(m.th))
 	m.docKey, m.know.docKey = "", ""
 }
@@ -240,6 +260,7 @@ func (m *Model) apply(t *domain.Tree, err error) {
 	}
 	m.tree, m.err = t, nil
 	m.gen++
+	m.syncTheme()
 	m.rebuild()
 	m.syncKnowledge()
 	if id := m.pendingSelect; id != "" && t.Issues[id] != nil {
@@ -479,8 +500,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	if m.confirm != "" && !(m.screen == screenSettings && s == "d") {
 		m.confirm, m.notice = "", ""
 	}
-	// The settings screen takes digits for its rows (view n is tab n).
-	if m.screen == screenSettings && m.tree != nil && len(s) == 1 && s >= "1" && s <= "9" {
+	// The settings screen takes digits for its rows (view n is tab n) and
+	// t/T for the theme.
+	if m.screen == screenSettings && m.tree != nil && (len(s) == 1 && s >= "1" && s <= "9" || s == "t" || s == "T") {
 		return m.settingsKey(s)
 	}
 	// Keys that work in both panes.
@@ -1017,7 +1039,7 @@ var (
 	}, screenBindings)
 	settingsBindings = []binding{
 		bind("Settings", "↑↓ j k 1-9", "select (n is view n)", false),
-		bind("Settings", "space", "toggle the mouse", true),
+		bind("Settings", "space", "switch the theme or toggle the mouse", true), bind("Settings", "t T", "next or previous theme", true),
 		bind("Settings", "enter", "edit the view", true),
 		bind("Settings", "n", "add a view", true),
 		bind("Settings", "d d", "delete the view", true),
@@ -1400,9 +1422,9 @@ func (m *Model) checkPane(w, h int) string {
 	return m.pagePane("Check", body, w, h)
 }
 
-// settingsPane lists the editable settings as rows: the saved views
-// numbered like the tabs they show as, then the user's mouse choice. The
-// schema and the project's Definition of Done follow, read-only.
+// settingsPane lists the editable settings as rows: the theme, the saved
+// views numbered like the tabs they show as, then the user's mouse choice.
+// The schema and the project's Definition of Done follow, read-only.
 func (m *Model) settingsPane(w, h int) string {
 	inner := w - 2 - 2*theme.Pad
 	p := m.tree.Project
@@ -1427,13 +1449,15 @@ func (m *Model) settingsPane(w, h int) string {
 		rowLines[k] = len(b)
 		b = append(b, row(k, key, label, value))
 	}
-	b = append(b, m.th.S.Heading.Render("Saved views"), "")
+	b = append(b, m.th.S.Heading.Render("Look"), "")
+	addRow(0, "t", "Theme", m.th.Palette.Name+"  (t next, T previous; prep tui --gallery previews them)")
+	b = append(b, "", m.th.S.Heading.Render("Saved views"), "")
 	for k, n := range domain.ViewNames(p.Config) {
 		flags := p.Config.Views[n]
 		if flags == "" {
 			flags = "(all issues)"
 		}
-		addRow(k, fmt.Sprint(k+1), n, flags)
+		addRow(k+1, fmt.Sprint(k+1), n, flags)
 	}
 	b = append(b, "", m.th.S.Heading.Render("You")+"  "+m.th.S.Subtle.Render("your user configuration, not the project's"), "")
 	addRow(m.settingsRows()-1, "␣", "Mouse", map[bool]string{true: "on", false: "off"}[m.mouse]+"  (clicks and the wheel; off lets the terminal select text)")
