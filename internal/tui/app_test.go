@@ -1377,3 +1377,23 @@ func TestGallerySwitchesThemes(t *testing.T) {
 		t.Fatalf("T T: %s", g.th.Palette.Name)
 	}
 }
+
+func TestUnsetThemeFollowsTheTerminal(t *testing.T) {
+	p, _ := sample(t)
+	m := openModel(t, p, 110, 28)
+	m.retheme(false, m.th.Profile)
+	if m.th.Palette.Name != "light" || m.th.Dark {
+		t.Fatalf("light terminal shows %s", m.th.Palette.Name)
+	}
+	m.retheme(true, m.th.Profile)
+	if m.th.Palette.Name != "default" || !m.th.Dark {
+		t.Fatalf("dark terminal shows %s", m.th.Palette.Name)
+	}
+
+	// A configured theme ignores the background.
+	m.tree.Project.Config.Theme = "nord"
+	m.retheme(false, m.th.Profile)
+	if m.th.Palette.Name != "nord" {
+		t.Fatalf("configured nord shows %s", m.th.Palette.Name)
+	}
+}

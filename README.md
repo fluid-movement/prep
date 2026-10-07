@@ -80,25 +80,24 @@ Change the views freely. In the TUI, `s` opens the settings screen, where views 
 
 ## Themes
 
-`prep tui` comes with the themes `default`, `high-contrast`, `monochrome`, `pastel`, `catppuccin`, `nord` and `gruvbox`, each for dark and light terminals. `prep tui --gallery` shows every component; `t` and `T` switch to the next and previous theme, so you can compare them. Pick one on the settings screen (`s`, then `t`/`T`) or in your `.prep/config.yaml`:
+The themes of `prep tui` are made for dark terminals: `default`, `high-contrast`, `monochrome`, `pastel`, `catppuccin`, `nord` and `gruvbox`. For light terminals there is one theme, `light`, to use as is or to build your own on. Without a configured theme, prep shows `default` on a dark terminal and `light` on a light one. `prep tui --gallery` shows every component; `t` and `T` switch to the next and previous theme, so you can compare them. Pick one on the settings screen (`s`, then `t`/`T`) or in your `.prep/config.yaml`:
 
 ```yaml
 theme: nord
 ```
 
-A custom theme starts from a base and overrides any of its tokens, as hex colors, for dark and light backgrounds:
+A custom theme starts from a base and overrides any of its colors:
 
 ```yaml
 theme: mine
 themes:
   mine:
     base: nord
-    dark:
-      accent: "#FF9E5E"
-      selection: "#2A2F3A"
+    accent: "#FF9E5E"
+    selection: "#3A4254"
 ```
 
-`prep theme new <name> [--from <theme>]` writes a custom theme with every token filled in from the active theme (or `--from`) and selects it, so you see all tokens and only change the ones you want. A theme has eight tokens: the gray ramp `text`, `muted` and `subtle`, the `accent`, the `selection` background, and `success`, `warning` and `error`. Borders, states and kinds draw from them: states have their own glyphs, so only ready (`success`) and in progress (`accent`) stand out, and finished work fades to `subtle`. `prep theme list` shows the themes and marks the active one; `prep check` reports unknown tokens, invalid colors and unknown bases. Terminals with 256 or 16 colors get the nearest colors, and `NO_COLOR` turns colors off.
+A theme has eight colors: the gray ramp `text`, `muted` and `subtle`, the `accent`, the `selection` background, and `success`, `warning` and `error`. Borders, states and kinds draw from them: states have their own glyphs, so only ready (`success`) and in progress (`accent`) stand out, and finished work fades to `subtle`. A theme based on `light` is a light theme. `prep theme new <name> [--from <theme>]` writes a custom theme with all eight colors filled in from the active theme (or `--from`) and selects it. `prep theme list` shows the themes and marks the active one; `prep check` reports unknown tokens, invalid colors and unknown bases. Terminals with 256 or 16 colors get the nearest colors, and `NO_COLOR` turns colors off.
 
 ## Development
 

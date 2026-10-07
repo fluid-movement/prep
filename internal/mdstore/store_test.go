@@ -211,7 +211,7 @@ func TestConfigKeepsThemes(t *testing.T) {
 		t.Fatal(err)
 	}
 	own := filepath.Join(root, Dir, "config.yaml")
-	src := "views:\n  All: \"\"\ntheme: mine\nthemes:\n  mine:\n    base: nord\n    dark:\n      accent: \"#123456\"\n"
+	src := "views:\n  All: \"\"\ntheme: mine\nthemes:\n  mine:\n    base: nord\n    accent: \"#123456\"\n"
 	if err := os.WriteFile(own, []byte(src), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +219,7 @@ func TestConfigKeepsThemes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Theme != "mine" || cfg.Themes["mine"].Base != "nord" || cfg.Themes["mine"].Dark["accent"] != "#123456" {
+	if cfg.Theme != "mine" || cfg.Themes["mine"].Base != "nord" || cfg.Themes["mine"].Colors["accent"] != "#123456" {
 		t.Fatalf("loaded %+v", cfg)
 	}
 
@@ -237,7 +237,7 @@ func TestConfigKeepsThemes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Theme != "mine" || got.Themes["mine"].Dark["accent"] != "#123456" || got.Views["Hot"] != "--priority high" {
+	if got.Theme != "mine" || got.Themes["mine"].Colors["accent"] != "#123456" || got.Views["Hot"] != "--priority high" {
 		b, _ := os.ReadFile(own)
 		t.Fatalf("after save %+v\n%s", got, b)
 	}

@@ -435,22 +435,12 @@ func renderConfig(current string, cfg domain.Config) (string, error) {
 			if def.Base != "" {
 				body.Content = append(body.Content, scalar("base"), scalar(def.Base))
 			}
-			for _, bg := range []struct {
-				name   string
-				values map[string]string
-			}{{"dark", def.Dark}, {"light", def.Light}} {
-				if len(bg.values) == 0 {
-					continue
+			for _, tok := range palette.Tokens() {
+				if v, ok := def.Colors[tok]; ok {
+					val := scalar(v)
+					val.Style = yaml.DoubleQuotedStyle
+					body.Content = append(body.Content, scalar(tok), val)
 				}
-				toks := &yaml.Node{Kind: yaml.MappingNode}
-				for _, tok := range palette.Tokens() {
-					if v, ok := bg.values[tok]; ok {
-						val := scalar(v)
-						val.Style = yaml.DoubleQuotedStyle
-						toks.Content = append(toks.Content, scalar(tok), val)
-					}
-				}
-				body.Content = append(body.Content, scalar(bg.name), toks)
 			}
 			themes.Content = append(themes.Content, scalar(name), body)
 		}

@@ -14,8 +14,24 @@ import (
 	"github.com/fluid-movement/prep/internal/domain"
 )
 
-// Default is the theme used when the configuration selects none.
-const Default = "default"
+// Default and Light are the themes used when the configuration selects
+// none, on dark and on light terminals.
+const (
+	Default = "default"
+	Light   = "light"
+)
+
+// Pick returns the theme to show: the configured one, else the default for
+// the terminal's background.
+func Pick(configured string, darkTerminal bool) string {
+	switch {
+	case configured != "":
+		return configured
+	case darkTerminal:
+		return Default
+	}
+	return Light
+}
 
 // tokens are the palette: a gray ramp, the accent, the selection
 // background and the status colors. Everything else (borders, states,
@@ -30,13 +46,16 @@ func Tokens() []string { return slices.Clone(tokens) }
 // downsamples the hex value for the terminal's profile.
 type Color struct{ Hex, ANSI256, ANSI string }
 
-// Variant maps every token to its color for one background.
+// Variant maps every token to its color.
 type Variant map[string]Color
 
-// Palette is a resolved theme: every token for dark and light backgrounds.
+// Palette is a resolved theme: every token's color. Themes are made for
+// dark terminals; Light marks the ones made for light terminals (the light
+// built-in and custom themes based on it).
 type Palette struct {
-	Name        string
-	Dark, Light Variant
+	Name   string
+	Light  bool
+	Colors Variant
 }
 
 var hexRe = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
@@ -90,7 +109,7 @@ func Resolve(name string, custom map[string]domain.ThemeDef) (Palette, error) {
 
 func resolve(name string, custom map[string]domain.ThemeDef, seen []string) (Palette, error) {
 	if b, ok := builtin(name); ok {
-		return Palette{Name: b.Name, Dark: clone(b.Dark), Light: clone(b.Light)}, nil
+		return Palette{Name: b.Name, Light: b.Light, Colors: clone(b.Colors)}, nil
 	}
 	def, ok := custom[name]
 	if !ok {
@@ -111,20 +130,14 @@ func resolve(name string, custom map[string]domain.ThemeDef, seen []string) (Pal
 		return Palette{}, err
 	}
 	p.Name = name
-	for _, v := range []struct {
-		into   Variant
-		values map[string]string
-		bg     string
-	}{{p.Dark, def.Dark, "dark"}, {p.Light, def.Light, "light"}} {
-		for tok, hex := range v.values {
-			if !slices.Contains(Tokens(), tok) {
-				return Palette{}, fmt.Errorf("theme %q: unknown token %s.%s; tokens: %s", name, v.bg, tok, strings.Join(Tokens(), ", "))
-			}
-			if !hexRe.MatchString(hex) {
-				return Palette{}, fmt.Errorf("theme %q: %s.%s must be a color like #A1B2C3, got %q", name, v.bg, tok, hex)
-			}
-			v.into[tok] = Color{Hex: hex}
+	for tok, hex := range def.Colors {
+		if !slices.Contains(Tokens(), tok) {
+			return Palette{}, fmt.Errorf("theme %q: unknown token %s; tokens: base, %s", name, tok, strings.Join(Tokens(), ", "))
 		}
+		if !hexRe.MatchString(hex) {
+			return Palette{}, fmt.Errorf("theme %q: %s must be a color like #A1B2C3, got %q", name, tok, hex)
+		}
+		p.Colors[tok] = Color{Hex: hex}
 	}
 	return p, nil
 }
@@ -148,13 +161,16 @@ func Validate(selected string, custom map[string]domain.ThemeDef) error {
 	return err
 }
 
-// Def returns a custom theme definition holding every token of p for dark
-// and light, as prep theme new writes it.
+// Def returns a custom theme definition holding every token of p, as prep
+// theme new writes it. A light palette keeps light as its base, so the
+// new theme stays a light theme.
 func Def(p Palette) domain.ThemeDef {
-	d := domain.ThemeDef{Dark: map[string]string{}, Light: map[string]string{}}
+	d := domain.ThemeDef{Colors: map[string]string{}}
+	if p.Light {
+		d.Base = Light
+	}
 	for _, tok := range Tokens() {
-		d.Dark[tok] = p.Dark[tok].Hex
-		d.Light[tok] = p.Light[tok].Hex
+		d.Colors[tok] = p.Colors[tok].Hex
 	}
 	return d
 }

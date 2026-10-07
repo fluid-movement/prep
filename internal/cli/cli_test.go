@@ -1097,7 +1097,7 @@ func TestThemeCommands(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := string(b)
-	if !strings.Contains(cfg, "theme: mine") || !strings.Contains(cfg, `error: "#F38BA8"`) || !strings.Contains(cfg, `text: "#4C4F69"`) {
+	if !strings.Contains(cfg, "theme: mine") || !strings.Contains(cfg, `error: "#F38BA8"`) || !strings.Contains(cfg, `selection: "#45475A"`) {
 		t.Fatalf("config.yaml:\n%s", cfg)
 	}
 	if out := h.ok("theme", "list"); !strings.Contains(out, "* mine            custom") {

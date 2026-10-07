@@ -30,19 +30,31 @@ func RunGallery(in io.Reader, out io.Writer, cfg domain.Config) error {
 
 type gallery struct {
 	th     *theme.Theme
+	theme  string // the configured theme; empty follows the background
 	themes map[string]domain.ThemeDef
 	names  []string
+	chosen bool // the user switched themes; the background no longer picks
 	vp     viewport.Model
 	ready  bool
 	width  int
 }
 
 func newGallery(cfg domain.Config, th *theme.Theme) *gallery {
-	g := &gallery{th: th, themes: cfg.Themes, names: palette.Names(cfg.Themes)}
-	if p, err := palette.Resolve(cfg.Theme, cfg.Themes); err == nil {
-		*g.th = *theme.From(p, th.Dark, th.Profile)
-	}
+	g := &gallery{th: th, theme: cfg.Theme, themes: cfg.Themes, names: palette.Names(cfg.Themes)}
+	g.show(palette.Pick(cfg.Theme, true))
 	return g
+}
+
+// show switches to a theme by name and re-renders.
+func (g *gallery) show(name string) {
+	p, err := palette.Resolve(name, g.themes)
+	if err != nil {
+		return
+	}
+	*g.th = *theme.From(p, g.th.Profile)
+	if g.ready {
+		g.vp.SetContent(ui.Gallery(g.th, g.width-2))
+	}
 }
 
 // switchTheme shows the next or previous theme.
@@ -52,14 +64,8 @@ func (g *gallery) switchTheme(back bool) {
 	if back {
 		step = len(g.names) - 1
 	}
-	p, err := palette.Resolve(g.names[(cur+step)%len(g.names)], g.themes)
-	if err != nil {
-		return
-	}
-	*g.th = *theme.From(p, g.th.Dark, g.th.Profile)
-	if g.ready {
-		g.vp.SetContent(ui.Gallery(g.th, g.width-2))
-	}
+	g.chosen = true
+	g.show(g.names[(cur+step)%len(g.names)])
 }
 
 var galleryKeys = []ui.Key{{Keys: "↑/↓ pgup/pgdn", Desc: "scroll"}, {Keys: "t/T", Desc: "next/previous theme"}, {Keys: "q", Desc: "quit"}}
@@ -69,10 +75,11 @@ func (g *gallery) Init() tea.Cmd { return tea.RequestBackgroundColor }
 func (g *gallery) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.BackgroundColorMsg:
-		*g.th = *g.th.Rebuild(msg.IsDark(), g.th.Profile)
-		g.vp.SetContent(ui.Gallery(g.th, g.width-2))
+		if !g.chosen {
+			g.show(palette.Pick(g.theme, msg.IsDark()))
+		}
 	case tea.ColorProfileMsg:
-		*g.th = *g.th.Rebuild(g.th.Dark, msg.Profile)
+		*g.th = *g.th.Rebuild(msg.Profile)
 		g.vp.SetContent(ui.Gallery(g.th, g.width-2))
 	case tea.KeyPressMsg:
 		switch msg.String() {

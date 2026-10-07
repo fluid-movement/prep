@@ -146,6 +146,7 @@ type Model struct {
 	confirm       string            // a pending second key press: delete|view in settings
 	moving        bool              // settings: the selected view moves with j/k
 	setIdx        int               // selected settings row: the theme, the views, then the mouse
+	termLight     bool              // the terminal reported a light background
 	pending       map[string]string // issue|field: edited text a rejected write left
 	pendingSelect string            // issue to select after the next load
 	noticeTone    ui.Tone
@@ -192,26 +193,30 @@ type checkedMsg struct {
 
 func (m *Model) Init() tea.Cmd { return tea.Batch(tea.RequestBackgroundColor, m.waitForChange()) }
 
-// retheme rebuilds the theme in place when the terminal reports its
-// background or color profile; components hold the same pointer, inputs
-// copy their styles, and cached renders start over.
+// retheme follows the terminal's reported background (it picks the theme
+// only when none is configured) and color profile.
 func (m *Model) retheme(dark bool, profile colorprofile.Profile) {
-	if dark == m.th.Dark && profile == m.th.Profile {
-		return
+	m.termLight = !dark
+	if profile != m.th.Profile {
+		m.setTheme(m.th.Rebuild(profile))
 	}
-	m.setTheme(m.th.Rebuild(dark, profile))
+	m.syncTheme()
 }
 
-// syncTheme follows the configured theme after a load: a new choice or an
-// edited custom theme re-renders everything. An invalid theme keeps the
-// current one; the check screen reports it.
+// syncTheme shows the configured theme, or the default for the terminal's
+// background: a new choice or an edited custom theme re-renders
+// everything. An invalid theme keeps the current one; the check screen
+// reports it.
 func (m *Model) syncTheme() {
-	cfg := m.tree.Project.Config
-	p, err := palette.Resolve(cfg.Theme, cfg.Themes)
+	var cfg domain.Config
+	if m.tree != nil {
+		cfg = m.tree.Project.Config
+	}
+	p, err := palette.Resolve(palette.Pick(cfg.Theme, !m.termLight), cfg.Themes)
 	if err != nil || reflect.DeepEqual(p, m.th.Palette) {
 		return
 	}
-	m.setTheme(theme.From(p, m.th.Dark, m.th.Profile))
+	m.setTheme(theme.From(p, m.th.Profile))
 }
 
 // setTheme replaces the theme in place; components hold the same pointer,

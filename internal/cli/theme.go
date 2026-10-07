@@ -113,7 +113,7 @@ func themeNew(a *app, args []string) error {
 		a.reportWrite(writeResult{OK: true, Op: "theme new", Files: files})
 		return nil
 	}
-	a.printf("theme %s: every token from %s for dark and light, now active\n", name, p.Name)
+	a.printf("theme %s: every token from %s, now active\n", name, p.Name)
 	for _, f := range files {
 		a.printf("  %s\n", f)
 	}

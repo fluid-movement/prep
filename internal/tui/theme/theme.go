@@ -30,10 +30,10 @@ const (
 	Section = 1 // blank lines between sections
 )
 
-// Theme is the design system resolved for one palette, terminal
-// background and color profile.
+// Theme is the design system resolved for one palette and color profile.
 type Theme struct {
 	Palette palette.Palette
+	// Dark is true for themes made for dark terminals (all but light ones).
 	Dark    bool
 	Profile colorprofile.Profile
 	C       Colors
@@ -41,17 +41,18 @@ type Theme struct {
 	Border  lipgloss.Border
 }
 
-// New builds the default theme for a background and color profile.
-// Programs start with dark and rebuild the theme when the terminal reports
-// its background; tests pass fixed values so output is deterministic.
+// New builds the built-in theme for a terminal background when nothing is
+// configured: default on dark terminals, light on light ones. Programs
+// start dark and follow the terminal's reported background; tests pass
+// fixed values so output is deterministic.
 func New(dark bool, profile colorprofile.Profile) *Theme {
-	p, _ := palette.Resolve(palette.Default, nil)
-	return From(p, dark, profile)
+	p, _ := palette.Resolve(palette.Pick("", dark), nil)
+	return From(p, profile)
 }
 
-// From builds the theme of a palette for a background and color profile.
-func From(p palette.Palette, dark bool, profile colorprofile.Profile) *Theme {
-	t := &Theme{Palette: p, Dark: dark, Profile: profile, Border: lipgloss.RoundedBorder()}
+// From builds the theme of a palette for a color profile.
+func From(p palette.Palette, profile colorprofile.Profile) *Theme {
+	t := &Theme{Palette: p, Dark: !p.Light, Profile: profile, Border: lipgloss.RoundedBorder()}
 	t.C = Colors{
 		Text: t.color("text"), Muted: t.color("muted"), Subtle: t.color("subtle"), Accent: t.color("accent"),
 		Border: t.color("subtle"), Focus: t.color("accent"), Selection: t.color("selection"),
@@ -71,25 +72,15 @@ func From(p palette.Palette, dark bool, profile colorprofile.Profile) *Theme {
 	return t
 }
 
-// variant is the palette's tokens for the theme's background.
-func (t *Theme) variant() palette.Variant {
-	if t.Dark {
-		return t.Palette.Dark
-	}
-	return t.Palette.Light
-}
-
-// Rebuild returns the same palette for another background or profile.
-func (t *Theme) Rebuild(dark bool, profile colorprofile.Profile) *Theme {
-	return From(t.Palette, dark, profile)
-}
+// Rebuild returns the same palette for another color profile.
+func (t *Theme) Rebuild(profile colorprofile.Profile) *Theme { return From(t.Palette, profile) }
 
 // color resolves a token for the profile: hand-picked 256- and 16-color
 // values when the palette has them, else the hex value downsampled.
 func (t *Theme) color(token string) color.Color {
-	v, ok := t.variant()[token]
+	v, ok := t.Palette.Colors[token]
 	if !ok {
-		v = t.variant()["muted"]
+		v = t.Palette.Colors["muted"]
 	}
 	hex := lipgloss.Color(v.Hex)
 	ansi256, ansi := colorprofile.ANSI256.Convert(hex), colorprofile.ANSI.Convert(hex)
@@ -128,7 +119,7 @@ func (t *Theme) Kind(domain.Kind) color.Color { return t.C.Muted }
 
 // Hex returns the true-color value of a token for the theme's background,
 // for libraries that take color strings (Glamour).
-func (t *Theme) Hex(name string) string { return t.variant()[name].Hex }
+func (t *Theme) Hex(name string) string { return t.Palette.Colors[name].Hex }
 
 // Token names and their colors, in display order, for the gallery.
 func (t *Theme) Tokens() []struct {

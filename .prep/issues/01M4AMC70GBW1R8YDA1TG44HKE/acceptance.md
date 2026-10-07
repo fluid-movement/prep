@@ -1,0 +1,6 @@
+- [x] Built-ins default, high-contrast, monochrome, pastel, catppuccin, nord, gruvbox are dark palettes; light is the one light theme; each defines the eight tokens
+- [x] Custom themes are base plus tokens under the theme name; prep theme new writes that; light-ness is inherited from the base
+- [x] Unset theme: default on dark terminals, light on light terminals; a configured theme ignores the background
+- [x] Selection is visible on dark backgrounds in every dark theme
+- [x] The dropped badge strikes its label in one color
+- [x] Tests, snapshots, README and knowledge updated

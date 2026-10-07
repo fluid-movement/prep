@@ -42,11 +42,14 @@ func StateBadge(t *theme.Theme, s domain.State) string {
 	if !ok {
 		g = "?"
 	}
-	st := lipgloss.NewStyle().Foreground(t.State(s)).Width(BadgeWidth)
+	fg := lipgloss.NewStyle().Foreground(t.State(s))
+	label := fg
 	if s == domain.StateDropped {
-		return st.Render(g + " " + lipgloss.NewStyle().Strikethrough(true).Render(StateLabel(s)))
+		// Sibling styles, not nested ones: a styled string inside another
+		// style loses the outer color after its reset.
+		label = label.Strikethrough(true)
 	}
-	return st.Render(g + " " + StateLabel(s))
+	return lipgloss.NewStyle().Width(BadgeWidth).Render(fg.Render(g+" ") + label.Render(StateLabel(s)))
 }
 
 // KindTag renders an issue kind in its color, padded to KindWidth.

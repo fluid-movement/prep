@@ -43,17 +43,18 @@ func TestGallerySnapshots(t *testing.T) {
 
 // TestThemeGallerySnapshots keeps every built-in theme's look reviewable.
 func TestThemeGallerySnapshots(t *testing.T) {
-	for _, name := range palette.Builtins()[1:] {
+	for _, name := range palette.Builtins() {
+		if name == palette.Default || name == palette.Light {
+			continue // gallery-dark-* and gallery-light-*
+		}
 		p, err := palette.Resolve(name, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, dark := range []bool{true, false} {
-			snap := fmt.Sprintf("gallery-%s-%s-80", name, map[bool]string{true: "dark", false: "light"}[dark])
-			t.Run(snap, func(t *testing.T) {
-				golden(t, snap, Gallery(theme.From(p, dark, colorprofile.TrueColor), 80))
-			})
-		}
+		snap := fmt.Sprintf("gallery-%s-80", name)
+		t.Run(snap, func(t *testing.T) {
+			golden(t, snap, Gallery(theme.From(p, colorprofile.TrueColor), 80))
+		})
 	}
 }
 
@@ -74,7 +75,7 @@ func TestThemesFollowTheColorProfile(t *testing.T) {
 		} {
 			var out bytes.Buffer
 			w := &colorprofile.Writer{Forward: &out, Profile: c.profile}
-			if _, err := w.WriteString(Gallery(theme.From(p, true, c.profile), 80)); err != nil {
+			if _, err := w.WriteString(Gallery(theme.From(p, c.profile), 80)); err != nil {
 				t.Fatal(err)
 			}
 			got := out.String()
