@@ -1,0 +1,8 @@
+- [ ] prep init writes .prep/config.yaml.dist with the default views and commit mode and .prep/.gitignore containing config.yaml; it writes no config.yaml
+- [ ] With only config.yaml.dist present, prep views, prep list --view and the TUI use its views and commit mode
+- [ ] With both files present, config.yaml is used as a whole and nothing from config.yaml.dist is merged in
+- [ ] Saving settings in the TUI without an own config creates .prep/config.yaml from config.yaml.dist (header kept) and leaves config.yaml.dist unchanged
+- [ ] Writing the gitignored config.yaml prints no staging warning, and in commit mode all the commit contains no config.yaml
+- [ ] prep check reports an invalid config.yaml.dist and an invalid config.yaml each with its own file name, and accepts config.yaml.dist as a project file
+- [ ] This repository has .prep/config.yaml.dist committed and .prep/config.yaml ignored
+- [ ] Tests cover the fallback, the write-from-dist, the ignored-path staging and init
