@@ -1,0 +1,5 @@
+- [x] prep flags lists every flag ParseFilter accepts plus --view and --tree, each with its description
+- [x] List flags show all current values with issue counts: states, kinds, priorities, tags in use, parents for --under (ID and title), saved views
+- [x] prep flags --json returns the same data
+- [x] A test fails when ParseFilter gains a flag QueryFlags does not describe, or a listed value does not parse
+- [x] README views section points to prep flags

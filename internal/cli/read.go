@@ -222,6 +222,72 @@ func cmdViews(a *app, args []string) error {
 	return nil
 }
 
+// cmdFlags lists every query flag with the values it accepts now, for
+// writing views and list queries.
+func cmdFlags(a *app, args []string) error {
+	fs := flag.NewFlagSet("flags", flag.ContinueOnError)
+	if _, err := parse(fs, args); err != nil {
+		return err
+	}
+	t, err := a.load(false)
+	if err != nil {
+		return err
+	}
+	flags := t.QueryFlags()
+	var views []domain.FlagValue
+	for _, n := range domain.ViewNames(t.Project.Config) {
+		views = append(views, domain.FlagValue{Value: n, Label: t.Project.Config.Views[n]})
+	}
+	flags = append(flags,
+		domain.FlagInfo{Name: "view", Kind: domain.FlagList, Desc: "prep list only: a saved view's query, before the other flags", Values: views},
+		domain.FlagInfo{Name: "tree", Kind: domain.FlagBool, Desc: "prep list only: show the hierarchy"},
+	)
+	if a.json {
+		a.emit(map[string]any{"flags": flags})
+		return nil
+	}
+	for k, f := range flags {
+		// Switches stay together; flags with values get their own block.
+		if k > 0 && (f.Kind != domain.FlagBool || flags[k-1].Kind != domain.FlagBool) {
+			a.printf("\n")
+		}
+		head := "--" + f.Name
+		switch {
+		case f.Name == "under":
+			head += " <id>  (repeatable)"
+		case f.Name == "view":
+			head += " <name>"
+		case f.Kind == domain.FlagList:
+			head += " <value>[,<value>...]"
+		case f.Kind == domain.FlagText:
+			head += " <text>  (repeatable)"
+		}
+		a.printf("%s  %s", head, f.Desc)
+		if f.Count != nil {
+			a.printf(" (%d issues)", *f.Count)
+		}
+		a.printf("\n")
+		if f.Kind == domain.FlagList && len(f.Values) == 0 {
+			a.printf("  (none yet)\n")
+		}
+		for _, v := range f.Values {
+			switch {
+			case f.Name == "view":
+				q := v.Label
+				if q == "" {
+					q = "(all issues)"
+				}
+				a.printf("  %-26s %s\n", v.Value, q)
+			case v.Label != "":
+				a.printf("  %-26s %4d  %s\n", v.Value, v.Count, v.Label)
+			default:
+				a.printf("  %-26s %4d\n", v.Value, v.Count)
+			}
+		}
+	}
+	return nil
+}
+
 func cmdShow(a *app, args []string) error {
 	fs := flag.NewFlagSet("show", flag.ContinueOnError)
 	pos, err := parse(fs, args)

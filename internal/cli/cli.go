@@ -76,6 +76,7 @@ func init() {
 		{"show", false, "show <id>                  read one issue with its derived state", cmdShow},
 		{"check", false, "check [--no-drift]         validate the whole tree", cmdCheck},
 		{"watch", false, "watch                      stream a line per change under .prep until killed (for harness integrations)", cmdWatch},
+		{"flags", false, "flags                      every query flag with the values it accepts now and their issue counts", cmdFlags},
 		{"views", false, "views                      saved views from config.yaml (else config.yaml.dist)", cmdViews},
 		{"new", true, "new --title T --kind K     create an issue [--parent id] [--depends-on id]... [--tag t]... [--priority p] [--body text | --body-file path|-]", cmdNew},
 		{"edit", true, "edit <id>                  change [--title T] [--kind K] [--parent id|''] [--depends-on id|'']... [--tag t|'']... [--priority p] [--body text | --body-file path|-]", cmdEdit},

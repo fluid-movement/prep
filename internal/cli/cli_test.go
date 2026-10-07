@@ -1110,3 +1110,27 @@ func TestThemeCommands(t *testing.T) {
 		t.Fatalf("check:\n%s", out)
 	}
 }
+
+func TestFlags(t *testing.T) {
+	h := newHarness(t)
+	h.newIssue("--title", "Export", "--kind", "code", "--tag", "cli")
+	out := h.ok("flags")
+	for _, want := range []string{"--state <value>[,<value>...]", "  in_progress", "--tag <value>[,<value>...]", "  cli ", "--under <id>", "(none yet)", "--view <name>", "  Unresolved", "--tree"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("flags lacks %q:\n%s", want, out)
+		}
+	}
+	var r struct {
+		Flags []struct {
+			Name   string `json:"name"`
+			Values []struct {
+				Value string `json:"value"`
+				Count int    `json:"count"`
+			} `json:"values"`
+		} `json:"flags"`
+	}
+	h.jsonOf(&r, "flags")
+	if len(r.Flags) != 14 || r.Flags[2].Name != "tag" || len(r.Flags[2].Values) != 1 || r.Flags[2].Values[0].Count != 1 {
+		t.Fatalf("flags json: %+v", r.Flags)
+	}
+}
