@@ -1,0 +1,4 @@
+- [x] palette.Tokens is text, muted, subtle, accent, selection, success, warning, error; every built-in defines exactly these for dark and light
+- [x] States render open muted, defined text, ready success, in progress accent, done and dropped subtle; kinds muted
+- [x] A custom theme setting border, state.* or kind.* is a P003 error
+- [x] Snapshots updated; README and knowledge describe the eight tokens

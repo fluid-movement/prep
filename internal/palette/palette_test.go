@@ -8,6 +8,9 @@ import (
 )
 
 func TestBuiltinsDefineEveryToken(t *testing.T) {
+	if got := strings.Join(Tokens(), " "); got != "text muted subtle accent selection success warning error" {
+		t.Fatalf("tokens = %s", got)
+	}
 	want := []string{"default", "high-contrast", "monochrome", "pastel", "catppuccin", "nord", "gruvbox"}
 	if got := strings.Join(Builtins(), " "); got != strings.Join(want, " ") {
 		t.Fatalf("built-ins = %s", got)
@@ -32,7 +35,7 @@ func TestBuiltinsDefineEveryToken(t *testing.T) {
 func TestResolveCustomThemes(t *testing.T) {
 	custom := map[string]domain.ThemeDef{
 		"mine":   {Base: "nord", Dark: map[string]string{"accent": "#123456"}},
-		"deeper": {Base: "mine", Light: map[string]string{"state.done": "#ABCDEF"}},
+		"deeper": {Base: "mine", Light: map[string]string{"success": "#ABCDEF"}},
 		"plain":  {Dark: map[string]string{"text": "#FFFFFF"}},
 	}
 	p, err := Resolve("deeper", custom)
@@ -40,7 +43,7 @@ func TestResolveCustomThemes(t *testing.T) {
 		t.Fatal(err)
 	}
 	nord, _ := builtin("nord")
-	if p.Name != "deeper" || p.Dark["accent"].Hex != "#123456" || p.Light["state.done"].Hex != "#ABCDEF" || p.Dark["text"] != nord.Dark["text"] {
+	if p.Name != "deeper" || p.Dark["accent"].Hex != "#123456" || p.Light["success"].Hex != "#ABCDEF" || p.Dark["text"] != nord.Dark["text"] {
 		t.Fatalf("deeper = %+v", p)
 	}
 	if nord.Dark["accent"].Hex == "#123456" {
@@ -55,7 +58,7 @@ func TestResolveCustomThemes(t *testing.T) {
 	if got := strings.Join(Names(custom), " "); !strings.HasSuffix(got, "gruvbox deeper mine plain") {
 		t.Fatalf("names = %s", got)
 	}
-	if d := Def(p); len(d.Dark) != len(Tokens()) || d.Dark["text"] != "#ECEFF4" || d.Light["state.done"] != "#ABCDEF" {
+	if d := Def(p); len(d.Dark) != len(Tokens()) || d.Dark["text"] != "#ECEFF4" || d.Light["success"] != "#ABCDEF" {
 		t.Fatalf("Def = %+v", d)
 	}
 }
@@ -69,6 +72,9 @@ func TestValidateRejectsBrokenThemes(t *testing.T) {
 		{"nope", nil, `unknown theme "nope"`},
 		{"", map[string]domain.ThemeDef{"a": {Dark: map[string]string{"accnt": "#000000"}}}, "unknown token dark.accnt"},
 		{"", map[string]domain.ThemeDef{"a": {Light: map[string]string{"text": "red"}}}, "light.text must be a color"},
+		{"", map[string]domain.ThemeDef{"a": {Dark: map[string]string{"border": "#000000"}}}, "unknown token dark.border"},
+		{"", map[string]domain.ThemeDef{"a": {Dark: map[string]string{"state.done": "#000000"}}}, "unknown token dark.state.done"},
+		{"", map[string]domain.ThemeDef{"a": {Light: map[string]string{"kind.code": "#000000"}}}, "unknown token light.kind.code"},
 		{"", map[string]domain.ThemeDef{"a": {Base: "b"}}, `unknown base "b"`},
 		{"", map[string]domain.ThemeDef{"a": {Base: "b"}, "b": {Base: "a"}}, "base cycle"},
 		{"", map[string]domain.ThemeDef{"nord": {}}, "built-in theme cannot be redefined"},

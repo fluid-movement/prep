@@ -17,21 +17,13 @@ import (
 // Default is the theme used when the configuration selects none.
 const Default = "default"
 
-// Semantic token names, in display order.
-var semantic = []string{"text", "muted", "subtle", "accent", "border", "selection", "success", "warning", "error"}
+// tokens are the palette: a gray ramp, the accent, the selection
+// background and the status colors. Everything else (borders, states,
+// kinds) is drawn from these.
+var tokens = []string{"text", "muted", "subtle", "accent", "selection", "success", "warning", "error"}
 
-// Tokens lists every token name in display order: the semantic tokens,
-// then state.<state> and kind.<kind>.
-func Tokens() []string {
-	out := slices.Clone(semantic)
-	for _, s := range domain.States {
-		out = append(out, "state."+string(s))
-	}
-	for _, k := range domain.Kinds {
-		out = append(out, "kind."+string(k))
-	}
-	return out
-}
+// Tokens lists every token name in display order.
+func Tokens() []string { return slices.Clone(tokens) }
 
 // Color is one token's color: a true-color hex value, and optionally
 // hand-picked 256- and 16-color values. Without them, the theme package

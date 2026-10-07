@@ -1,0 +1,1 @@
+- 2026-10-07T07:27:46Z claude-code/opus-5.5: Done: palette.Tokens is the eight tokens; built-ins cut to them (values unchanged); theme maps border→subtle, kinds→muted, states via stateTokens. All 19 goldens updated: text identical except the gallery swatch list, colors calmer. Unknown-token tests cover border, state.* and kind.*.
