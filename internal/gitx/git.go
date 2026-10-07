@@ -93,6 +93,18 @@ func IsAncestor(dir, a, b string) bool {
 	return err == nil
 }
 
+// IsTracked reports whether path is in git's index.
+func IsTracked(dir, path string) bool {
+	_, err := Run(dir, "ls-files", "--error-unmatch", "--", path)
+	return err == nil
+}
+
+// Untrack removes path from git's index, keeping the file.
+func Untrack(dir, path string) error {
+	_, err := Run(dir, "rm", "--cached", "--quiet", "--", path)
+	return err
+}
+
 // Dirty reports whether path has changes not yet committed (staged or not).
 func Dirty(dir, path string) bool {
 	out, _ := Run(dir, "status", "--porcelain", "--", path)

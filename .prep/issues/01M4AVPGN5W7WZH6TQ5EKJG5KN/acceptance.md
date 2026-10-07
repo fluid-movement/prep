@@ -1,0 +1,4 @@
+- [x] A 0.1.0 project: prep check shows one fixable warning instead of an error, and views work before the fix
+- [x] prep fix writes config.yaml.dist (converted), keeps a local converted config.yaml, adds .prep/.gitignore and untracks config.yaml; check is clean afterwards
+- [x] A current project is untouched by prep fix
+- [x] Tests cover detection, the in-memory conversion and the fix; fixtures converted

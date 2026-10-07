@@ -1190,3 +1190,69 @@ func TestCompleteInTheSameCommit(t *testing.T) {
 		t.Fatalf("check:\n%s", out)
 	}
 }
+
+func TestFixConvertsAPrep010Project(t *testing.T) {
+	h := newHarness(t)
+	git := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-c", "user.email=t@t", "-c", "user.name=t"}, args...)...)
+		cmd.Dir = h.dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+		return string(out)
+	}
+	// The layout prep 0.1.0 wrote: one committed config.yaml.
+	prep := filepath.Join(h.dir, ".prep")
+	for _, f := range []string{"config.yaml.dist", ".gitignore"} {
+		if err := os.Remove(filepath.Join(prep, f)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	old := "# prep project configuration (project-level only).\n# commit_mode: off stages .prep changes; all commits each tool operation.\ncommit_mode: off\nviews:\n  Unresolved: --state open,defined,ready,in_progress\n  All: \"\"\n"
+	if err := os.WriteFile(filepath.Join(prep, "config.yaml"), []byte(old), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git("init", "-q")
+	git("add", "-A")
+	git("commit", "-qm", "0.1.0 project")
+
+	// Before the fix: one fixable warning, and the views still work.
+	if out := h.ok("check"); !strings.Contains(out, "P006") || !strings.Contains(out, "0 errors") {
+		t.Fatalf("check:\n%s", out)
+	}
+	h.ok("list", "--view", "Unresolved")
+
+	h.ok("fix")
+	dist, err := os.ReadFile(filepath.Join(prep, "config.yaml.dist"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range []string{"commit_mode", "in_progress", "project-level only"} {
+		if strings.Contains(string(dist), s) {
+			t.Fatalf("config.yaml.dist still has %q:\n%s", s, dist)
+		}
+	}
+	if !strings.Contains(string(dist), "views:\n  Unresolved: --state open,defined,ready,in-progress") {
+		t.Fatalf("config.yaml.dist:\n%s", dist)
+	}
+	own, _ := os.ReadFile(filepath.Join(prep, "config.yaml"))
+	if string(own) != string(dist) {
+		t.Fatalf("local config.yaml differs from the shared one:\n%s", own)
+	}
+	st := git("status", "--porcelain", "--ignored", ".prep")
+	for _, want := range []string{"D  .prep/config.yaml", "A  .prep/config.yaml.dist", "A  .prep/.gitignore", "!! .prep/config.yaml"} {
+		if !strings.Contains(st, want) {
+			t.Fatalf("status lacks %q:\n%s", want, st)
+		}
+	}
+	if out := h.ok("check"); !strings.Contains(out, "0 errors, 0 warnings") {
+		t.Fatalf("check after fix:\n%s", out)
+	}
+	// A current project is left alone.
+	git("commit", "-qm", "converted")
+	if out := h.ok("fix"); !strings.Contains(out, "0 files") {
+		t.Fatalf("second fix changed files:\n%s", out)
+	}
+}

@@ -38,6 +38,7 @@ const (
 	CodeConfigInvalid   = "P003" // config.yaml or config.yaml.dist invalid
 	CodeProjectUnknown  = "P004" // unknown file in .prep
 	CodeDoDOptOutUnused = "P005"
+	CodeConfigLegacy    = "P006" // config in the prep 0.1.0 layout; prep fix converts it
 
 	// Issue structure.
 	CodeBadID              = "I001" // directory name is not a valid ID

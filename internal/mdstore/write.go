@@ -315,11 +315,68 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 	return changed, nil
 }
 
+// fixLegacyConfig converts a prep 0.1.0 configuration: both config files
+// in the current format, config.yaml.dist shared (from the personal
+// config.yaml when it is missing) and config.yaml ignored. Taking
+// config.yaml out of git's index is the CLI's part.
+func (s *Store) fixLegacyConfig() ([]string, error) {
+	var changed []string
+	ownRel, distRel, ignRel := Dir+"/"+ConfigOwn, Dir+"/"+ConfigDist, Dir+"/.gitignore"
+	own, hasOwn, err := s.read(ownRel)
+	if err != nil {
+		return nil, err
+	}
+	dist, hasDist, err := s.read(distRel)
+	if err != nil {
+		return nil, err
+	}
+	if !hasOwn && !hasDist {
+		return nil, nil
+	}
+	if conv, old := convertLegacyConfig(own); hasOwn && old {
+		if err := s.write(ownRel, conv); err != nil {
+			return changed, err
+		}
+		own, changed = conv, append(changed, ownRel)
+	}
+	if conv, old := convertLegacyConfig(dist); hasDist && old {
+		if err := s.write(distRel, conv); err != nil {
+			return changed, err
+		}
+		changed = append(changed, distRel)
+	}
+	if hasOwn && !hasDist {
+		if err := s.write(distRel, own); err != nil {
+			return changed, err
+		}
+		changed = append(changed, distRel)
+	}
+	if !s.IgnoresOwnConfig() {
+		ign, _, err := s.read(ignRel)
+		if err != nil {
+			return changed, err
+		}
+		if ign != "" && !strings.HasSuffix(ign, "\n") {
+			ign += "\n"
+		}
+		if err := s.write(ignRel, ign+ConfigOwn+"\n"); err != nil {
+			return changed, err
+		}
+		changed = append(changed, ignRel)
+	}
+	return changed, nil
+}
+
 // Fix applies safe automatic repairs: canonical format, missing empty schema
 // files, duplicate dependencies and repeated section headings whose copies
 // hold content at most once.
 func (s *Store) Fix() ([]string, error) {
 	changed, err := s.Fmt(false)
+	if err != nil {
+		return changed, err
+	}
+	conf, err := s.fixLegacyConfig()
+	changed = append(changed, conf...)
 	if err != nil {
 		return changed, err
 	}

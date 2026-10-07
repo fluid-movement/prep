@@ -200,7 +200,7 @@ func TestConfigFallsBackToDist(t *testing.T) {
 	if _, _, d, _ := Open(root).Load(); strings.HasPrefix(d[0].Message, "config.yaml") {
 		t.Fatalf("message repeats the file name: %q", d[0].Message)
 	}
-	if err := os.WriteFile(file("config.yaml"), []byte("commit_mode: all\n"), 0o644); err != nil {
+	if err := os.WriteFile(file("config.yaml"), []byte("views:\n  Bad: --kind nope\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if got := strings.Join(diags(), " "); got != "config.yaml.dist config.yaml" {

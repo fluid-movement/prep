@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -120,6 +121,9 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 		}
 	}
 	project.Config, _ = s.LoadConfig()
+	if why := s.legacyConfig(); len(why) > 0 {
+		diag(domain.CodeConfigLegacy, domain.SevWarning, domain.ClassFixable, "", ConfigOwn, "run prep fix, then commit", "configuration from prep 0.1.0: %s", strings.Join(why, "; "))
+	}
 
 	entries, err := os.ReadDir(s.abs(Dir))
 	if err != nil {
@@ -345,6 +349,56 @@ func (s *Store) LoadConfig() (domain.Config, error) {
 	return cfg, err
 }
 
+var (
+	legacyCommitMode = regexp.MustCompile(`(?m)^#?\s*commit_mode:.*\n?`)
+	legacyHeader     = "# prep project configuration (project-level only).\n"
+)
+
+// convertLegacyConfig turns a config written by prep 0.1.0 into the
+// current format: no commit_mode, the state in-progress, the current
+// header. It reports whether anything changed.
+func convertLegacyConfig(raw string) (string, bool) {
+	out := legacyCommitMode.ReplaceAllString(raw, "")
+	out = strings.ReplaceAll(out, "in_progress", "in-progress")
+	if strings.HasPrefix(out, legacyHeader) {
+		out = defaultHeader() + strings.TrimPrefix(out, legacyHeader)
+	}
+	return out, out != raw
+}
+
+// legacyConfig lists what is left of the prep 0.1.0 configuration layout:
+// old content in a config file, a config.yaml without config.yaml.dist,
+// no .gitignore entry for the personal config.
+func (s *Store) legacyConfig() []string {
+	var why []string
+	own, hasOwn, _ := s.read(Dir + "/" + ConfigOwn)
+	dist, hasDist, _ := s.read(Dir + "/" + ConfigDist)
+	if _, old := convertLegacyConfig(own); hasOwn && old {
+		why = append(why, "config.yaml uses commit_mode or in_progress")
+	}
+	if _, old := convertLegacyConfig(dist); hasDist && old {
+		why = append(why, "config.yaml.dist uses commit_mode or in_progress")
+	}
+	if hasOwn && !hasDist {
+		why = append(why, "no config.yaml.dist to share")
+	}
+	if (hasOwn || hasDist) && !s.IgnoresOwnConfig() {
+		why = append(why, ".prep/.gitignore does not ignore config.yaml")
+	}
+	return why
+}
+
+// IgnoresOwnConfig reports whether .prep/.gitignore lists config.yaml.
+func (s *Store) IgnoresOwnConfig() bool {
+	raw, _, _ := s.read(Dir + "/.gitignore")
+	for _, l := range strings.Split(raw, "\n") {
+		if strings.TrimSpace(l) == ConfigOwn || strings.TrimSpace(l) == "/"+ConfigOwn {
+			return true
+		}
+	}
+	return false
+}
+
 // loadConfigFile reads one config file in .prep and reports whether it exists.
 func (s *Store) loadConfigFile(name string) (domain.Config, bool, error) {
 	var cfg domain.Config
@@ -352,6 +406,7 @@ func (s *Store) loadConfigFile(name string) (domain.Config, bool, error) {
 	if err != nil || !ok {
 		return cfg, ok, err
 	}
+	raw, _ = convertLegacyConfig(raw) // read a 0.1.0 config as converted; check reports it
 	var f configFile
 	if err := decodeStrict(raw, &f); err != nil {
 		return cfg, true, fmt.Errorf("%s: %v", name, err)
@@ -407,7 +462,7 @@ func renderConfig(current string, cfg domain.Config) (string, error) {
 		header = append(header, l)
 	}
 	if len(header) == 0 {
-		header = strings.Split(strings.TrimSpace(DefaultConfig[:strings.Index(DefaultConfig, "views:")]), "\n")
+		header = strings.Split(strings.TrimSpace(defaultHeader()), "\n")
 	}
 	scalar := func(v string) *yaml.Node { return &yaml.Node{Kind: yaml.ScalarNode, Value: v} }
 	views := &yaml.Node{Kind: yaml.MappingNode}
@@ -457,6 +512,11 @@ func renderConfig(current string, cfg domain.Config) (string, error) {
 		return "", err
 	}
 	return strings.Join(header, "\n") + "\n" + b.String(), nil
+}
+
+// defaultHeader is DefaultConfig's leading comment lines.
+func defaultHeader() string {
+	return DefaultConfig[:strings.Index(DefaultConfig, "\nviews:")+1]
 }
 
 // DefaultConfig is written by prep init as config.yaml.dist.

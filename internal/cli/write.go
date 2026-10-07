@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/fluid-movement/prep/internal/domain"
+	"github.com/fluid-movement/prep/internal/gitx"
 	"github.com/fluid-movement/prep/internal/mdstore"
 )
 
@@ -422,12 +423,26 @@ func cmdFix(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	// The personal config is ignored now; a 0.1.0 project still has it in
+	// git's index, and committing the fix removes it there (config.yaml.dist
+	// takes its place).
+	own := mdstore.Dir + "/" + mdstore.ConfigOwn
+	untracked := false
+	if gitx.IsRepo(a.store.Root) && gitx.IsTracked(a.store.Root, own) && a.store.IgnoresOwnConfig() {
+		if err := gitx.Untrack(a.store.Root, own); err != nil {
+			return err
+		}
+		untracked = true
+	}
 	idx, err := a.kstore.WriteIndexes(false)
 	if err != nil {
 		return err
 	}
 	files = append(files, idx...)
 	a.afterWrite(files)
+	if untracked {
+		files = append(files, own+" (removed from git's index; your copy stays)")
+	}
 	a.reportWrite(writeResult{OK: true, Op: "fix", Files: files})
 	return nil
 }
