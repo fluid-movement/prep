@@ -9,7 +9,7 @@ scope:
   - internal/tui/actions.go
   - internal/tui/editing.go
   - internal/tui/ui/modal.go
-confirmed_commit: 8c0f4679f307c818dba1e962e18e730333f80f3a
+confirmed_commit: 13bef3c995cb0c4273538733c8025542ffe59356
 ---
 
 # TUI editing and keys
