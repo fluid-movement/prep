@@ -61,22 +61,21 @@ func TestEffectiveDoDCascades(t *testing.T) {
 func TestPlanConfigValidates(t *testing.T) {
 	tree := NewTree(Project{}, nil, nil, nil)
 	bad := []Config{
-		{CommitMode: "sometimes"},
-		{CommitMode: CommitOff, ViewOrder: []string{""}, Views: map[string]string{"": ""}},
-		{CommitMode: CommitOff, ViewOrder: []string{"A", "A"}, Views: map[string]string{"A": ""}},
-		{CommitMode: CommitOff, ViewOrder: []string{"A"}, Views: map[string]string{"A": "--state nope"}},
-		{CommitMode: CommitOff, ViewOrder: []string{"A"}, Views: map[string]string{"A": "", "B": ""}},
+		{ViewOrder: []string{""}, Views: map[string]string{"": ""}},
+		{ViewOrder: []string{"A", "A"}, Views: map[string]string{"A": ""}},
+		{ViewOrder: []string{"A"}, Views: map[string]string{"A": "--state nope"}},
+		{ViewOrder: []string{"A"}, Views: map[string]string{"A": "", "B": ""}},
 	}
 	for _, cfg := range bad {
 		if _, err := tree.PlanConfig(cfg); err == nil {
 			t.Errorf("PlanConfig(%+v) accepted", cfg)
 		}
 	}
-	c, err := tree.PlanConfig(Config{CommitMode: CommitAll, ViewOrder: []string{"Hot"}, Views: map[string]string{"Hot": " --priority  high "}})
+	c, err := tree.PlanConfig(Config{ViewOrder: []string{"Hot"}, Views: map[string]string{"Hot": " --priority  high "}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := tree.Apply(c).Project.Config; got.CommitMode != CommitAll || got.Views["Hot"] != "--priority high" {
+	if got := tree.Apply(c).Project.Config; got.Views["Hot"] != "--priority high" {
 		t.Fatalf("applied config = %+v", got)
 	}
 }

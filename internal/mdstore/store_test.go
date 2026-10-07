@@ -120,8 +120,7 @@ func TestConfigRoundTrip(t *testing.T) {
 		t.Fatalf("unchanged config rewritten as\n%s\nwant\n%s", got, DefaultConfig)
 	}
 
-	// Order, renames, new views and the commit mode survive a load.
-	cfg.CommitMode = domain.CommitAll
+	// Order, renames and new views survive a load.
 	cfg.ViewOrder = []string{"Mine: urgent", "All", "Actionable"}
 	cfg.Views = map[string]string{"Mine: urgent": "--priority critical,high  --tag ui", "All": "", "Actionable": "--actionable"}
 	apply(cfg)
@@ -129,7 +128,7 @@ func TestConfigRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v\n%s", err, read())
 	}
-	if got.CommitMode != domain.CommitAll || strings.Join(got.ViewOrder, "|") != "Mine: urgent|All|Actionable" || got.Views["Mine: urgent"] != "--priority critical,high --tag ui" {
+	if strings.Join(got.ViewOrder, "|") != "Mine: urgent|All|Actionable" || got.Views["Mine: urgent"] != "--priority critical,high --tag ui" {
 		t.Fatalf("loaded %+v from\n%s", got, read())
 	}
 	if !strings.HasPrefix(read(), "# prep project configuration") {

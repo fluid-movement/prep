@@ -105,7 +105,7 @@ func sample(t *testing.T) (*project, map[string]string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := domain.Config{CommitMode: tr.Project.Config.CommitMode, Views: map[string]string{}}
+	cfg := domain.Config{Views: map[string]string{}}
 	for _, v := range sampleViews {
 		cfg.Views[v.name] = v.query
 		cfg.ViewOrder = append(cfg.ViewOrder, v.name)
@@ -686,7 +686,7 @@ func TestCheckAndSettingsScreens(t *testing.T) {
 
 	keys(m, "s")
 	v = ansi.Strip(m.View().Content)
-	for _, want := range []string{"Settings", "Commit mode", "Attention", "--stale", "Definition of Done"} {
+	for _, want := range []string{"Settings", "Saved views", "Attention", "--stale", "Definition of Done"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("settings lacks %q:\n%s", want, v)
 		}
@@ -1010,7 +1010,7 @@ func TestEditSettings(t *testing.T) {
 	var edits []string
 	m := editable(t, p, &edits)
 	run(m, "s")
-	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Commit mode") || !strings.Contains(v, "6  All") {
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Saved views") || !strings.Contains(v, "6  All") {
 		t.Fatalf("settings screen:\n%s", v)
 	}
 	cfg := func() domain.Config {
@@ -1020,12 +1020,6 @@ func TestEditSettings(t *testing.T) {
 		}
 		return tr.Project.Config
 	}
-
-	run(m, "space")
-	if cfg().CommitMode != domain.CommitAll {
-		t.Fatalf("space did not toggle the commit mode: %q", cfg().CommitMode)
-	}
-	run(m, "space")
 
 	// Add a view; an invalid query is rejected and the dialog stays open.
 	run(m, "n")

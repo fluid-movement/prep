@@ -1,0 +1,5 @@
+- [x] No code, fixture or knowledge entry mentions commit_mode or commit mode, except history records
+- [x] Every prep write stages the touched files and never commits
+- [x] A config.yaml that sets commit_mode is reported by prep check as P003
+- [x] The TUI settings screen lists the views and the mouse setting without a commit mode row; its tests and goldens are updated
+- [x] prep init writes a config.yaml without commit_mode

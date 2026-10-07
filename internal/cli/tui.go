@@ -59,7 +59,7 @@ func cmdTUI(a *app, args []string) error {
 		if err != nil {
 			return "", err
 		}
-		if err := record(root, t, strings.Join(strings.Fields(fmt.Sprintf("prep: %s %s (tui)", c.Op, c.IssueID)), " "), files); err != nil {
+		if err := record(root, files); err != nil {
 			return c.IssueID, fmt.Errorf("written, but git failed: %v", err)
 		}
 		return c.IssueID, nil

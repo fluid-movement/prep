@@ -247,7 +247,7 @@ func TestClickKnowledgeAndSettingsRows(t *testing.T) {
 
 	keys(m, "esc", "s")
 	clickText(t, m, "--actionable", 0, 110)
-	if m.setIdx != 2 {
+	if m.setIdx != 1 {
 		t.Fatalf("settings row click: row %d", m.setIdx)
 	}
 	clickText(t, m, "Mouse", 0, 110)

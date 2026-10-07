@@ -1,6 +1,4 @@
 # prep project configuration (project-level only).
-# commit_mode: off stages .prep changes; all commits each tool operation.
-commit_mode: off
 views:
   Attention: --stale
   Actionable: --actionable

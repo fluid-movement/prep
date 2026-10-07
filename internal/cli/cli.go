@@ -278,21 +278,18 @@ func one(name string, pos []string) (string, error) {
 	return pos[0], nil
 }
 
-// afterWrite stages or commits the touched paths according to config.
-func (a *app) afterWrite(t *domain.Tree, msg string, paths []string) {
-	if err := record(a.store.Root, t, msg, paths); err != nil {
+// afterWrite stages the touched paths.
+func (a *app) afterWrite(paths []string) {
+	if err := record(a.store.Root, paths); err != nil {
 		fmt.Fprintf(a.errw, "prep: warning: %v\n", err)
 	}
 }
 
-// record stages written paths, or commits them in commit mode all. Outside
-// a git repository it does nothing.
-func record(root string, t *domain.Tree, msg string, paths []string) error {
+// record stages written paths; the user or agent commits them with the
+// code. Outside a git repository it does nothing.
+func record(root string, paths []string) error {
 	if len(paths) == 0 || !gitx.IsRepo(root) {
 		return nil
-	}
-	if t != nil && t.Project.Config.CommitMode == domain.CommitAll {
-		return gitx.Commit(root, msg, paths)
 	}
 	return gitx.Stage(root, paths)
 }

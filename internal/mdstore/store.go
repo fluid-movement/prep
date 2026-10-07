@@ -317,13 +317,12 @@ func canonicalProject(raw string) string {
 // --- config ---
 
 type configFile struct {
-	CommitMode string            `yaml:"commit_mode,omitempty"`
-	Views      map[string]string `yaml:"views,omitempty"`
+	Views map[string]string `yaml:"views,omitempty"`
 }
 
 // LoadConfig reads config.yaml; a missing file yields defaults.
 func (s *Store) LoadConfig() (domain.Config, error) {
-	cfg := domain.Config{CommitMode: domain.CommitOff}
+	var cfg domain.Config
 	raw, ok, err := s.read(Dir + "/config.yaml")
 	if err != nil || !ok {
 		return cfg, err
@@ -331,13 +330,6 @@ func (s *Store) LoadConfig() (domain.Config, error) {
 	var f configFile
 	if err := decodeStrict(raw, &f); err != nil {
 		return cfg, fmt.Errorf("config.yaml: %v", err)
-	}
-	switch f.CommitMode {
-	case "":
-	case domain.CommitOff, domain.CommitAll:
-		cfg.CommitMode = f.CommitMode
-	default:
-		return cfg, fmt.Errorf("config.yaml: commit_mode must be off or all, got %q", f.CommitMode)
 	}
 	for name, flags := range f.Views {
 		if _, err := domain.ParseFilter(strings.Fields(flags)); err != nil {
@@ -371,8 +363,8 @@ func viewOrder(raw string) []string {
 }
 
 // renderConfig writes config.yaml from a configuration: the comment lines
-// that lead the current file (or the default header), the commit mode and
-// the views in their order, so the file reads like the one prep init wrote.
+// that lead the current file (or the default header) and the views in
+// their order, so the file reads like the one prep init wrote.
 func renderConfig(current string, cfg domain.Config) (string, error) {
 	var header []string
 	for _, l := range strings.Split(current, "\n") {
@@ -382,7 +374,7 @@ func renderConfig(current string, cfg domain.Config) (string, error) {
 		header = append(header, l)
 	}
 	if len(header) == 0 {
-		header = strings.Split(strings.TrimSpace(DefaultConfig[:strings.Index(DefaultConfig, "commit_mode")]), "\n")
+		header = strings.Split(strings.TrimSpace(DefaultConfig[:strings.Index(DefaultConfig, "views:")]), "\n")
 	}
 	scalar := func(v string) *yaml.Node { return &yaml.Node{Kind: yaml.ScalarNode, Value: v} }
 	views := &yaml.Node{Kind: yaml.MappingNode}
@@ -393,10 +385,10 @@ func renderConfig(current string, cfg domain.Config) (string, error) {
 		}
 		views.Content = append(views.Content, scalar(n), v)
 	}
-	root := &yaml.Node{Kind: yaml.MappingNode, Content: []*yaml.Node{scalar("commit_mode"), scalar(cfg.CommitMode)}}
-	if len(cfg.ViewOrder) > 0 {
-		root.Content = append(root.Content, scalar("views"), views)
+	if len(cfg.ViewOrder) == 0 {
+		return strings.Join(header, "\n") + "\n", nil
 	}
+	root := &yaml.Node{Kind: yaml.MappingNode, Content: []*yaml.Node{scalar("views"), views}}
 	var b strings.Builder
 	enc := yaml.NewEncoder(&b)
 	enc.SetIndent(2)
@@ -408,8 +400,7 @@ func renderConfig(current string, cfg domain.Config) (string, error) {
 
 // DefaultConfig is written by prep init.
 const DefaultConfig = `# prep project configuration (project-level only).
-# commit_mode: off stages .prep changes; all commits each tool operation.
-commit_mode: off
+# views: saved queries (prep list flags), shown as tabs in prep tui.
 views:
   Unresolved: --state open,defined,ready,in_progress
   All: ""

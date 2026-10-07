@@ -1,0 +1,3 @@
+- 2026-10-07T06:57:32Z claude-code/opus-5.5: Removed commit mode from domain, mdstore, cli and the TUI settings screen; tests next
+
+- 2026-10-07T06:59:47Z claude-code/opus-5.5: Done: commit_mode, CommitOff/CommitAll and gitx.Commit removed; record and afterWrite take only paths (commit messages are gone); settings screen lost its commit mode row (goldens: row and Project heading removed, key help shorter); fixtures and this repo converted; config-invalid fixture now fails on an unparsable view query. Verified in a scratch repo: init writes no commit_mode, prep new only stages, a leftover commit_mode is P003. The two remaining mentions in knowledge (cli, storage-format) describe the removal.

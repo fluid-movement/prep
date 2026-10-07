@@ -2,7 +2,6 @@ package cli
 
 import (
 	"flag"
-	"fmt"
 	"sort"
 	"strings"
 
@@ -188,7 +187,7 @@ func (a *app) writeKnowledge(e domain.KnowledgeEdit) ([]string, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	a.afterWrite(t, fmt.Sprintf("prep: knowledge %s", c.Knowledge.Path), files)
+	a.afterWrite(files)
 	return files, c.Knowledge.Path, nil
 }
 

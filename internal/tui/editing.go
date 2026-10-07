@@ -246,15 +246,14 @@ func (m *Model) helpColumn(lines []string, width int) string {
 
 // --- settings ---
 
-// settingsRows is the number of selectable rows: the commit mode, then the views.
-// settingsRows counts the settings rows: the commit mode, the views, and
-// the user's mouse choice last.
-func (m *Model) settingsRows() int { return 2 + len(domain.ViewNames(m.tree.Project.Config)) }
+// settingsRows counts the settings rows: the views, and the user's mouse
+// choice last.
+func (m *Model) settingsRows() int { return 1 + len(domain.ViewNames(m.tree.Project.Config)) }
 
 // settingsConfig copies the project configuration with its view order spelled out.
 func (m *Model) settingsConfig() domain.Config {
 	c := m.tree.Project.Config
-	cp := domain.Config{CommitMode: c.CommitMode, Views: map[string]string{}, ViewOrder: domain.ViewNames(c)}
+	cp := domain.Config{Views: map[string]string{}, ViewOrder: domain.ViewNames(c)}
 	for _, n := range cp.ViewOrder {
 		cp.Views[n] = c.Views[n]
 	}
@@ -267,8 +266,8 @@ func (m *Model) saveSettings(what string, cfg domain.Config, fromModal bool) tea
 
 // settingsKey handles the settings screen: arrows or digits select a row
 // (digit n is view n, the tab it shows as), space or enter toggles the
-// commit mode or the mouse, enter edits a view, n adds one, d d deletes it,
-// and m starts moving it.
+// mouse, enter edits a view, n adds one, d d deletes it, and m starts
+// moving it.
 func (m *Model) settingsKey(s string) tea.Cmd {
 	if m.moving {
 		return m.moveKey(s)
@@ -276,10 +275,10 @@ func (m *Model) settingsKey(s string) tea.Cmd {
 	rows := m.settingsRows()
 	m.setIdx = clamp(m.setIdx, 0, rows-1)
 	cfg := m.settingsConfig()
-	view := m.setIdx - 1 // index into cfg.ViewOrder; -1 is the commit mode
+	view := m.setIdx // index into cfg.ViewOrder; -1 on the mouse row
 	onMouse := m.setIdx == rows-1
 	if onMouse {
-		view = -2
+		view = -1
 	}
 	if s != "d" {
 		m.confirm = ""
@@ -290,14 +289,10 @@ func (m *Model) settingsKey(s string) tea.Cmd {
 	case "down", "j":
 		m.setIdx = clamp(m.setIdx+1, 0, rows-1)
 	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
-		m.setIdx = clamp(int(s[0]-'0'), 0, rows-2)
+		m.setIdx = clamp(int(s[0]-'1'), 0, rows-2)
 	case "space", "enter":
 		if onMouse {
 			return m.toggleMouse()
-		}
-		if view < 0 {
-			cfg.CommitMode = map[string]string{domain.CommitOff: domain.CommitAll, domain.CommitAll: domain.CommitOff}[cfg.CommitMode]
-			return m.saveSettings("commit mode "+cfg.CommitMode, cfg, false)
 		}
 		if s == "enter" {
 			name := cfg.ViewOrder[view]
@@ -332,7 +327,7 @@ func (m *Model) settingsKey(s string) tea.Cmd {
 // it one place (one write each), enter or esc ends the mode.
 func (m *Model) moveKey(s string) tea.Cmd {
 	cfg := m.settingsConfig()
-	view := m.setIdx - 1
+	view := m.setIdx
 	to := view
 	switch s {
 	case "up", "k":
@@ -349,7 +344,7 @@ func (m *Model) moveKey(s string) tea.Cmd {
 		return nil
 	}
 	cfg.ViewOrder[view], cfg.ViewOrder[to] = cfg.ViewOrder[to], cfg.ViewOrder[view]
-	m.setIdx = to + 1
+	m.setIdx = to
 	return m.saveSettings("moved view "+cfg.ViewOrder[to], cfg, false)
 }
 
@@ -383,7 +378,7 @@ func (m *Model) saveViewEdit() tea.Cmd {
 	cfg.Views[name] = query
 	what := "saved view " + name
 	if old == "" {
-		m.setIdx = len(cfg.ViewOrder)
+		m.setIdx = len(cfg.ViewOrder) - 1
 		what = "added view " + name
 	}
 	return m.saveSettings(what, cfg, true)

@@ -77,18 +77,6 @@ func Stage(dir string, paths []string) error {
 	return err
 }
 
-// Commit commits exactly the given paths, leaving anything else staged alone.
-func Commit(dir, message string, paths []string) error {
-	if err := Stage(dir, paths); err != nil {
-		return err
-	}
-	if out, _ := Run(dir, append([]string{"diff", "--cached", "--name-only", "--"}, paths...)...); out == "" {
-		return nil
-	}
-	_, err := Run(dir, append([]string{"commit", "--quiet", "-m", message, "--only", "--"}, paths...)...)
-	return err
-}
-
 // Head returns the full hash of the current commit.
 func Head(dir string) (string, error) {
 	out, err := Run(dir, "rev-parse", "HEAD")

@@ -72,7 +72,7 @@ func cmdInit(a *app, args []string) error {
 		return err
 	}
 	a.store = st
-	a.afterWrite(nil, "prep: init", files)
+	a.afterWrite(files)
 	if !*noBootstrap {
 		more, err := a.bootstrap()
 		if err != nil {
@@ -116,7 +116,7 @@ func (a *app) applyAll(t *domain.Tree, cs []*domain.Change, msg string) ([]strin
 		}
 		t = t.Apply(c)
 	}
-	a.afterWrite(t, msg, files)
+	a.afterWrite(files)
 	return files, nil
 }
 
@@ -197,7 +197,7 @@ func cmdNew(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	a.afterWrite(t, fmt.Sprintf("prep: new %s %s", c.IssueID, in.Title), files)
+	a.afterWrite(files)
 	a.reportWrite(writeResult{OK: true, Op: "new", ID: c.IssueID, State: domain.StateOpen, Files: files})
 	return nil
 }
@@ -311,7 +311,7 @@ func cmdEdit(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	a.afterWrite(t, fmt.Sprintf("prep: edit %s (%s)", id, strings.Join(c.Edit.Fields, ", ")), files)
+	a.afterWrite(files)
 	after, err := a.load(false)
 	if err != nil {
 		return err
@@ -369,7 +369,7 @@ func opCmd(op domain.Op) func(*app, []string) error {
 		if err != nil {
 			return err
 		}
-		a.afterWrite(t, fmt.Sprintf("prep: %s %s %s", op, id, t.Issues[id].Title), files)
+		a.afterWrite(files)
 		a.reportWrite(writeResult{OK: true, Op: string(op), ID: id, State: t.Apply(c).State(id), Files: files})
 		return nil
 	}
@@ -384,7 +384,6 @@ func cmdFmt(a *app, args []string) error {
 	if err := a.open(); err != nil {
 		return err
 	}
-	cfg, _ := a.store.LoadConfig()
 	files, err := a.store.Fmt(*check)
 	if err != nil {
 		return err
@@ -410,7 +409,7 @@ func cmdFmt(a *app, args []string) error {
 		}
 		return nil
 	}
-	a.afterWrite(&domain.Tree{Project: domain.Project{Config: cfg}}, "prep: fmt", files)
+	a.afterWrite(files)
 	a.reportWrite(writeResult{OK: true, Op: "fmt", Files: files})
 	return nil
 }
@@ -419,7 +418,6 @@ func cmdFix(a *app, args []string) error {
 	if err := a.open(); err != nil {
 		return err
 	}
-	cfg, _ := a.store.LoadConfig()
 	files, err := a.store.Fix()
 	if err != nil {
 		return err
@@ -429,7 +427,7 @@ func cmdFix(a *app, args []string) error {
 		return err
 	}
 	files = append(files, idx...)
-	a.afterWrite(&domain.Tree{Project: domain.Project{Config: cfg}}, "prep: fix", files)
+	a.afterWrite(files)
 	a.reportWrite(writeResult{OK: true, Op: "fix", Files: files})
 	return nil
 }
@@ -462,7 +460,7 @@ func cmdMigrate(a *app, args []string) error {
 		}
 		files = append(files, ".prep/project.md")
 	}
-	a.afterWrite(t, fmt.Sprintf("prep: migrate schema %d to %d", from, domain.SchemaVersion), files)
+	a.afterWrite(files)
 	a.reportWrite(writeResult{OK: true, Op: "migrate", Files: files})
 	return nil
 }
@@ -592,7 +590,7 @@ func recordCmd(op domain.Op) func(*app, []string) error {
 		if c.Decision != nil {
 			msg += fmt.Sprintf(" %s %s", c.Decision.ID, c.Decision.Title)
 		}
-		a.afterWrite(t, msg, files)
+		a.afterWrite(files)
 		a.reportWrite(writeResult{OK: true, Op: string(op), ID: id, Files: files})
 		return nil
 	}

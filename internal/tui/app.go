@@ -143,7 +143,7 @@ type Model struct {
 	know          knowState
 	confirm       string            // a pending second key press: delete|view in settings
 	moving        bool              // settings: the selected view moves with j/k
-	setIdx        int               // selected settings row: 0 commit mode, then the views
+	setIdx        int               // selected settings row: the views, then the mouse
 	pending       map[string]string // issue|field: edited text a rejected write left
 	pendingSelect string            // issue to select after the next load
 	noticeTone    ui.Tone
@@ -1017,7 +1017,7 @@ var (
 	}, screenBindings)
 	settingsBindings = []binding{
 		bind("Settings", "↑↓ j k 1-9", "select (n is view n)", false),
-		bind("Settings", "space", "toggle the commit mode or the mouse", true),
+		bind("Settings", "space", "toggle the mouse", true),
 		bind("Settings", "enter", "edit the view", true),
 		bind("Settings", "n", "add a view", true),
 		bind("Settings", "d d", "delete the view", true),
@@ -1400,10 +1400,9 @@ func (m *Model) checkPane(w, h int) string {
 	return m.pagePane("Check", body, w, h)
 }
 
-// settingsPane shows the project configuration, read-only.
-// settingsPane lists the editable settings as rows: the commit mode, then
-// the saved views numbered like the tabs they show as. The schema and the
-// project's Definition of Done follow, read-only.
+// settingsPane lists the editable settings as rows: the saved views
+// numbered like the tabs they show as, then the user's mouse choice. The
+// schema and the project's Definition of Done follow, read-only.
 func (m *Model) settingsPane(w, h int) string {
 	inner := w - 2 - 2*theme.Pad
 	p := m.tree.Project
@@ -1428,15 +1427,13 @@ func (m *Model) settingsPane(w, h int) string {
 		rowLines[k] = len(b)
 		b = append(b, row(k, key, label, value))
 	}
-	b = append(b, m.th.S.Heading.Render("Project"), "")
-	addRow(0, "␣", "Commit mode", p.Config.CommitMode+"  (off stages .prep changes, all commits each write)")
-	b = append(b, "", m.th.S.Heading.Render("Saved views"), "")
+	b = append(b, m.th.S.Heading.Render("Saved views"), "")
 	for k, n := range domain.ViewNames(p.Config) {
 		flags := p.Config.Views[n]
 		if flags == "" {
 			flags = "(all issues)"
 		}
-		addRow(k+1, fmt.Sprint(k+1), n, flags)
+		addRow(k, fmt.Sprint(k+1), n, flags)
 	}
 	b = append(b, "", m.th.S.Heading.Render("You")+"  "+m.th.S.Subtle.Render("your user configuration, not the project's"), "")
 	addRow(m.settingsRows()-1, "␣", "Mouse", map[bool]string{true: "on", false: "off"}[m.mouse]+"  (clicks and the wheel; off lets the terminal select text)")

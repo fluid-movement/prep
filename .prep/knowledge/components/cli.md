@@ -1,7 +1,7 @@
 ---
 type: component
 title: CLI
-description: internal/cli — command table, global flags, JSON output and errors, write pipeline, git staging and commit modes.
+description: internal/cli — command table, global flags, JSON output and errors, write pipeline and git staging.
 status: stable
 generated:
   by: claude-code/2.1.289
@@ -22,10 +22,10 @@ Applies when adding or changing commands.
 - `prep edit <id>` changes any of `--title`, `--kind`, `--parent` (`''` removes it), `--depends-on` (repeatable, replaces the list; `''` clears it) and `--body`/`--body-file`. It uses `flag.Visit` to tell unset from empty, and reports `state` and `stale` after the write.
 - Record writes (`recordCmd` in `write.go`): `context` and `findings` replace their record and require `--body` or `--body-file`; `decide` appends a decision; `criterion` (`--add`, `--check`/`--uncheck`/`--remove <n>`) and `dod` (`--add`, `--opt-out` with `--reason`, `--remove <item>`) change acceptance.md; `log <id> <text>` appends to history. `prep show` numbers criteria for `--check <n>`.
 - `prep fmt` (and `--check`) and `prep fix` also regenerate the OKF index files of the knowledge bundle.
-- `record` stages written paths or commits them in commit mode `all`; `afterWrite` prints its errors, the TUI's write function returns them.
+- `record` stages written paths; `afterWrite` prints its errors, the TUI's write function returns them. prep never commits: the user or agent commits the staged `.prep` files with the code (commit mode was removed in 01M4AJ9DN4CK5S4WX2N68VBR98).
 - `prep knowledge new|update|confirm` (`knowledge.go`): knowledge entry writes run plan (`Tree.PlanKnowledge`), render through the store, `CheckWrite`, write, stage; `confirm` sets `confirmed_commit` to HEAD for the named entries or `--drifted` ones and needs git and a scope.
-- Commit mode defaults to `off`: prep stages the `.prep` files it writes and the user or agent commits them with the code; `all` commits each operation (decided in 01M46ARS5RNN4X2TMVHAKWA3KW).
-- Write pipeline: load → `Plan` → `CheckWrite` → `store.Apply` → stage (commit mode `off`) or commit only `.prep` paths (`all`).
+
+- Write pipeline: load → `Plan` → `CheckWrite` → `store.Apply` → stage.
 - Priority: `prep new --priority` and `prep edit --priority` (critical, high, medium, low; medium unsets; a priority-only edit works on resolved issues), `prep list --priority` filters (comma-separated OR, also in saved views). `summary` and `prep show --json` always carry the effective `priority`; text output marks non-medium levels before the title (`!crit`, `!high`, `low`) and `show` prints `priority:`. `prep list`, `prep next` and prime's actionable and stale lists order by priority then ID (`Tree.ByPriority`, `byPriority` for prime summaries).
 - Tags: `prep new --tag` and `prep edit --tag` (repeatable or comma-separated; edit replaces the list, `--tag ''` clears it, and a tag-only edit also works on resolved issues); `prep list --tag` filters; `prep list` shows tags as `#tag` after the title and `prep show` as a `tags:` line.
 - `prep init [--no-bootstrap]` creates `.prep` (no placeholder overview) and, unless skipped, the bootstrap issues via `Tree.PlanBootstrap`, written change by change; `prep knowledge bootstrap` does the same later when the knowledge base is not bootstrapped and no bootstrap issue is open. `prep prime` (JSON `bootstrap`) and `prep guide` (`alerts`) print the bootstrap alert first.

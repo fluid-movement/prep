@@ -130,17 +130,10 @@ type Project struct {
 
 // Config is the project-level configuration.
 type Config struct {
-	CommitMode string            `json:"commit_mode"`
-	Views      map[string]string `json:"views,omitempty"`
+	Views map[string]string `json:"views,omitempty"`
 	// ViewOrder lists the view names in the order the config file gives them.
 	ViewOrder []string `json:"view_order,omitempty"`
 }
-
-// Commit modes.
-const (
-	CommitOff = "off"
-	CommitAll = "all"
-)
 
 // Criterion is one checkable acceptance criterion.
 type Criterion struct {

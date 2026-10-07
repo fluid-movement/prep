@@ -9,15 +9,10 @@ import (
 const OpConfig Op = "config"
 
 // PlanConfig validates a new project configuration and returns the change
-// that writes it: a known commit mode, and saved views with distinct,
-// non-empty names whose queries parse. Views keep the order of ViewOrder.
+// that writes it: saved views with distinct, non-empty names whose queries
+// parse. Views keep the order of ViewOrder.
 func (t *Tree) PlanConfig(cfg Config) (*Change, error) {
 	var unmet []Unmet
-	switch cfg.CommitMode {
-	case CommitOff, CommitAll:
-	default:
-		unmet = append(unmet, Unmet{GateConfig, fmt.Sprintf("commit mode must be %s or %s, got %q", CommitOff, CommitAll, cfg.CommitMode)})
-	}
 	seen := map[string]bool{}
 	for _, name := range cfg.ViewOrder {
 		switch {
