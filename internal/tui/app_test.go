@@ -1035,14 +1035,28 @@ func TestEditSettings(t *testing.T) {
 		return tr.Project.Config
 	}
 
-	// t and T switch the theme live and save it.
+	// t previews the next theme on the issue screen without saving; enter
+	// keeps it; esc after another step restores it.
 	run(m, "t")
-	if cfg().Theme != "high-contrast" || m.th.Palette.Name != "high-contrast" {
-		t.Fatalf("t: config theme %q, shown %q", cfg().Theme, m.th.Palette.Name)
+	if m.preview == nil || m.screen != screenIssues || m.th.Palette.Name != "high-contrast" || cfg().Theme != "" {
+		t.Fatalf("t: preview %v, screen %d, shown %q, saved %q", m.preview != nil, m.screen, m.th.Palette.Name, cfg().Theme)
 	}
-	run(m, "T")
-	if cfg().Theme != "default" || m.th.Palette.Name != "default" {
-		t.Fatalf("T: config theme %q, shown %q", cfg().Theme, m.th.Palette.Name)
+	if f := ansi.Strip(m.footer()); !strings.Contains(f, "Theme high-contrast 2/8") {
+		t.Fatalf("theme bar: %q", f)
+	}
+	run(m, "enter")
+	if m.preview != nil || m.screen != screenSettings || cfg().Theme != "high-contrast" || m.th.Palette.Name != "high-contrast" {
+		t.Fatalf("enter: preview %v, screen %d, saved %q", m.preview != nil, m.screen, cfg().Theme)
+	}
+	run(m, "enter") // the Theme row: preview again
+	run(m, "right")
+	run(m, "right")
+	if m.th.Palette.Name != "pastel" {
+		t.Fatalf("right right shows %s", m.th.Palette.Name)
+	}
+	run(m, "esc")
+	if m.preview != nil || m.screen != screenSettings || m.th.Palette.Name != "high-contrast" || cfg().Theme != "high-contrast" {
+		t.Fatalf("esc: shown %q, saved %q", m.th.Palette.Name, cfg().Theme)
 	}
 	run(m, "down")
 
@@ -1575,5 +1589,35 @@ func TestLinkModeScrollsToTheSelection(t *testing.T) {
 	sel := m.relations(ids["export"])[linkTargets(m.relations(ids["export"]))[m.linkSel]].id
 	if !strings.Contains(v, m.tree.Issues[sel].Title) || !strings.Contains(v, "above") {
 		t.Fatalf("selection %s not scrolled into view:\n%s", m.tree.Issues[sel].Title, v)
+	}
+}
+
+func TestThemePreviewOnTheIssueScreen(t *testing.T) {
+	p, _ := sample(t)
+	var edits []string
+	m := editable(t, p, &edits)
+	m.Update(tea.WindowSizeMsg{Width: 110, Height: 28})
+	run(m, "6")
+	run(m, "s")
+	run(m, "enter") // the Theme row
+	run(m, "left")  // the last theme: light
+	if m.th.Palette.Name != "light" || m.screen != screenIssues {
+		t.Fatalf("left from default shows %s on screen %d", m.th.Palette.Name, m.screen)
+	}
+	checkSize(t, m.View().Content, 110, 28)
+	golden(t, "theme-preview-110x28", m.View().Content)
+
+	// A reload during the preview keeps the previewed theme.
+	tr, err := p.load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.apply(tr, nil)
+	if m.th.Palette.Name != "light" {
+		t.Fatalf("reload reset the preview to %s", m.th.Palette.Name)
+	}
+	run(m, "esc")
+	if m.th.Palette.Name != "default" || m.screen != screenSettings {
+		t.Fatalf("esc: %s on screen %d", m.th.Palette.Name, m.screen)
 	}
 }

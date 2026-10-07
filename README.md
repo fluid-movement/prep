@@ -80,7 +80,7 @@ Change the views freely. In the TUI, `s` opens the settings screen, where views 
 
 ## Themes
 
-The themes of `prep tui` are made for dark terminals: `default`, `high-contrast`, `monochrome`, `pastel`, `catppuccin`, `nord` and `gruvbox`. For light terminals there is one theme, `light`, to use as is or to build your own on. Without a configured theme, prep shows `default` on a dark terminal and `light` on a light one. `prep tui --gallery` shows every component; `t` and `T` switch to the next and previous theme, so you can compare them. Pick one on the settings screen (`s`, then `t`/`T`) or in your `.prep/config.yaml`:
+The themes of `prep tui` are made for dark terminals: `default`, `high-contrast`, `monochrome`, `pastel`, `catppuccin`, `nord` and `gruvbox`. For light terminals there is one theme, `light`, to use as is or to build your own on. Without a configured theme, prep shows `default` on a dark terminal and `light` on a light one. `prep tui --gallery` shows every component; `t` and `T` switch to the next and previous theme, so you can compare them. To pick one, open the settings screen (`s`) and press enter on the Theme row: your issues stay on screen while ←/→ (or `t`/`T`) preview each theme, enter keeps the one shown and esc goes back to the one you had. Or set it in your `.prep/config.yaml`:
 
 ```yaml
 theme: nord

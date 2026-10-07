@@ -1,0 +1,5 @@
+- [x] enter on the settings Theme row shows the issue screen with a theme bar naming the theme and its position
+- [x] ←/→, j/k, t/T preview the next/previous theme live without saving
+- [x] enter saves the previewed theme and returns to settings; esc restores the previous theme and returns to settings
+- [x] A reload during the preview keeps the previewed theme
+- [x] Tests and a snapshot cover the preview; README and knowledge updated

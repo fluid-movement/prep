@@ -153,6 +153,7 @@ type Model struct {
 	termLight     bool              // the terminal reported a light background
 	linkMode      bool              // o: the detail's links are selectable in place
 	linkSel       int               // the selected link target in link mode
+	preview       *themePreview     // a theme preview from the settings screen, nil when none
 	pending       map[string]string // issue|field: edited text a rejected write left
 	pendingSelect string            // issue to select after the next load
 	noticeTone    ui.Tone
@@ -214,6 +215,9 @@ func (m *Model) retheme(dark bool, profile colorprofile.Profile) {
 // everything. An invalid theme keeps the current one; the check screen
 // reports it.
 func (m *Model) syncTheme() {
+	if m.preview != nil {
+		return // the preview decides until enter or esc
+	}
 	var cfg domain.Config
 	if m.tree != nil {
 		cfg = m.tree.Project.Config
@@ -508,6 +512,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	s := k.String()
 	if s == "?" {
 		return m.openHelp()
+	}
+	if m.preview != nil {
+		return m.previewKey(s)
 	}
 	if m.linkMode {
 		if cmd, done := m.linkKey(s); done {
@@ -1123,7 +1130,7 @@ var (
 	}, screenBindings)
 	settingsBindings = []binding{
 		bind("Settings", "↑↓ j k 1-9", "select (n is view n)", false),
-		bind("Settings", "space", "switch the theme or toggle the mouse", true), bind("Settings", "t T", "next or previous theme", true),
+		bind("Settings", "space", "preview themes or toggle the mouse", true), bind("Settings", "t T", "preview the next or previous theme", true),
 		bind("Settings", "enter", "edit the view", true),
 		bind("Settings", "n", "add a view", true),
 		bind("Settings", "d d", "delete the view", true),
@@ -1140,6 +1147,7 @@ var (
 		bind("Screens", "?", "all keys", true),
 		bind("Screens", "q", "quit", true),
 	}
+	previewKeys  = []ui.Key{{Keys: "←/→ t T", Desc: "preview"}, {Keys: "enter", Desc: "keep"}, {Keys: "esc", Desc: "back"}}
 	linkModeKeys = []ui.Key{{Keys: "↑/↓ j k", Desc: "select"}, {Keys: "enter", Desc: "go"}, {Keys: "1-9 b c …", Desc: "go to that link"}, {Keys: "esc o", Desc: "leave"}}
 	filterKeys   = []ui.Key{{Keys: "↑/↓", Desc: "choose"}, {Keys: "enter tab", Desc: "pick, or apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
 )
@@ -1215,6 +1223,10 @@ func (m *Model) footer() string {
 		return ui.Fit(ui.Error(m.th, m.err.Error()), m.w)
 	case m.filtering:
 		return ui.KeyHelp(m.th, filterKeys, m.w)
+	case m.preview != nil:
+		pv := m.preview
+		bar := m.th.S.Title.Render("Theme ") + m.th.S.Heading.Render(pv.names[pv.idx]) + m.th.S.Subtle.Render(fmt.Sprintf(" %d/%d  ", pv.idx+1, len(pv.names)))
+		return ui.Fit(bar+ui.KeyHelp(m.th, previewKeys, max(1, m.w-lipgloss.Width(bar))), m.w)
 	case m.linkMode:
 		return ui.KeyHelp(m.th, linkModeKeys, m.w)
 	}
@@ -1580,7 +1592,7 @@ func (m *Model) settingsPane(w, h int) string {
 		b = append(b, row(k, key, label, value))
 	}
 	b = append(b, m.th.S.Heading.Render("Look"), "")
-	addRow(0, "t", "Theme", m.th.Palette.Name+"  (t next, T previous; prep tui --gallery previews them)")
+	addRow(0, "t", "Theme", m.th.Palette.Name+"  (enter previews themes on your issues)")
 	b = append(b, "", m.th.S.Heading.Render("Saved views"), "")
 	for k, n := range domain.ViewNames(p.Config) {
 		flags := p.Config.Views[n]
