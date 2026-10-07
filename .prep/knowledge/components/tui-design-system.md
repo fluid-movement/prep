@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/tui/theme
   - internal/tui/ui
-confirmed_commit: e55bd6fcfec1c1676dab76f3e4d5bd8c0d4342df
+confirmed_commit: 77c3a8e79264a702eeed40e793491d2579e7cb90
 ---
 
 # TUI design system
