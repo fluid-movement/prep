@@ -26,8 +26,11 @@ type Store struct {
 	Root string // repository root
 }
 
-// Load reads every entry. With drift, it compares scoped paths against each
-// entry's confirmed_commit using git.
+// Load reads every entry. With drift, it compares scoped paths against the
+// later of each entry's confirmed_commit and the last commit that changed
+// the entry file: writing or confirming an entry is its review, so code and
+// entry can land in one commit. While the entry file has uncommitted
+// changes, uncommitted changes in its scope count as reviewed with it.
 func (s *Store) Load(drift bool) ([]*domain.Entry, []domain.Diagnostic, error) {
 	base := filepath.Join(s.Root, filepath.FromSlash(Dir))
 	var entries []*domain.Entry
@@ -58,10 +61,24 @@ func (s *Store) Load(drift bool) ([]*domain.Entry, []domain.Diagnostic, error) {
 		if useGit && e.ConfirmedCommit != "" && len(e.Scope) > 0 {
 			if !gitx.CommitExists(s.Root, e.ConfirmedCommit) {
 				e.DriftErr = fmt.Sprintf("confirmed_commit %s is not in this repository", e.ConfirmedCommit)
-			} else if changed, err := gitx.ChangedSince(s.Root, e.ConfirmedCommit, e.Scope); err != nil {
-				e.DriftErr = err.Error()
 			} else {
-				e.Drifted = changed
+				file := Dir + bpath
+				since := e.ConfirmedCommit
+				if last := gitx.LastCommit(s.Root, file); last != "" && last != since && gitx.IsAncestor(s.Root, since, last) {
+					since = last
+				}
+				var changed []string
+				var err error
+				if gitx.Dirty(s.Root, file) {
+					changed, err = gitx.ChangedBetween(s.Root, since, "HEAD", e.Scope)
+				} else {
+					changed, err = gitx.ChangedSince(s.Root, since, e.Scope)
+				}
+				if err != nil {
+					e.DriftErr = err.Error()
+				} else {
+					e.Drifted = changed
+				}
 			}
 		}
 		entries = append(entries, e)

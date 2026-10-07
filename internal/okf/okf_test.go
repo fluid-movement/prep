@@ -48,10 +48,59 @@ func TestDriftAgainstConfirmedCommit(t *testing.T) {
 	if len(entries[0].Links) != 1 || entries[0].Links[0] != "/overview.md" {
 		t.Fatalf("links = %v", entries[0].Links)
 	}
+	git("add", ".")
+	git("commit", "-qm", "entry")
+
+	drift := func() string {
+		t.Helper()
+		entries, _, err := s.Load(true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.Join(entries[0].Drifted, " ")
+	}
+	entryFile := ".prep/knowledge/components/export.md"
+	entryText := func() string {
+		b, err := os.ReadFile(filepath.Join(root, entryFile))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+
+	// Code changed after the entry: uncommitted, then committed, it drifts.
 	write("internal/export/csv.go", "package export\n\nfunc Stream() {}\n")
-	entries, _, _ = s.Load(true)
-	if len(entries[0].Drifted) != 1 || entries[0].Drifted[0] != "internal/export/csv.go" {
-		t.Fatalf("drift = %v", entries[0].Drifted)
+	if got := drift(); got != "internal/export/csv.go" {
+		t.Fatalf("uncommitted code change: drift = %q", got)
+	}
+	git("commit", "-qam", "code")
+	if got := drift(); got != "internal/export/csv.go" {
+		t.Fatalf("committed code change: drift = %q", got)
+	}
+
+	// Updating the entry covers the scope's uncommitted changes, and once
+	// both land in one commit the entry is current.
+	write("internal/export/csv.go", "package export\n\nfunc Stream() {}\n\nfunc Rows() {}\n")
+	write(entryFile, strings.Replace(entryText(), "Body with", "Streams rows. Body with", 1))
+	if got := drift(); got != "internal/export/csv.go" {
+		// The earlier committed change still counts until the entry is
+		// committed; only the uncommitted one is covered now.
+		t.Fatalf("entry being edited: drift = %q", got)
+	}
+	git("commit", "-qam", "code and entry")
+	if got := drift(); got != "" {
+		t.Fatalf("code and entry in one commit: drift = %q", got)
+	}
+	write("internal/export/csv.go", "package export\n")
+	write(entryFile, entryText()+"\nMore.\n")
+	if got := drift(); got != "" {
+		t.Fatalf("entry edited with uncommitted code: drift = %q", got)
+	}
+	git("commit", "-qam", "both again")
+	write("internal/export/csv.go", "package export\n\n// later\n")
+	git("commit", "-qam", "code alone")
+	if got := drift(); got != "internal/export/csv.go" {
+		t.Fatalf("code committed after the entry: drift = %q", got)
 	}
 }
 

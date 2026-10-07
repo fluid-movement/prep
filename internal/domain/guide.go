@@ -284,7 +284,7 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		switch {
 		case parent:
 		case i.Kind == KindCode:
-			ins = append(ins, "Commit the code, then run prep complete "+i.ID+" --commit <hash> --docs <entry>... (or --no-impact <reason>).")
+			ins = append(ins, "Run prep complete "+i.ID+" --docs <entry>... (or --no-impact <reason>), then commit the code together with the staged .prep changes: the commit that adds resolution.md is the evidence. For work committed earlier, pass --commit <hash>.")
 		case i.Kind == KindResearch:
 			ins = append(ins, "Write the answer with prep findings "+i.ID+" --body-file -, then run prep complete "+i.ID+" --docs <entry>... (or --no-impact <reason>).")
 			outs = append(outs, Pointer{f("findings.md"), "research findings", "prep findings " + i.ID + " --body-file -"})

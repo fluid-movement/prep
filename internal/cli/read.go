@@ -308,6 +308,7 @@ func cmdShow(a *app, args []string) error {
 		return err
 	}
 	i := t.Issues[id]
+	pending := a.resolveEvidence(t, id)
 	dod, opt := t.EffectiveDoD(id)
 	s := summarize(t, id)
 	if a.json {
@@ -315,7 +316,7 @@ func cmdShow(a *app, args []string) error {
 			"issue": i, "dir": mdstore.IssueDir(id), "priority": i.Priority.Effective(), "state": s.State, "stale": s.Stale, "blocked": s.Blocked,
 			"actionable": s.Actionable, "children": nonNil(t.Children(id)), "blocks": nonNil(t.Blocks(id)),
 			"progress": s.Progress, "definition_of_done": nonNil(dod), "dod_opt_outs": opt,
-			"context": i.Context, "findings": i.Findings, "history": i.History,
+			"context": i.Context, "findings": i.Findings, "history": i.History, "evidence_pending": pending,
 		})
 		return nil
 	}
@@ -403,6 +404,8 @@ func cmdShow(a *app, args []string) error {
 		}
 		if r.Evidence != "" {
 			a.printf(" (commit %s)", r.Evidence)
+		} else if pending {
+			a.printf(" (evidence: the commit that adds its resolution.md, not made yet)")
 		}
 		a.printf("\n")
 	}
@@ -430,8 +433,25 @@ func nonNil(s []string) []string {
 	return s
 }
 
+// resolveEvidence fills a done code issue's evidence in memory when it was
+// completed without --commit: the commit that added its resolution.md. It
+// reports whether that commit is not made yet.
+func (a *app) resolveEvidence(t *domain.Tree, id string) (pending bool) {
+	i := t.Issues[id]
+	r := i.Resolution
+	if r == nil || r.Evidence != "" || r.Outcome != domain.OutcomeDone || i.Kind != domain.KindCode || t.IsParent(id) {
+		return false
+	}
+	if !gitx.IsRepo(a.store.Root) {
+		return true
+	}
+	r.Evidence = gitx.AddedIn(a.store.Root, mdstore.IssueDir(id)+"/resolution.md")
+	return r.Evidence == ""
+}
+
 // touchedFiles lists code paths an issue touched, from its commit evidence.
 func (a *app) touchedFiles(t *domain.Tree, id string) []string {
+	a.resolveEvidence(t, id)
 	r := t.Issues[id].Resolution
 	if r == nil || r.Evidence == "" || !gitx.IsRepo(a.store.Root) || !gitx.CommitExists(a.store.Root, r.Evidence) {
 		return nil

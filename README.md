@@ -43,8 +43,11 @@ prep define <id>                             # requirement settled: write a base
 prep ready <id>
 prep next                                    # actionable issues
 prep claim <id>
-prep complete <id> --commit <hash> --docs /components/export.md   # or --no-impact <reason>
+prep complete <id> --docs /components/export.md   # or --no-impact <reason>
+git commit                                   # code and the staged .prep records together
 ```
+
+prep stages the files it writes and never commits; you (or your agent) commit them with the code they describe. A code issue completed without `--commit` takes as its evidence the commit that adds its `resolution.md`, so code, records and knowledge updates land in one commit; `--commit <hash>` names work committed earlier. A knowledge entry counts as current as of the last commit that changed it (or its `confirmed_commit`, if later), so updating or confirming it in the same commit as the code keeps it from drifting.
 
 Every read command (`prime`, `guide`, `list`, `next`, `show`, `check`, `views`) accepts `--json`; errors are JSON with stable codes under `--json`. Write commands (`new`, `import`, `define`, `ack`, `ready`, `claim`, `release`, `complete`, `drop`, `fmt`, `fix`, `migrate`) perform one transition each, so harness permission rules can allow reads and ask before writes. IDs accept any unique suffix. Name the actor with `--by` or `PREP_ACTOR` (`<producer>/<version>` for agents, `human:<id>` for people).
 

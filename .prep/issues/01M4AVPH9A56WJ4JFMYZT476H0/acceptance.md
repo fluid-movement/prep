@@ -1,0 +1,5 @@
+- [x] prep complete on a code issue without --commit succeeds; show prints the evidence as pending, then as the adding commit after git commit
+- [x] --commit <hash> still works and is validated
+- [x] An entry updated or confirmed with uncommitted code changes in scope shows no drift, before and after one commit with both
+- [x] Code changed in a later commit without touching the entry is still drift
+- [x] guide shows [--commit <ref>]; tests cover all of the above; knowledge updated

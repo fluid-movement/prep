@@ -59,6 +59,46 @@ func ChangedSince(dir, commit string, scopes []string) ([]string, error) {
 	return strings.Split(out, "\n"), nil
 }
 
+// ChangedBetween lists files under the scopes that differ between two
+// commits, ignoring the working tree.
+func ChangedBetween(dir, from, to string, scopes []string) ([]string, error) {
+	args := []string{"diff", "--name-only", from, to, "--"}
+	for _, s := range scopes {
+		args = append(args, pathspec(s))
+	}
+	out, err := Run(dir, args...)
+	if err != nil || out == "" {
+		return nil, err
+	}
+	return strings.Split(out, "\n"), nil
+}
+
+// LastCommit returns the newest commit that changed path, or "".
+func LastCommit(dir, path string) string {
+	out, _ := Run(dir, "log", "-1", "--format=%H", "--", path)
+	return out
+}
+
+// AddedIn returns the commit that added path, or "" while it is not
+// committed.
+func AddedIn(dir, path string) string {
+	out, _ := Run(dir, "log", "--diff-filter=A", "--format=%H", "--", path)
+	lines := strings.Split(out, "\n")
+	return lines[len(lines)-1] // the oldest, should the file have been re-added
+}
+
+// IsAncestor reports whether commit a is an ancestor of (or equal to) b.
+func IsAncestor(dir, a, b string) bool {
+	_, err := Run(dir, "merge-base", "--is-ancestor", a, b)
+	return err == nil
+}
+
+// Dirty reports whether path has changes not yet committed (staged or not).
+func Dirty(dir, path string) bool {
+	out, _ := Run(dir, "status", "--porcelain", "--", path)
+	return out != ""
+}
+
 // FilesInCommit lists the files a commit changed.
 func FilesInCommit(dir, commit string) ([]string, error) {
 	out, err := Run(dir, "show", "--name-only", "--format=", commit)

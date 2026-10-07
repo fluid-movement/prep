@@ -246,11 +246,11 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 			switch i.Kind {
 			case KindCode:
 				if in == nil {
-					needs = append(needs, "--commit <ref>")
+					needs = append(needs, "[--commit <ref>]")
 				} else {
-					if in.Commit == "" {
-						add(GateEvidence, "code issues need commit evidence: --commit <ref>")
-					} else if !commitPattern.MatchString(in.Commit) {
+					// Without --commit, the evidence is the commit that adds
+					// resolution.md: code and records land together.
+					if in.Commit != "" && !commitPattern.MatchString(in.Commit) {
 						add(GateEvidence, "commit reference %q is not a hex commit hash", in.Commit)
 					}
 					if strings.HasPrefix(in.Actor, "human:") {

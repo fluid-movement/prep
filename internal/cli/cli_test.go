@@ -210,7 +210,7 @@ func TestLifecycle(t *testing.T) {
 	h.ok("claim", a)
 	h.fails("G_UNCHECKED", "complete", a, "--commit", "abc1234", "--no-impact", "none", "--json")
 	h.replace(a, "acceptance.md", "- [ ]", "- [x]")
-	h.fails("G_EVIDENCE", "complete", a, "--no-impact", "none", "--json")
+	h.fails("G_EVIDENCE", "complete", a, "--commit", "not-a-hash", "--no-impact", "none", "--json")
 	h.fails("G_DOCS", "complete", a, "--commit", "abc1234", "--json")
 	h.fails("G_ACTOR", "complete", a, "--commit", "abc1234", "--no-impact", "none", "--by", "human:andre", "--json")
 	h.ok("complete", a, "--commit", "abc1234", "--docs", "overview")
@@ -1131,5 +1131,62 @@ func TestFlags(t *testing.T) {
 	h.jsonOf(&r, "flags")
 	if len(r.Flags) != 14 || r.Flags[2].Name != "tag" || len(r.Flags[2].Values) != 1 || r.Flags[2].Values[0].Count != 1 {
 		t.Fatalf("flags json: %+v", r.Flags)
+	}
+}
+
+func TestCompleteInTheSameCommit(t *testing.T) {
+	h := newHarness(t)
+	git := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-c", "user.email=t@t", "-c", "user.name=t"}, args...)...)
+		cmd.Dir = h.dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	git("init", "-q")
+	git("add", "-A")
+	git("commit", "-qm", "init")
+	id := h.newIssue("--title", "Export", "--kind", "code", "--body", "Export rows.")
+	h.ok("define", id)
+	h.ok("context", id, "--body", "In internal/export.")
+	h.ok("criterion", id, "--add", "works")
+	h.ok("criterion", id, "--check", "1")
+	h.ok("ready", id)
+	h.ok("claim", id)
+	if out := h.ok("guide", id); !strings.Contains(out, "[--commit <ref>]") {
+		t.Fatalf("guide does not show --commit as optional:\n%s", out)
+	}
+
+	// Complete first, then commit code and records together.
+	if err := os.WriteFile(filepath.Join(h.dir, "export.go"), []byte("package export\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h.ok("complete", id, "--no-impact", "test")
+	if out := h.ok("show", id); !strings.Contains(out, "not made yet") {
+		t.Fatalf("pending evidence not shown:\n%s", out)
+	}
+	git("add", "-A")
+	git("commit", "-qm", "export")
+	head := git("rev-parse", "HEAD")
+	if out := h.ok("show", id); !strings.Contains(out, "(commit "+head+")") {
+		t.Fatalf("evidence is not the commit with the code:\n%s", out)
+	}
+	var r struct {
+		Issue struct {
+			Resolution struct {
+				Evidence string `json:"evidence"`
+			} `json:"resolution"`
+		} `json:"issue"`
+		Pending bool `json:"evidence_pending"`
+	}
+	h.jsonOf(&r, "show", id)
+	if r.Issue.Resolution.Evidence != head || r.Pending {
+		t.Fatalf("show --json evidence %q pending %v, want %s", r.Issue.Resolution.Evidence, r.Pending, head)
+	}
+	if out := h.ok("check"); !strings.Contains(out, "0 errors") {
+		t.Fatalf("check:\n%s", out)
 	}
 }
