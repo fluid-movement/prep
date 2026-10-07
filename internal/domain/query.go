@@ -15,15 +15,26 @@ type Filter struct {
 	Tags       []string
 	Priorities []Priority // effective levels; medium matches unset
 	Under      []string
-	Stale      *bool
-	Actionable *bool
-	Blocked    *bool
-	Parent     *bool // true: only parents, false: only leaves
-	TopLevel   bool
-	Text       []string // case-insensitive substring of the title or requirement
+	// Excluded values: a leading not- or ! in a list flag's value
+	// (--state not-open).
+	// An issue matches a flag when it has one of the plain values (or there
+	// are none) and none of the excluded ones.
+	NotStates     []State
+	NotKinds      []Kind
+	NotTags       []string
+	NotPriorities []Priority
+	NotUnder      []string
+	Stale         *bool
+	Actionable    *bool
+	Blocked       *bool
+	Parent        *bool // true: only parents, false: only leaves
+	TopLevel      bool
+	Text          []string // case-insensitive substring of the title or requirement
 }
 
 // ParseFilter parses query flags such as `--state ready --kind code --under <id>`.
+// Values of list flags can be negated with a leading not- or ! (--state
+// not-open).
 // Boolean flags accept an optional =false (e.g. --stale=false).
 func ParseFilter(args []string) (Filter, error) {
 	var f Filter
@@ -60,47 +71,52 @@ func ParseFilter(args []string) (Filter, error) {
 			var v string
 			if v, err = takeVal(); err == nil {
 				for _, s := range strings.Split(v, ",") {
-					st := State(strings.ReplaceAll(strings.TrimSpace(s), "-", "_"))
+					s, neg := negated(s)
+					st := State(s)
 					if !hasState(States, st) {
 						return f, fmt.Errorf("unknown state %q", s)
 					}
-					f.States = append(f.States, st)
+					add(neg, &f.States, &f.NotStates, st)
 				}
 			}
 		case "kind":
 			var v string
 			if v, err = takeVal(); err == nil {
 				for _, s := range strings.Split(v, ",") {
-					kd := Kind(strings.TrimSpace(s))
+					s, neg := negated(s)
+					kd := Kind(s)
 					if !kd.Valid() {
 						return f, fmt.Errorf("unknown kind %q", s)
 					}
-					f.Kinds = append(f.Kinds, kd)
+					add(neg, &f.Kinds, &f.NotKinds, kd)
 				}
 			}
 		case "tag":
 			var v string
 			if v, err = takeVal(); err == nil {
 				for _, s := range strings.Split(v, ",") {
-					f.Tags = append(f.Tags, strings.ToLower(strings.TrimSpace(s)))
+					s, neg := negated(s)
+					add(neg, &f.Tags, &f.NotTags, strings.ToLower(s))
 				}
 			}
 		case "priority":
 			var v string
 			if v, err = takeVal(); err == nil {
 				for _, s := range strings.Split(v, ",") {
-					p := Priority(strings.ToLower(strings.TrimSpace(s)))
+					s, neg := negated(s)
+					p := Priority(strings.ToLower(s))
 					if !p.Valid() || p == "" {
 						err = fmt.Errorf("--priority must be one of %s", joinPriorities())
 						break
 					}
-					f.Priorities = append(f.Priorities, p)
+					add(neg, &f.Priorities, &f.NotPriorities, p)
 				}
 			}
 		case "under":
 			var v string
 			if v, err = takeVal(); err == nil {
-				f.Under = append(f.Under, v)
+				v, neg := negated(v)
+				add(neg, &f.Under, &f.NotUnder, v)
 			}
 		case "text":
 			var v string
@@ -133,38 +149,74 @@ func ParseFilter(args []string) (Filter, error) {
 	return f, nil
 }
 
+// NegationPrefixes negate a list flag's value: not- for the shell, ! for
+// the TUI and views. Tags cannot start with not-, so it is never ambiguous.
+var NegationPrefixes = []string{"not-", "!"}
+
+// negated trims a value and reports whether it starts with a negation
+// prefix.
+func negated(s string) (string, bool) {
+	s = strings.TrimSpace(s)
+	for _, p := range NegationPrefixes {
+		if strings.HasPrefix(s, p) {
+			return strings.TrimSpace(s[len(p):]), true
+		}
+	}
+	return s, false
+}
+
+// add appends v to the excluded list when neg, else to the plain one.
+func add[T any](neg bool, plain, excluded *[]T, v T) {
+	if neg {
+		*excluded = append(*excluded, v)
+	} else {
+		*plain = append(*plain, v)
+	}
+}
+
 // Query returns the IDs matching the filter, in chronological order.
 // Under references are resolved as ID suffixes.
 func (t *Tree) Query(f Filter) ([]string, error) {
-	var under map[string]bool
-	if len(f.Under) > 0 {
-		under = map[string]bool{}
-		for _, ref := range f.Under {
+	descendants := func(refs []string) (map[string]bool, error) {
+		if len(refs) == 0 {
+			return nil, nil
+		}
+		set := map[string]bool{}
+		for _, ref := range refs {
 			id, err := t.Resolve(ref)
 			if err != nil {
 				return nil, err
 			}
 			for _, d := range t.Descendants(id) {
-				under[d] = true
+				set[d] = true
 			}
 		}
+		return set, nil
+	}
+	under, err := descendants(f.Under)
+	if err != nil {
+		return nil, err
+	}
+	notUnder, err := descendants(f.NotUnder)
+	if err != nil {
+		return nil, err
 	}
 	var out []string
 	for _, id := range t.IDs() {
 		i := t.Issues[id]
-		if len(f.States) > 0 && !hasState(f.States, t.State(id)) {
+		if len(f.States) > 0 && !hasState(f.States, t.State(id)) || hasState(f.NotStates, t.State(id)) {
 			continue
 		}
-		if len(f.Kinds) > 0 && !hasKind(f.Kinds, i.Kind) {
+		if len(f.Kinds) > 0 && !hasKind(f.Kinds, i.Kind) || hasKind(f.NotKinds, i.Kind) {
 			continue
 		}
-		if len(f.Tags) > 0 && !anyTag(f.Tags, i.Tags) {
+		if len(f.Tags) > 0 && !anyTag(f.Tags, i.Tags) || anyTag(f.NotTags, i.Tags) {
 			continue
 		}
-		if len(f.Priorities) > 0 && !hasPriority(f.Priorities, i.Priority) {
+		if len(f.Priorities) > 0 && !hasPriority(f.Priorities, i.Priority) || hasPriority(f.NotPriorities, i.Priority) {
 			continue
 		}
-		if under != nil && !under[id] {
+		if under != nil && !under[id] || notUnder[id] {
 			continue
 		}
 		if f.Stale != nil && t.Stale(id) != *f.Stale {

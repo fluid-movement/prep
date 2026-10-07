@@ -27,7 +27,7 @@ const tab = atom({ plugin: 'prep', key: 'tab' } as const, 'live' as PrepTab)
 const project = atom({ plugin: 'prep', key: 'project' } as const, null)
 
 // The project view lists what is not resolved yet.
-const UNRESOLVED = ['--state', 'open,defined,ready,in_progress']
+const UNRESOLVED = ['--state', 'open,defined,ready,in-progress']
 
 /** Runs a prep read command and parses its JSON output. */
 async function prep<T>($: EngineInterface, args: string[]): Promise<T> {

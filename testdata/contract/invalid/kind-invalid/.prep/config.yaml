@@ -2,7 +2,7 @@
 views:
   Attention: --stale
   Actionable: --actionable
-  In progress: --state in_progress
+  In progress: --state in-progress
   To enrich: --state defined
   To define: --state open
   All: ""

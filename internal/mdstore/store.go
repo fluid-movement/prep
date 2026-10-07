@@ -463,7 +463,7 @@ const DefaultConfig = `# prep configuration. config.yaml.dist is the project's s
 # copy it to config.yaml (gitignored) to make your own, which replaces it.
 # views: saved queries (prep list flags), shown as tabs in prep tui.
 views:
-  Unresolved: --state open,defined,ready,in_progress
+  Unresolved: --state open,defined,ready,in-progress
   All: ""
 `
 

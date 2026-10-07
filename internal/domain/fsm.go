@@ -613,8 +613,9 @@ func (t *Tree) CheckWrite(c *Change) error {
 var tagRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._/-]*$`)
 
 // ValidTag reports whether a tag has the allowed form: lowercase letters,
-// digits and . _ - /, starting with a letter or digit.
-func ValidTag(tag string) bool { return tagRe.MatchString(tag) }
+// digits and . _ - /, starting with a letter or digit, and not with not-
+// (which negates a value in queries).
+func ValidTag(tag string) bool { return tagRe.MatchString(tag) && !strings.HasPrefix(tag, "not-") }
 
 // NormalizeTags lowercases and deduplicates tags, keeping their order, and
 // rejects malformed ones.
@@ -626,7 +627,7 @@ func NormalizeTags(in []string) ([]string, error) {
 			continue
 		}
 		if !ValidTag(t) {
-			return nil, fmt.Errorf("tag %q: use lowercase letters, digits and . _ - /", t)
+			return nil, fmt.Errorf("tag %q: use lowercase letters, digits and . _ - /, not starting with not- (it negates in queries)", t)
 		}
 		if !contains(out, t) {
 			out = append(out, t)

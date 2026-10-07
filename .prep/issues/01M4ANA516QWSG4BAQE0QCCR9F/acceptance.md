@@ -1,0 +1,6 @@
+- [x] --state not-open and --state '!open' list every issue that is not open; not-open,not-done neither; ready,not-dropped ready only
+- [x] Negation works for --state, --kind, --tag, --priority and --under in prep list, saved views and the TUI filter bar
+- [x] Negated values are validated; tags starting with not- are rejected
+- [x] The state is in-progress in queries, JSON output, views, the TUI, the Claude Code panel and docs; in_progress is rejected
+- [x] The picker completes values after not- and !; prep flags, the list help and README explain negation
+- [x] Tests cover parsing, querying, tags and the picker

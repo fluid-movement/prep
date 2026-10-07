@@ -246,6 +246,7 @@ func cmdFlags(a *app, args []string) error {
 		a.emit(map[string]any{"flags": flags})
 		return nil
 	}
+	a.printf("A leading not- negates a value: --state not-open is every issue that is not open (! works too, quoted in the shell).\n\n")
 	for k, f := range flags {
 		// Switches stay together; flags with values get their own block.
 		if k > 0 && (f.Kind != domain.FlagBool || flags[k-1].Kind != domain.FlagBool) {
@@ -254,11 +255,11 @@ func cmdFlags(a *app, args []string) error {
 		head := "--" + f.Name
 		switch {
 		case f.Name == "under":
-			head += " <id>  (repeatable)"
+			head += " [not-]<id>  (repeatable)"
 		case f.Name == "view":
 			head += " <name>"
 		case f.Kind == domain.FlagList:
-			head += " <value>[,<value>...]"
+			head += " [not-]<value>[,...]"
 		case f.Kind == domain.FlagText:
 			head += " <text>  (repeatable)"
 		}

@@ -41,7 +41,7 @@ func Validate(t *Tree) []Diagnostic {
 		}
 		for _, tag := range i.Tags {
 			if !ValidTag(tag) {
-				e(CodeTagInvalid, ClassManual, "issue.md", "use lowercase letters, digits and . _ - / (prep edit --tag)", "tag %q is malformed", tag)
+				e(CodeTagInvalid, ClassManual, "issue.md", "use lowercase letters, digits and . _ - /, not starting with not- (prep edit --tag)", "tag %q is malformed", tag)
 			}
 		}
 

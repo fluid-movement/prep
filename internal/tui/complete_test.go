@@ -28,6 +28,10 @@ func TestCompleteFilterWords(t *testing.T) {
 		{"--state open,d", "defined done", 13, 14},
 		{"--state open,", "defined done", 13, 13}, // listed values are skipped
 		{"--under rel", "01M4A", 8, 11},           // the title counts
+		{"--state !d", "!defined !done", 8, 10},
+		{"--state !open,!", "!defined !done", 14, 15},
+		{"--state not-d", "not-defined not-done", 8, 13},
+		{"--state not-open,", "defined done", 17, 17},
 		{"--stale ", "", 0, 0},
 		{"--text ", "", 0, 0},
 		{"writer", "", 0, 0},

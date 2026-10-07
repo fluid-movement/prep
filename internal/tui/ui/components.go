@@ -32,7 +32,7 @@ var stateGlyphs = map[domain.State]string{
 
 // StateLabel is the human label of a state.
 func StateLabel(s domain.State) string {
-	return strings.ReplaceAll(string(s), "_", " ")
+	return strings.ReplaceAll(string(s), "-", " ")
 }
 
 // StateBadge renders a state as glyph and label in the state's color,

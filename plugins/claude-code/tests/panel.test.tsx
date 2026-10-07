@@ -33,7 +33,7 @@ const prime = (claims: { id: string; title: string; by: string }[] = []) => ({
 
 const show = (id: string) => ({
   priority: id === CHILD ? 'high' : 'medium',
-  state: 'in_progress',
+  state: 'in-progress',
   stale: false,
   blocked: false,
   children: [],
@@ -74,7 +74,7 @@ const guide = {
 const list = {
   issues: [
     summary(PARENT, 'TUI parent', 'open', { children: 1, progress: { done: 0, dropped: 0, total: 1 } }),
-    summary(CHILD, 'Side panel', 'in_progress', { parent: PARENT }),
+    summary(CHILD, 'Side panel', 'in-progress', { parent: PARENT }),
     summary(OTHER, 'Other work', 'ready'),
   ],
 }
@@ -83,7 +83,7 @@ const list = {
 const tree = {
   issues: [
     summary(PARENT, 'TUI parent', 'open', { children: 1, progress: { done: 0, dropped: 0, total: 1 } }),
-    summary(CHILD, 'Side panel', 'in_progress', { parent: PARENT, depth: 1, stale: true }),
+    summary(CHILD, 'Side panel', 'in-progress', { parent: PARENT, depth: 1, stale: true }),
     summary(OTHER, 'Other work', 'ready', { actionable: true, priority: 'critical' }),
   ],
 }
@@ -301,7 +301,7 @@ describe('panel', () => {
     for (const want of [
       CHILD,
       '#integration',
-      'in_progress',
+      'in-progress',
       '!high',
       'step implement',
       `prep complete ${CHILD} --commit <ref>`,
@@ -379,7 +379,7 @@ describe('views', () => {
     const text = await drawn($)
     expect(text).toContain('Open issues 3')
     expect(text).toContain('check: 0 errors, 1 warnings')
-    expect(text).toContain('  in_progress')
+    expect(text).toContain('  in-progress')
     expect(text).toContain('stale')
     expect(text).toContain('actionable')
     expect(text).toContain('!crit')

@@ -27,8 +27,9 @@ type completion struct {
 
 // complete finds candidates for the word before pos in a filter bar
 // query: flag names after "--", a list flag's values after the flag (the
-// part after the last comma, skipping values already listed). Bare words
-// search titles and get no candidates.
+// part after the last comma, skipping values already listed; a leading
+// not- or ! stays, negating the value). Bare words search titles and get no
+// candidates.
 func complete(flags []domain.FlagInfo, text string, pos int) completion {
 	runes := []rune(text)
 	pos = min(max(pos, 0), len(runes))
@@ -67,6 +68,19 @@ func complete(flags []domain.FlagInfo, text string, pos int) completion {
 	listed := strings.Split(word, ",")
 	typed := listed[len(listed)-1]
 	listed = listed[:len(listed)-1]
+	for k, l := range listed {
+		for _, p := range domain.NegationPrefixes {
+			l = strings.TrimPrefix(l, p)
+		}
+		listed[k] = l
+	}
+	bang := "" // a typed negation prefix stays
+	for _, p := range domain.NegationPrefixes {
+		if strings.HasPrefix(typed, p) {
+			bang = p
+			break
+		}
+	}
 	var values []domain.FlagValue
 	for _, v := range flag.Values {
 		if !slices.Contains(listed, v.Value) {
@@ -74,8 +88,12 @@ func complete(flags []domain.FlagInfo, text string, pos int) completion {
 		}
 	}
 	var items []suggestion
-	for _, v := range rank(values, func(v domain.FlagValue) string { return v.Value + " " + v.Label }, typed) {
-		items = append(items, suggestion{insert: v.Value, value: v.Value, label: v.Label, count: v.Count})
+	for _, v := range rank(values, func(v domain.FlagValue) string { return v.Value + " " + v.Label }, strings.TrimPrefix(typed, bang)) {
+		count := v.Count
+		if bang != "" {
+			count = -1 // the count is for the value, not its negation
+		}
+		items = append(items, suggestion{insert: bang + v.Value, value: bang + v.Value, label: v.Label, count: count})
 	}
 	return completion{start: startRune + len([]rune(word)) - len([]rune(typed)), end: pos, items: items}
 }

@@ -70,11 +70,11 @@ The configuration is personal. The project commits `.prep/config.yaml.dist` as t
 
 ```yaml
 views:
-  Unresolved: --state open,defined,ready,in_progress
+  Unresolved: --state open,defined,ready,in-progress
   All: ""
 ```
 
-A query takes any number of flags, and an issue must match all of them; a comma-separated list within one flag matches any of its values (`--state ready --tag tui,cli --priority high,critical`). The flags are `--state`, `--kind`, `--tag`, `--priority`, `--under <id>` (descendants of an issue), `--text` (title or requirement), `--stale`, `--blocked`, `--actionable`, `--parent`, `--leaf` and `--top`; the boolean ones accept `=false`. An empty query lists every issue. `prep flags` prints every flag with the values it accepts in your project right now (states, kinds, priorities, the tags in use, the parents for `--under`, the saved views) and how many issues each matches. In `prep tui`, the filter bar (`f`) offers the same values while you type: after `--` the flags, after a flag its values; ↑/↓ and tab or a click insert one.
+A query takes any number of flags, and an issue must match all of them; a comma-separated list within one flag matches any of its values (`--state ready --tag tui,cli --priority high,critical`). The flags are `--state`, `--kind`, `--tag`, `--priority`, `--under <id>` (descendants of an issue), `--text` (title or requirement), `--stale`, `--blocked`, `--actionable`, `--parent`, `--leaf` and `--top`; the boolean ones accept `=false`. A leading `not-` negates a value: `--state not-open` lists every issue that is not open, `--tag not-cli` the ones without the tag; within one flag, plain values include and negated ones exclude (`--state ready,in-progress,not-dropped`). `!` works the same and is quicker to type in the TUI filter bar and in views (`--state !open`); in a shell it needs quotes, since shells expand an unquoted `!`. Tags cannot start with `not-`. Values use hyphens throughout, such as the state `in-progress`. An empty query lists every issue. `prep flags` prints every flag with the values it accepts in your project right now (states, kinds, priorities, the tags in use, the parents for `--under`, the saved views) and how many issues each matches. In `prep tui`, the filter bar (`f`) offers the same values while you type: after `--` the flags, after a flag its values; ↑/↓ and tab or a click insert one.
 
 Change the views freely. In the TUI, `s` opens the settings screen, where views are added, edited, deleted and reordered. `prep views` lists them, and `prep list --view <name>` runs one on the command line.
 

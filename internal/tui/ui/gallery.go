@@ -121,7 +121,7 @@ func Gallery(t *theme.Theme, width int) string {
 	sw := min(width, 64)
 	b.WriteString(strings.Join([]string{
 		Suggestion(t, "--state", -1, "", false, sw),
-		Suggestion(t, "in_progress", 2, "", true, sw),
+		Suggestion(t, "in-progress", 2, "", true, sw),
 		Suggestion(t, "01M48KB1NRFQ1A3VWB9SHDM3TM", 8, "Release 0.2.0", false, sw),
 	}, "\n"))
 

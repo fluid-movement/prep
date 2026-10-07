@@ -91,7 +91,7 @@ func (p *project) record(id string, op domain.Op, in domain.RecordInput) {
 var sampleViews = []struct{ name, query string }{
 	{"Attention", "--stale"},
 	{"Actionable", "--actionable"},
-	{"In progress", "--state in_progress"},
+	{"In progress", "--state in-progress"},
 	{"To enrich", "--state defined"},
 	{"To define", "--state open"},
 	{"All", ""},
@@ -1428,9 +1428,14 @@ func TestFilterBarSuggestsValues(t *testing.T) {
 
 	// A click on a candidate inserts it.
 	typeText(m, " --state ")
-	clickText(t, m, "in_progress", 0, 120)
-	if m.input.Value() != "--priority high --state in_progress" || !m.filtering {
+	clickText(t, m, "in-progress", 0, 120)
+	if m.input.Value() != "--priority high --state in-progress" || !m.filtering {
 		t.Fatalf("click inserted %q (filtering %v)", m.input.Value(), m.filtering)
+	}
+
+	// A typed ! keeps negating the value it completes.
+	if f, err := parseFilterText("--state !open"); err != nil || len(f.NotStates) != 1 || len(f.Text) != 0 {
+		t.Fatalf("--state !open: %+v, %v", f, err)
 	}
 
 	// --priority takes its value (it used to become a text search).

@@ -14,7 +14,7 @@ const STATE: Record<string, Color> = {
   open: 'inactive',
   defined: 'suggestion',
   ready: 'ide',
-  in_progress: 'warning',
+  'in-progress': 'warning',
   done: 'success',
   dropped: 'subtle',
 }

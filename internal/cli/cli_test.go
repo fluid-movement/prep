@@ -201,7 +201,7 @@ func TestLifecycle(t *testing.T) {
 
 	// Claim, release (recorded in history), claim, complete.
 	h.ok("claim", a, "--by", "claude-code/2.0")
-	h.expectState(a, "in_progress", false)
+	h.expectState(a, "in-progress", false)
 	h.ok("release", a, "--reason", "switching tasks")
 	if !strings.Contains(h.read(a, "history.md"), "released by") {
 		t.Fatalf("release not recorded in history.md")
@@ -1115,7 +1115,7 @@ func TestFlags(t *testing.T) {
 	h := newHarness(t)
 	h.newIssue("--title", "Export", "--kind", "code", "--tag", "cli")
 	out := h.ok("flags")
-	for _, want := range []string{"--state <value>[,<value>...]", "  in_progress", "--tag <value>[,<value>...]", "  cli ", "--under <id>", "(none yet)", "--view <name>", "  Unresolved", "--tree"} {
+	for _, want := range []string{"--state [not-]<value>[,...]", "  in-progress", "--tag [not-]<value>[,...]", "  cli ", "--under [not-]<id>", "(none yet)", "--view <name>", "  Unresolved", "--tree"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("flags lacks %q:\n%s", want, out)
 		}

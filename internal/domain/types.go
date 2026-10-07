@@ -110,7 +110,7 @@ const (
 	StateOpen       State = "open"
 	StateDefined    State = "defined"
 	StateReady      State = "ready"
-	StateInProgress State = "in_progress"
+	StateInProgress State = "in-progress"
 	StateDone       State = "done"
 	StateDropped    State = "dropped"
 )
