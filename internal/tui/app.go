@@ -137,6 +137,7 @@ type Model struct {
 	flagInfo  []domain.FlagInfo // query flags and their values, read when the filter bar opens
 	comp      completion        // candidates for the word being typed
 	pick      int               // highlighted candidate
+	before    string            // the tab's filter when the bar opened; esc restores it
 
 	screen   screen
 	page     viewport.Model // check and settings screens
@@ -415,13 +416,14 @@ func buildTab(t *domain.Tree, name, flags, filter string, scope []string, treeMo
 }
 
 // parseFilterText reads filter bar input: prep list flags, with bare words
-// joined into one --text phrase (repeated --text flags would OR).
+// joined into one --text phrase (repeated --text flags would OR). A word
+// starting with - is a flag (perhaps half typed), never a title search.
 func parseFilterText(s string) (domain.Filter, error) {
 	var args, words []string
 	fields := strings.Fields(s)
 	for k := 0; k < len(fields); k++ {
 		f := fields[k]
-		if !strings.HasPrefix(f, "--") {
+		if !strings.HasPrefix(f, "-") {
 			words = append(words, f)
 			continue
 		}
@@ -650,6 +652,7 @@ func (m *Model) listKey(s string) tea.Cmd {
 			m.filtering, m.filterErr = true, ""
 			m.input.SetValue(m.filters[tb.name])
 			m.input.CursorEnd()
+			m.before = m.filters[tb.name]
 			m.flagInfo = m.tree.QueryFlags()
 			m.refreshCompletion()
 			return m.input.Focus()
@@ -680,7 +683,8 @@ func (m *Model) listKey(s string) tea.Cmd {
 
 // filterKey handles keys while the filter bar is open: up and down move
 // through the candidates, tab or enter inserts one, enter without
-// candidates applies, esc clears.
+// candidates applies, esc restores the filter the tab had before. The list
+// follows valid text as it is typed.
 func (m *Model) filterKey(k tea.KeyPressMsg) tea.Cmd {
 	tb := m.current()
 	switch k.String() {
@@ -704,7 +708,7 @@ func (m *Model) filterKey(k tea.KeyPressMsg) tea.Cmd {
 			return nil
 		}
 		if tb != nil {
-			m.setFilter(tb.name, "")
+			m.setFilter(tb.name, m.before)
 		}
 		return nil
 	case "enter":
@@ -732,8 +736,28 @@ func (m *Model) filterKey(k tea.KeyPressMsg) tea.Cmd {
 	}
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(k)
-	m.refreshCompletion()
+	m.filterChanged()
 	return cmd
+}
+
+// filterChanged follows an edit in the filter bar: new candidates, and on
+// the issue screen the tab's rows narrow to the text whenever it parses.
+// Text that does not parse yet keeps the last rows, without an error.
+func (m *Model) filterChanged() {
+	m.refreshCompletion()
+	tb := m.current()
+	if m.screen != screenIssues || tb == nil {
+		return
+	}
+	text := strings.TrimSpace(m.input.Value())
+	if text != "" {
+		if _, err := parseFilterText(text); err != nil {
+			return
+		}
+	}
+	if text != m.filters[tb.name] {
+		m.setFilter(tb.name, text)
+	}
 }
 
 // refreshCompletion recomputes the candidates for the issue filter bar
@@ -759,7 +783,7 @@ func (m *Model) insertSuggestion(n int) {
 	out := append(append(append([]rune{}, runes[:m.comp.start]...), ins...), runes[m.comp.end:]...)
 	m.input.SetValue(string(out))
 	m.input.SetCursor(m.comp.start + len(ins))
-	m.refreshCompletion()
+	m.filterChanged()
 }
 
 func (m *Model) setFilter(tab, text string) {

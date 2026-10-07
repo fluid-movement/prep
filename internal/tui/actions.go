@@ -492,6 +492,7 @@ func (m *Model) paste(p tea.PasteMsg) tea.Cmd {
 	case d == nil:
 		if m.filtering {
 			m.input, cmd = m.input.Update(p)
+			m.filterChanged()
 		}
 	case d.kind == modalText || d.kind == modalCreate && d.step == 2:
 		d.area, cmd = d.area.Update(p)

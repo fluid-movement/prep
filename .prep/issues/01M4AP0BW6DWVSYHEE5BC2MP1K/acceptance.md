@@ -1,0 +1,3 @@
+- [x] Typing --kind decision narrows the rows before enter; --kind (no value yet) keeps the previous rows without an error
+- [x] esc restores the filter the tab had when the bar opened; enter keeps the live one; enter on invalid text shows the error
+- [x] Tests cover live narrowing, esc restore and invalid text; README and knowledge updated

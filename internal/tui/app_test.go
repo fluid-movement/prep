@@ -628,7 +628,8 @@ func TestFilterBar(t *testing.T) {
 		t.Fatalf("filter widened In progress: %v", got)
 	}
 
-	// A parse error keeps the bar open; esc clears the filter.
+	// A parse error keeps the bar open; esc restores the filter the tab had,
+	// and esc in the list clears it.
 	keys(m, "/")
 	m.input.SetValue("--bogus")
 	keys(m, "enter")
@@ -636,8 +637,12 @@ func TestFilterBar(t *testing.T) {
 		t.Fatal("invalid filter accepted")
 	}
 	keys(m, "esc")
-	if m.filtering || m.filters["In progress"] != "" || len(rowIDs(m)) != 1 {
-		t.Fatalf("esc did not clear the filter: %v", rowIDs(m))
+	if m.filtering || m.filters["In progress"] != "--state defined" {
+		t.Fatalf("esc did not restore the filter: %q", m.filters["In progress"])
+	}
+	keys(m, "esc")
+	if m.filters["In progress"] != "" || len(rowIDs(m)) != 1 {
+		t.Fatalf("esc in the list did not clear the filter: %v", rowIDs(m))
 	}
 }
 
@@ -1476,5 +1481,40 @@ func TestFilterBarEnterPicksThenApplies(t *testing.T) {
 	typeText(m, "y")
 	if m.filterErr != "" {
 		t.Fatalf("error kept after typing: %q", m.filterErr)
+	}
+}
+
+func TestFilterBarFiltersLive(t *testing.T) {
+	p, ids := sample(t)
+	m := openModel(t, p, 120, 30)
+	keys(m, "6")
+	all := len(rowIDs(m))
+	keys(m, "f")
+	typeText(m, "-")
+	if len(rowIDs(m)) != all {
+		t.Fatalf("a half-typed flag filtered: %v", rowIDs(m))
+	}
+	typeText(m, "-kind ")
+	if len(rowIDs(m)) != all || m.filterErr != "" {
+		t.Fatalf("--kind without a value changed rows or errored: %v %q", rowIDs(m), m.filterErr)
+	}
+	typeText(m, "decision")
+	if got := rowIDs(m); len(got) != 1 || got[0] != ids["format"] || !m.filtering {
+		t.Fatalf("--kind decision before enter: %v", got)
+	}
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "/ --kind decision") {
+		t.Fatalf("live query missing from the title:\n%s", v)
+	}
+	// esc goes back to the filter the tab had before (none).
+	keys(m, "esc")
+	if len(rowIDs(m)) != all || m.filters[m.current().name] != "" {
+		t.Fatalf("esc kept the live filter: %v", rowIDs(m))
+	}
+	// enter keeps it.
+	keys(m, "f")
+	typeText(m, "--kind decision")
+	keys(m, "enter")
+	if m.filtering || m.filters[m.current().name] != "--kind decision" {
+		t.Fatalf("enter: filtering %v, filter %q", m.filtering, m.filters[m.current().name])
 	}
 }
