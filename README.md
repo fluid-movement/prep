@@ -64,7 +64,9 @@ An issue is **stale** when its requirement or kind differs from the newest basel
 
 ## Views
 
-The tabs of `prep tui` are the saved views in `.prep/config.yaml`, in the order the file lists them. A view is a name and a query, with the same flags as `prep list`. `prep init` writes two: all unresolved work first, where each row's state glyph tells the states apart, then every issue.
+The tabs of `prep tui` are the saved views in the project configuration, in the order the file lists them. A view is a name and a query, with the same flags as `prep list`. `prep init` writes two to `.prep/config.yaml.dist`: all unresolved work first, where each row's state glyph tells the states apart, then every issue.
+
+The configuration is personal. The project commits `.prep/config.yaml.dist` as the shared default; your own `.prep/config.yaml` is gitignored and, when it exists, replaces the dist file as a whole (nothing is merged). Copy the dist file to start your own, or change a setting in the TUI, which creates it for you.
 
 ```yaml
 views:

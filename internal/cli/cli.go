@@ -76,7 +76,7 @@ func init() {
 		{"show", false, "show <id>                  read one issue with its derived state", cmdShow},
 		{"check", false, "check [--no-drift]         validate the whole tree", cmdCheck},
 		{"watch", false, "watch                      stream a line per change under .prep until killed (for harness integrations)", cmdWatch},
-		{"views", false, "views                      saved views from config.yaml", cmdViews},
+		{"views", false, "views                      saved views from config.yaml (else config.yaml.dist)", cmdViews},
 		{"new", true, "new --title T --kind K     create an issue [--parent id] [--depends-on id]... [--tag t]... [--priority p] [--body text | --body-file path|-]", cmdNew},
 		{"edit", true, "edit <id>                  change [--title T] [--kind K] [--parent id|''] [--depends-on id|'']... [--tag t|'']... [--priority p] [--body text | --body-file path|-]", cmdEdit},
 		{"context", true, "context <id>               replace the implementation context: --body text | --body-file path|-", recordCmd(domain.OpContext)},
@@ -286,12 +286,13 @@ func (a *app) afterWrite(paths []string) {
 }
 
 // record stages written paths; the user or agent commits them with the
-// code. Outside a git repository it does nothing.
+// code. Ignored paths (the user's own config) stay unstaged. Outside a git
+// repository it does nothing.
 func record(root string, paths []string) error {
 	if len(paths) == 0 || !gitx.IsRepo(root) {
 		return nil
 	}
-	return gitx.Stage(root, paths)
+	return gitx.Stage(root, gitx.Tracked(root, paths))
 }
 
 func formatDiag(d domain.Diagnostic) string {

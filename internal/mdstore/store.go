@@ -85,7 +85,7 @@ var (
 	issueFiles   = map[string]bool{"issue.md": true, "acceptance.md": true, "context.md": true, "decisions.md": true, "history.md": true, "findings.md": true, "ready.md": true, "claim.md": true, "resolution.md": true}
 	issueDirs    = map[string]bool{"baselines": true, "attachments": true}
 	schemaFiles  = []string{"acceptance.md", "context.md", "decisions.md", "history.md"}
-	projectFiles = map[string]bool{"project.md": true, "config.yaml": true, "issues": true, "knowledge": true, ".gitignore": true}
+	projectFiles = map[string]bool{"project.md": true, "config.yaml": true, "config.yaml.dist": true, "issues": true, "knowledge": true, ".gitignore": true}
 )
 
 // Load reads the project and every issue.
@@ -110,11 +110,14 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 			diag(domain.CodeNotCanonical, domain.SevWarning, domain.ClassFixable, "", "project.md", "run prep fmt", "not in canonical format")
 		}
 	}
-	cfg, err := s.LoadConfig()
-	if err != nil {
-		diag(domain.CodeConfigInvalid, domain.SevError, domain.ClassManual, "", "config.yaml", "fix config.yaml", "%v", err)
+	// Both files are checked: the dist file is what a fresh clone uses, even
+	// when this user's own config replaces it.
+	for _, name := range []string{ConfigDist, ConfigOwn} {
+		if _, ok, err := s.loadConfigFile(name); ok && err != nil {
+			diag(domain.CodeConfigInvalid, domain.SevError, domain.ClassManual, "", name, "fix "+name, "%v", err)
+		}
 	}
-	project.Config = cfg
+	project.Config, _ = s.LoadConfig()
 
 	entries, err := os.ReadDir(s.abs(Dir))
 	if err != nil {
@@ -320,25 +323,43 @@ type configFile struct {
 	Views map[string]string `yaml:"views,omitempty"`
 }
 
-// LoadConfig reads config.yaml; a missing file yields defaults.
+// Config files in .prep: each user's own config.yaml (gitignored) replaces
+// the committed config.yaml.dist as a whole; the two are never merged.
+const (
+	ConfigOwn  = "config.yaml"
+	ConfigDist = "config.yaml.dist"
+)
+
+// LoadConfig reads the configuration in effect: config.yaml, else
+// config.yaml.dist; with neither, defaults.
 func (s *Store) LoadConfig() (domain.Config, error) {
-	var cfg domain.Config
-	raw, ok, err := s.read(Dir + "/config.yaml")
-	if err != nil || !ok {
+	cfg, ok, err := s.loadConfigFile(ConfigOwn)
+	if ok || err != nil {
 		return cfg, err
+	}
+	cfg, _, err = s.loadConfigFile(ConfigDist)
+	return cfg, err
+}
+
+// loadConfigFile reads one config file in .prep and reports whether it exists.
+func (s *Store) loadConfigFile(name string) (domain.Config, bool, error) {
+	var cfg domain.Config
+	raw, ok, err := s.read(Dir + "/" + name)
+	if err != nil || !ok {
+		return cfg, ok, err
 	}
 	var f configFile
 	if err := decodeStrict(raw, &f); err != nil {
-		return cfg, fmt.Errorf("config.yaml: %v", err)
+		return cfg, true, fmt.Errorf("%s: %v", name, err)
 	}
-	for name, flags := range f.Views {
+	for view, flags := range f.Views {
 		if _, err := domain.ParseFilter(strings.Fields(flags)); err != nil {
-			return cfg, fmt.Errorf("config.yaml: view %q: %v", name, err)
+			return cfg, true, fmt.Errorf("%s: view %q: %v", name, view, err)
 		}
 	}
 	cfg.Views = f.Views
 	cfg.ViewOrder = viewOrder(raw)
-	return cfg, nil
+	return cfg, true, nil
 }
 
 // viewOrder returns the keys of the views mapping in file order.
@@ -398,8 +419,9 @@ func renderConfig(current string, cfg domain.Config) (string, error) {
 	return strings.Join(header, "\n") + "\n" + b.String(), nil
 }
 
-// DefaultConfig is written by prep init.
-const DefaultConfig = `# prep project configuration (project-level only).
+// DefaultConfig is written by prep init as config.yaml.dist.
+const DefaultConfig = `# prep configuration. config.yaml.dist is the project's shared default;
+# copy it to config.yaml (gitignored) to make your own, which replaces it.
 # views: saved queries (prep list flags), shown as tabs in prep tui.
 views:
   Unresolved: --state open,defined,ready,in_progress
@@ -419,7 +441,8 @@ func (s *Store) Init() ([]string, error) {
 	var written []string
 	files := []struct{ rel, content string }{
 		{Dir + "/project.md", DefaultProject()},
-		{Dir + "/config.yaml", DefaultConfig},
+		{Dir + "/" + ConfigDist, DefaultConfig},
+		{Dir + "/.gitignore", ConfigOwn + "\n"},
 		{Dir + "/issues/.gitkeep", ""},
 		{Dir + "/knowledge/.gitkeep", ""},
 	}

@@ -68,6 +68,27 @@ func FilesInCommit(dir, commit string) ([]string, error) {
 	return strings.Split(out, "\n"), nil
 }
 
+// Tracked drops the paths git ignores, such as the user's own
+// .prep/config.yaml, so staging never fails on them.
+func Tracked(dir string, paths []string) []string {
+	if len(paths) == 0 {
+		return paths
+	}
+	// check-ignore prints the ignored paths and exits 1 when there are none.
+	out, _ := Run(dir, append([]string{"check-ignore", "--"}, paths...)...)
+	ignored := map[string]bool{}
+	for _, p := range strings.Split(out, "\n") {
+		ignored[p] = true
+	}
+	var keep []string
+	for _, p := range paths {
+		if !ignored[p] {
+			keep = append(keep, p)
+		}
+	}
+	return keep
+}
+
 // Stage adds paths (including deletions) to the index.
 func Stage(dir string, paths []string) error {
 	if len(paths) == 0 {

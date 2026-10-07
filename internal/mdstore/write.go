@@ -90,8 +90,13 @@ func (s *Store) Apply(c *domain.Change) ([]string, error) {
 		return s.write(rel, content)
 	}
 	if c.Config != nil {
-		rel := Dir + "/config.yaml"
-		current, _, err := s.read(rel)
+		// The first save creates the user's own config from the dist
+		// file, keeping its header.
+		rel := Dir + "/" + ConfigOwn
+		current, ok, err := s.read(rel)
+		if err == nil && !ok {
+			current, _, err = s.read(Dir + "/" + ConfigDist)
+		}
 		if err != nil {
 			return touched, err
 		}

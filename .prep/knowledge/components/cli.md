@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/cli
   - cmd/prep
-confirmed_commit: 13bef3c995cb0c4273538733c8025542ffe59356
+confirmed_commit: 93c6f551b4e25a6de2f7af0bfe84d6102d29decf
 ---
 
 # CLI
@@ -22,7 +22,7 @@ Applies when adding or changing commands.
 - `prep edit <id>` changes any of `--title`, `--kind`, `--parent` (`''` removes it), `--depends-on` (repeatable, replaces the list; `''` clears it) and `--body`/`--body-file`. It uses `flag.Visit` to tell unset from empty, and reports `state` and `stale` after the write.
 - Record writes (`recordCmd` in `write.go`): `context` and `findings` replace their record and require `--body` or `--body-file`; `decide` appends a decision; `criterion` (`--add`, `--check`/`--uncheck`/`--remove <n>`) and `dod` (`--add`, `--opt-out` with `--reason`, `--remove <item>`) change acceptance.md; `log <id> <text>` appends to history. `prep show` numbers criteria for `--check <n>`.
 - `prep fmt` (and `--check`) and `prep fix` also regenerate the OKF index files of the knowledge bundle.
-- `record` stages written paths; `afterWrite` prints its errors, the TUI's write function returns them. prep never commits: the user or agent commits the staged `.prep` files with the code (commit mode was removed in 01M4AJ9DN4CK5S4WX2N68VBR98).
+- `record` stages written paths except those git ignores (`gitx.Tracked`, so the user's own `.prep/config.yaml` is never staged); `afterWrite` prints its errors, the TUI's write function returns them. prep never commits: the user or agent commits the staged `.prep` files with the code (commit mode was removed in 01M4AJ9DN4CK5S4WX2N68VBR98).
 - `prep knowledge new|update|confirm` (`knowledge.go`): knowledge entry writes run plan (`Tree.PlanKnowledge`), render through the store, `CheckWrite`, write, stage; `confirm` sets `confirmed_commit` to HEAD for the named entries or `--drifted` ones and needs git and a scope.
 
 - Write pipeline: load → `Plan` → `CheckWrite` → `store.Apply` → stage.
@@ -35,6 +35,6 @@ Applies when adding or changing commands.
 - `prep update [--check]` replaces the binary with the latest release; see [Release, install and update](/components/release.md).
 - `prep watch` (`watch.go`) is a read command for harness integrations: it watches `.prep` with `internal/watch` and prints one line per debounced change (`changed`, or `{"event":"changed"}` with `--json`) until SIGINT/SIGTERM or until its output closes; tests stop it by replacing `watchContext`. The [Claude Code integration](/components/claude-code.md)'s panel refreshes on each line.
 - `prep show --json` carries the issue's fields plus `history` (the work log text), `context`, `findings`, derived state, relations, progress and the effective Definition of Done.
-- `prep tui` is a read command that needs a terminal (stdin and stdout); it opens the [TUI](/components/tui.md), and `--gallery` shows the [TUI design system](/components/tui-design-system.md). `prep views` lists saved views in config order.
+- `prep tui` is a read command that needs a terminal (stdin and stdout); it opens the [TUI](/components/tui.md), and `--gallery` shows the [TUI design system](/components/tui-design-system.md). `prep views` lists saved views in config order, from config.yaml or else config.yaml.dist.
 - `prep skill` prints the embedded `internal/cli/skill.md`; `.claude/skills/prep/SKILL.md` must stay identical (tested).
 - Tests in `cli_test.go` drive whole lifecycles through `Main` with a fake clock; the package variables `clock` and `entropy` (nil: `crypto/rand`) feed `prep new` and the bootstrap issues their IDs, and tests read IDs from the commands' output.

@@ -121,7 +121,8 @@ var States = []State{StateOpen, StateDefined, StateReady, StateInProgress, State
 // Terminal reports whether the state is done or dropped.
 func (s State) Terminal() bool { return s == StateDone || s == StateDropped }
 
-// Project holds project-level facts from project.md and config.yaml.
+// Project holds project-level facts from project.md and the config in
+// effect (config.yaml, else config.yaml.dist).
 type Project struct {
 	Schema int
 	DoD    []string

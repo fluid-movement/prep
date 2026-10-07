@@ -131,7 +131,76 @@ func TestConfigRoundTrip(t *testing.T) {
 	if strings.Join(got.ViewOrder, "|") != "Mine: urgent|All|Actionable" || got.Views["Mine: urgent"] != "--priority critical,high --tag ui" {
 		t.Fatalf("loaded %+v from\n%s", got, read())
 	}
-	if !strings.HasPrefix(read(), "# prep project configuration") {
+	if !strings.HasPrefix(read(), "# prep configuration") {
 		t.Fatalf("header lost:\n%s", read())
+	}
+}
+
+func TestConfigFallsBackToDist(t *testing.T) {
+	root := t.TempDir()
+	s := Open(root)
+	written, err := s.Init()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(strings.Join(written, " "), Dir+"/config.yaml ") || !strings.Contains(strings.Join(written, " "), Dir+"/config.yaml.dist") {
+		t.Fatalf("init wrote %v", written)
+	}
+	file := func(name string) string { return filepath.Join(root, Dir, name) }
+	if b, err := os.ReadFile(file(".gitignore")); err != nil || string(b) != "config.yaml\n" {
+		t.Fatalf(".gitignore = %q, %v", b, err)
+	}
+	if _, err := os.Stat(file("config.yaml")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("init wrote config.yaml: %v", err)
+	}
+	views := func() string {
+		t.Helper()
+		cfg, err := Open(root).LoadConfig()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.Join(cfg.ViewOrder, "|")
+	}
+	if got := views(); got != "Unresolved|All" {
+		t.Fatalf("without an own config: %s", got)
+	}
+
+	// An own config replaces the dist file as a whole.
+	if err := os.WriteFile(file("config.yaml"), []byte("views:\n  Mine: --tag me\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := views(); got != "Mine" {
+		t.Fatalf("with an own config: %s", got)
+	}
+
+	// prep check reports each invalid file under its own name.
+	diags := func() []string {
+		t.Helper()
+		_, _, d, err := Open(root).Load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var files []string
+		for _, x := range d {
+			if x.Code == domain.CodeConfigInvalid {
+				files = append(files, x.File)
+			}
+		}
+		return files
+	}
+	if got := diags(); len(got) != 0 {
+		t.Fatalf("valid configs reported: %v", got)
+	}
+	if err := os.WriteFile(file("config.yaml.dist"), []byte("views:\n  Bad: --state nope\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(diags(), " "); got != "config.yaml.dist" {
+		t.Fatalf("invalid dist reported as %q", got)
+	}
+	if err := os.WriteFile(file("config.yaml"), []byte("commit_mode: all\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(diags(), " "); got != "config.yaml.dist config.yaml" {
+		t.Fatalf("invalid configs reported as %q", got)
 	}
 }

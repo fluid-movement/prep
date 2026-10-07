@@ -35,7 +35,7 @@ const (
 	// Project level.
 	CodeProjectMissing  = "P001" // project.md missing or unreadable
 	CodeSchemaMismatch  = "P002" // schema version differs from the binary
-	CodeConfigInvalid   = "P003" // config.yaml invalid
+	CodeConfigInvalid   = "P003" // config.yaml or config.yaml.dist invalid
 	CodeProjectUnknown  = "P004" // unknown file in .prep
 	CodeDoDOptOutUnused = "P005"
 

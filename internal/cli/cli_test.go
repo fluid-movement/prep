@@ -1052,3 +1052,36 @@ func TestImport(t *testing.T) {
 		t.Fatalf("import output:\n%s", out)
 	}
 }
+
+func TestOwnConfigIsNeverStaged(t *testing.T) {
+	h := newHarness(t)
+	git := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-c", "user.email=t@t", "-c", "user.name=t"}, args...)...)
+		cmd.Dir = h.dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+		return string(out)
+	}
+	git("init", "-q")
+	git("add", "-A")
+	git("commit", "-qm", "init")
+
+	// A settings save writes the own config; staging skips it and keeps
+	// staging the rest.
+	if err := os.WriteFile(filepath.Join(h.dir, ".prep", "config.yaml"), []byte("views:\n  Mine: --tag me\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(h.dir, ".prep", "project.md"), []byte("changed\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := record(h.dir, []string{".prep/config.yaml", ".prep/project.md"}); err != nil {
+		t.Fatalf("record: %v", err)
+	}
+	st := git("status", "--porcelain", "--ignored", ".prep")
+	if !strings.Contains(st, "!! .prep/config.yaml") || !strings.Contains(st, "M  .prep/project.md") {
+		t.Fatalf("status:\n%s", st)
+	}
+}
