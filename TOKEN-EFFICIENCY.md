@@ -125,19 +125,19 @@ Constraints that apply to every Jev integration:
 
 ## First measurements: fathom audits
 
-Three runs on 2026-10-08 of the same prompt in fathom (a Rust project of nine crates and targets, with a fresh knowledge base of about 100 entries): "spawn explore subagents to check if our new prep knowledge base and issues are complete". fathom's state changed between runs (issues and entries from the earlier ones), so the comparison is rough.
+Four runs on 2026-10-08 of the same prompt in fathom (a Rust project of nine crates and targets, with a fresh knowledge base of about 100 entries): "spawn explore subagents to check if our new prep knowledge base and issues are complete". fathom's state changed between runs (issues and entries from the earlier ones), so the comparison is rough.
 
-| | Run 1 `704a70a0` | Run 2 `3b7d87a5` | Run 3 `a2aed92f` |
-| --- | --- | --- | --- |
-| Setup | before G7 | G7 binary; old skill and ledger still loaded (`/clear`, no restart) | G7, G8 hint, fresh session |
-| Subagents | 5 × Opus | 5 × Opus | 4 × Sonnet |
-| Main loop tokens | 1.51M | 0.60M | 0.65M |
-| Subagent tokens | 8.16M | 10.67M | 4.39M |
-| Subagent requests | 128 | 149 | 72 |
-| Tool output read back | ~196k | ~207k | ~159k |
-| of which knowledge files | ~45k | ~64k | ~43k |
-| Final main context | 105k | 78k | 74k |
-| Cost | $7.32 | $7.50 | $3.14 |
+| | Run 1 `704a70a0` | Run 2 `3b7d87a5` | Run 3 `a2aed92f` | Run 4 `174fa6b3` |
+| --- | --- | --- | --- | --- |
+| Setup | before G7 | G7 binary; old skill and ledger still loaded (`/clear`, no restart) | G7, G8 hint, fresh session | hint with "never the files", "unchanged", bounded output |
+| Subagents | 5 × Opus | 5 × Opus | 4 × Sonnet | 4 × Sonnet |
+| Main loop tokens | 1.51M | 0.60M | 0.65M | 0.52M |
+| Subagent tokens | 8.16M | 10.67M | 4.39M | 1.31M |
+| Subagent requests | 128 | 149 | 72 | 38 |
+| Tool output read back | ~196k | ~207k | ~159k | ~74k |
+| of which knowledge (files, or `prep knowledge` in run 4) | ~45k | ~64k | ~43k | ~41k (25 calls: 20 find, 17 show, 6 list; 1 direct file read) |
+| Final main context | 105k | 78k | 74k | 62k |
+| Cost | $7.32 | $7.50 | $3.14 | $1.60 |
 
 What they showed:
 
@@ -146,7 +146,8 @@ What they showed:
 - **Rules must be in the briefing.** The main agent never invoked the skill in runs 2 and 3; only the `prep prime` hint reached it, and subagents see only what their prompt says. In run 3 the main agent passed the knowledge rule on but softened it to "or the files directly", and the subagents read the files. The hint now says "never the files" and "unchanged".
 - **Knowledge reads stayed near 27% of tool output** (K-share above the 25% line) in an audit, where comparing whole entries with old docs is the task. Exact-identifier `grep`s returned 2–3k each and are no waste; bulk `cat` loops over entries and read-back saved output files (two of ~27k characters in run 3, three totalling ~134k characters in run 1) are.
 - **Code reads are now the largest share** (~67k in run 3).
-- **Tooling pitfalls found:** `prep setup --refresh` uninstalled token-ledger with the marketplace (fixed in 01M4DMXST6T9VKMVF46H9DFR40), and `/clear` keeps plugins and skill text from before an install, so a measured run needs a fresh Claude Code start.
+- **Run 4: the rules held once worded strictly.** The main agent quoted the hint into every subagent prompt as "passed on unchanged"; the subagents read knowledge only through `prep knowledge`, read back no saved output, and needed 38 requests in all. Run 4 cost 78% less than run 1 and used 81% fewer tokens. Part of that is a smaller task: the main agent told the subagents that open issues already cover known gaps, and their reports were shorter (3.8–5.2k characters against 5–10k). Knowledge volume stayed about the same (~41k); what fell was code and doc reading, requests, and the amplification of both.
+- **Tooling pitfalls found:** `prep setup --refresh` uninstalled token-ledger with the marketplace (fixed in 01M4DMXST6T9VKMVF46H9DFR40), and `/clear` keeps plugins and skill text from before an install, so a measured run needs a fresh Claude Code start. The ledger classifies `prep knowledge` reads as `prep-cli`, not `knowledge`, so K-share needs them added back.
 
 Still open: measure ordinary issue work (enrichment, implementation), where narrow knowledge reads should matter more than in audits, and check report quality across models.
 
