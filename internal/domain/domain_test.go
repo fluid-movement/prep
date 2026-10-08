@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -191,3 +192,43 @@ func TestDroppedParentWithOpenChild(t *testing.T) {
 		t.Fatal("no warning for a dropped parent with an open child")
 	}
 }
+
+// codes lists the gate codes of unmet conditions.
+func codes(unmet []Unmet) []string {
+	var out []string
+	for _, u := range unmet {
+		out = append(out, u.Code)
+	}
+	return out
+}
+
+func TestGatesForDefineAndComplete(t *testing.T) {
+	open := &Issue{ID: idA, Title: "A", Kind: KindCode}
+	tree := NewTree(Project{}, []*Issue{open}, nil, nil)
+	if got := codes(must(tree.Gates(idA, OpDefine, nil))); !slices.Equal(got, []string{GateRequirement}) {
+		t.Fatalf("define without prose: %v", got)
+	}
+
+	busy := &Issue{ID: idB, Title: "B", Kind: KindCode, Prose: "Do it.", Body: "Do it.", Context: "Where.", Criteria: []Criterion{{Text: "x", Checked: true}},
+		Baselines: []Baseline{{Name: "20261005-120000", Kind: KindCode, Requirement: "Do it."}}, Ready: &Ready{Baseline: "20261005-120000"}, Claim: &Claim{By: "agent/1"}}
+	entries := []*Entry{{Path: "/overview.md", Type: "overview", Title: "O", Description: "O."}}
+	tree = NewTree(Project{}, []*Issue{busy}, entries, nil)
+	cases := []struct {
+		in   Input
+		want []string
+	}{
+		{Input{Actor: "agent/1"}, []string{GateDocs}},
+		{Input{Actor: "agent/1", Docs: []string{"/overview.md"}, NoImpact: "none"}, []string{GateDocs}},
+		{Input{Actor: "agent/1", Docs: []string{"/gone.md"}}, []string{GateDocEntry}},
+		{Input{Actor: "agent/1", Docs: []string{"overview"}}, nil},
+		{Input{Actor: "agent/1", NoImpact: "internal only"}, nil},
+	}
+	for _, c := range cases {
+		unmet, _ := tree.Gates(idB, OpComplete, &c.in)
+		if got := codes(unmet); !slices.Equal(got, c.want) {
+			t.Errorf("complete %+v: unmet %v, want %v", c.in, got, c.want)
+		}
+	}
+}
+
+func must(unmet []Unmet, _ []string) []Unmet { return unmet }

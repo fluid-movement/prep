@@ -1,0 +1,2 @@
+- New entries [Watcher](/components/watch.md) and [Git helpers](/components/git.md), scoped to `internal/watch` (with `internal/cli/watch.go`) and `internal/gitx`.
+- `internal/domain/domain_test.go` `TestGatesForDefineAndComplete`.

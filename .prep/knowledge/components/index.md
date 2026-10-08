@@ -7,6 +7,7 @@
 * [Claude Code integration](/components/claude-code.md) - The prep plugin for Claude Code: skill, SessionStart briefing and the activity bridge to prep tui's Agent screen, served from this repository as its own marketplace and installed per user by prep setup.
 * [CLI](/components/cli.md) - internal/cli — command table, global flags, JSON output and errors, write pipeline and git staging.
 * [Domain package](/components/domain.md) - internal/domain — issue model, state derivation, FSM gates, validation codes, query engine, guide and knowledge retrieval.
+* [Git helpers](/components/git.md) - internal/gitx — the few git calls prep makes (drift, staging, evidence, HEAD), how their output is read, and why git is optional.
 * [Markdown store](/components/markdown-store.md) - internal/mdstore — parses and renders .prep files canonically, atomic writes with compare-and-swap, fmt and fix.
 * [OKF store](/components/okf-store.md) - internal/okf — reads the knowledge bundle (links, drift) and writes entries for prep knowledge new, update and confirm.
 * [Palette and themes](/components/palette.md) - internal/palette — TUI color token names, the built-in themes, custom theme resolution and validation; how a theme reaches the screen.
@@ -19,3 +20,4 @@
 * [TUI knowledge screen](/components/tui-knowledge.md) - internal/tui knowledge screen: entries with attention marks, the entry view, filters and links between issues and entries.
 * [TUI mouse](/components/tui-mouse.md) - How the TUI takes clicks and the wheel: elements marked as Lip Gloss layers while rendering, hit-testing, click semantics, and the per-user mouse capture setting.
 * [TUI](/components/tui.md) - prep tui screens in internal/tui — the issue views (tabs, list, detail and its links), loader injection, live reload with fsnotify, navigation keys, and how screens are tested; editing is in TUI editing and keys.
+* [Watcher](/components/watch.md) - internal/watch — reports changes under .prep, debounced and merged, split into project and local changes; used by prep tui's live reload and prep watch.

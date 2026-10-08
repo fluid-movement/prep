@@ -1,0 +1,2 @@
+- [x] Knowledge entries describe the watcher and the git helpers, scoped to their code
+- [x] Domain tests cover the requirement, documentation and documentation-entry gates
