@@ -63,18 +63,39 @@ describe('ledger', () => {
   })
 })
 
+describe('issues', () => {
+  test('rows carry the issue a prep write, guide or issue edit moved to', async ($, on) => {
+    const files = fakeHost(on)
+    const A = '01M4AHPY6HZ0ZFMMH349V1V2TC'
+    const B = '01M4AJ9DN4CK5S4WX2N68VBR98'
+    await $.session.start({ cwd: '/r', surface: 'terminal', isInteractive: true })
+    await $.turn.start({ text: 'hi', turnId: 'turn1' })
+    await $.tool.call({ tool: 'Read', tool_use_id: 't1', file_path: '/r/README.md' } as never)
+    await $.tool.call({ tool: 'Bash', tool_use_id: 't2', command: `prep guide ${A}` } as never)
+    await $.tool.call({ tool: 'Bash', tool_use_id: 't3', command: `prep show ${B}` } as never)
+    await $.tool.call({ tool: 'Edit', tool_use_id: 't4', file_path: `/r/.prep/issues/${B}/context.md` } as never)
+    await $.turn.complete({ turnId: 'turn1', answer: '', reason: 'answer' } as never)
+
+    const rows = files.get('/home/u/.claude/token-ledger/s1.jsonl')!.trim().split('\n').map(l => JSON.parse(l))
+    expect(rows.filter(r => r.type === 'tool').map(r => r.issue)).toEqual([undefined, A, A, B])
+  })
+})
+
 describe('summary', () => {
-  test('totals requests and groups tool output by tool and area', () => {
+  test('totals requests and groups tool output by tool, area and issue', () => {
     const text = summarize([
       { type: 'step', t: 0, usage: { input: 10, cacheRead: 100, cacheWrite: 5, output: 7 } },
-      { type: 'tool', t: 0, tool: 'Read', area: 'knowledge', resultChars: 800 },
+      { type: 'step', t: 0, issue: 'A', usage: { input: 1, cacheRead: 1000, cacheWrite: 0, output: 9 } },
+      { type: 'tool', t: 0, tool: 'Read', area: 'knowledge', issue: 'A', resultChars: 800 },
       { type: 'tool', t: 0, tool: 'Bash', area: 'prep-cli', prep: ['guide'], resultChars: 400 },
       { type: 'tool', t: 0, tool: 'Bash', area: 'prep-cli', prep: ['ready', 'claim'], resultChars: 40 },
     ])
-    expect(text).toContain('1 model requests: input 10, cache read 100, cache write 5, output 7 tokens')
+    expect(text).toContain('2 model requests: input 11, cache read 1100, cache write 5, output 16 tokens')
     expect(text).toContain('Read: 1 calls, ~200 tokens')
     expect(text).toContain('knowledge: 1 calls, ~200 tokens')
     expect(text).toContain('guide: 1 calls, ~100 tokens')
     expect(text).toContain('ready + claim: 1 calls, ~10 tokens')
+    expect(text).toContain('A: 1 requests, 1010 tokens; 1 tool calls, ~200 tokens')
+    expect(text).toContain('(none): 1 requests, 122 tokens; 2 tool calls, ~110 tokens')
   })
 })

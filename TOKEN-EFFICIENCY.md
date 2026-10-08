@@ -45,20 +45,22 @@ Two plugins in this repository record and show the data:
 
 - **token-ledger** (`plugins/token-ledger`) writes `~/.claude/token-ledger/<session id>.jsonl`. It records:
   - every model request, with input, cache read, cache write and output tokens;
+  - on each request and tool call, the prep issue being worked on, so sessions that cover several issues split by issue;
   - every tool call, with what it touched, its prep area (`knowledge`, `issue`, `prep-cli`, `code`), the prep subcommand, and how much text it returned;
   - context fill and cost at the end of each turn.
 
   The row format is in its README. To load it from a checkout: `claude --plugin-dir plugins/token-ledger`.
 - **The prep pane's Usage tab** (`/prep:pane usage`) shows the current session's figures as they accumulate.
 
-Record ordinary prep work, unchanged, for one to two weeks. Aim for at least 10 sessions that each take one issue through enrichment or implementation.
+Record ordinary prep work, unchanged, for one to two weeks. Aim for at least 10 issues taken through enrichment or implementation.
 
 ## What we compute
 
 | Metric | Definition |
 | --- | --- |
 | **K-share** | Knowledge-entry tokens read back ÷ all tool-output tokens, per prep session |
-| **K-per-issue** | Knowledge tokens read in a session that works on one issue |
+| **K-per-issue** | Knowledge tokens read while working on one issue (rows' `issue`) |
+| **Tokens per issue** | Model tokens per issue, to find which issues, kinds or phases cost the most |
 | **K-unused** | Share of knowledge reads that did not feed the work (proxy below) |
 | **Amplification** | For each read: its tokens × the model requests that followed it in the session; the read's real cost, mostly as cache reads |
 | **Code-share** | Code tokens read back ÷ all tool-output tokens |
