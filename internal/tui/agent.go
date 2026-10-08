@@ -40,6 +40,11 @@ type agentState struct {
 	freshAfter time.Time // events after this are fresh until freshUntil
 	freshUntil time.Time
 	ticking    bool
+	// guide caches the Now card's guide for guideID in guideTree: building
+	// one validates the whole tree, too much for every frame.
+	guide     domain.Guide
+	guideID   string
+	guideTree *domain.Tree
 }
 
 type activityMsg struct {
@@ -371,7 +376,10 @@ func (m *Model) nowCard(id string, width int) []string {
 	t := m.tree
 	i := t.Issues[id]
 	s := t.State(id)
-	g := t.BuildGuide(id, func(string) string { return "" }, nil)
+	if a := &m.agentS; a.guideTree != t || a.guideID != id {
+		a.guide, a.guideID, a.guideTree = t.BuildGuide(id, func(string) string { return "" }, nil), id, t
+	}
+	g := m.agentS.guide
 	lines := []string{
 		ui.Fit(m.th.S.Subtle.Render(shortID(id))+" "+m.th.S.Title.Render(i.Title), width),
 		ui.Fit(ui.StateBadge(m.th, s)+ui.KindTag(m.th, i.Kind)+m.th.S.Muted.Render("step "+g.Step), width),

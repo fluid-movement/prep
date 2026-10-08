@@ -21,12 +21,12 @@ States (never stored): resolution.md → done/dropped; claim.md with valid ready
 | Transition | From | Gates |
 | --- | --- | --- |
 | define | open, or defined/ready when stale | title, valid kind, non-empty prose, empty Open questions |
-| ack | defined, ready, in progress when stale | empty Open questions; rewrites ready.md to the new baseline |
+| ack | defined, ready, in progress when stale | empty Open questions; after a kind change on a signed-off issue, the context ready would require; rewrites ready.md to the new baseline |
 | ready | defined, not stale | at least one criterion; context.md non-empty unless manual or parent |
 | claim | ready, not stale | not a parent; dependencies done |
 | release | in progress | records the release in history.md |
 | complete | in progress (parents: ready or in progress) | not stale; all criteria checked; documentation decision; parents: children resolved; code: non-human actor, and a given --commit must be a hex hash; research: findings.md; decision: an outcome: true entry |
-| drop | any unresolved state | reason |
+| drop | any unresolved state | reason; a dropped (like a done) parent with unresolved children is warning I023 |
 
 - **Record writes** are not transitions either: `prep context`, `decide`, `criterion`, `dod`, `findings` and `log` work on any unresolved issue and never change state; `prep guide` names them in its instructions and Write list.
 - **Edit** is not a transition: `prep edit` changes title, kind, parent, dependencies, tags, priority or requirement of any unresolved issue (tags and priority also on resolved ones) and appends a history line; it never changes state, but a requirement or kind edit makes a defined issue stale.

@@ -1,0 +1,5 @@
+- [x] IDs and suffixes resolve in any case
+- [x] prep new refuses dropped dependencies and drops repeats
+- [x] ack after a kind change needs the context ready requires
+- [x] A dropped parent with unresolved children warns I023
+- [x] The Agent screen builds the guide once per tree and issue

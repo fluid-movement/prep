@@ -195,6 +195,11 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 		if !i.Kind.Valid() {
 			add(GateKind, "kind %q is not one of %s", i.Kind, joinKinds())
 		}
+		// Ack keeps the sign-off; a new kind may need context ready never
+		// checked for.
+		if b := i.LatestBaseline(); b != nil && b.Kind != i.Kind && i.Ready != nil && !parent && i.Kind != KindManual && strings.TrimSpace(i.Context) == "" {
+			add(GateContext, "the kind changed to %s and context.md is empty; %s issues require enrichment context", i.Kind, i.Kind)
+		}
 		if strings.TrimSpace(i.OpenQuestions) != "" {
 			add(GateOpenQuestions, "the Open questions section in issue.md is not empty")
 		}
@@ -422,7 +427,17 @@ func (t *Tree) PlanNew(in NewIssueInput, now time.Time) (*Change, error) {
 	if err != nil {
 		return nil, &Error{Code: ErrUsage, Message: "cannot create issue", Unmet: []Unmet{{GatePriority, err.Error()}}}
 	}
-	issue := &Issue{ID: id, Title: strings.TrimSpace(in.Title), Kind: in.Kind, Parent: in.Parent, DependsOn: in.DependsOn, Tags: tags, Priority: prio, Prose: strings.TrimSpace(in.Body)}
+	var deps []string
+	for _, d := range in.DependsOn {
+		if contains(deps, d) {
+			continue
+		}
+		if t.State(d) == StateDropped {
+			return nil, &Error{Code: ErrUsage, Message: "cannot create issue", Unmet: []Unmet{{GateDeps, fmt.Sprintf("cannot depend on dropped issue %s", d)}}}
+		}
+		deps = append(deps, d)
+	}
+	issue := &Issue{ID: id, Title: strings.TrimSpace(in.Title), Kind: in.Kind, Parent: in.Parent, DependsOn: deps, Tags: tags, Priority: prio, Prose: strings.TrimSpace(in.Body)}
 	return &Change{Op: "new", IssueID: id, NewIssue: issue}, nil
 }
 

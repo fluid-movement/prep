@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestScopeMatch(t *testing.T) {
@@ -129,5 +130,64 @@ func TestKnowledgeReservedNames(t *testing.T) {
 		if !errors.As(err, &de) || de.Code != ErrUsage {
 			t.Fatalf("%s: expected a usage error, got %v", p, err)
 		}
+	}
+}
+
+const (
+	idA = "01M45YYRG0AP2P2A41FRCHGR0Q"
+	idB = "01M45YYSF8MH8F910XSA7Q366A"
+	idC = "01M45YYVDRJAN3ZJDXNK2DSAPX"
+)
+
+func TestResolveIgnoresCase(t *testing.T) {
+	tree := NewTree(Project{}, []*Issue{{ID: idA, Title: "A", Kind: KindCode}, {ID: idB, Title: "B", Kind: KindCode}}, nil, nil)
+	for _, ref := range []string{idA, strings.ToLower(idA), "chgr0q", "CHGR0Q"} {
+		if got, err := tree.Resolve(ref); err != nil || got != idA {
+			t.Errorf("Resolve(%q) = %q, %v", ref, got, err)
+		}
+	}
+}
+
+func TestPlanNewDependencies(t *testing.T) {
+	dropped := &Issue{ID: idA, Title: "A", Kind: KindCode, Resolution: &Resolution{Outcome: OutcomeDropped, Reason: "no"}}
+	open := &Issue{ID: idB, Title: "B", Kind: KindCode}
+	tree := NewTree(Project{}, []*Issue{dropped, open}, nil, nil)
+	c, err := tree.PlanNew(NewIssueInput{Title: "N", Kind: KindCode, DependsOn: []string{idB, idB}}, time.Now())
+	if err != nil || len(c.NewIssue.DependsOn) != 1 {
+		t.Fatalf("plan = %+v, %v", c, err)
+	}
+	_, err = tree.PlanNew(NewIssueInput{Title: "N", Kind: KindCode, DependsOn: []string{idA}}, time.Now())
+	var de *Error
+	if !errors.As(err, &de) || len(de.Unmet) != 1 || de.Unmet[0].Code != GateDeps {
+		t.Fatalf("depending on a dropped issue: %v", err)
+	}
+}
+
+func TestAckAfterKindChangeNeedsContext(t *testing.T) {
+	i := &Issue{ID: idA, Title: "A", Kind: KindCode, Prose: "Do it.", Criteria: []Criterion{{Text: "x"}},
+		Baselines: []Baseline{{Name: "20261005-120000", Kind: KindManual, Requirement: "Do it."}}, Ready: &Ready{Baseline: "20261005-120000"}}
+	tree := NewTree(Project{}, []*Issue{i}, nil, nil)
+	if !tree.Stale(idA) {
+		t.Fatal("a kind change should make the issue stale")
+	}
+	unmet, _ := tree.Gates(idA, OpAck, nil)
+	if len(unmet) != 1 || unmet[0].Code != GateContext {
+		t.Fatalf("unmet = %+v", unmet)
+	}
+	i.Context = "Where."
+	if unmet, _ := NewTree(Project{}, []*Issue{i}, nil, nil).Gates(idA, OpAck, nil); len(unmet) != 0 {
+		t.Fatalf("with context: unmet = %+v", unmet)
+	}
+}
+
+func TestDroppedParentWithOpenChild(t *testing.T) {
+	p := &Issue{ID: idA, Title: "P", Kind: KindManual, Resolution: &Resolution{Outcome: OutcomeDropped, Reason: "no"}}
+	c := &Issue{ID: idB, Title: "C", Kind: KindCode, Parent: idA}
+	found := false
+	for _, d := range Validate(NewTree(Project{}, []*Issue{p, c}, nil, nil)) {
+		found = found || d.Code == CodeResolvedChildOpen && d.Issue == idA
+	}
+	if !found {
+		t.Fatal("no warning for a dropped parent with an open child")
 	}
 }

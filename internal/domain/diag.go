@@ -64,7 +64,7 @@ const (
 	CodeDocEntryMissing    = "I020" // resolution references a missing knowledge entry
 	CodeSelfDependency     = "I021"
 	CodeDuplicateDep       = "I022"
-	CodeResolvedChildOpen  = "I023" // done parent with unresolved children
+	CodeResolvedChildOpen  = "I023" // resolved parent with unresolved children
 	CodeStaleInProgress    = "I024"
 	CodeContextLinkMissing = "I025"
 	CodeTagInvalid         = "I026"

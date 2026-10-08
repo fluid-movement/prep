@@ -1,0 +1,3 @@
+- `internal/domain/tree.go` `Resolve` uppercases the ref; `internal/domain/fsm.go` `PlanNew` (dependencies) and `Gates` for `OpAck` (G_CONTEXT after a kind change with ready.md); `internal/domain/validate.go` I023 for dropped parents.
+- `internal/tui/agent.go` `nowCard` caches the guide in `agentState`.
+- Knowledge: [Domain package](/components/domain.md), [Issue lifecycle](/features/lifecycle.md), [TUI Agent screen](/components/tui-agent.md).

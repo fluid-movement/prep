@@ -128,6 +128,11 @@ func Validate(t *Tree) []Diagnostic {
 				if strings.TrimSpace(r.Reason) == "" {
 					e(CodeRecordInvalid, ClassManual, "resolution.md", "add a reason", "dropped resolution has no reason")
 				}
+				for _, c := range t.Children(id) {
+					if !t.State(c).Terminal() {
+						w(CodeResolvedChildOpen, ClassGuided, "resolution.md", "drop or complete the child, or move it to another parent", "dropped parent has unresolved child %s", c)
+					}
+				}
 			default:
 				e(CodeRecordInvalid, ClassManual, "resolution.md", "set outcome to done or dropped", "invalid outcome %q", r.Outcome)
 			}

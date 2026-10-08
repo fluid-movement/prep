@@ -9,7 +9,7 @@ generated:
 scope:
   - cmd/**
   - internal/**
-confirmed_commit: 811861a63b42b4ea1c1caefba4ab2d7ac43ab200
+confirmed_commit: 0d18a882dae4900f42677ada9c204818c98ff235
 ---
 
 # Architecture

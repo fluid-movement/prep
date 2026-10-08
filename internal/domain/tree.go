@@ -64,6 +64,7 @@ func (t *Tree) Resolve(ref string) (string, error) {
 	if ref == "" {
 		return "", &Error{Code: ErrUsage, Message: "issue id required"}
 	}
+	ref = strings.ToUpper(ref) // IDs are Crockford base32, which ignores case
 	if _, ok := t.Issues[ref]; ok {
 		return ref, nil
 	}
