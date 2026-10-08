@@ -1,7 +1,7 @@
 import type { On } from 'claude-code'
 import { describe, expect, test } from 'claude-code/testing'
 
-import { classify, prepSubcommand } from '../hooks/classify'
+import { classify, prepSubcommands } from '../hooks/classify'
 import { summarize } from '../hooks/register'
 
 /** An in-memory file system and the session facts the ledger asks for. */
@@ -27,14 +27,20 @@ function fakeHost(on: On) {
 
 describe('classify', () => {
   test('prep commands, knowledge and issue paths are told apart', () => {
-    expect(prepSubcommand('prep guide 01ABC --json')).toBe('guide')
-    expect(prepSubcommand('/usr/local/bin/prep complete 01ABC')).toBe('complete')
-    expect(prepSubcommand('go test ./... | grep prep')).toBeUndefined()
+    expect(prepSubcommands('prep guide 01ABC --json')).toEqual(['guide'])
+    expect(prepSubcommands('/usr/local/bin/prep complete 01ABC')).toEqual(['complete'])
+    expect(prepSubcommands('go test ./... | grep prep')).toEqual([])
+    expect(prepSubcommands('cd /r && prep guide 01ABC')).toEqual(['guide'])
+    expect(prepSubcommands('I=01ABC B=x && prep criterion $I --add y && prep ready $I')).toEqual(['criterion', 'ready'])
+    expect(prepSubcommands('cd /r && PREP_ACTOR=x prep show 01ABC | head')).toEqual(['show'])
+    expect(prepSubcommands("echo prep guide; cat <<'EOF'\nprep init\nEOF")).toEqual([])
     expect(classify('Read', { file_path: '/r/.prep/knowledge/overview.md' }).area).toBe('knowledge')
     expect(classify('Read', { file_path: '/r/.prep/issues/01ABC/context.md' }).area).toBe('issue')
     expect(classify('Read', { file_path: '/r/internal/cli/cli.go' }).area).toBe('code')
     expect(classify('Bash', { command: 'cat .prep/knowledge/components/cli.md' }).area).toBe('knowledge')
-    expect(classify('Bash', { command: 'prep show 01ABC' })).toEqual({ target: 'prep show 01ABC', area: 'prep-cli', prep: 'show' })
+    const ctx = classify('Bash', { command: "prep context 01ABC --body-file - <<'EOF'\nlong text\nEOF" })
+    expect(ctx).toEqual({ target: "prep context 01ABC --body-file - <<'EOF' …", area: 'prep-cli', prep: ['context'] })
+    expect(classify('Bash', { command: 'prep show 01ABC' })).toEqual({ target: 'prep show 01ABC', area: 'prep-cli', prep: ['show'] })
   })
 })
 
@@ -52,7 +58,7 @@ describe('ledger', () => {
     expect(rows.map(r => r.type)).toEqual(['session', 'turn', 'tool', 'tool', 'turn.end'])
     expect(rows[0].isPrep).toBe(true)
     expect(rows[2]).toMatchObject({ tool: 'Read', area: 'knowledge', resultChars: 400, turnId: 'turn1' })
-    expect(rows[3]).toMatchObject({ tool: 'Bash', area: 'prep-cli', prep: 'guide' })
+    expect(rows[3]).toMatchObject({ tool: 'Bash', area: 'prep-cli', prep: ['guide'] })
     expect(rows[4].contextTokens).toBe(1234)
   })
 })
@@ -62,11 +68,13 @@ describe('summary', () => {
     const text = summarize([
       { type: 'step', t: 0, usage: { input: 10, cacheRead: 100, cacheWrite: 5, output: 7 } },
       { type: 'tool', t: 0, tool: 'Read', area: 'knowledge', resultChars: 800 },
-      { type: 'tool', t: 0, tool: 'Bash', area: 'prep-cli', prep: 'guide', resultChars: 400 },
+      { type: 'tool', t: 0, tool: 'Bash', area: 'prep-cli', prep: ['guide'], resultChars: 400 },
+      { type: 'tool', t: 0, tool: 'Bash', area: 'prep-cli', prep: ['ready', 'claim'], resultChars: 40 },
     ])
     expect(text).toContain('1 model requests: input 10, cache read 100, cache write 5, output 7 tokens')
     expect(text).toContain('Read: 1 calls, ~200 tokens')
     expect(text).toContain('knowledge: 1 calls, ~200 tokens')
     expect(text).toContain('guide: 1 calls, ~100 tokens')
+    expect(text).toContain('ready + claim: 1 calls, ~10 tokens')
   })
 })

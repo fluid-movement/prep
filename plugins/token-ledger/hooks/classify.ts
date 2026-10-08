@@ -3,9 +3,11 @@
 
 export type Area = 'prep-cli' | 'knowledge' | 'issue' | 'code'
 
-export type Target = { target?: string; area?: Area; prep?: string }
+export type Target = { target?: string; area?: Area; prep?: string[] }
 
-const MAX_TARGET = 200
+// Long enough that the target can be classified again afterwards; heredoc
+// bodies (text the agent writes) are dropped before clipping.
+const MAX_TARGET = 1000
 
 /** Names what a tool call worked on and which part of prep it belongs to. */
 export function classify(tool: string, input: Record<string, unknown>): Target {
@@ -19,9 +21,9 @@ export function classify(tool: string, input: Record<string, unknown>): Target {
       return path === undefined ? {} : { target: path, area: areaOfPath(path) }
     }
     case 'Bash': {
-      const command = str('command') ?? ''
-      const sub = prepSubcommand(command)
-      if (sub !== undefined) return { target: clip(command), area: 'prep-cli', prep: sub }
+      const command = withoutHeredocs(str('command') ?? '')
+      const subs = prepSubcommands(command)
+      if (subs.length > 0) return { target: clip(command), area: 'prep-cli', prep: subs }
       const path = prepPathIn(command)
       return { target: clip(command), area: path ? areaOfPath(path) : undefined }
     }
@@ -39,10 +41,27 @@ export function classify(tool: string, input: Record<string, unknown>): Target {
   }
 }
 
-/** The prep subcommand a shell command runs, if it runs prep first. */
-export function prepSubcommand(command: string): string | undefined {
-  const m = command.trim().match(/^(?:\S*\/)?prep\s+([a-z][a-z-]*)/)
-  return m?.[1]
+/**
+ * The prep subcommands a shell command runs, in order: prep wherever it
+ * starts a command in the line (after cd ... &&, assignments, export).
+ */
+export function prepSubcommands(command: string): string[] {
+  const subs: string[] = []
+  for (const segment of withoutHeredocs(command).split(/&&|\|\||[;|\n]/)) {
+    let words = segment.trim().split(/\s+/).filter(Boolean)
+    if (words[0] === 'export') words = words.slice(1)
+    let at = 0
+    while (at < words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[at]!)) at++
+    if (!/^(?:\S*\/)?prep$/.test(words[at] ?? '')) continue
+    const sub = words[at + 1]
+    if (sub !== undefined && /^[a-z][a-z-]*$/.test(sub)) subs.push(sub)
+  }
+  return subs
+}
+
+// Heredoc bodies are text, not commands, and can be long: keep the marker.
+function withoutHeredocs(command: string): string {
+  return command.replace(/(<<-?\s*(['"]?)(\w+)\2[^\n]*)\n[\s\S]*?\n\s*\3[ \t]*(?=\n|$)/g, '$1 …')
 }
 
 function prepPathIn(command: string): string | undefined {

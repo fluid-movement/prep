@@ -136,7 +136,8 @@ export function summarize(all: readonly Row[]): string {
   const group = (key: string) => {
     const by = new Map<string, { n: number; chars: number }>()
     for (const r of tools) {
-      const k = r[key] as string | undefined
+      const v = r[key] as string | string[] | undefined
+      const k = Array.isArray(v) ? v.join(' + ') : v
       if (k === undefined) continue
       const g = by.get(k) ?? { n: 0, chars: 0 }
       g.n++

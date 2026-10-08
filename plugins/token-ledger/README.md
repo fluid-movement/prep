@@ -18,10 +18,10 @@ Every row has `type` and `t` (milliseconds since the epoch).
 | `session` | `sessionId`, `cwd`, `isPrep` (a `.prep` directory exists), `interactive` |
 | `turn` | `turnId`, `promptChars` |
 | `step` | one model request: `turnId`, `index`, `agentId` (subagents), `messages`, `model`, `usage` (`input`, `cacheRead`, `cacheWrite`, `output` tokens), `answerChars`, `tools` (names requested), `stop` |
-| `tool` | `turnId` (main loop) or `agentId`, `tool`, `target` (path, command or pattern, clipped to 200 chars), `area` (`prep-cli`, `knowledge`, `issue`, `code`), `prep` (the subcommand), `resultChars` (what the model read back; ≈ chars/4 tokens), `isError`, `ms` |
+| `tool` | `turnId` (main loop) or `agentId`, `tool`, `target` (path, command or pattern; heredoc bodies dropped, clipped to 1000 chars), `area` (`prep-cli`, `knowledge`, `issue`, `code`; empty when none applies), `prep` (the subcommands the command runs, in order), `resultChars` (what the model read back; ≈ chars/4 tokens), `isError`, `ms` |
 | `turn.end` | `turnId`, `contextTokens`, `window`, `costUsd` |
 | `session.end` | `reason` |
 
-Shell commands are recorded as typed, so a secret on a command line lands in the file; the file stays in your home directory.
+Every tool call is recorded; `area` is a first classification, and `target` keeps enough to classify calls again afterwards. Shell commands are recorded as typed (without heredoc bodies), so a secret on a command line lands in the file; the file stays in your home directory.
 
 Questions the data answers: how many tokens each knowledge read adds and how often it happens per issue, how much of a session's input is prep output versus code, and how context grows turn by turn (`contextTokens`), since every read is paid again on each later request.

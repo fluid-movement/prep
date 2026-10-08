@@ -448,7 +448,7 @@ describe('views', () => {
       { type: 'session', t: 0 },
       { type: 'step', t: 1, usage: { input: 1200, cacheRead: 45000, cacheWrite: 3000, output: 800 } },
       { type: 'tool', t: 2, tool: 'Read', area: 'knowledge', target: '/repo/.prep/knowledge/components/tui.md', resultChars: 8000 },
-      { type: 'tool', t: 3, tool: 'Bash', area: 'prep-cli', prep: 'guide', target: 'prep guide x', resultChars: 1200 },
+      { type: 'tool', t: 3, tool: 'Bash', area: 'prep-cli', prep: ['guide'], target: 'prep guide x', resultChars: 1200 },
     ]
       .map(r => JSON.stringify(r))
       .join('\n')
