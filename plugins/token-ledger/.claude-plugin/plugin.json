@@ -1,0 +1,10 @@
+{
+  "name": "token-ledger",
+  "version": "0.1.0",
+  "description": "Records each session's tool calls and per-request token usage as JSONL under ~/.claude/token-ledger, to measure where tokens go in prep projects.",
+  "author": {
+    "name": "fluid-movement"
+  },
+  "homepage": "https://github.com/fluid-movement/prep",
+  "repository": "https://github.com/fluid-movement/prep"
+}
