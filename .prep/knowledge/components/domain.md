@@ -7,7 +7,7 @@ generated:
   by: claude-code/2.1.289
   at: 2026-10-05T00:00:00Z
 scope: internal/domain
-confirmed_commit: 83d44bad79e4d4e035ff96f7a7aa776e5735508f
+confirmed_commit: 6da3e44f576018f7d6ddd149a6492c1ae1c15183
 ---
 
 # Domain package
@@ -32,6 +32,7 @@ Applies when changing lifecycle rules, gates, diagnostics or queries.
 - `flags.go`: `Tree.QueryFlags` describes every `ParseFilter` flag in order (list, bool or text; description) with the values available now and issue counts: states, kinds, tags in use, priorities, parents for `--under` (ID, title, descendants), and counts for the switches. `prep flags` prints it and the TUI filter bar's picker offers its values; `FlagKind(name)` tells readers of typed queries which flags take a value. `TestQueryFlagsMatchParseFilter` reads `ParseFilter`'s `switch name` cases from the source and fails when one is not described.
 - `query.go`: `ParseFilter` (different flags AND, repeated flags OR; a list flag's value with a leading `not-` or `!` (`NegationPrefixes`) goes to the `Not*` fields and excludes: an issue matches when it has a plain value, or there are none, and no excluded one; 01M4ANA516QWSG4BAQE0QCCR9F), `ValidTag` rejects tags starting with `not-` so negation is unambiguous; values use hyphens (the state is `in-progress`, the underscore spelling is not accepted), `Query`, tree ordering, `ViewNames` (saved views in config order). `validateKnowledge` accepts the OKF statuses draft, stable and deprecated.
 - `guide.go`: `BuildGuide` step contracts and `Candidates` knowledge retrieval; `ScopeMatch` globbing.
+- `knowread.go`: `Sections` (an entry body split at headings outside code fences; anchors are `Slug`s with -1, -2 for repeats; `Text` includes subsections, `Own` stops at the next heading), `Blocks` (paragraphs and top-level list items with what they nest; a fence stays whole) and `Tree.FindKnowledge` (blocks ranked by terms matched in the block or its heading, then score: exact, prefix, substring, one typo; entry title, description and scope add score only).
 - `errors.go`: `E_*` error codes for commands.
 
 Rules worth knowing: see [Issue lifecycle](/features/lifecycle.md).

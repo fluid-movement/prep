@@ -644,6 +644,54 @@ func TestKnowledgeCommands(t *testing.T) {
 	}
 }
 
+func TestKnowledgeReads(t *testing.T) {
+	h := newHarness(t)
+	body := "Applies when exporting.\n\n## Formats\n\n- CSV writes one row per issue.\n- JSON nests children.\n\n### Escaping\n\nQuotes double inside CSV fields.\n\n## Writers\n\nOne writer per format."
+	h.ok("knowledge", "new", "components/export.md", "--type", "component", "--title", "Export", "--description", "Export: formats and writers", "--scope", "internal/export", "--body", body)
+
+	out := h.ok("knowledge", "list", "--type", "component")
+	if !strings.Contains(out, "/components/export.md  component  Export — Export: formats and writers (~") || strings.Contains(out, "overview") {
+		t.Fatalf("list:\n%s", out)
+	}
+	var listed struct {
+		Entries []struct {
+			Path     string
+			Sections []struct{ Anchor string }
+		}
+	}
+	h.jsonOf(&listed, "knowledge", "list", "export", "--json")
+	if len(listed.Entries) != 1 || len(listed.Entries[0].Sections) != 4 {
+		t.Fatalf("list --json: %+v", listed)
+	}
+
+	out = h.ok("knowledge", "find", "csv", "rows")
+	if !strings.HasPrefix(out, "== /components/export.md — Export (whole entry ~") || !strings.Contains(out, "[#formats Formats]\n- CSV writes one row per issue.\n") {
+		t.Fatalf("find:\n%s", out)
+	}
+	if strings.Contains(out, "JSON nests") {
+		t.Fatalf("find prints only matching blocks:\n%s", out)
+	}
+	h.ok("knowledge", "find", "nothingmatches")
+	h.fails("usage", "knowledge", "find")
+
+	out = h.ok("knowledge", "show", ".prep/knowledge/components/export.md#formats", "overview")
+	if !strings.Contains(out, "== /components/export.md#formats — Export\n## Formats") || !strings.Contains(out, "Quotes double") || strings.Contains(out, "One writer") {
+		t.Fatalf("show section with subsections:\n%s", out)
+	}
+	if !strings.Contains(out, "== /overview.md — Project overview\nThe test project.") {
+		t.Fatalf("show takes several entries:\n%s", out)
+	}
+	out = h.ok("knowledge", "show", "components/export", "--outline")
+	if !strings.Contains(out, "scope: internal/export\n  (intro) ~") || !strings.Contains(out, "    #escaping Escaping (~") || strings.Contains(out, "One writer") {
+		t.Fatalf("outline:\n%s", out)
+	}
+	h.fails("sections: formats, escaping, writers", "knowledge", "show", "components/export#nope")
+	h.fails("E_NOT_FOUND", "knowledge", "show", "components/missing")
+	if out := h.ok("help"); !strings.Contains(out, "knowledge list|find|show") || strings.Index(out, "knowledge list|find|show") > strings.Index(out, "Write commands") {
+		t.Fatalf("help lists the knowledge reads among the reads:\n%s", out)
+	}
+}
+
 func TestTags(t *testing.T) {
 	h := newHarness(t)
 	a := h.newIssue("--title", "Export", "--kind", "code", "--body", "Export rows.", "--tag", "Release", "--tag", "csv,io")

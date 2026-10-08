@@ -519,9 +519,9 @@ func cmdGuide(a *app, args []string) error {
 		}
 	}
 	if len(g.Knowledge) > 0 {
-		a.printf("\nKnowledge candidates (open what you need):\n")
+		a.printf("\nKnowledge candidates (read what you need: prep knowledge show <entry>[#section], --outline first for long ones):\n")
 		for _, c := range g.Knowledge {
-			a.printf("  .prep/knowledge%s — %s: %s [%s]\n", c.Path, c.Title, c.Description, c.Via)
+			a.printf("  %s — %s: %s [%s]\n", c.Path, c.Title, c.Description, c.Via)
 		}
 	}
 	if len(g.Outputs) > 0 {

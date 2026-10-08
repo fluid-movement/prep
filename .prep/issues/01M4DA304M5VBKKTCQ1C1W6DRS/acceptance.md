@@ -1,0 +1,7 @@
+- [x] prep knowledge list prints one line per entry (path, type, title, description, ≈tokens) and filters with the knowledge filter (--type, --status, --scope, words); --json adds scope and sections
+- [x] prep knowledge find ranks sections by title, description, scope, heading and body matches (exact, prefix, substring, one typo), sections matching every term first, at most --max (default 8), each with an <entry>#<anchor> reference and a matching line
+- [x] prep knowledge show prints whole entries, single sections (<entry>#<anchor>, including subsections) or --outline (headings with anchors and sizes); several references per call; an unknown anchor fails listing the available ones
+- [x] Headings inside fenced code blocks are not sections; repeated headings get -1, -2 anchors
+- [x] prep guide lists knowledge candidates as entry references to read with prep knowledge show
+- [x] prep help lists the knowledge reads under read commands; the skill (both copies) tells agents to read knowledge through these commands
+- [x] Domain tests cover sections and ranking; CLI tests cover the three commands

@@ -1,0 +1,1 @@
+- 2026-10-08T08:33:13Z claude-code/opus-5.5: Entries in this repository have one # heading and bold-labelled bullets, so find works on blocks (paragraphs, list items) and prints them, rather than on sections; sections remain for show.

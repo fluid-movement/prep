@@ -9,12 +9,19 @@ import (
 	"github.com/fluid-movement/prep/internal/gitx"
 )
 
-// cmdKnowledge dispatches the knowledge entry writes: new, update, confirm.
+// cmdKnowledge dispatches the knowledge reads (list, find, show) and writes
+// (new, update, confirm, bootstrap).
 func cmdKnowledge(a *app, args []string) error {
 	if len(args) == 0 {
-		return usageErr("knowledge needs a subcommand: new, update, confirm or bootstrap")
+		return usageErr("knowledge needs a subcommand: list, find, show, new, update, confirm or bootstrap")
 	}
 	switch args[0] {
+	case "list":
+		return knowledgeList(a, args[1:])
+	case "find":
+		return knowledgeFind(a, args[1:])
+	case "show":
+		return knowledgeShow(a, args[1:])
 	case "new":
 		return knowledgeEdit(a, args[1:], true)
 	case "update":
@@ -24,7 +31,7 @@ func cmdKnowledge(a *app, args []string) error {
 	case "bootstrap":
 		return knowledgeBootstrap(a, args[1:])
 	}
-	return usageErr("unknown knowledge subcommand %q: use new, update, confirm or bootstrap", args[0])
+	return usageErr("unknown knowledge subcommand %q: use list, find, show, new, update, confirm or bootstrap", args[0])
 }
 
 func knowledgeEdit(a *app, args []string, isNew bool) error {

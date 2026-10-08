@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/cli
   - cmd/prep
-confirmed_commit: 0633156e6281973f35f9dda5635485a848605512
+confirmed_commit: 6da3e44f576018f7d6ddd149a6492c1ae1c15183
 ---
 
 # CLI
@@ -23,6 +23,7 @@ Applies when adding or changing commands.
 - Record writes (`recordCmd` in `write.go`): `context` and `findings` replace their record and require `--body` or `--body-file`; `decide` appends a decision; `criterion` (`--add`, `--check`/`--uncheck`/`--remove <n>`) and `dod` (`--add`, `--opt-out` with `--reason`, `--remove <item>`) change acceptance.md; `log <id> <text>` appends to history. `prep show` numbers criteria for `--check <n>`.
 - `prep fmt` (and `--check`) and `prep fix` also regenerate the OKF index files of the knowledge bundle.
 - `record` stages written paths except those git ignores (`gitx.Tracked`, so the user's own `.prep/config.yaml` is never staged); `afterWrite` prints its errors, the TUI's write function returns them. prep never commits: the user or agent commits the staged `.prep` files with the code (commit mode was removed in 01M4AJ9DN4CK5S4WX2N68VBR98).
+- `prep knowledge list|find|show` (`knowread.go`) are reads, listed under read commands by a second `knowledge` row in the command table (dispatch takes the first; both run `cmdKnowledge`): `list` takes the knowledge filter, `find <query> [--max N]` prints matching blocks grouped by entry, `show <entry>[#anchor]... [--outline]` accepts several references in the forms `NormalizeEntryPath` takes; an unknown anchor fails naming the anchors. `prep guide` lists its knowledge candidates as entry paths to read with `prep knowledge show`.
 - `prep knowledge new|update|confirm` (`knowledge.go`): knowledge entry writes run plan (`Tree.PlanKnowledge`), render through the store, `CheckWrite`, write, stage; `confirm` sets `confirmed_commit` to HEAD for the named entries or `--drifted` ones and needs git and a scope.
 
 - Write pipeline: load → `Plan` → `CheckWrite` → `store.Apply` → stage.
