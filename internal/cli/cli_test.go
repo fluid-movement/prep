@@ -965,11 +965,22 @@ func TestClaudeCodePlugin(t *testing.T) {
 			t.Fatalf("%s: %v", path, err)
 		}
 	}
-	if plugin.Name != "prep" || market.Name != "prep" || len(market.Plugins) != 1 || market.Plugins[0].Source != "./plugins/claude-code" {
+	// The marketplace serves the prep plugin and others beside it (token-ledger);
+	// just release stamps every entry with the release version.
+	if plugin.Name != "prep" || market.Name != "prep" {
 		t.Fatalf("manifests: %+v %+v", plugin, market)
 	}
-	if plugin.Version != market.Plugins[0].Version {
-		t.Fatalf("plugin.json version %s, marketplace.json %s", plugin.Version, market.Plugins[0].Version)
+	found := false
+	for _, p := range market.Plugins {
+		if p.Version != plugin.Version {
+			t.Fatalf("plugin.json version %s, marketplace.json %s for %s", plugin.Version, p.Version, p.Name)
+		}
+		if p.Name == "prep" {
+			found = p.Source == "./plugins/claude-code"
+		}
+	}
+	if !found {
+		t.Fatalf("marketplace.json does not serve prep from ./plugins/claude-code: %+v", market)
 	}
 	hooks, _ := os.ReadFile(filepath.Join(root, "plugins", "claude-code", "hooks", "hooks.json"))
 	if !strings.Contains(string(hooks), "prep prime --hook --plugin") {
