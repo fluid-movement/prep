@@ -1,0 +1,4 @@
+- [x] The skill (internal/cli/skill.md and its two copies) has a survey rule: subagents per area for steps that need many files, the knowledge-read rule passed on in their prompts, the entries or sections each needs named, a short report asked for, a smaller model when the harness lets the agent choose
+- [x] The skill tells agents to read code by searching and reading ranges and to bound command output instead of reading back output files a tool saved
+- [x] The bootstrap survey context (step 1) and the import context (step 1) point to surveying through subagents in large projects
+- [x] Copies stay identical (TestStaticSkillMatchesBinary, TestClaudeCodePlugin)
