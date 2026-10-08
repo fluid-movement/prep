@@ -1,9 +1,20 @@
 // Draws the panel: tabs over the live view (the current issue, or the
-// overview while there is none) or the project view (overview and issue tree).
+// overview while there is none), the project view (overview and issue tree)
+// or the usage view (this session's tokens, by prep area).
 
 import type { Color, Elements, RenderChildren, RenderElement } from 'claude-code'
 
-import type { PrepGuide, PrepPrime, PrepProjectSnapshot, PrepShow, PrepSnapshot, PrepSummary, PrepTab } from '../types'
+import type {
+  PrepGuide,
+  PrepPrime,
+  PrepProjectSnapshot,
+  PrepShow,
+  PrepSnapshot,
+  PrepSummary,
+  PrepTab,
+  PrepUsage,
+} from '../types'
+import { compact } from './usage'
 
 type Kit = Pick<Elements['terminal'], 'Box' | 'Text' | 'Markdown' | 'Button'>
 
@@ -33,6 +44,7 @@ export function drawPane(
   tab: PrepTab,
   live: PrepSnapshot | null,
   project: PrepProjectSnapshot | null,
+  usage: PrepUsage | { error: string } | null,
   onTab: (tab: PrepTab) => void,
 ): RenderElement {
   const { Box, Button } = kit
@@ -52,8 +64,13 @@ export function drawPane(
       <Box flexDirection="row" gap={2}>
         {tabButton('live', 'Live', 'l')}
         {tabButton('project', 'Project', 'p')}
+        {tabButton('usage', 'Usage', 'u')}
       </Box>
-      {tab === 'project' ? drawProjectView(kit, project) : drawPanel(kit, live)}
+      {tab === 'project'
+        ? drawProjectView(kit, project)
+        : tab === 'usage'
+          ? drawUsageView(kit, usage)
+          : drawPanel(kit, live)}
     </Box>
   )
 }
@@ -203,6 +220,64 @@ function drawProjectView(kit: Kit, project: PrepProjectSnapshot | null): RenderE
         tree.slice(0, TREE_ROWS).map(s => treeRow(kit, s)),
         tree.length > TREE_ROWS && <Text dimColor>{`… ${tree.length - TREE_ROWS} more`}</Text>,
       ])}
+    </Box>
+  )
+}
+
+const AREA_LABEL: Record<string, string> = {
+  knowledge: 'knowledge base',
+  issue: 'issue files',
+  'prep-cli': 'prep commands',
+  code: 'code',
+}
+
+function drawUsageView(kit: Kit, u: PrepUsage | { error: string } | null): RenderElement {
+  const { Box, Text } = kit
+  if (u === null) return <Text dimColor>Loading usage…</Text>
+  if ('error' in u) return drawPanel(kit, { view: 'error', message: u.error })
+  const context =
+    u.contextTokens !== undefined && u.window !== undefined
+      ? `context ${compact(u.contextTokens)} / ${compact(u.window)} (${Math.round((u.contextTokens / u.window) * 100)}%)`
+      : 'context unknown'
+  const cost = u.costUsd !== undefined ? ` · $${u.costUsd.toFixed(2)}` : ''
+  return (
+    <Box flexDirection="column" gap={1}>
+      <Box flexDirection="column">
+        <Text bold color={ACCENT}>
+          This session
+        </Text>
+        <Text dimColor wrap="truncate-end">{`${context}${cost} · ${u.sessionId}`}</Text>
+      </Box>
+      {!u.hasLedger ? (
+        <Text dimColor>
+          Per-request tokens and reads by area come from the token-ledger plugin, after its first turn in this session:
+          /plugin install token-ledger@prep
+        </Text>
+      ) : (
+        [
+          section(kit, `Requests ${u.requests}`, [
+            <Text>{`input ${compact(u.tokens.input)} · cache read ${compact(u.tokens.cacheRead)}`}</Text>,
+            <Text>{`cache write ${compact(u.tokens.cacheWrite)} · output ${compact(u.tokens.output)}`}</Text>,
+          ]),
+          section(kit, 'Read back by area (≈ tokens)', [
+            u.areas.map(a => (
+              <Text>
+                {`${(AREA_LABEL[a.area] ?? a.area).padEnd(16)}${compact(a.tokens).padStart(7)}`}
+                <Text dimColor>{`  ${a.calls} calls`}</Text>
+              </Text>
+            )),
+          ]),
+          u.topReads.length > 0 &&
+            section(kit, 'Largest knowledge reads', [
+              u.topReads.map(r => (
+                <Text wrap="truncate-end">
+                  {`${compact(r.tokens).padStart(6)} `}
+                  <Text dimColor>{r.target.replace(/^.*\.prep\/knowledge/, '')}</Text>
+                </Text>
+              )),
+            ]),
+        ]
+      )}
     </Box>
   )
 }
