@@ -88,7 +88,31 @@ func TestScreenKeys(t *testing.T) {
 		t.Fatal("t toggled the issue tree from the Agent screen")
 	}
 	run(m, "2")
+	if m.screen != screenAgent || m.agentS.view != agentActivity {
+		t.Fatalf("2 on the Agent screen: screen %d, view %d", m.screen, m.agentS.view)
+	}
+	run(m, "i")
+	run(m, "2")
 	if m.screen != screenIssues || m.active != 1 {
-		t.Fatalf("2 left screen %d on tab %d", m.screen, m.active)
+		t.Fatalf("2 on the issues: screen %d, tab %d", m.screen, m.active)
+	}
+}
+
+// In a short terminal the two navigation tiers share the first line, so
+// the TUI fits in a strip above or below the agent.
+func TestShortTerminal(t *testing.T) {
+	var events []activity.Event
+	m, _, _ := agentModel(t, &events, 110, 12)
+	for _, c := range []struct{ key, name, tier2 string }{{"", "issues", "Attention"}, {"w", "agent", "Issue │ Activity"}, {"b", "knowledge", "entries"}} {
+		if c.key != "" {
+			run(m, c.key)
+		}
+		view := m.View().Content
+		checkSize(t, view, 110, 12)
+		golden(t, "short-"+c.name+"-110x12", view)
+		first := strings.SplitN(ansi.Strip(view), "\n", 2)[0]
+		if !strings.Contains(first, "Issues") || !strings.Contains(first, c.tier2) {
+			t.Errorf("%s: the first line does not hold both tiers: %q", c.name, first)
+		}
 	}
 }

@@ -1,0 +1,2 @@
+- `internal/tui/nav.go`: `navScreens`, `header` (both tiers, marks), `utilities`, `goScreen`, `toggleScreen`, the back stack (`place`, `pushBack`, `goBack`); `internal/tui/ui/nav.go` `Nav`, `NavSpans`; key dispatch in `internal/tui/app.go` `key`; clicks in `internal/tui/mouse.go`.
+- Knowledge: [TUI navigation](/components/tui-navigation.md), [TUI mouse](/components/tui-mouse.md), [TUI design system](/components/tui-design-system.md).

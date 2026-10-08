@@ -1,0 +1,2 @@
+- `internal/tui/nav.go` `shortHeight`, `headerH`; tests in `internal/tui/sizes_test.go` (`TestShortTerminal`, `TestTinyTerminals`).
+- Knowledge: [TUI navigation](/components/tui-navigation.md).

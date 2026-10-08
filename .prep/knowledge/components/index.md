@@ -19,5 +19,6 @@
 * [TUI filter bar](/components/tui-filter.md) - internal/tui filter bar: query flags and words per tab, and the picker that suggests flags and their values while typing.
 * [TUI knowledge screen](/components/tui-knowledge.md) - internal/tui knowledge screen: entries with attention marks, the entry view, filters and links between issues and entries.
 * [TUI mouse](/components/tui-mouse.md) - How the TUI takes clicks and the wheel: elements marked as Lip Gloss layers while rendering, hit-testing, click semantics, and the per-user mouse capture setting.
+* [TUI navigation](/components/tui-navigation.md) - prep tui's two-tier navigation: the screens bar (Issues, Agent, Knowledge; check and settings at its right), each screen's views below it, the keys and clicks that move between them, the back stack and the short layout.
 * [TUI](/components/tui.md) - prep tui screens in internal/tui — the issue views (tabs, list, detail and its links), loader injection, live reload with fsnotify, navigation keys, and how screens are tested; editing is in TUI editing and keys.
 * [Watcher](/components/watch.md) - internal/watch — reports changes under .prep, debounced and merged, split into project and local changes; used by prep tui's live reload and prep watch.

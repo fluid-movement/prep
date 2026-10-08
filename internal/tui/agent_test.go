@@ -67,17 +67,30 @@ func agentModel(t *testing.T, events *[]activity.Event, w, h int) (*Model, map[s
 }
 
 func TestAgentScreenSnapshots(t *testing.T) {
+	views := []struct {
+		name string
+		want []string
+	}{
+		{"agent", []string{"claude-code/opus · 4f1c9a2e", "Issue │ Activity │ Usage", "CSV writer", "1/2 acceptance", "step implement", "Write rows as CSV"}},
+		{"agent-activity", []string{"checked criterion 1", "searched knowledge", "done in 3 prep commands", "Choose the default format"}},
+		{"agent-usage", []string{"74k/200k", "Largest knowledge reads", "This issue"}},
+	}
 	for _, size := range [][2]int{{110, 28}, {80, 24}} {
 		w, h := size[0], size[1]
 		var events []activity.Event
 		m, _, _ := agentModel(t, &events, w, h)
 		run(m, "w")
-		view := m.View().Content
-		checkSize(t, view, w, h)
-		golden(t, fmt.Sprintf("agent-%dx%d", w, h), view)
-		for _, want := range []string{"claude-code/opus · 4f1c9a2e", "CSV writer", "1/2 acceptance", "checked criterion 1", "searched knowledge", "done in 3 prep commands", "Choose the default format"} {
-			if !strings.Contains(ansi.Strip(view), want) {
-				t.Errorf("%dx%d lacks %q", w, h, want)
+		for k, v := range views {
+			if k > 0 {
+				run(m, "tab")
+			}
+			view := m.View().Content
+			checkSize(t, view, w, h)
+			golden(t, fmt.Sprintf("%s-%dx%d", v.name, w, h), view)
+			for _, want := range v.want {
+				if !strings.Contains(ansi.Strip(view), want) {
+					t.Errorf("%s %dx%d lacks %q", v.name, w, h, want)
+				}
 			}
 		}
 	}
@@ -92,9 +105,11 @@ func TestAgentScreenKeys(t *testing.T) {
 	var events []activity.Event
 	m, ids, _ := agentModel(t, &events, 110, 28)
 	run(m, "w")
-	if m.screen != screenAgent {
-		t.Fatal("w does not open the Agent screen")
+	if m.screen != screenAgent || m.agentS.view != agentIssue {
+		t.Fatal("w does not open the Agent screen on its Issue view")
 	}
+	// tab and the digits move in the second tier, wrapping around.
+	run(m, "3")
 	usage := ansi.Strip(m.View().Content)
 	for _, want := range []string{"context", "74k/200k", "requests  3 · $0.12", "knowledge", "Largest knowledge reads", "/components/cli.md#write", "This issue", "4 commands · 1 checked · 2.3k knowledge", "active 1m", "agent 1/2"} {
 		if !strings.Contains(usage, want) {
@@ -102,21 +117,40 @@ func TestAgentScreenKeys(t *testing.T) {
 		}
 	}
 	run(m, "tab")
-	if got := ansi.Strip(m.View().Content); !strings.Contains(got, "Agent · pi/1.1") || !strings.Contains(got, "JSON writer") {
-		t.Fatalf("tab does not show the other agent:\n%s", got)
+	if m.agentS.view != agentIssue {
+		t.Fatalf("tab after the last view: view %d", m.agentS.view)
 	}
-	run(m, "tab")
+	run(m, "shift+tab")
+	if m.agentS.view != agentUsage {
+		t.Fatalf("shift+tab before the first view: view %d", m.agentS.view)
+	}
+	run(m, "1")
+	// a cycles the agents; back at the first it follows the newest again.
+	run(m, "a")
+	if got := ansi.Strip(m.View().Content); !strings.Contains(got, "pi/1.1") || !strings.Contains(got, "JSON writer") {
+		t.Fatalf("a does not show the other agent:\n%s", got)
+	}
+	run(m, "a")
 	if m.agentS.agent != "" {
 		t.Fatalf("back to the first agent should follow again, pinned %q", m.agentS.agent)
 	}
+	// enter opens the issue; backspace returns to the Agent screen.
 	run(m, "enter")
 	if m.screen != screenIssues || m.selected() != ids["csv"] || m.focus != focusDetail {
 		t.Fatalf("enter: screen %v, selected %s, focus %v", m.screen, m.selected(), m.focus)
 	}
-	run(m, "w")
+	run(m, "backspace")
+	if m.screen != screenAgent {
+		t.Fatalf("backspace after enter: screen %v", m.screen)
+	}
 	run(m, "esc")
 	if m.screen != screenIssues {
 		t.Fatal("esc does not leave the Agent screen")
+	}
+	run(m, "w")
+	run(m, "i")
+	if m.screen != screenIssues {
+		t.Fatal("i does not go to the issues")
 	}
 }
 
@@ -124,6 +158,7 @@ func TestAgentScreenFollowsTheStream(t *testing.T) {
 	var events []activity.Event
 	m, ids, loads := agentModel(t, &events, 110, 28)
 	run(m, "w")
+	run(m, "2")
 	before := *loads
 	events = append(events, activity.Event{At: agentNow.Add(time.Second), Actor: "claude-code/opus", Session: "4f1c9a2e-77", Kind: activity.KindPrep, Op: "guide", Issue: ids["json"], Verb: "read the guide", Area: activity.AreaIssue})
 	_, cmd := m.Update(changedMsg{watch.Change{Local: true}})

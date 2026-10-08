@@ -23,12 +23,6 @@ func detailMarkdown(t *domain.Tree, id string) string {
 	}
 	var b strings.Builder
 	p := func(format string, a ...any) { fmt.Fprintf(&b, format, a...) }
-	section := func(title, body string) {
-		if strings.TrimSpace(body) == "" {
-			return
-		}
-		p("\n## %s\n\n%s\n", title, strings.TrimSpace(body))
-	}
 
 	p("# %s\n\n", i.Title)
 	meta := []string{"**" + ui.StateLabel(t.State(id)) + "**", string(i.Kind), "`" + id + "`"}
@@ -48,6 +42,25 @@ func detailMarkdown(t *domain.Tree, id string) string {
 	p("%s\n", strings.Join(meta, " · "))
 	if len(i.Tags) > 0 {
 		p("\n%s\n", "#"+strings.Join(i.Tags, " #"))
+	}
+	return b.String() + detailSections(t, id)
+}
+
+// detailSections is the detail document without its title and meta line:
+// requirement, open questions, context, decisions and the records after.
+// The Agent screen's Issue view shows it under its own summary.
+func detailSections(t *domain.Tree, id string) string {
+	i := t.Issues[id]
+	if i == nil {
+		return ""
+	}
+	var b strings.Builder
+	p := func(format string, a ...any) { fmt.Fprintf(&b, format, a...) }
+	section := func(title, body string) {
+		if strings.TrimSpace(body) == "" {
+			return
+		}
+		p("\n## %s\n\n%s\n", title, strings.TrimSpace(body))
 	}
 
 	section("Requirement", i.Prose)

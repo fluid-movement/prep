@@ -1,0 +1,2 @@
+- [x] Below 16 rows both tiers share one line
+- [x] Goldens at 110x12 for Issues, Agent and Knowledge

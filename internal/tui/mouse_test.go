@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -71,9 +72,23 @@ func TestClickTabsRowsAndRelations(t *testing.T) {
 			listW = w
 		}
 
-		// A tab switches the view, also from another screen.
-		keys(m, "s")
-		clickText(t, m, "To define", 0, w) // the header comes first
+		// The screens bar switches screens and the crumb goes back; a tab
+		// switches the view of the screen shown.
+		m.after = func(time.Duration, func(time.Time) tea.Msg) tea.Cmd { return nil }
+		clickText(t, m, "Agent", 0, w)
+		if m.screen != screenAgent {
+			t.Fatalf("%dx%d: Agent click left screen %d", w, h, m.screen)
+		}
+		clickText(t, m, "‹", 0, 10)
+		if m.screen != screenIssues {
+			t.Fatalf("%dx%d: back crumb left screen %d", w, h, m.screen)
+		}
+		clickText(t, m, "⚙", 0, w)
+		if m.screen != screenSettings {
+			t.Fatalf("%dx%d: gear click left screen %d", w, h, m.screen)
+		}
+		clickText(t, m, "Issues", 0, w)
+		clickText(t, m, "To define", 0, w)
 		if m.screen != screenIssues || m.current().name != "To define" {
 			t.Fatalf("%dx%d: tab click: screen %d tab %q", w, h, m.screen, m.current().name)
 		}

@@ -78,7 +78,6 @@ const (
 	listRatio    = 0.55
 	minListW     = 52
 	minDetailW   = 40
-	headerLines  = 1
 	footerLines  = 1
 	maxRelations = 6
 	noticeFor    = 2 * time.Second
@@ -138,9 +137,9 @@ type Model struct {
 	focus    focus
 	w, h     int
 	vp       viewport.Model
-	docKey   string   // issue, width and generation of the rendered detail
-	gen      int      // increases on every successful load
-	back     []string // previously shown issues, for backspace
+	docKey   string  // issue, width and generation of the rendered detail
+	gen      int     // increases on every successful load
+	back     []place // where the person was, for backspace and the back crumb
 	notice   string
 	changes  <-chan watch.Change
 
@@ -575,17 +574,26 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	if m.screen == screenSettings && m.tree != nil && (len(s) == 1 && s >= "1" && s <= "9" || s == "t" || s == "T") {
 		return m.settingsKey(s)
 	}
-	// Keys that work in both panes.
+	// i is Issues from every other screen; on Issues it sets the priority.
+	if s == "i" && m.screen != screenIssues {
+		return m.goScreen(screenIssues)
+	}
+	// Keys that work on every screen: the navigation, then the rest.
 	switch s {
 	case "q", "ctrl+c":
 		return tea.Quit
+	case "tab", "shift+tab":
+		if s == "tab" {
+			return m.setView(m.activeView() + 1)
+		}
+		return m.setView(m.activeView() - 1)
 	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
-		if n := int(s[0] - '1'); n < len(m.tabs) {
-			// Like a click on the tab: the issue screen on that view.
-			m.screen, m.moving = screenIssues, false
-			m.switchTab(n)
+		if n := int(s[0] - '1'); n < len(m.views()) {
+			return m.setView(n)
 		}
 		return nil
+	case "backspace":
+		return m.goBack()
 	case "r":
 		return m.reload()
 	case "y":
@@ -604,45 +612,19 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		}
 		return m.flash("flat view")
 	case "b":
-		if m.tree == nil {
-			return nil
-		}
-		if m.screen == screenKnowledge {
-			m.screen = screenIssues
-			return nil
-		}
-		return m.openKnowledge("")
+		return m.toggleScreen(screenKnowledge)
 	case "z":
 		return m.toggleLayout()
 	case "w":
-		if m.tree == nil {
-			return nil
-		}
-		if m.screen == screenAgent {
-			m.screen = screenIssues
-			return nil
-		}
-		return m.openAgent()
-	case "c", "s":
-		target := screenCheck
-		if s == "s" {
-			target = screenSettings
-		}
-		if m.screen == target {
-			m.screen = screenIssues
-			return nil
-		}
-		m.screen = target
-		m.page.GotoTop()
-		if target == screenCheck {
-			return m.runCheck()
-		}
-		return nil
+		return m.toggleScreen(screenAgent)
+	case "c":
+		return m.toggleScreen(screenCheck)
+	case "s":
+		return m.toggleScreen(screenSettings)
 	}
 	if m.screen != screenIssues {
 		if s == "esc" && !m.moving && m.screen != screenKnowledge {
-			m.screen = screenIssues
-			return nil
+			return m.goScreen(screenIssues)
 		}
 		if m.screen == screenSettings && m.tree != nil {
 			return m.settingsKey(s)
@@ -689,12 +671,6 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 func (m *Model) listKey(s string) tea.Cmd {
 	tb := m.current()
 	switch s {
-	case "tab":
-		m.switchTab(m.active + 1)
-		return nil
-	case "shift+tab":
-		m.switchTab(m.active - 1)
-		return nil
 	case "enter":
 		if m.selected() != "" {
 			m.focus = focusDetail
@@ -875,19 +851,6 @@ func (m *Model) detailKey(s string, k tea.KeyPressMsg) tea.Cmd {
 	case "esc", "left", "h":
 		m.focus = focusList
 		return nil
-	case "tab":
-		m.switchTab(m.active + 1)
-		return nil
-	case "shift+tab":
-		m.switchTab(m.active - 1)
-		return nil
-	case "backspace":
-		if n := len(m.back); n > 0 {
-			id := m.back[n-1]
-			m.back = m.back[:n-1]
-			return m.jump(id, false)
-		}
-		return m.flash("no earlier issue")
 	}
 	var cmd tea.Cmd
 	m.vp, cmd = m.vp.Update(k)
@@ -911,7 +874,7 @@ func (m *Model) jumpToParent() tea.Cmd {
 // clearing that view's parent focus.
 func (m *Model) jump(id string, remember bool) tea.Cmd {
 	m.wheeled = false // the view follows the selection to where it lands
-	from := m.selected()
+	from, at := m.selected(), m.here()
 	if !m.selectInCurrent(id) {
 		var order []int
 		for k, tb := range m.tabs {
@@ -944,7 +907,7 @@ func (m *Model) jump(id string, remember bool) tea.Cmd {
 		}
 	}
 	if remember && from != "" && from != id {
-		m.back = append(m.back, from)
+		m.back = append(m.back, at)
 	}
 	return nil
 }
@@ -1058,7 +1021,7 @@ func (m *Model) relations(id string) []relation {
 
 // --- view ---
 
-func (m *Model) bodyHeight() int { return ui.Stack(m.h, headerLines, footerLines) }
+func (m *Model) bodyHeight() int { return ui.Stack(m.h, m.headerH(), footerLines) }
 
 func (m *Model) listHeight() int { return max(1, m.bodyHeight()-2) }
 
@@ -1084,19 +1047,19 @@ func (m *Model) render() string {
 	case m.tree == nil:
 		body = ui.Empty(m.th, "Could not load .prep", fmt.Sprint(m.err), m.w, bodyH)
 	case m.screen == screenCheck:
-		m.at = point{0, headerLines}
+		m.at = point{0, m.headerH()}
 		body = m.checkPane(m.w, bodyH)
 	case m.screen == screenSettings:
-		m.at = point{0, headerLines}
+		m.at = point{0, m.headerH()}
 		body = m.settingsPane(m.w, bodyH)
 	case m.screen == screenKnowledge:
-		m.at = point{0, headerLines}
+		m.at = point{0, m.headerH()}
 		body = m.knowledgePane(m.w, bodyH)
 	case m.screen == screenAgent:
-		m.at = point{0, headerLines}
+		m.at = point{0, m.headerH()}
 		body = m.agentPane(m.w, bodyH)
 	default:
-		m.at = point{0, headerLines}
+		m.at = point{0, m.headerH()}
 		listW, detailW := m.split(m.w, listRatio, minListW, minDetailW)
 		switch {
 		case detailW == 0 && m.focus == focusDetail:
@@ -1114,7 +1077,7 @@ func (m *Model) render() string {
 		block := m.modalView(m.w, bodyH)
 		bw, bh := lipgloss.Width(block), lipgloss.Height(block)
 		x, y := ui.OverlayAt(bw, bh, m.w, bodyH)
-		y += headerLines
+		y += m.headerH()
 		m.markAt("dialog", x, y, bw, bh, zDialog)
 		for _, e := range m.modal.marks {
 			m.markAt(e.id, x+paneInner.x+e.x, y+paneInner.y+e.line, e.w, e.h, zEntry)
@@ -1122,36 +1085,6 @@ func (m *Model) render() string {
 		body = ui.Overlay(m.th, body, block, m.w, bodyH)
 	}
 	return header + "\n" + body + "\n" + footer
-}
-
-func (m *Model) header() string {
-	name := m.th.S.Title.Render("prep") + " "
-	var tabs []ui.Tab
-	for _, tb := range m.tabs {
-		tabs = append(tabs, ui.Tab{Label: tb.name, Count: tb.count})
-	}
-	status := ""
-	if m.diagDone {
-		errs, warns := 0, 0
-		for _, d := range m.diags {
-			if d.Severity == domain.SevError {
-				errs++
-			} else {
-				warns++
-			}
-		}
-		status = " " + ui.Note(m.th, fmt.Sprintf("✕ %d", errs), toneIf(errs > 0, ui.ToneError)) + " " + ui.Note(m.th, fmt.Sprintf("▲ %d", warns), toneIf(warns > 0, ui.ToneWarning))
-	}
-	tabsW := m.w - lipgloss.Width(name) - lipgloss.Width(status)
-	line := name + ui.Tabs(m.th, tabs, m.active, tabsW)
-	xs, ws := ui.TabSpans(tabs, tabsW)
-	for k := range xs {
-		m.markAt(fmt.Sprintf("tab:%d", k), lipgloss.Width(name)+xs[k], 0, ws[k], 1, zRow)
-	}
-	if status != "" {
-		line += strings.Repeat(" ", max(0, m.w-lipgloss.Width(line)-lipgloss.Width(status))) + status
-	}
-	return ui.Fit(line, m.w)
 }
 
 // split divides a screen's width like ui.Split, or gives one pane all of
@@ -1211,10 +1144,11 @@ var (
 		bind("Views", "t", "tree or flat", false),
 	}
 	screenBindings = []binding{
-		bind("Screens", "c", "check", false),
-		bind("Screens", "s", "settings", false),
-		bind("Screens", "b", "knowledge", true),
 		bind("Screens", "w", "agent (what it is doing, live)", true),
+		bind("Screens", "b", "knowledge", true),
+		bind("Screens", "⌫", "back to where you were, across screens", false),
+		bind("Screens", "c", "check (or click ✕ ▲)", false),
+		bind("Screens", "s", "settings (or click ⚙)", false),
 		bind("Screens", "z", "one pane or split", false),
 		bind("Screens", "r", "reload", false),
 		bind("Screens", "?", "all keys", true),
@@ -1229,7 +1163,6 @@ var (
 	detailBindings = concat([]binding{
 		bind("Move", "↑↓ pgup pgdn", "scroll", false),
 		bind("Move", "o", "links: j/k select, enter or a link's key goes", true),
-		bind("Move", "⌫", "back to the previous issue", false),
 		bind("Move", "esc", "list (← h too)", true),
 	}, nonEssential(issueBindings, "n"), []binding{
 		bind("Views", "tab 1-9", "switch view", false),
@@ -1242,15 +1175,16 @@ var (
 		bind("Settings", "d d", "delete the view", true),
 		bind("Settings", "m", "move the view: j k or arrows, enter when done", true),
 		bind("Settings", "esc", "back", true),
+		bind("Screens", "i w b", "issues, agent, knowledge", false),
+		bind("Screens", "⌫", "back to where you were", false),
 		bind("Screens", "c", "check", false),
 		bind("Screens", "?", "all keys", true),
 	}
 	pageBindings = []binding{
 		bind("Page", "↑↓ pgup pgdn", "scroll", false),
 		bind("Page", "esc", "back", true),
-		bind("Screens", "1-9", "the issues, on view n", false),
-		bind("Screens", "b", "knowledge", false),
-		bind("Screens", "w", "agent", false),
+		bind("Screens", "i w b", "issues, agent, knowledge", false),
+		bind("Screens", "⌫", "back to where you were", false),
 		bind("Screens", "c", "check", true),
 		bind("Screens", "s", "settings", true),
 		bind("Screens", "?", "all keys", true),
@@ -1287,12 +1221,11 @@ var knowledgeBindings = []binding{
 	bind("Knowledge", "f", "filter: --type --status --scope, words match titles", true),
 	bind("Knowledge", "a", "only entries that need an agent's attention", true),
 	bind("Knowledge", "o", "go to an issue that changed the entry", true),
-	bind("Knowledge", "⌫", "back to the issue you came from", false),
 	bind("Knowledge", "y", "copy the entry path", false),
-	bind("Knowledge", "esc b", "back to the issues", true),
-	bind("Screens", "1-9", "the issues, on view n", false),
+	bind("Screens", "esc b", "back to the issues", true),
+	bind("Screens", "i w", "issues, agent", false),
+	bind("Screens", "⌫", "back to where you were", false),
 	bind("Screens", "z", "one pane or split", false),
-	bind("Screens", "w", "agent", false),
 	bind("Screens", "c", "check", false),
 	bind("Screens", "s", "settings", false),
 	bind("Screens", "?", "all keys", true),

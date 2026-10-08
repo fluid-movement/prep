@@ -16,7 +16,7 @@ func TestProgramReadsMouseInput(t *testing.T) {
 	p, ids := sample(t)
 	m := NewModel(testTheme(), Options{Load: p.load})
 	m.Update(tea.WindowSizeMsg{Width: 110, Height: 28})
-	x, _ := find(t, m, "All", 0, 110) // before the program owns the model
+	x, y := find(t, m, "All", 0, 110) // before the program owns the model
 	keys(m, "6")
 	rx, ry := find(t, m, "CSV writer", 0, 60)
 	keys(m, "1")
@@ -29,7 +29,7 @@ func TestProgramReadsMouseInput(t *testing.T) {
 		time.Sleep(150 * time.Millisecond) // let the program render between inputs
 	}
 	time.Sleep(300 * time.Millisecond)
-	send(fmt.Sprintf("\x1b[<0;%d;1M\x1b[<0;%d;1m", x+1, x+1))                 // click the All tab
+	send(fmt.Sprintf("\x1b[<0;%d;%dM\x1b[<0;%d;%dm", x+1, y+1, x+1, y+1))     // click the All tab
 	send(fmt.Sprintf("\x1b[<0;%d;%dM\x1b[<0;%d;%dm", rx+1, ry+1, rx+1, ry+1)) // click the CSV writer row
 	send("\x1b[<65;6;6M")                                                     // a wheel notch keeps the selection
 	send("q")

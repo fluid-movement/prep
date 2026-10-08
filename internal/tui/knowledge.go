@@ -143,21 +143,13 @@ func (m *Model) knowledgeKey(s string, k tea.KeyPressMsg) tea.Cmd {
 		}
 	case "o":
 		return m.openEntryLinks()
-	case "backspace":
-		if n := len(m.back); n > 0 {
-			id := m.back[n-1]
-			m.back = m.back[:n-1]
-			m.screen = screenIssues
-			return m.jump(id, false)
-		}
-		return m.flash("no earlier issue")
 	case "esc":
 		if m.know.filter != "" {
 			m.know.filter = ""
 			m.syncKnowledge()
 			return nil
 		}
-		m.screen = screenIssues
+		return m.goScreen(screenIssues)
 	}
 	return nil
 }
@@ -191,6 +183,7 @@ func (m *Model) openEntryLinks() tea.Cmd {
 		}
 		target := id
 		d.items = append(d.items, action{key: keys[n : n+1], label: shortID(id) + " " + m.tree.Issues[id].Title, run: func() tea.Cmd {
+			m.pushBack()
 			m.screen = screenIssues
 			return m.jump(target, false)
 		}})

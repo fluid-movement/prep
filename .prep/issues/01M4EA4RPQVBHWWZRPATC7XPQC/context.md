@@ -1,0 +1,2 @@
+- `internal/tui/agent.go`: `agentState.view` and `offsets`, `agentPane`, `issuePane`, `agentStatus`, `agentKey` (`a` cycles agents); `internal/tui/detail.go` `detailSections`.
+- Knowledge: [TUI Agent screen](/components/tui-agent.md).

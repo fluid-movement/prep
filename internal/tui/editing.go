@@ -215,7 +215,7 @@ func (m *Model) followLink(id string, rels []relation, targets []int, n int) tea
 // followRel opens a relation: a linked issue, or a knowledge entry.
 func (m *Model) followRel(id string, r relation) tea.Cmd {
 	if r.label == "knowledge" {
-		m.back = append(m.back, id)
+		m.pushBack()
 		return m.openKnowledge(r.id)
 	}
 	return m.jump(r.id, true)

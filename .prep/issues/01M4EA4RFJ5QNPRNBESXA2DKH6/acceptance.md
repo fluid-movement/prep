@@ -1,0 +1,4 @@
+- [x] The bar shows Issues, Agent and Knowledge with the current one marked and the agent's live dot
+- [x] i, w and b switch screens; clicks on the bar, the crumb, the counts and the gear work
+- [x] Backspace and the back crumb return across screens with the selection
+- [x] The issue lists are the second tier; tab and 1-9 move in it on every screen

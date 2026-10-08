@@ -1,0 +1,3 @@
+- [x] The Agent screen has Issue, Activity and Usage views, Issue first
+- [x] The Issue view shows the current issue in full: state, step, acceptance, next transition, knowledge, document
+- [x] a cycles agents; each view scrolls on its own

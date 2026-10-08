@@ -8,7 +8,6 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 
 	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
@@ -25,7 +24,6 @@ const (
 	freshFor  = 2 * time.Second  // a new line stays marked this long
 	agentTick = 30 * time.Second // relative times refresh while the screen shows
 	idleAfter = 2 * time.Minute  // a quiet agent is called idle after this
-	nowLines  = 7                // the Now card's height inside its pane
 )
 
 // agentState is the Agent screen: the stream, the agent shown (empty
@@ -34,8 +32,12 @@ type agentState struct {
 	events     []activity.Event
 	err        error
 	loaded     bool
-	agent      string    // pinned agent key; "" follows the newest
-	offset     int       // feed lines scrolled past, from the newest
+	agent      string // pinned agent key; "" follows the newest
+	view       int    // the view shown: agentIssue, agentActivity, agentUsage
+	offsets    [3]int // lines scrolled past in each view (the feed's from the newest)
+	shownIssue string // the issue the Issue view shows, to scroll it to the top when it changes
+	doc        string // the Issue view's rendered document, for docKey
+	docKey     string
 	newest     time.Time // the newest event seen, to mark what arrives after it
 	freshAfter time.Time // events after this are fresh until freshUntil
 	freshUntil time.Time
@@ -94,7 +96,7 @@ func (m *Model) applyActivity(msg activityMsg) tea.Cmd {
 // times.
 func (m *Model) openAgent() tea.Cmd {
 	m.screen = screenAgent
-	m.agentS.offset = 0
+	m.agentS.offsets = [3]int{}
 	return tea.Batch(m.loadActivity(), m.startAgentTick())
 }
 
@@ -132,35 +134,32 @@ func (m *Model) shownAgent() string {
 	return ""
 }
 
-// agentKey handles the Agent screen: j/k scroll the feed, tab cycles the
-// agents, enter opens the current issue, esc or w go back.
+// agentKey handles the Agent screen: j/k and pages scroll the view shown,
+// a cycles the agents, enter opens the current issue. tab and the digits
+// switch the views and esc leaves, as on every screen.
 func (m *Model) agentKey(s string) tea.Cmd {
 	a := &m.agentS
+	off := &a.offsets[a.view]
 	switch s {
 	case "down", "j":
-		a.offset++
+		*off++
 	case "up", "k":
-		a.offset = max(0, a.offset-1)
+		*off = max(0, *off-1)
 	case "pgdown":
-		a.offset += m.bodyHeight() / 2
+		*off += m.bodyHeight() / 2
 	case "pgup":
-		a.offset = max(0, a.offset-m.bodyHeight()/2)
+		*off = max(0, *off-m.bodyHeight()/2)
 	case "g", "home":
-		a.offset = 0
+		*off = 0
 	case "G", "end":
-		a.offset = 1 << 30 // rendering clamps it
-	case "tab", "shift+tab":
+		*off = 1 << 30 // rendering clamps it
+	case "a":
 		as := m.agents()
 		if len(as) < 2 {
 			return m.flash("only one agent so far")
 		}
-		k := slices.Index(as, m.shownAgent())
-		if s == "tab" {
-			k = (k + 1) % len(as)
-		} else {
-			k = (k - 1 + len(as)) % len(as)
-		}
-		a.agent, a.offset = as[k], 0
+		k := (slices.Index(as, m.shownAgent()) + 1) % len(as)
+		a.agent, a.offsets = as[k], [3]int{}
 		if k == 0 {
 			a.agent = "" // the newest: follow whoever is active
 			return m.flash("following the most recent agent")
@@ -171,12 +170,11 @@ func (m *Model) agentKey(s string) tea.Cmd {
 		if v.focus == "" || m.tree.Issues[v.focus] == nil {
 			return m.flash("no current issue")
 		}
+		m.pushBack()
 		m.screen = screenIssues
 		cmd := m.jump(v.focus, false)
 		m.focus = focusDetail
 		return cmd
-	case "esc":
-		m.screen = screenIssues
 	}
 	return nil
 }
@@ -304,70 +302,86 @@ func ago(now, t time.Time) string {
 	return fmt.Sprintf("%dd", int(d.Hours()/24))
 }
 
-// agentPane lays the screen out: the Now card and usage beside the feed
-// when there is room, else the card over the feed.
+// agentPane shows the agent in the view chosen in the second tier.
 func (m *Model) agentPane(w, h int) string {
-	key := m.shownAgent()
-	d := m.agentView(key)
-	title := "Agent"
-	if d.label != "" {
-		title += " · " + d.label
-	}
+	d := m.agentView(m.shownAgent())
 	if m.agentS.err == nil && len(m.agentS.events) == 0 {
 		inner := w - 2 - 2*theme.Pad
 		m.pane("feed", w, h)
 		return ui.Pane{Title: "Agent", Body: ui.Empty(m.th, "No agent activity yet", "Each prep command an agent runs in this project shows up here, live", inner, h-2), Width: w, Height: h}.View(m.th)
 	}
-	leftW, feedW := m.split(w, 0.42, 44, 48)
-	if feedW == 0 {
-		nowH := max(0, min(h-3, nowLines+2+1))
-		top := m.nowPane(d, title, w, nowH, true)
-		m.at.y += nowH
-		return top + "\n" + m.feedPane(d, w, h-nowH)
+	switch m.agentS.view {
+	case agentActivity:
+		return m.feedPane(d, w, h)
+	case agentUsage:
+		return m.usagePane(d, w, h)
 	}
-	nowH := max(0, min(h-3, nowLines+2))
-	left := m.nowPane(d, title, leftW, nowH, false) + "\n"
-	m.at.y += nowH
-	left += m.usagePane(d, leftW, h-nowH)
-	m.at.y -= nowH
-	m.at.x += leftW
-	return lipgloss.JoinHorizontal(lipgloss.Top, left, m.feedPane(d, feedW, h))
+	return m.issuePane(d, w, h)
 }
 
-// nowPane is the card for the agent's current issue; compact adds a
-// one-line usage summary for layouts without the usage pane.
-func (m *Model) nowPane(d agentData, title string, w, h int, compact bool) string {
-	inner := w - 2 - 2*theme.Pad
-	m.pane("now", w, h)
-	var lines []string
+// agentStatus names the agent shown and whether it is active, for the
+// second tier's right end.
+func (m *Model) agentStatus() string {
+	key := m.shownAgent()
+	if key == "" {
+		return ""
+	}
+	d := m.agentView(key)
 	now := m.clock()
-	switch {
-	case m.agentS.err != nil:
-		lines = append(lines, ui.Error(m.th, m.agentS.err.Error()))
-	case d.focus == "" || m.tree.Issues[d.focus] == nil:
-		lines = append(lines, m.th.S.Muted.Render("No current issue"), m.th.S.Subtle.Render("its next prep guide or write sets one; prep focus <id> too"))
-	default:
-		lines = append(lines, m.nowCard(d.focus, inner)...)
-	}
-	for len(lines) < h-3 {
-		lines = append(lines, "")
-	}
-	status := ui.Note(m.th, "● active "+ago(now, d.last), ui.ToneAccent)
+	status := m.th.S.Muted.Render(d.label) + "  " + ui.Note(m.th, "● active "+ago(now, d.last), ui.ToneAccent)
 	if now.Sub(d.last) >= idleAfter {
-		status = ui.Note(m.th, "idle for "+ago(now, d.last), ui.ToneMuted)
+		status = m.th.S.Muted.Render(d.label) + "  " + ui.Note(m.th, "idle for "+ago(now, d.last), ui.ToneMuted)
 	}
 	if as := m.agents(); len(as) > 1 {
-		pos := fmt.Sprintf("  ·  agent %d/%d", slices.Index(as, d.key)+1, len(as))
+		pos := fmt.Sprintf("  agent %d/%d", slices.Index(as, d.key)+1, len(as))
 		if m.agentS.agent != "" {
 			pos += " pinned"
 		}
 		status += m.th.S.Muted.Render(pos)
 	}
-	if compact && d.requests > 0 {
-		status += m.th.S.Muted.Render(fmt.Sprintf("  ·  context %s  ·  %d requests", ui.Count(d.contextUsed), d.requests))
+	return status
+}
+
+// issuePane is the agent's current issue in full: where it stands (state,
+// step, acceptance, the next transition, the knowledge its guide points
+// to) over the issue's document, scrolled with j/k.
+func (m *Model) issuePane(d agentData, w, h int) string {
+	inner := w - 2 - 2*theme.Pad
+	rows := max(1, h-2)
+	m.pane("issue", w, h)
+	switch {
+	case m.agentS.err != nil:
+		return ui.Pane{Title: "Issue", Body: ui.Error(m.th, m.agentS.err.Error()), Width: w, Height: h}.View(m.th)
+	case d.focus == "" || m.tree.Issues[d.focus] == nil:
+		return ui.Pane{Title: "Issue", Body: ui.Empty(m.th, "No current issue", "its next prep guide or write sets one; prep focus <id> too", inner, rows), Width: w, Height: h}.View(m.th)
 	}
-	lines = append(lines[:max(0, h-3)], ui.Fit(status, inner))
-	return ui.Pane{Title: title, Body: strings.Join(lines, "\n"), Focused: true, Width: w, Height: h}.View(m.th)
+	a := &m.agentS
+	if a.shownIssue != d.focus {
+		a.shownIssue, a.offsets[agentIssue] = d.focus, 0
+	}
+	lines := m.nowCard(d.focus, inner)[1:] // the pane's title names the issue
+	if ks := a.guide.Knowledge; len(ks) > 0 {
+		lines = append(lines, "", m.th.S.Heading.Render("Knowledge"))
+		for _, k := range ks[:min(3, len(ks))] {
+			lines = append(lines, ui.Fit(m.th.S.Body.Render(k.Title)+"  "+m.th.S.Subtle.Render(k.Path), inner))
+		}
+	}
+	if key := fmt.Sprintf("%s|%d|%d", d.focus, inner, m.gen); key != a.docKey {
+		doc, err := ui.Markdown(m.th, detailSections(m.tree, d.focus), inner)
+		if err != nil {
+			doc = ui.Error(m.th, err.Error())
+		}
+		a.doc, a.docKey = doc, key
+	}
+	lines = append(lines, "")
+	lines = append(lines, strings.Split(a.doc, "\n")...)
+	a.offsets[agentIssue] = clamp(a.offsets[agentIssue], 0, max(0, len(lines)-rows))
+	off := a.offsets[agentIssue]
+	title := shortID(d.focus) + " " + m.tree.Issues[d.focus].Title
+	if len(lines) > rows {
+		title += fmt.Sprintf("  %d%%", 100*(off+rows)/len(lines))
+	}
+	return ui.Pane{Title: title, Body: strings.Join(lines[off:min(len(lines), off+rows)], "\n"), Focused: true, Width: w, Height: h}.View(m.th)
 }
 
 // nowCard is the current issue: title, state, kind and step, acceptance,
@@ -480,8 +494,10 @@ func (m *Model) usagePane(d agentData, w, h int) string {
 	if d.requests == 0 {
 		lines = append(lines, "", m.th.S.Subtle.Render("Token figures appear when the harness reports them."))
 	}
-	// Short panes keep the top: figures first, the long tail last.
-	lines = lines[:min(len(lines), max(0, h-2))]
+	rows := max(0, h-2)
+	off := clamp(m.agentS.offsets[agentUsage], 0, max(0, len(lines)-rows))
+	m.agentS.offsets[agentUsage] = off
+	lines = lines[off:min(len(lines), off+rows)]
 	return ui.Pane{Title: "Usage", Body: strings.Join(lines, "\n"), Width: w, Height: h}.View(m.th)
 }
 
@@ -533,27 +549,27 @@ func (m *Model) feedPane(d agentData, w, h int) string {
 	if len(lines) == 0 {
 		body = ui.Empty(m.th, "Nothing yet", "Each prep command the agent runs lands here", inner, rows)
 	} else {
-		m.agentS.offset = clamp(m.agentS.offset, 0, max(0, len(lines)-rows))
-		end := min(len(lines), m.agentS.offset+rows)
-		body = strings.Join(lines[m.agentS.offset:end], "\n")
+		m.agentS.offsets[agentActivity] = clamp(m.agentS.offsets[agentActivity], 0, max(0, len(lines)-rows))
+		end := min(len(lines), m.agentS.offsets[agentActivity]+rows)
+		body = strings.Join(lines[m.agentS.offsets[agentActivity]:end], "\n")
 	}
 	title := "Activity"
-	if m.agentS.offset > 0 {
-		title += fmt.Sprintf("  ↑ %d newer", m.agentS.offset)
+	if off := m.agentS.offsets[agentActivity]; off > 0 {
+		title += fmt.Sprintf("  ↑ %d newer", off)
 	}
 	return ui.Pane{Title: title, Body: body, Width: w, Height: h}.View(m.th)
 }
 
 var agentBindings = []binding{
-	bind("Agent", "↑↓ j k", "scroll the activity", false),
-	bind("Agent", "g G pgup pgdn", "newest, oldest, page", false),
-	bind("Agent", "tab", "next agent (back to the first follows the most recent)", true),
+	bind("Agent", "tab 1-3", "issue, activity or usage", true),
+	bind("Agent", "↑↓ j k", "scroll the view", false),
+	bind("Agent", "g G pgup pgdn", "top, bottom, page", false),
+	bind("Agent", "a", "next agent (back to the first follows the most recent)", true),
 	bind("Agent", "enter", "open the current issue", true),
 	bind("Agent", "y", "copy the current issue's ID", false),
-	bind("Agent", "esc w", "back to the issues", true),
-	bind("Screens", "1-9", "the issues, on view n", false),
-	bind("Screens", "z", "one pane or split", false),
-	bind("Screens", "b", "knowledge", false),
+	bind("Screens", "i b", "issues, knowledge", false),
+	bind("Screens", "⌫", "back to where you were", false),
+	bind("Screens", "esc w", "back to the issues", true),
 	bind("Screens", "c", "check", false),
 	bind("Screens", "s", "settings", false),
 	bind("Screens", "?", "all keys", true),

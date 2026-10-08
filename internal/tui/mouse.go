@@ -93,9 +93,16 @@ func (m *Model) click(x, y int) tea.Cmd {
 		return nil
 	}
 	switch kind {
+	case "screen":
+		return m.goScreen(navScreens[n])
+	case "back":
+		return m.goBack()
+	case "check":
+		return m.goScreen(screenCheck)
+	case "settings":
+		return m.toggleScreen(screenSettings)
 	case "tab":
-		m.screen, m.moving = screenIssues, false
-		m.switchTab(n)
+		return m.setView(n)
 	case "pane":
 		switch arg {
 		case "list":
@@ -210,9 +217,11 @@ func (m *Model) wheel(msg tea.MouseWheelMsg) tea.Cmd {
 		}
 	case "entry":
 		m.know.vp, cmd = m.know.vp.Update(msg)
-	case "feed":
+	case "feed", "issue", "usage":
+		// The Agent views scroll their lines; rendering clamps the offset.
 		if step != 0 {
-			m.agentS.offset = max(0, m.agentS.offset+step)
+			off := &m.agentS.offsets[m.agentS.view]
+			*off = max(0, *off+step)
 		}
 	case "page":
 		m.page, cmd = m.page.Update(msg)
