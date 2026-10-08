@@ -555,20 +555,6 @@ func TestHierarchy(t *testing.T) {
 	}
 	keys(m, "t")
 
-	// p jumps to the parent; outside the current view it switches to All.
-	keys(m, "g", "down", "down", "down", "p")
-	if m.selected() != ids["json"] {
-		t.Fatalf("p selected %s, want JSON writer", m.selected())
-	}
-	keys(m, "t", "3", "p")
-	if m.current().name != "All" || m.selected() != ids["export"] {
-		t.Fatalf("p outside the view: tab %s selected %s", m.current().name, m.selected())
-	}
-	keys(m, "t", "p")
-	if m.notice == "" {
-		t.Fatal("p on a top-level issue gives no notice")
-	}
-
 	// Relations in the detail: tab moves, enter opens, backspace returns.
 	keys(m, "6", "g", "down", "enter")
 	var got []string
@@ -840,7 +826,7 @@ func TestActionMenu(t *testing.T) {
 
 	// ? lists every sequence, the ones that do not apply with their reason.
 	run(m, "?")
-	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "a d") || !strings.Contains(v, "Define (not now") || !strings.Contains(v, "a i") {
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "a d") || !strings.Contains(v, "Define (not now") || !strings.Contains(v, "a p") {
 		t.Fatalf("keymap lacks the action menu's sequences:\n%s", v)
 	}
 	run(m, "x") // any key closes
@@ -881,8 +867,8 @@ func TestEditMenuAndKeys(t *testing.T) {
 		t.Fatalf("context = %q", got)
 	}
 
-	// i h sets the priority without the action menu.
-	run(m, "i")
+	// p h sets the priority without the action menu.
+	run(m, "p")
 	run(m, "h")
 	if got := issue(t, p, ids["schema"]).Priority; got != domain.PriorityHigh {
 		t.Fatalf("i h: priority %q", got)
@@ -1113,7 +1099,7 @@ func TestSetPriority(t *testing.T) {
 	run(m, "6")
 	m.selectInCurrent(ids["csv"])
 	run(m, "a")
-	run(m, "i")
+	run(m, "p")
 	if m.modal == nil || m.modal.heading != "Priority" {
 		t.Fatal("i does not open the priority menu")
 	}
@@ -1130,7 +1116,7 @@ func TestSetPriority(t *testing.T) {
 	}
 	// Medium unsets the priority again.
 	run(m, "a")
-	run(m, "i")
+	run(m, "p")
 	run(m, "m")
 	if got := issue(t, p, ids["csv"]).Priority; got != "" {
 		t.Fatalf("medium did not unset: %q", got)

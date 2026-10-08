@@ -1,0 +1,2 @@
+- [x] p opens the priority picker, a p too; i only goes to Issues
+- [x] No parent jump key; the keymap explains o

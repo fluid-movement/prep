@@ -1,0 +1,2 @@
+- `internal/tui/app.go` `key` and `issueBindings`; `internal/tui/actions.go` the action menu's priority entry.
+- Knowledge: [TUI](/components/tui.md), [TUI editing and keys](/components/tui-editing.md), [TUI navigation](/components/tui-navigation.md).

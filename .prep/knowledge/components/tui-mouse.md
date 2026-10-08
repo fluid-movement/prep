@@ -9,7 +9,7 @@ scope:
   - internal/tui/mouse.go
   - internal/tui/mouse_test.go
   - internal/tui/program_test.go
-confirmed_commit: f78c088c490199a1be3a2805a788eab7a2581563
+confirmed_commit: 4a7c7c7b47f12e013fb7a8ae836fe53e83dd1ac3
 ---
 
 # TUI mouse

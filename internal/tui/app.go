@@ -574,7 +574,7 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	if m.screen == screenSettings && m.tree != nil && (len(s) == 1 && s >= "1" && s <= "9" || s == "t" || s == "T") {
 		return m.settingsKey(s)
 	}
-	// i is Issues from every other screen; on Issues it sets the priority.
+	// i is Issues from every other screen.
 	if s == "i" && m.screen != screenIssues {
 		return m.goScreen(screenIssues)
 	}
@@ -640,8 +640,6 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		return cmd
 	}
 	switch s {
-	case "p":
-		return m.jumpToParent()
 	case "a":
 		if m.tree != nil {
 			return m.openMenu()
@@ -654,7 +652,7 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		return nil
 	case "e":
 		return m.openEditMenu()
-	case "i":
+	case "p":
 		if m.tree != nil && m.selected() != "" {
 			return m.openPriority()
 		}
@@ -855,18 +853,6 @@ func (m *Model) detailKey(s string, k tea.KeyPressMsg) tea.Cmd {
 	var cmd tea.Cmd
 	m.vp, cmd = m.vp.Update(k)
 	return cmd
-}
-
-func (m *Model) jumpToParent() tea.Cmd {
-	id := m.selected()
-	if id == "" {
-		return nil
-	}
-	p := m.tree.Issues[id].Parent
-	if p == "" || m.tree.Issues[p] == nil {
-		return m.flash("top-level issue: no parent")
-	}
-	return m.jump(p, true)
 }
 
 // jump selects an issue: in the current tab when it is a row there,
@@ -1132,11 +1118,10 @@ var (
 	issueBindings = []binding{
 		bind("Issue", "a", "actions (letters run them)", true),
 		bind("Issue", "e", "edit: r requirement · c context · t title · g tags", true),
-		bind("Issue", "i", "priority: c critical · h high · m medium · l low", true),
+		bind("Issue", "p", "priority: c critical · h high · m medium · l low", true),
 		bind("Issue", "n", "new issue (under the focused parent)", true),
 		bind("Issue", "y", "copy the ID", false),
-		bind("Issue", "p", "go to the parent", false),
-		bind("Issue", "o", "select or follow a link", false),
+		bind("Issue", "o", "links: go to the parent, a child, a dependency or a knowledge entry", false),
 	}
 	viewBindings = []binding{
 		bind("Views", "f", "filter (prep list flags; words match titles)", true),

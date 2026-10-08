@@ -310,7 +310,7 @@ func TestClickDialogs(t *testing.T) {
 	// Menu entries: a click selects, a second click runs; outside does nothing.
 	run(m, "a")
 	clickText(t, m, "Set priority", 0, 120)
-	if m.modal == nil || m.modal.items[m.modal.cursor].key != "i" {
+	if m.modal == nil || m.modal.items[m.modal.cursor].key != "p" {
 		t.Fatalf("menu click: %+v", m.modal)
 	}
 	click(m, 0, 0)

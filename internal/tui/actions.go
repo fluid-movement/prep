@@ -188,7 +188,7 @@ func (m *Model) actions() []action {
 		action{key: "c", label: "Edit context", reason: edit, run: func() tea.Cmd { return m.openText(id, "context") }},
 		action{key: "v", label: "Tick off criteria (verify)", reason: crit, run: m.openCriteria},
 		action{key: "m", label: "Move to another parent", reason: edit, run: m.openReparent},
-		action{key: "i", label: "Set priority", run: m.openPriority},
+		action{key: "p", label: "Set priority", run: m.openPriority},
 		action{key: "g", label: "Edit tags", run: m.openTags},
 		action{key: "d", label: "Define", reason: m.gate(id, domain.OpDefine), run: m.transition(id, domain.OpDefine, "defined")},
 		action{key: "r", label: "Mark ready", reason: m.gate(id, domain.OpReady), run: m.transition(id, domain.OpReady, "marked ready")},
