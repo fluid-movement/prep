@@ -1,0 +1,4 @@
+- `internal/okf/okf.go` `Load`: drift whenever the entry has a confirmed commit or a commit of its own; `splitEntry` shared with `renderUpdate` in `internal/okf/write.go`.
+- `internal/okf/write.go` `Render` refuses `New` over an existing file; `internal/domain/knowledge.go` `PlanKnowledge` refuses `index.md` and `log.md`.
+- `internal/gitx/git.go`: `-z` for `diff --name-only`, `show --name-only` and `check-ignore --stdin`; `GIT_OPTIONAL_LOCKS=0` in `run`.
+- Knowledge: [OKF store](/components/okf-store.md).

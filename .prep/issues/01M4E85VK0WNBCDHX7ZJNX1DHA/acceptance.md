@@ -1,0 +1,4 @@
+- [x] A scoped entry without confirmed_commit drifts after a later code commit
+- [x] knowledge new refuses index.md, log.md and an existing unreadable file
+- [x] Frontmatter closes only on an exact --- line
+- [x] Non-ASCII paths appear verbatim in drift lists and the ignore check

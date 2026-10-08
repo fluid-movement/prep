@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"path"
 	"strings"
 	"time"
 )
@@ -29,6 +30,9 @@ func (t *Tree) PlanKnowledge(in KnowledgeEdit) (*Change, error) {
 	p := NormalizeEntryPath(in.Path)
 	if strings.Contains(p, "..") || strings.Contains(p, "//") || p == "/.md" || strings.ContainsAny(p, " \t\\") {
 		return nil, &Error{Code: ErrUsage, Message: fmt.Sprintf("%q is not a valid entry path; use a bundle path such as /components/export.md", in.Path)}
+	}
+	if b := path.Base(p); b == "index.md" || b == "log.md" {
+		return nil, &Error{Code: ErrUsage, Message: fmt.Sprintf("%s is reserved: prep generates index.md and keeps log.md for a chronological log; name the entry differently", p)}
 	}
 	in.Path = p
 	in.At = in.At.UTC().Truncate(time.Second)

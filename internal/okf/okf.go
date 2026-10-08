@@ -29,7 +29,8 @@ type Store struct {
 // Load reads every entry. With drift, it compares scoped paths against the
 // later of each entry's confirmed_commit and the last commit that changed
 // the entry file: writing or confirming an entry is its review, so code and
-// entry can land in one commit. While the entry file has uncommitted
+// entry can land in one commit. An entry never confirmed counts from its
+// last commit alone; one not yet committed has nothing to drift from. While the entry file has uncommitted
 // changes, uncommitted changes in its scope count as reviewed with it.
 func (s *Store) Load(drift bool) ([]*domain.Entry, []domain.Diagnostic, error) {
 	base := filepath.Join(s.Root, filepath.FromSlash(Dir))
@@ -58,13 +59,13 @@ func (s *Store) Load(drift bool) ([]*domain.Entry, []domain.Diagnostic, error) {
 				File: Dir + bpath, Message: perr.Error(), Fix: "entries start with YAML frontmatter containing type, title and description"})
 			return nil
 		}
-		if useGit && e.ConfirmedCommit != "" && len(e.Scope) > 0 {
-			if !gitx.CommitExists(s.Root, e.ConfirmedCommit) {
+		file := Dir + bpath
+		if useGit && len(e.Scope) > 0 && (e.ConfirmedCommit != "" || gitx.LastCommit(s.Root, file) != "") {
+			if e.ConfirmedCommit != "" && !gitx.CommitExists(s.Root, e.ConfirmedCommit) {
 				e.DriftErr = fmt.Sprintf("confirmed_commit %s is not in this repository", e.ConfirmedCommit)
 			} else {
-				file := Dir + bpath
 				since := e.ConfirmedCommit
-				if last := gitx.LastCommit(s.Root, file); last != "" && last != since && gitx.IsAncestor(s.Root, since, last) {
+				if last := gitx.LastCommit(s.Root, file); last != "" && last != since && (since == "" || gitx.IsAncestor(s.Root, since, last)) {
 					since = last
 				}
 				var changed []string
@@ -110,16 +111,29 @@ func StripCode(s string) string {
 	return codeSpanRe.ReplaceAllString(fencedRe.ReplaceAllString(s, ""), "")
 }
 
-func parseEntry(bpath, raw string) (*domain.Entry, error) {
-	raw = strings.ReplaceAll(raw, "\r\n", "\n")
+var fmClose = regexp.MustCompile(`(?m)^---[ \t]*$`)
+
+// splitEntry separates an entry's frontmatter from its body. The
+// frontmatter closes on a line that is exactly ---, so a ---- rule or a
+// line starting with --- inside it does not end it.
+func splitEntry(raw string) (fm, body string, err error) {
+	raw = strings.TrimPrefix(strings.ReplaceAll(raw, "\r\n", "\n"), "\ufeff")
 	if !strings.HasPrefix(raw, "---\n") {
-		return nil, fmt.Errorf("missing frontmatter")
+		return "", "", fmt.Errorf("missing frontmatter")
 	}
-	end := strings.Index(raw[4:], "\n---")
-	if end < 0 {
-		return nil, fmt.Errorf("frontmatter is not closed with ---")
+	rest := raw[4:]
+	loc := fmClose.FindStringIndex(rest)
+	if loc == nil {
+		return "", "", fmt.Errorf("frontmatter is not closed with ---")
 	}
-	fm, body := raw[4:4+end+1], raw[4+end+4:]
+	return rest[:loc[0]], rest[loc[1]:], nil
+}
+
+func parseEntry(bpath, raw string) (*domain.Entry, error) {
+	fm, body, err := splitEntry(raw)
+	if err != nil {
+		return nil, err
+	}
 	var m map[string]any
 	if err := yaml.Unmarshal([]byte(fm), &m); err != nil {
 		return nil, fmt.Errorf("frontmatter: %v", strings.TrimPrefix(err.Error(), "yaml: "))

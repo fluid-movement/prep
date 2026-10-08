@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -116,5 +117,17 @@ func TestKnowledgeViewQueries(t *testing.T) {
 	}
 	if _, err := ParseKnowledgeFilter([]string{"--type", "nope"}); err == nil {
 		t.Error("unknown type accepted")
+	}
+}
+
+func TestKnowledgeReservedNames(t *testing.T) {
+	tree := NewTree(Project{}, nil, nil, nil)
+	body, typ := "Body.", "component"
+	for _, p := range []string{"/index.md", "/components/index.md", "/log.md"} {
+		_, err := tree.PlanKnowledge(KnowledgeEdit{Path: p, New: true, Body: &body, Type: &typ, Title: &typ, Description: &typ})
+		var de *Error
+		if !errors.As(err, &de) || de.Code != ErrUsage {
+			t.Fatalf("%s: expected a usage error, got %v", p, err)
+		}
 	}
 }

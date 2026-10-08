@@ -41,6 +41,11 @@ func (s *Store) Render(e *domain.KnowledgeEdit) (*domain.Entry, error) {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
+	if e.New && existed {
+		// prep knowledge new only plans entries the tree does not have, so
+		// this file failed to load; writing over it would lose it.
+		return nil, &domain.Error{Code: domain.ErrConflict, Message: fmt.Sprintf("%s exists but is not a readable entry (see prep check); fix or remove it first", Dir+e.Path)}
+	}
 	var content string
 	if e.New {
 		content, err = renderNew(e)
@@ -125,15 +130,10 @@ func renderNew(e *domain.KnowledgeEdit) (string, error) {
 }
 
 func renderUpdate(raw string, e *domain.KnowledgeEdit) (string, error) {
-	raw = strings.ReplaceAll(raw, "\r\n", "\n")
-	if !strings.HasPrefix(raw, "---\n") {
-		return "", fmt.Errorf("%s: missing frontmatter", Dir+e.Path)
+	fm, body, err := splitEntry(raw)
+	if err != nil {
+		return "", fmt.Errorf("%s: %v", Dir+e.Path, err)
 	}
-	end := strings.Index(raw[4:], "\n---")
-	if end < 0 {
-		return "", fmt.Errorf("%s: frontmatter is not closed with ---", Dir+e.Path)
-	}
-	fm, body := raw[4:4+end+1], raw[4+end+4:]
 	var doc yaml.Node
 	if err := yaml.Unmarshal([]byte(fm), &doc); err != nil {
 		return "", fmt.Errorf("%s: frontmatter: %v", Dir+e.Path, err)

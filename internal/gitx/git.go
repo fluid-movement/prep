@@ -5,14 +5,24 @@ package gitx
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
 
-// Run executes git in dir and returns trimmed stdout.
+// Run executes git in dir and returns trimmed stdout. Optional locks are
+// off, so a read such as git status never takes index.lock from under a
+// commit the person runs at the same time.
 func Run(dir string, args ...string) (string, error) {
+	return run(dir, "", args...)
+}
+
+// run is Run with text on standard input.
+func run(dir, stdin string, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
+	cmd.Stdin = strings.NewReader(stdin)
 	var out, errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errb
 	if err := cmd.Run(); err != nil {
@@ -37,6 +47,18 @@ func CommitExists(dir, ref string) bool {
 	return err == nil
 }
 
+// paths splits the NUL-separated output of a -z command: paths come
+// verbatim, where the line form quotes non-ASCII and special characters.
+func paths(out string) []string {
+	var list []string
+	for p := range strings.SplitSeq(out, "\x00") {
+		if p != "" {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
 // pathspec turns a scope pattern into a git pathspec.
 func pathspec(scope string) string {
 	if strings.ContainsAny(scope, "*?[") {
@@ -48,29 +70,23 @@ func pathspec(scope string) string {
 // ChangedSince lists files under the scopes that differ between commit and
 // the working tree.
 func ChangedSince(dir, commit string, scopes []string) ([]string, error) {
-	args := []string{"diff", "--name-only", commit, "--"}
+	args := []string{"diff", "--name-only", "-z", commit, "--"}
 	for _, s := range scopes {
 		args = append(args, pathspec(s))
 	}
 	out, err := Run(dir, args...)
-	if err != nil || out == "" {
-		return nil, err
-	}
-	return strings.Split(out, "\n"), nil
+	return paths(out), err
 }
 
 // ChangedBetween lists files under the scopes that differ between two
 // commits, ignoring the working tree.
 func ChangedBetween(dir, from, to string, scopes []string) ([]string, error) {
-	args := []string{"diff", "--name-only", from, to, "--"}
+	args := []string{"diff", "--name-only", "-z", from, to, "--"}
 	for _, s := range scopes {
 		args = append(args, pathspec(s))
 	}
 	out, err := Run(dir, args...)
-	if err != nil || out == "" {
-		return nil, err
-	}
-	return strings.Split(out, "\n"), nil
+	return paths(out), err
 }
 
 // LastCommit returns the newest commit that changed path, or "".
@@ -113,27 +129,24 @@ func Dirty(dir, path string) bool {
 
 // FilesInCommit lists the files a commit changed.
 func FilesInCommit(dir, commit string) ([]string, error) {
-	out, err := Run(dir, "show", "--name-only", "--format=", commit)
-	if err != nil || out == "" {
-		return nil, err
-	}
-	return strings.Split(out, "\n"), nil
+	out, err := Run(dir, "show", "--name-only", "-z", "--format=", commit)
+	return paths(out), err
 }
 
 // Tracked drops the paths git ignores, such as the user's own
 // .prep/config.yaml, so staging never fails on them.
-func Tracked(dir string, paths []string) []string {
-	if len(paths) == 0 {
-		return paths
+func Tracked(dir string, list []string) []string {
+	if len(list) == 0 {
+		return list
 	}
 	// check-ignore prints the ignored paths and exits 1 when there are none.
-	out, _ := Run(dir, append([]string{"check-ignore", "--"}, paths...)...)
+	out, _ := run(dir, strings.Join(list, "\x00")+"\x00", "check-ignore", "-z", "--stdin")
 	ignored := map[string]bool{}
-	for _, p := range strings.Split(out, "\n") {
+	for _, p := range paths(out) {
 		ignored[p] = true
 	}
 	var keep []string
-	for _, p := range paths {
+	for _, p := range list {
 		if !ignored[p] {
 			keep = append(keep, p)
 		}
