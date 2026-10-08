@@ -3,8 +3,8 @@
 ## Entries
 
 * [Architecture](/components/architecture.md) - One Go binary; the domain layer sits between agent/human interfaces and storage ports with markdown and OKF adapters.
-* [Claude Code side panel](/components/claude-code-panel.md) - The prep pane in Claude Code: activation, following the agent, data, drawing, the Live, Project and Usage views, /prep:focus and /prep:pane, opening and developing.
-* [Claude Code integration](/components/claude-code.md) - The prep plugin for Claude Code: skill, SessionStart briefing, /prep:status, /prep:next, /prep:guide and the side panel (/prep:focus, /prep:pane), served from this repository as its own marketplace and installed per user by prep setup.
+* [Claude Code side panel](/components/claude-code-panel.md) - Removed: the prep side panel in Claude Code, replaced by prep tui's Agent screen; kept for the issues that link it.
+* [Claude Code integration](/components/claude-code.md) - The prep plugin for Claude Code: skill, SessionStart briefing and the activity bridge to prep tui's Agent screen, served from this repository as its own marketplace and installed per user by prep setup.
 * [CLI](/components/cli.md) - internal/cli — command table, global flags, JSON output and errors, write pipeline and git staging.
 * [Domain package](/components/domain.md) - internal/domain — issue model, state derivation, FSM gates, validation codes, query engine, guide and knowledge retrieval.
 * [Markdown store](/components/markdown-store.md) - internal/mdstore — parses and renders .prep files canonically, atomic writes with compare-and-swap, fmt and fix.

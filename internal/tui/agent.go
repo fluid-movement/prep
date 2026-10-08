@@ -176,9 +176,18 @@ func (m *Model) agentKey(s string) tea.Cmd {
 	return nil
 }
 
-// agentLabel names an agent for people: its actor, and its session's
-// start when several agents share an actor.
+// agentLabel names an agent for people: the actor of its latest prep
+// command (the name the agent gives itself; its harness's bridge uses its
+// own), else of any event, and its session.
 func agentLabel(key string, events []activity.Event) string {
+	for k := len(events) - 1; k >= 0; k-- {
+		if e := events[k]; e.Agent() == key && (e.Kind == activity.KindPrep || e.Kind == activity.KindFocus) {
+			if e.Session != "" {
+				return e.Actor + " · " + shortSession(e.Session)
+			}
+			return e.Actor
+		}
+	}
 	for k := len(events) - 1; k >= 0; k-- {
 		if e := events[k]; e.Agent() == key {
 			if e.Session != "" {
@@ -235,8 +244,10 @@ func (m *Model) agentView(key string) agentData {
 		d.last = e.At
 		switch e.Kind {
 		case activity.KindRequest:
-			d.requests++
+			// A turn's end reports context and cost without tokens; only
+			// events with tokens are model requests.
 			if e.Tokens != nil {
+				d.requests++
 				d.tokens.Input += e.Tokens.Input
 				d.tokens.Output += e.Tokens.Output
 				d.tokens.CacheRead += e.Tokens.CacheRead

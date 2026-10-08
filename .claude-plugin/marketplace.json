@@ -8,13 +8,7 @@
     {
       "name": "prep",
       "source": "./plugins/claude-code",
-      "description": "Makes Claude Code work with prep: the prep skill, a SessionStart briefing, and status, next and guide commands.",
-      "version": "0.1.0"
-    },
-    {
-      "name": "token-ledger",
-      "source": "./plugins/token-ledger",
-      "description": "Records each session's tool calls and per-request token usage as JSONL under ~/.claude/token-ledger, to measure where tokens go in prep projects.",
+      "description": "Makes Claude Code work with prep: the prep skill, a SessionStart briefing, and the activity bridge behind prep tui's Agent screen.",
       "version": "0.1.0"
     }
   ]

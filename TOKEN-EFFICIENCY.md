@@ -41,16 +41,15 @@ prep's own output is already small. The candidate token sinks are:
 
 ## How we measure
 
-Two plugins in this repository record and show the data:
+prep's activity stream records and shows the data (it replaced the token-ledger plugin and the pane's Usage tab, which earlier runs used):
 
-- **token-ledger** (`plugins/token-ledger`) writes `~/.claude/token-ledger/<session id>.jsonl`. It records:
-  - every model request, with input, cache read, cache write and output tokens;
-  - on each request and tool call, the prep issue being worked on, so sessions that cover several issues split by issue;
-  - every tool call, with what it touched, its prep area (`knowledge`, `issue`, `prep-cli`, `code`), the prep subcommand, and how much text it returned;
-  - context fill and cost at the end of each turn.
+- **The activity stream** (`.prep/local/activity.jsonl`, per machine; see the knowledge entry `/features/agent-activity.md`) holds:
+  - every prep command the agent runs, with its issue, verb and, for reads, how much text it returned;
+  - from the Claude Code plugin's bridge: every other tool call (what it touched, its area: `knowledge`, `issue`, `prep`, `code`, `other`; how much text it returned) and every model request (input, cache read, cache write and output tokens), plus context fill and cost at the end of each turn;
+  - the session (`PREP_SESSION`), and each agent's current issue derived from its prep commands, so sessions that cover several issues split by issue.
 
-  The row format is in its README. To load it from a checkout: `claude --plugin-dir plugins/token-ledger`.
-- **The prep pane's Usage tab** (`/prep:pane usage`) shows the current session's figures as they accumulate.
+  `prep activity --json --max 0` prints it.
+- **prep tui's Agent screen** (`w`, or `prep tui --agent`) shows the current session's figures as they accumulate.
 
 Record ordinary prep work, unchanged, for one to two weeks. Aim for at least 10 issues taken through enrichment or implementation.
 
@@ -154,7 +153,7 @@ Still open: measure ordinary issue work (enrichment, implementation), where narr
 ## Next steps
 
 1. Record ordinary prep work for one to two weeks (the plugins are installed; start a fresh Claude Code session after `just install`).
-2. Compute the metrics above from `~/.claude/token-ledger/*.jsonl`. Claude can do this when given the files.
+2. Compute the metrics above from `prep activity --json --max 0` (earlier runs: `~/.claude/token-ledger/*.jsonl`). Claude can do this when given the output.
 3. Read the outcome table, pick the matching action, and record the decision in the knowledge base. If the action is a prototype, open a prep issue for it.
 
 ## Sources
