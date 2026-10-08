@@ -13,9 +13,11 @@ import type {
   PrepSource,
   PrepSummary,
   PrepTab,
+  PrepUsage,
 } from '../types'
 import { issueFromCommand, issueFromPath } from './infer'
 import { drawPane, drawPanel } from './panel'
+import { ledgerPath, summarizeLedger } from './usage'
 
 const PANE = 'prep'
 const TITLE = 'prep'
@@ -25,6 +27,11 @@ const pin = atom({ plugin: 'prep', key: 'pin' } as const, null)
 const snapshot = atom({ plugin: 'prep', key: 'snapshot' } as const, null)
 const tab = atom({ plugin: 'prep', key: 'tab' } as const, 'live' as PrepTab)
 const project = atom({ plugin: 'prep', key: 'project' } as const, null)
+const usage = atom({ plugin: 'prep', key: 'usage' } as const, null)
+
+// token-ledger appends its rows when a turn ends; the usage view reads them
+// this long after, so the turn's own rows are in.
+const LEDGER_SETTLE_MS = 500
 
 // The project view lists what is not resolved yet.
 const UNRESOLVED = ['--state', 'open,defined,ready,in-progress']
@@ -110,10 +117,40 @@ async function refreshProject($: EngineInterface): Promise<void> {
   if (gen === projectGeneration) await update($, project, () => next)
 }
 
-/** Shows a view; the project view loads fresh data as it opens. */
+/** Loads the usage view: Claude Code's figures for the session, and token-ledger's rows when it wrote any. */
+async function loadUsage($: EngineInterface): Promise<PrepUsage> {
+  const [sessionId, home, session] = await Promise.all([$.session.id(), $.env.get('HOME'), $.session.usage()])
+  const path = ledgerPath(home ?? '', sessionId)
+  const hasLedger = home !== undefined && (await $.fs.exists(path))
+  const text = hasLedger ? ((await $.fs.read(path)) as string) : ''
+  return {
+    sessionId,
+    contextTokens: session.context.tokens,
+    window: session.context.window,
+    costUsd: session.cost?.usd,
+    hasLedger,
+    ...summarizeLedger(text),
+  }
+}
+
+let usageGeneration = 0
+
+async function refreshUsage($: EngineInterface): Promise<void> {
+  const gen = ++usageGeneration
+  let next: PrepUsage | { error: string }
+  try {
+    next = await loadUsage($)
+  } catch (err) {
+    next = { error: err instanceof Error ? err.message : String(err) }
+  }
+  if (gen === usageGeneration) await update($, usage, () => next)
+}
+
+/** Shows a view; the project and usage views load fresh data as they open. */
 async function showTab($: EngineInterface, next: PrepTab): Promise<void> {
   await update($, tab, () => next)
   if (next === 'project') await refreshProject($)
+  if (next === 'usage') await refreshUsage($)
 }
 
 /** Makes ref the agent's current issue and redraws when it changed. */
@@ -194,6 +231,15 @@ export const register: Register = (on, options) => {
     return ran
   }).catch(passOn)
 
+  // The usage view follows the session turn by turn while it is shown.
+  on('turn.complete', async ($, e, next) => {
+    const done = await next(e)
+    if (active && (await read($, tab)) === 'usage') {
+      void $.clock.after(LEDGER_SETTLE_MS, () => refreshUsage($))
+    }
+    return done
+  }).catch(passOn)
+
   // /prep:focus and /prep:pane are declared in commands/ and answered here.
   on('command.run', { command: 'prep:focus' }, async ($, e) => {
     if (!active) return { text: 'Not a prep project.' }
@@ -218,13 +264,13 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'prep:pane' }, async ($, e) => {
     if (!active) return { text: 'Not a prep project.' }
     const arg = e.args.trim()
-    if (arg === 'live' || arg === 'project') {
+    if (arg === 'live' || arg === 'project' || arg === 'usage') {
       await showTab($, arg)
       await $.store.set(openKey(cwd), true)
       await $.ui.open({ id: PANE, title: TITLE })
       return { text: `prep panel shows the ${arg} view.` }
     }
-    if (arg !== '') return { text: `prep panel: unknown view ${arg}; use live or project.` }
+    if (arg !== '') return { text: `prep panel: unknown view ${arg}; use live, project or usage.` }
     if (await isPaneOpen($)) {
       await $.store.set(openKey(cwd), false)
       await $.ui.close({ id: PANE })
@@ -243,9 +289,9 @@ export const register: Register = (on, options) => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const kit = $.ui.resolve(e)
-    const [shown, live, proj] = [await read($, tab), await read($, snapshot), await read($, project)]
+    const [shown, live, proj, used] = [await read($, tab), await read($, snapshot), await read($, project), await read($, usage)]
     try {
-      return drawPane(kit, shown, live, proj, next => void showTab($, next))
+      return drawPane(kit, shown, live, proj, used, next => void showTab($, next))
     } catch (err) {
       // Never an empty pane: say what failed instead.
       return drawPanel(kit, { view: 'error', message: err instanceof Error ? err.message : String(err) })

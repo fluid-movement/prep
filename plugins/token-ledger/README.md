@@ -7,7 +7,7 @@ A Claude Code plugin that records where a session's tokens go, so decisions abou
 claude --plugin-dir plugins/token-ledger # or load it from a checkout
 ```
 
-It writes one file per session, `~/.claude/token-ledger/<session id>.jsonl`, appended at the end of each turn. Nothing leaves the machine. `/token-ledger` summarizes the current session.
+It writes one file per session, `~/.claude/token-ledger/<session id>.jsonl`, appended at the end of each turn. Nothing leaves the machine. `/token-ledger` summarizes the current session, and the prep plugin's pane shows the same figures live in its Usage tab (`/prep:pane usage`).
 
 ## Rows
 
@@ -15,7 +15,7 @@ Every row has `type` and `t` (milliseconds since the epoch).
 
 | type | fields |
 | --- | --- |
-| `session` | `cwd`, `isPrep` (a `.prep` directory exists), `interactive` |
+| `session` | `sessionId`, `cwd`, `isPrep` (a `.prep` directory exists), `interactive` |
 | `turn` | `turnId`, `promptChars` |
 | `step` | one model request: `turnId`, `index`, `agentId` (subagents), `messages`, `model`, `usage` (`input`, `cacheRead`, `cacheWrite`, `output` tokens), `answerChars`, `tools` (names requested), `stop` |
 | `tool` | `turnId` (main loop) or `agentId`, `tool`, `target` (path, command or pattern, clipped to 200 chars), `area` (`prep-cli`, `knowledge`, `issue`, `code`), `prep` (the subcommand), `resultChars` (what the model read back; ≈ chars/4 tokens), `isError`, `ms` |

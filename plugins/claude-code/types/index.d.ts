@@ -80,8 +80,27 @@ export type PrepSnapshot =
   | { view: 'overview'; prime: PrepPrime }
   | { view: 'error'; message: string }
 
-/** Which view the pane shows: the issue being worked on, or the project. */
-export type PrepTab = 'live' | 'project'
+/** Which view the pane shows: the issue being worked on, the project, or this session's token usage. */
+export type PrepTab = 'live' | 'project' | 'usage'
+
+/** Tool output the model read back, per prep area, in estimated tokens (chars/4). */
+export type PrepUsageArea = { area: string; calls: number; tokens: number }
+
+/** What the usage view draws for the current Claude Code session. */
+export type PrepUsage = {
+  sessionId: string
+  /** The context window's fill and size, and the session's cost, when Claude Code reports them. */
+  contextTokens?: number
+  window?: number
+  costUsd?: number
+  /** False when the token-ledger plugin has written nothing for this session. */
+  hasLedger: boolean
+  requests: number
+  tokens: { input: number; cacheRead: number; cacheWrite: number; output: number }
+  areas: PrepUsageArea[]
+  /** The largest knowledge reads, by estimated tokens. */
+  topReads: { target: string; tokens: number }[]
+}
 
 /** What the project view draws: the overview and the unresolved issues in tree order. */
 export type PrepProjectSnapshot = { prime: PrepPrime; tree: PrepSummary[] } | { error: string }
@@ -99,6 +118,8 @@ declare module 'claude-code' {
       tab: PrepTab
       /** The last data loaded for the project view, while it is shown. */
       project: PrepProjectSnapshot | null
+      /** The last figures loaded for the usage view, while it is shown. */
+      usage: PrepUsage | { error: string } | null
     }
   }
 }

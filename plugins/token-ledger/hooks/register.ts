@@ -56,7 +56,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'token-ledger', description: "Summarize this session's token usage and tool calls" })
     const isPrep = await $.fs.exists(`${e.cwd}/.prep`)
-    await record($, { type: 'session', cwd: e.cwd, isPrep, interactive: e.isInteractive })
+    await record($, { type: 'session', sessionId: await $.session.id(), cwd: e.cwd, isPrep, interactive: e.isInteractive })
     return next(e)
   })
 

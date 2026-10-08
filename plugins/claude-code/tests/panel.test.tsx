@@ -389,6 +389,42 @@ describe('views', () => {
     expect(await drawn($)).toContain('step implement')
   })
 
+  test('the Usage tab shows the session and what token-ledger recorded', async ($, on) => {
+    fakePrep(on)
+    fakePanes(on)
+    const ledger = [
+      { type: 'session', t: 0 },
+      { type: 'step', t: 1, usage: { input: 1200, cacheRead: 45000, cacheWrite: 3000, output: 800 } },
+      { type: 'tool', t: 2, tool: 'Read', area: 'knowledge', target: '/repo/.prep/knowledge/components/tui.md', resultChars: 8000 },
+      { type: 'tool', t: 3, tool: 'Bash', area: 'prep-cli', prep: 'guide', target: 'prep guide x', resultChars: 1200 },
+    ]
+      .map(r => JSON.stringify(r))
+      .join('\n')
+    const files = new Map([['/home/u/.claude/token-ledger/s1.jsonl', ledger]])
+    on('session.id', async () => ({ value: 's1' }))
+    on('env.get', async () => ({ value: '/home/u' }))
+    on('session.usage', async () => ({ value: { startedAt: 0, context: { tokens: 50000, window: 200000 }, rateLimits: [], cost: { usd: 0.42 } } }) as never)
+    on('fs.exists', async (_$, e) => ({ value: files.has(e.path) }))
+    on('fs.read', async (_$, e) => ({ value: files.get(e.path) ?? '' }) as never)
+    await $.session.start(START)
+
+    const ui = await pane($)
+    await ui.press({ key: 'tab-usage' })
+    let text = await drawn($)
+    expect(text).toContain('context 50k / 200k (25%) · $0.42 · s1')
+    expect(text).toContain('Requests 1')
+    expect(text).toContain('cache read 45k')
+    expect(text).toMatch(/knowledge base\s+2\.0k\s+1 calls/)
+    expect(text).toMatch(/prep commands\s+300\s+1 calls/)
+    expect(text).toContain('/components/tui.md')
+
+    files.clear()
+    await ui.press({ key: 'tab-live' })
+    await ui.press({ key: 'tab-usage' })
+    text = await drawn($)
+    expect(text).toContain('/plugin install token-ledger@prep')
+  })
+
   test('/prep:pane project opens the pane on the project view', async ($, on) => {
     fakePrep(on)
     const panes = fakePanes(on)
