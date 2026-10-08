@@ -22,7 +22,8 @@ type Harness interface {
 	// Installed reports the installed integration's version, if any.
 	Installed() (version string, ok bool, err error)
 	// Install installs the integration for version, or updates it to it.
-	Install(version string) error
+	// Warnings report what went wrong around it without failing it.
+	Install(version string) (warnings []string, err error)
 	// Remove removes the integration.
 	Remove() error
 }
@@ -107,6 +108,8 @@ type Result struct {
 	Action  string `json:"action"` // installed, updated, removed, up to date, skipped, failed
 	Version string `json:"version,omitempty"`
 	Err     string `json:"error,omitempty"`
+	// Warnings from a successful install, such as other plugins it could not keep.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // Validate checks that every name is a registered harness.
@@ -180,7 +183,9 @@ func install(h Harness, current string, installed bool, statusErr error, version
 	default:
 		r.Action = "installed"
 	}
-	if err := h.Install(version); err != nil {
+	warnings, err := h.Install(version)
+	r.Warnings = warnings
+	if err != nil {
 		r.Action, r.Err = "failed", err.Error()
 	}
 	return r

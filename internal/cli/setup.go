@@ -180,6 +180,9 @@ func cmdSetup(a *app, args []string) error {
 				line += ": " + r.Err
 			}
 			a.printf("%s\n", line)
+			for _, w := range r.Warnings {
+				a.printf("  warning: %s\n", w)
+			}
 		}
 		if path != "" {
 			a.printf("choices saved in %s\n", path)

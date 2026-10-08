@@ -910,10 +910,10 @@ func (f *fakeHarness) Detect() bool  { return f.detected }
 func (f *fakeHarness) Installed() (string, bool, error) {
 	return f.version, f.version != "", nil
 }
-func (f *fakeHarness) Install(v string) error {
+func (f *fakeHarness) Install(v string) ([]string, error) {
 	*f.log = append(*f.log, f.name+" install "+v)
 	f.version = v
-	return nil
+	return nil, nil
 }
 func (f *fakeHarness) Remove() error {
 	*f.log = append(*f.log, f.name+" remove")

@@ -53,19 +53,30 @@ func (h *Harness) run(args ...string) (string, error) {
 	return string(out), nil
 }
 
-// Installed reads the plugin's version from claude plugin list.
-func (h *Harness) Installed() (string, bool, error) {
+type plugin struct {
+	ID      string `json:"id"`
+	Version string `json:"version"`
+	Scope   string `json:"scope"`
+}
+
+// plugins reads claude plugin list.
+func (h *Harness) plugins() ([]plugin, error) {
 	out, err := h.run("plugin", "list", "--json")
 	if err != nil {
+		return nil, err
+	}
+	var ps []plugin
+	if err := json.Unmarshal([]byte(jsonPart(out)), &ps); err != nil {
+		return nil, fmt.Errorf("reading claude plugin list: %v", err)
+	}
+	return ps, nil
+}
+
+// Installed reads the plugin's version from claude plugin list.
+func (h *Harness) Installed() (string, bool, error) {
+	plugins, err := h.plugins()
+	if err != nil {
 		return "", false, err
-	}
-	var plugins []struct {
-		ID      string `json:"id"`
-		Version string `json:"version"`
-		Scope   string `json:"scope"`
-	}
-	if err := json.Unmarshal([]byte(jsonPart(out)), &plugins); err != nil {
-		return "", false, fmt.Errorf("reading claude plugin list: %v", err)
 	}
 	for _, p := range plugins {
 		if p.ID == pluginID && p.Scope == "user" {
@@ -89,27 +100,57 @@ func Source(version string) (string, error) {
 
 // Install pins the marketplace to the source for version and installs the
 // plugin at user scope. Re-adding the marketplace moves the pin, so it is
-// removed first when present; that also removes the old plugin.
-func (h *Harness) Install(version string) error {
+// removed first when present; that uninstalls every plugin from it, so the
+// other user-scope plugins from it (such as token-ledger) are installed
+// again afterwards. Those that fail, and those at other scopes, which it
+// cannot restore, come back as warnings.
+func (h *Harness) Install(version string) ([]string, error) {
 	src, err := Source(version)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var warnings, others []string
 	if present, err := h.hasMarketplace(); err != nil {
-		return err
+		return nil, err
 	} else if present {
+		plugins, err := h.plugins()
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range plugins {
+			if p.ID == pluginID || !strings.HasSuffix(p.ID, "@"+marketplace) {
+				continue
+			}
+			if p.Scope == "user" {
+				others = append(others, p.ID)
+			} else {
+				warnings = append(warnings, fmt.Sprintf("%s (%s scope) was uninstalled with the marketplace; install it again with claude plugin install %s --scope %s", p.ID, p.Scope, p.ID, p.Scope))
+			}
+		}
 		if _, err := h.run("plugin", "marketplace", "remove", marketplace); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if _, err := h.run("plugin", "marketplace", "add", src); err != nil {
-		return err
+		return nil, err
 	}
 	out, err := h.run("plugin", "install", pluginID, "--scope", "user", "--json")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return checkResult(out)
+	if err := checkResult(out); err != nil {
+		return nil, err
+	}
+	for _, id := range others {
+		out, err := h.run("plugin", "install", id, "--scope", "user", "--json")
+		if err == nil {
+			err = checkResult(out)
+		}
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("%s was uninstalled with the marketplace and could not be installed again: %v", id, err))
+		}
+	}
+	return warnings, nil
 }
 
 // Remove uninstalls the plugin and removes the marketplace.

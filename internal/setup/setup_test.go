@@ -19,13 +19,13 @@ func (f *fake) Detect() bool  { return f.detected }
 func (f *fake) Installed() (string, bool, error) {
 	return f.version, f.version != "", nil
 }
-func (f *fake) Install(v string) error {
+func (f *fake) Install(v string) ([]string, error) {
 	f.calls = append(f.calls, "install "+v)
 	if f.failInstall {
-		return errors.New("boom")
+		return nil, errors.New("boom")
 	}
 	f.version = v
-	return nil
+	return nil, nil
 }
 func (f *fake) Remove() error {
 	f.calls = append(f.calls, "remove")

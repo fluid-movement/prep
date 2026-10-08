@@ -1,0 +1,3 @@
+- [x] Updating the integration installs again the other user-scope plugins that were installed from the prep marketplace (test with the fake claude)
+- [x] A plugin that fails to install again is reported as a warning; the prep install still succeeds (test)
+- [x] Plugins from the marketplace at other scopes are named in a warning
