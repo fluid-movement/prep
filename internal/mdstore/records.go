@@ -75,23 +75,45 @@ func parseTime(t time.Time) (time.Time, error) {
 
 // --- issue.md ---
 
-var openQuestionsRe = regexp.MustCompile(`(?im)^##\s+open questions\s*$`)
-var headingRe = regexp.MustCompile(`(?m)^#{1,2}\s`)
+var openQuestionsRe = regexp.MustCompile(`(?i)^##\s+open questions\s*$`)
+var headingRe = regexp.MustCompile(`^#{1,2}\s`)
 
 // splitOpenQuestions separates the Open questions section from the prose.
+// The section runs to the next level one or two heading; headings inside
+// fenced code blocks count for neither.
 func splitOpenQuestions(body string) (prose, questions string) {
-	loc := openQuestionsRe.FindStringIndex(body)
-	if loc == nil {
+	lines := strings.Split(body, "\n")
+	start, end := -1, len(lines)
+	var fence domain.Fence
+	for k, l := range lines {
+		if in, _ := fence.Line(l); in {
+			continue
+		}
+		if start < 0 && openQuestionsRe.MatchString(l) {
+			start = k
+		} else if start >= 0 && headingRe.MatchString(l) {
+			end = k
+			break
+		}
+	}
+	if start < 0 {
 		return body, ""
 	}
-	rest := body[loc[1]:]
-	end := len(rest)
-	if m := headingRe.FindStringIndex(rest); m != nil {
-		end = m[0]
-	}
-	questions = strings.TrimSpace(rest[:end])
-	prose = strings.TrimSpace(body[:loc[0]] + rest[end:])
+	questions = strings.TrimSpace(strings.Join(lines[start+1:end], "\n"))
+	prose = strings.TrimSpace(strings.Join(lines[:start], "\n") + "\n" + strings.Join(lines[end:], "\n"))
 	return prose, questions
+}
+
+// hasOpenQuestions reports whether text has an Open questions heading
+// outside fenced code blocks.
+func hasOpenQuestions(text string) bool {
+	var fence domain.Fence
+	for l := range strings.SplitSeq(text, "\n") {
+		if in, _ := fence.Line(l); !in && openQuestionsRe.MatchString(l) {
+			return true
+		}
+	}
+	return false
 }
 
 func parseIssue(raw string, i *domain.Issue) error {
@@ -131,7 +153,7 @@ func renderIssue(i *domain.Issue) string {
 // when the text has none.
 func requirementBody(text string) string {
 	text = normalize(text)
-	if openQuestionsRe.MatchString(text) {
+	if hasOpenQuestions(text) {
 		return text
 	}
 	if text == "" {
@@ -360,8 +382,9 @@ func parseDecisions(raw string) ([]domain.Decision, []string) {
 		}
 		cur, body = nil, nil
 	}
+	var fence domain.Fence
 	for _, l := range strings.Split(normalize(raw), "\n") {
-		if strings.HasPrefix(l, "## ") {
+		if in, _ := fence.Line(l); !in && strings.HasPrefix(l, "## ") {
 			flush()
 			m := decisionHeadRe.FindStringSubmatch(l)
 			if m == nil {
@@ -408,8 +431,12 @@ func canonicalDecisions(raw string) string {
 	lines := strings.Split(normalize(raw), "\n")
 	var out []string
 	inMeta := false
+	var fence domain.Fence
 	for k, l := range lines {
+		in, _ := fence.Line(l)
 		switch {
+		case in:
+			inMeta = false
 		case strings.HasPrefix(l, "## "):
 			inMeta = true
 		case inMeta && strings.TrimSpace(l) == "":

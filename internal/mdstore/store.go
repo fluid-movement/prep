@@ -134,7 +134,7 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 		return project, nil, nil, err
 	}
 	for _, e := range entries {
-		if !projectFiles[e.Name()] {
+		if !projectFiles[e.Name()] && !strings.HasPrefix(e.Name(), tempPrefix) {
 			diag(domain.CodeProjectUnknown, domain.SevError, domain.ClassManual, "", e.Name(), "remove the file; schema files are fixed", "unknown entry in .prep: %s", e.Name())
 		}
 	}
@@ -180,6 +180,9 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 	}
 	for _, e := range entries {
 		n := e.Name()
+		if strings.HasPrefix(n, tempPrefix) {
+			continue // a write in flight, or left by a crash
+		}
 		i.Files = append(i.Files, n)
 		switch {
 		case e.IsDir() && issueDirs[n]:
@@ -353,17 +356,31 @@ func (s *Store) LoadConfig() (domain.Config, error) {
 	return cfg, err
 }
 
+// tempPrefix starts the names of the temporary files atomic writes rename
+// into place. Loading skips them: one may belong to a write in flight.
+const tempPrefix = ".prep-tmp-"
+
 var (
 	legacyCommitMode = regexp.MustCompile(`(?m)^#?\s*commit_mode:.*\n?`)
+	stateValues      = regexp.MustCompile(`--state[ =][^\s"']+`)
 	legacyHeader     = "# prep project configuration (project-level only).\n"
 )
 
 // convertLegacyConfig turns a config written by prep 0.1.0 into the
-// current format: no commit_mode, the state in-progress, the current
-// header. It reports whether anything changed.
+// current format: no commit_mode, the state in-progress in --state values
+// (other text that contains in_progress stays), the current header. It reports whether anything changed.
 func convertLegacyConfig(raw string) (string, bool) {
 	out := legacyCommitMode.ReplaceAllString(raw, "")
-	out = strings.ReplaceAll(out, "in_progress", "in-progress")
+	out = stateValues.ReplaceAllStringFunc(out, func(flag string) string {
+		name, list := flag[:len("--state ")], strings.Split(flag[len("--state "):], ",")
+		for k, v := range list {
+			bare := strings.TrimLeft(strings.TrimPrefix(v, "not-"), "!")
+			if bare == "in_progress" {
+				list[k] = strings.TrimSuffix(v, "in_progress") + "in-progress"
+			}
+		}
+		return name + strings.Join(list, ",")
+	})
 	if strings.HasPrefix(out, legacyHeader) {
 		out = defaultHeader() + strings.TrimPrefix(out, legacyHeader)
 	}

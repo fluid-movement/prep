@@ -22,7 +22,7 @@ func (s *Store) write(rel, content string) error {
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(p), ".prep-tmp-*")
+	tmp, err := os.CreateTemp(filepath.Dir(p), tempPrefix+"*")
 	if err != nil {
 		return err
 	}
@@ -80,14 +80,41 @@ func (s *Store) cas(rel string) error {
 }
 
 // Apply renders a change into files and writes them. It returns the
-// repository-relative paths it touched.
+// repository-relative paths it touched. Every file is rendered and checked
+// against what was loaded before the first one is written, so a conflict
+// leaves the change unwritten rather than half applied.
 func (s *Store) Apply(c *domain.Change) ([]string, error) {
+	touched, contents, err := s.render(c)
+	if err != nil {
+		return nil, err
+	}
+	for _, rel := range touched {
+		if err := s.cas(rel); err != nil {
+			return nil, err
+		}
+	}
+	for k, rel := range touched {
+		var err error
+		if contents[k] == nil {
+			err = s.remove(rel)
+		} else {
+			err = s.write(rel, *contents[k])
+		}
+		if err != nil {
+			return touched[:k+1], err
+		}
+	}
+	return touched, nil
+}
+
+// render turns a change into the files it writes, in order, with their
+// contents; nil content removes the file.
+func (s *Store) render(c *domain.Change) (touched []string, contents []*string, err error) {
 	dir := IssueDir(c.IssueID)
-	var touched []string
 	w := func(name, content string) error {
-		rel := dir + "/" + name
-		touched = append(touched, rel)
-		return s.write(rel, content)
+		touched = append(touched, dir+"/"+name)
+		contents = append(contents, &content)
+		return nil
 	}
 	if c.Config != nil {
 		// The first save creates the user's own config from the dist
@@ -98,73 +125,69 @@ func (s *Store) Apply(c *domain.Change) ([]string, error) {
 			current, _, err = s.read(Dir + "/" + ConfigDist)
 		}
 		if err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 		out, err := renderConfig(current, *c.Config)
 		if err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 		touched = append(touched, rel)
-		if err := s.write(rel, out); err != nil {
-			return touched, err
-		}
+		contents = append(contents, &out)
 	}
 	if c.NewIssue != nil {
 		if _, err := os.Stat(s.abs(dir)); err == nil {
-			return nil, &domain.Error{Code: domain.ErrConflict, Message: fmt.Sprintf("issue directory %s already exists", dir)}
+			return nil, nil, &domain.Error{Code: domain.ErrConflict, Message: fmt.Sprintf("issue directory %s already exists", dir)}
 		}
 		i := *c.NewIssue
 		i.Body = requirementBody(i.Prose)
 		if err := w("issue.md", renderIssue(&i)); err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 		for _, n := range schemaFiles {
 			if err := w(n, ""); err != nil {
-				return touched, err
+				return nil, nil, err
 			}
 		}
 	}
 	if e := c.Edit; e != nil {
 		rel := dir + "/issue.md"
 		if err := s.cas(rel); err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 		raw, _, err := s.read(rel)
 		if err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 		var i domain.Issue
 		if err := parseIssue(raw, &i); err != nil {
-			return touched, fmt.Errorf("%s: %w", rel, err)
+			return nil, nil, fmt.Errorf("%s: %w", rel, err)
 		}
 		i.Title, i.Kind, i.Parent, i.DependsOn, i.Tags, i.Priority = e.Title, e.Kind, e.Parent, e.DependsOn, e.Tags, e.Priority
 		if e.Body != nil {
 			i.Body = requirementBody(*e.Body)
 		}
 		if err := w("issue.md", renderIssue(&i)); err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 	}
 	if c.Baseline != nil {
 		if err := w("baselines/"+c.Baseline.Name+".md", renderBaseline(c.Baseline)); err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 	}
 	if c.Ready != nil {
 		if err := w("ready.md", renderReady(c.Ready)); err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 	}
 	if c.Claim != nil {
 		if err := w("claim.md", renderClaim(c.Claim)); err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 	}
 	if c.RemoveClaim {
 		touched = append(touched, dir+"/claim.md")
-		if err := s.remove(dir + "/claim.md"); err != nil {
-			return touched, err
-		}
+		contents = append(contents, nil)
 	}
 	// current reads a record under compare-and-swap, so an edit never builds
 	// on content that changed since load.
@@ -178,47 +201,47 @@ func (s *Store) Apply(c *domain.Change) ([]string, error) {
 	}
 	if c.Context != nil {
 		if err := w("context.md", fileText(*c.Context)); err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 	}
 	if c.Findings != nil {
 		if err := w("findings.md", fileText(*c.Findings)); err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 	}
 	if c.Decision != nil {
 		raw, err := current("decisions.md")
 		if err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 		if err := w("decisions.md", fileText(normalize(raw)+"\n\n"+renderDecision(c.Decision))); err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 	}
 	if len(c.Acceptance) > 0 {
 		raw, err := current("acceptance.md")
 		if err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 		if err := w("acceptance.md", fileText(applyAcceptance(raw, c.Acceptance))); err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 	}
 	if c.History != "" {
 		raw, err := current("history.md")
 		if err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 		if err := w("history.md", fileText(normalize(raw)+"\n\n"+c.History)); err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 	}
 	if c.Resolution != nil {
 		if err := w("resolution.md", renderResolution(c.Resolution)); err != nil {
-			return touched, err
+			return nil, nil, err
 		}
 	}
-	return touched, nil
+	return touched, contents, nil
 }
 
 // Fmt rewrites every file in canonical format. With dryRun it only reports

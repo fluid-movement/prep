@@ -1,0 +1,4 @@
+- [x] Headings inside fenced code never end Open questions or start a decision; a ~~~ line does not close a ``` block
+- [x] Only --state values convert from in_progress
+- [x] Temp files from atomic writes are not reported as unknown files
+- [x] A conflict on any file of a change writes none of it

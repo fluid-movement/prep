@@ -304,3 +304,81 @@ func TestLocalDirMustBeIgnored(t *testing.T) {
 		t.Fatalf("after fix: %s", c)
 	}
 }
+
+func TestLegacyConfigConvertsOnlyStateValues(t *testing.T) {
+	in := "views:\n  Busy: --state ready,not-in_progress\n  Mine: --tag in_progress\n  Odd: --state=!in_progress --text in_progress_x\n"
+	want := "views:\n  Busy: --state ready,not-in-progress\n  Mine: --tag in_progress\n  Odd: --state=!in-progress --text in_progress_x\n"
+	got, changed := convertLegacyConfig(in)
+	if got != want || !changed {
+		t.Fatalf("converted =\n%s\nwant\n%s", got, want)
+	}
+	if _, changed := convertLegacyConfig(want); changed {
+		t.Fatal("a converted config converts again")
+	}
+}
+
+func TestLoadSkipsTempFiles(t *testing.T) {
+	root := t.TempDir()
+	s := Open(root)
+	if _, err := s.Init(); err != nil {
+		t.Fatal(err)
+	}
+	tree := domain.NewTree(domain.Project{}, nil, nil, nil)
+	c, err := tree.PlanNew(domain.NewIssueInput{Title: "A", Kind: domain.KindCode, Body: "A."}, time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Apply(c); err != nil {
+		t.Fatal(err)
+	}
+	for _, dir := range []string{Dir, IssueDir(c.IssueID)} {
+		if err := os.WriteFile(filepath.Join(root, dir, tempPrefix+"123"), []byte("half"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, issues, diags, err := Open(root).Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range diags {
+		if d.Severity == domain.SevError {
+			t.Fatalf("temp file reported: %+v", d)
+		}
+	}
+	if len(issues) != 1 || issues[0].HasFile(tempPrefix+"123") {
+		t.Fatalf("issues = %+v", issues)
+	}
+}
+
+func TestApplyWritesNothingOnConflict(t *testing.T) {
+	root := t.TempDir()
+	s := Open(root)
+	if _, err := s.Init(); err != nil {
+		t.Fatal(err)
+	}
+	tree := domain.NewTree(domain.Project{}, nil, nil, nil)
+	c, err := tree.PlanNew(domain.NewIssueInput{Title: "A", Kind: domain.KindCode, Body: "A."}, time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Apply(c); err != nil {
+		t.Fatal(err)
+	}
+	w := Open(root)
+	if _, _, _, err := w.Load(); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(root, IssueDir(c.IssueID))
+	if err := os.WriteFile(filepath.Join(dir, "history.md"), []byte("someone else\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ctx := "New context."
+	_, err = w.Apply(&domain.Change{IssueID: c.IssueID, Context: &ctx, History: "- line"})
+	var de *domain.Error
+	if !errors.As(err, &de) || de.Code != domain.ErrConflict {
+		t.Fatalf("expected conflict, got %v", err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "context.md")); strings.Contains(string(b), ctx) {
+		t.Fatal("context.md was written before the conflict on history.md")
+	}
+}

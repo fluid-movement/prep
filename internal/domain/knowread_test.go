@@ -72,3 +72,15 @@ func TestFindKnowledge(t *testing.T) {
 		t.Error("oneEdit")
 	}
 }
+
+func TestSectionsAndBlocksTrackFenceType(t *testing.T) {
+	body := "# Top\n\n````md\n```go\n## not a heading\n````\n\n## Real\n\ntext"
+	secs := Sections(body)
+	if len(secs) != 2 || secs[1].Heading != "Real" {
+		t.Fatalf("sections = %+v", secs)
+	}
+	bs := Blocks("```\n~~~\n\n## inside\n```\n\nafter")
+	if len(bs) != 2 || bs[1] != "after" {
+		t.Fatalf("blocks = %q", bs)
+	}
+}

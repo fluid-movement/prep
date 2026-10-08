@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/fluid-movement/prep/internal/domain"
 	"gopkg.in/yaml.v3"
 )
 
@@ -78,8 +79,6 @@ func withFrontmatter(fm, body string) string {
 	return b.String()
 }
 
-var fence = regexp.MustCompile("^\\s*(```|~~~)")
-
 // normalize is the canonical text form: LF line endings, no trailing
 // whitespace, single blank lines outside code fences, no leading or trailing
 // blank lines. It never ends with a newline; renderers add one.
@@ -87,16 +86,15 @@ func normalize(s string) string {
 	s = strings.ReplaceAll(s, "\r\n", "\n")
 	lines := strings.Split(s, "\n")
 	out := make([]string, 0, len(lines))
-	inFence := false
+	var fence domain.Fence
 	blank := false
 	for _, l := range lines {
-		if fence.MatchString(l) {
-			inFence = !inFence
-		}
-		if !inFence {
+		in, delim := fence.Line(l)
+		code := in && !delim
+		if !code {
 			l = strings.TrimRight(l, " \t")
 		}
-		if l == "" && !inFence {
+		if l == "" && !code {
 			if blank {
 				continue
 			}

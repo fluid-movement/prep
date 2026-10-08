@@ -29,14 +29,9 @@ func Sections(body string) []Section {
 	lines := strings.Split(body, "\n")
 	type head struct{ line, level int }
 	var heads []head
-	fence := false
+	var fence Fence
 	for k, l := range lines {
-		t := strings.TrimSpace(l)
-		if strings.HasPrefix(t, "```") || strings.HasPrefix(t, "~~~") {
-			fence = !fence
-			continue
-		}
-		if fence {
+		if in, _ := fence.Line(l); in {
 			continue
 		}
 		if n := headingLevel(l); n > 0 {
@@ -197,16 +192,11 @@ func Blocks(text string) []string {
 		}
 		cur = nil
 	}
-	fence := false
+	var fence Fence
 	for _, l := range strings.Split(text, "\n") {
 		t := strings.TrimSpace(l)
-		if strings.HasPrefix(t, "```") || strings.HasPrefix(t, "~~~") {
-			fence = !fence
-			cur = append(cur, l)
-			continue
-		}
-		switch {
-		case fence:
+		switch in, _ := fence.Line(l); {
+		case in:
 			cur = append(cur, l)
 		case t == "":
 			flush()

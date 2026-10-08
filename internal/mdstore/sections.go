@@ -2,6 +2,8 @@ package mdstore
 
 import (
 	"strings"
+
+	"github.com/fluid-movement/prep/internal/domain"
 )
 
 // section is one "## " section of a record file: the heading line and the
@@ -22,17 +24,9 @@ func (s section) empty() bool {
 // code blocks are never headings.
 func splitSections(text string) []section {
 	secs := []section{{lines: []string{""}}}
-	fence := ""
+	var fence domain.Fence
 	for l := range strings.SplitSeq(text, "\n") {
-		t := strings.TrimSpace(l)
-		switch {
-		case fence != "":
-			if strings.HasPrefix(t, fence) {
-				fence = ""
-			}
-		case strings.HasPrefix(t, "```") || strings.HasPrefix(t, "~~~"):
-			fence = t[:3]
-		case strings.HasPrefix(l, "## "):
+		if in, _ := fence.Line(l); !in && strings.HasPrefix(l, "## ") {
 			secs = append(secs, section{heading: l, key: strings.ToLower(strings.TrimSpace(l[3:])), lines: []string{l}})
 			continue
 		}

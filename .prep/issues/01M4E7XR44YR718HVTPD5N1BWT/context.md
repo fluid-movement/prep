@@ -1,0 +1,5 @@
+- Fence tracking moves into `domain.Fence` (`internal/domain/fence.go`), used by `normalize` (`internal/mdstore/text.go`), `splitSections`, `splitOpenQuestions`/`hasOpenQuestions`, `parseDecisions`/`canonicalDecisions` (`internal/mdstore/records.go`) and `Sections`/`Blocks` (`internal/domain/knowread.go`).
+- `convertLegacyConfig` (`internal/mdstore/store.go`) rewrites `in_progress` only inside `--state` values.
+- `tempPrefix` names the temp files of `write`; `Load` and `loadIssue` skip them.
+- `Apply` splits into `render` (paths and contents) and a write loop after checking every path.
+- Knowledge: [Markdown store](/components/markdown-store.md), [Storage format](/conventions/storage-format.md).
