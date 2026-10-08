@@ -117,11 +117,20 @@ func TestFoci(t *testing.T) {
 		{At: t0.Add(6 * time.Minute), Actor: "c", Kind: KindFocus, Issue: "I5"},
 	}
 	f := Foci(events)
-	if len(f) != 2 || f["a"].Issue != "I3" || f["c"].Issue != "I5" {
+	if len(f) != 2 || f["actor:a"].Issue != "I3" || f["actor:c"].Issue != "I5" {
 		t.Fatalf("foci: %+v", f)
 	}
-	if a := Actors(events); strings.Join(a, ",") != "c,a,b" {
-		t.Fatalf("actors: %v", a)
+	if a := Agents(events); strings.Join(a, ",") != "actor:c,actor:a,actor:b" {
+		t.Fatalf("agents: %v", a)
+	}
+	// A session joins the agent's prep commands and its harness's events,
+	// whatever actor names they carry.
+	s1 := []Event{
+		{At: t0, Actor: "claude-code/opus", Session: "s1", Kind: KindPrep, Op: "guide", Issue: "I1"},
+		{At: t0.Add(time.Minute), Actor: "claude-code/2.1", Session: "s1", Kind: KindTool, Op: "Edit"},
+	}
+	if a := Agents(s1); len(a) != 1 || a[0] != "session:s1" || Foci(s1)["session:s1"].Issue != "I1" {
+		t.Fatalf("session agent: %v %+v", a, Foci(s1))
 	}
 }
 

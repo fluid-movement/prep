@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/term"
 
+	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/mdstore"
 	"github.com/fluid-movement/prep/internal/okf"
@@ -21,6 +22,7 @@ import (
 func cmdTUI(a *app, args []string) error {
 	fs := flag.NewFlagSet("tui", flag.ContinueOnError)
 	gallery := fs.Bool("gallery", false, "show the design system's components")
+	agent := fs.Bool("agent", false, "open on the Agent screen: what the agent is doing, live")
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
@@ -79,6 +81,9 @@ func cmdTUI(a *app, args []string) error {
 		Write:     write,
 		Load:      func() (*domain.Tree, error) { return load(false) },
 		Watch:     filepath.Join(root, mdstore.Dir),
+		// The last 2,000 events at most: the stream prunes itself near that.
+		Activity:   func() ([]activity.Event, error) { return activity.Read(filepath.Join(root, mdstore.Dir), 2000) },
+		StartAgent: *agent,
 		Check: func() ([]domain.Diagnostic, error) {
 			t, err := load(true)
 			if err != nil {

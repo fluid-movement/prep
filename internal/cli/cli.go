@@ -61,6 +61,7 @@ type app struct {
 	// succeeds; eventReads adds the size of its output.
 	event      *activity.Event
 	eventReads bool
+	named      bool // the actor came from --by or PREP_ACTOR, not the default
 }
 
 type command struct {
@@ -107,7 +108,7 @@ func init() {
 		{"fmt", true, "fmt [--check]              rewrite files in canonical format (--check: report only, exit 1 on changes)", cmdFmt},
 		{"fix", true, "fix                        safe auto-fixes from check", cmdFix},
 		{"migrate", true, "migrate                    migrate .prep to this binary's schema", cmdMigrate},
-		{"tui", false, "tui [--gallery]            terminal UI next to the harness (--gallery: every component; t/T switch themes)", cmdTUI},
+		{"tui", false, "tui [--agent|--gallery]    terminal UI next to the harness (--agent: open on what the agent is doing; --gallery: every component, t/T switch themes)", cmdTUI},
 		{"theme", true, "theme list | new <name> [--from <theme>]  TUI themes: list them, or start a custom one with every token in .prep/config.yaml", cmdTheme},
 		{"setup", true, "setup [--harness h,...|--remove h|--refresh]  install harness integrations (skill, hooks, commands)", cmdSetup},
 		{"update", true, "update [--check]           replace this binary with the latest release (verifies its checksum)", cmdUpdate},
@@ -139,7 +140,8 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	name := rest[0]
 	for _, c := range commands {
 		if c.name == name {
-			if a.actor == "" {
+			a.named = a.actor != ""
+			if !a.named {
 				a.actor = "cli/prep-" + Version
 			}
 			if err := c.run(a, rest[1:]); err != nil {

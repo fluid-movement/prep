@@ -250,15 +250,28 @@ func Parse(r io.Reader, max int) ([]Event, error) {
 	return out, sc.Err()
 }
 
-// Focus is an actor's current issue and when it was set.
-type Focus struct {
-	Actor string    `json:"actor"`
-	Issue string    `json:"issue"`
-	At    time.Time `json:"at"`
+// Agent names who an event belongs to: its harness session when it has
+// one (PREP_SESSION, set by the harness for the agent's shell and sent by
+// its bridge, so both sides meet whatever actor name the agent passes),
+// else its actor.
+func (e Event) Agent() string {
+	if e.Session != "" {
+		return "session:" + e.Session
+	}
+	return "actor:" + e.Actor
 }
 
-// Foci returns each actor's current issue from events (oldest first);
-// actors whose latest focus event cleared it are left out.
+// Focus is an agent's current issue and when it was set.
+type Focus struct {
+	Agent   string    `json:"agent"`
+	Actor   string    `json:"actor"`
+	Session string    `json:"session,omitempty"`
+	Issue   string    `json:"issue"`
+	At      time.Time `json:"at"`
+}
+
+// Foci returns each agent's current issue from events (oldest first);
+// agents whose latest focus event cleared it are left out.
 func Foci(events []Event) map[string]Focus {
 	out := map[string]Focus{}
 	for _, e := range events {
@@ -266,20 +279,20 @@ func Foci(events []Event) map[string]Focus {
 			continue
 		}
 		if e.Issue == "" {
-			delete(out, e.Actor)
+			delete(out, e.Agent())
 			continue
 		}
-		out[e.Actor] = Focus{Actor: e.Actor, Issue: e.Issue, At: e.At}
+		out[e.Agent()] = Focus{Agent: e.Agent(), Actor: e.Actor, Session: e.Session, Issue: e.Issue, At: e.At}
 	}
 	return out
 }
 
-// Actors lists the actors in events, the most recently active first.
-func Actors(events []Event) []string {
+// Agents lists the agents in events, the most recently active first.
+func Agents(events []Event) []string {
 	seen := map[string]bool{}
 	var out []string
 	for k := len(events) - 1; k >= 0; k-- {
-		if a := events[k].Actor; !seen[a] {
+		if a := events[k].Agent(); !seen[a] {
 			seen[a] = true
 			out = append(out, a)
 		}

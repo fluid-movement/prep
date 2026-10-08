@@ -210,6 +210,10 @@ func (m *Model) wheel(msg tea.MouseWheelMsg) tea.Cmd {
 		}
 	case "entry":
 		m.know.vp, cmd = m.know.vp.Update(msg)
+	case "feed":
+		if step != 0 {
+			m.agentS.offset = max(0, m.agentS.offset+step)
+		}
 	case "page":
 		m.page, cmd = m.page.Update(msg)
 	}

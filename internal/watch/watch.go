@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,10 +15,23 @@ import (
 // asks for a reload; a transition writes several files at once.
 const debounce = 150 * time.Millisecond
 
+// Change says what changed since the last report: the project (issues,
+// knowledge, config) or the per-machine state under the local directory
+// (the activity stream), or both.
+type Change struct {
+	Tree  bool
+	Local bool
+}
+
+// Local is the directory under the watched one that holds per-machine
+// state; changes in it are reported as Local.
+const Local = "local"
+
 // Dir reports changes anywhere under dir on the returned channel, at most
-// one pending signal at a time. fsnotify is not recursive, so every
-// directory is watched and new ones are added as they appear.
-func Dir(dir string) (<-chan struct{}, func(), error) {
+// one pending report at a time, merging what changed until it is read.
+// fsnotify is not recursive, so every directory is watched and new ones
+// are added as they appear.
+func Dir(dir string) (<-chan Change, func(), error) {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, nil, err
@@ -32,14 +46,24 @@ func Dir(dir string) (<-chan struct{}, func(), error) {
 	}
 	addTree(dir)
 
-	out := make(chan struct{}, 1)
+	out := make(chan Change, 1)
+	local := filepath.Join(dir, Local)
 	var mu sync.Mutex
 	var timer *time.Timer
+	var pending Change
+	// Only this goroutine sends, so a queued report can be taken back and
+	// merged with the new one.
 	signal := func() {
+		mu.Lock()
+		c := pending
+		pending = Change{}
+		mu.Unlock()
 		select {
-		case out <- struct{}{}:
+		case old := <-out:
+			c.Tree, c.Local = c.Tree || old.Tree, c.Local || old.Local
 		default:
 		}
+		out <- c
 	}
 	go func() {
 		for {
@@ -54,6 +78,11 @@ func Dir(dir string) (<-chan struct{}, func(), error) {
 					}
 				}
 				mu.Lock()
+				if ev.Name == local || strings.HasPrefix(ev.Name, local+string(filepath.Separator)) {
+					pending.Local = true
+				} else {
+					pending.Tree = true
+				}
 				if timer == nil {
 					timer = time.AfterFunc(debounce, signal)
 				} else {

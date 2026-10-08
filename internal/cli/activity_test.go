@@ -38,6 +38,7 @@ func TestActivityRecordsCommands(t *testing.T) {
 	other := h.newIssue("--title", "Other", "--kind", "code", "--by", "agent/2")
 	h.ok("show", id, "--by", "agent/2") // a read: agent/2 stays on Other
 	h.fails("no issue matches", "guide", "NOPE", "--by", "agent/1")
+	h.ok("show", id) // an unnamed read (a panel, a person) is not recorded
 
 	got := h.activity()
 	var verbs []string
@@ -60,6 +61,11 @@ func TestActivityRecordsCommands(t *testing.T) {
 			if e.Chars != 0 || e.Issue != id || e.Target != "Export" || e.Area != activity.AreaIssue {
 				t.Fatalf("criterion event: %+v", e)
 			}
+		}
+	}
+	for _, e := range got.Events {
+		if e.Chars > 0 && e.Actor != "agent/1" && e.Actor != "agent/2" {
+			t.Fatalf("unnamed read recorded: %+v", e)
 		}
 	}
 	if len(got.Focus) != 2 || got.Focus[0].Actor != "agent/2" || got.Focus[0].Issue != other || got.Focus[1].Issue != id {

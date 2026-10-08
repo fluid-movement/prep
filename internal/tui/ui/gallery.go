@@ -135,6 +135,25 @@ func Gallery(t *theme.Theme, width int) string {
 		b.WriteString(a)
 	}
 
+	section("Activity")
+	aw := min(width, 72)
+	b.WriteString(Chapter(t, "5ZTDH", "Activity stream, prep focus and prep activity", domain.StateInProgress, aw) + "\n")
+	for _, a := range []Activity{
+		{Area: "issue", Ago: "now", Verb: "checked criterion 3", Target: "Activity stream", Fresh: true},
+		{Area: "knowledge", Ago: "12s", Verb: "searched knowledge", Target: "watch debounce"},
+		{Area: "code", Ago: "1m", Verb: "edited", Target: "internal/watch/watch.go"},
+		{Area: "code", Ago: "2m", Verb: "ran", Target: "go test ./...", Failed: true},
+		{Area: "prep", Ago: "4m", Verb: "read the briefing"},
+	} {
+		b.WriteString(ActivityLine(t, a, aw) + "\n")
+	}
+	b.WriteString(Celebrate(t, "done in 23 commands", aw) + "\n")
+	b.WriteString(Meter(t, "context", 41_200, 200_000, aw) + "\n")
+	b.WriteString(Meter(t, "context", 131_000, 200_000, aw) + "\n")
+	b.WriteString(Meter(t, "context", 182_500, 200_000, aw) + "\n")
+	b.WriteString(BarRow(t, "knowledge", 2400, 9100, "2.4k", aw) + "\n")
+	b.WriteString(BarRow(t, "code", 9100, 9100, "9.1k", aw))
+
 	section("Key help")
 	b.WriteString(KeyHelp(t, []Key{{"tab", "next view"}, {"↑/↓", "move"}, {"enter", "focus detail"}, {"y", "copy id"}, {"q", "quit"}}, width))
 

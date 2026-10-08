@@ -44,14 +44,16 @@ func (a *app) prepDir() string {
 }
 
 // recordEvent appends the noted event. Activity is UI state: a failure to
-// record never fails the command.
+// record never fails the command. Reads are recorded only for a named
+// actor (--by or PREP_ACTOR), as agents run them: panels, hooks and people
+// reading without a name would bury what the agent does.
 func (a *app) recordEvent(printed int) {
 	dir := a.prepDir()
-	if a.event == nil || dir == "" {
+	if a.event == nil || dir == "" || a.eventReads && !a.named {
 		return
 	}
 	e := *a.event
-	e.At, e.Actor = a.now().UTC(), a.actor
+	e.At, e.Actor, e.Session = a.now().UTC(), a.actor, os.Getenv("PREP_SESSION")
 	if a.eventReads {
 		e.Chars = printed
 	}
@@ -288,6 +290,9 @@ func activityAdd(a *app, args []string) error {
 		}
 		if e.Actor == "" {
 			e.Actor = a.actor
+		}
+		if e.Session == "" {
+			e.Session = os.Getenv("PREP_SESSION")
 		}
 		if err := activity.Append(dir, e); err != nil {
 			return err

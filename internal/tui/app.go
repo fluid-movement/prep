@@ -15,6 +15,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/colorprofile"
 
+	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/palette"
 	"github.com/fluid-movement/prep/internal/tui/theme"
@@ -42,6 +43,13 @@ type Options struct {
 	// SaveMouse records the user's mouse capture choice; nil keeps a
 	// toggle for this session only.
 	SaveMouse func(on bool) error
+	// Activity reads the local activity stream for the Agent screen; nil
+	// leaves the screen empty.
+	Activity func() ([]activity.Event, error)
+	// StartAgent opens on the Agent screen (prep tui --agent).
+	StartAgent bool
+	// Now is the clock for relative times; nil is time.Now.
+	Now func() time.Time
 }
 
 // Run starts the issue views.
@@ -78,6 +86,7 @@ const (
 	screenCheck
 	screenSettings
 	screenKnowledge
+	screenAgent
 )
 
 type focus int
@@ -128,7 +137,7 @@ type Model struct {
 	gen      int      // increases on every successful load
 	back     []string // previously shown issues, for backspace
 	notice   string
-	changes  <-chan struct{}
+	changes  <-chan watch.Change
 
 	filters   map[string]string // per tab name: the applied filter text
 	filtering bool              // the filter bar has the keyboard
@@ -147,6 +156,8 @@ type Model struct {
 
 	modal         *modal
 	know          knowState
+	agentS        agentState
+	clock         func() time.Time
 	confirm       string            // a pending second key press: delete|view in settings
 	moving        bool              // settings: the selected view moves with j/k
 	setIdx        int               // selected settings row: the theme, the views, then the mouse
@@ -174,7 +185,13 @@ func NewModel(th *theme.Theme, opts Options) *Model {
 	in.SetStyles(inputStyles(th))
 	m := &Model{th: th, opts: opts, treeMode: true, scope: map[string][]string{}, cursor: map[string]int{}, offset: map[string]int{},
 		vp: newViewport(), page: newViewport(), know: knowState{vp: newViewport()}, filters: map[string]string{}, input: in,
-		pending: map[string]string{}, mouse: !opts.NoMouse, runEditor: execEditor, after: tea.Tick}
+		pending: map[string]string{}, mouse: !opts.NoMouse, runEditor: execEditor, after: tea.Tick, clock: opts.Now}
+	if m.clock == nil {
+		m.clock = time.Now
+	}
+	if opts.StartAgent {
+		m.screen = screenAgent
+	}
 	m.apply(opts.Load())
 	return m
 }
@@ -191,14 +208,20 @@ type loadedMsg struct {
 	tree *domain.Tree
 	err  error
 }
-type changedMsg struct{}
+type changedMsg struct{ watch.Change }
 type clearNoticeMsg struct{ notice string }
 type checkedMsg struct {
 	diags []domain.Diagnostic
 	err   error
 }
 
-func (m *Model) Init() tea.Cmd { return tea.Batch(tea.RequestBackgroundColor, m.waitForChange()) }
+func (m *Model) Init() tea.Cmd {
+	cmds := []tea.Cmd{tea.RequestBackgroundColor, m.waitForChange(), m.loadActivity()}
+	if m.screen == screenAgent {
+		cmds = append(cmds, m.startAgentTick())
+	}
+	return tea.Batch(cmds...)
+}
 
 // retheme follows the terminal's reported background (it picks the theme
 // only when none is configured) and color profile.
@@ -243,10 +266,11 @@ func (m *Model) waitForChange() tea.Cmd {
 	}
 	ch := m.changes
 	return func() tea.Msg {
-		if _, ok := <-ch; !ok {
+		c, ok := <-ch
+		if !ok {
 			return nil
 		}
-		return changedMsg{}
+		return changedMsg{c}
 	}
 }
 
@@ -463,7 +487,22 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.w, m.h = msg.Width, msg.Height
 		return m, nil
 	case changedMsg:
-		return m, tea.Batch(m.reload(), m.waitForChange())
+		// The activity stream changes with every agent command; it never
+		// reloads the issues.
+		cmds := []tea.Cmd{m.waitForChange()}
+		if msg.Tree {
+			cmds = append(cmds, m.reload())
+		}
+		if msg.Local {
+			cmds = append(cmds, m.loadActivity())
+		}
+		return m, tea.Batch(cmds...)
+	case activityMsg:
+		return m, m.applyActivity(msg)
+	case agentTickMsg:
+		return m, m.agentTicked()
+	case agentFadeMsg:
+		return m, nil
 	case loadedMsg:
 		m.apply(msg.tree, msg.err)
 		if (m.screen == screenCheck || m.screen == screenKnowledge) && msg.err == nil {
@@ -565,6 +604,15 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 			return nil
 		}
 		return m.openKnowledge("")
+	case "w":
+		if m.tree == nil {
+			return nil
+		}
+		if m.screen == screenAgent {
+			m.screen = screenIssues
+			return nil
+		}
+		return m.openAgent()
 	case "c", "s":
 		target := screenCheck
 		if s == "s" {
@@ -591,6 +639,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		}
 		if m.screen == screenKnowledge && m.tree != nil {
 			return m.knowledgeKey(s, k)
+		}
+		if m.screen == screenAgent && m.tree != nil {
+			return m.agentKey(s)
 		}
 		var cmd tea.Cmd
 		m.page, cmd = m.page.Update(k)
@@ -1013,6 +1064,9 @@ func (m *Model) render() string {
 	case m.screen == screenKnowledge:
 		m.at = point{0, headerLines}
 		body = m.knowledgePane(m.w, bodyH)
+	case m.screen == screenAgent:
+		m.at = point{0, headerLines}
+		body = m.agentPane(m.w, bodyH)
 	default:
 		m.at = point{0, headerLines}
 		listW, detailW := ui.Split(m.w, listRatio, minListW, minDetailW)
@@ -1110,6 +1164,7 @@ var (
 		bind("Screens", "c", "check", false),
 		bind("Screens", "s", "settings", false),
 		bind("Screens", "b", "knowledge", true),
+		bind("Screens", "w", "agent (what it is doing, live)", true),
 		bind("Screens", "r", "reload", false),
 		bind("Screens", "?", "all keys", true),
 		bind("Screens", "q", "quit", true),
@@ -1189,6 +1244,8 @@ func (m *Model) bindings() []binding {
 	switch {
 	case m.screen == screenKnowledge && m.tree != nil:
 		return knowledgeBindings
+	case m.screen == screenAgent && m.tree != nil:
+		return agentBindings
 	case m.screen == screenSettings && m.tree != nil:
 		return settingsBindings
 	case m.screen != screenIssues:

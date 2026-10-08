@@ -45,7 +45,10 @@ func cmdWatch(a *app, args []string) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-changes:
+		case c := <-changes:
+			if !c.Tree {
+				continue // the activity stream is not the project
+			}
 			// A closed reader (the harness went away) ends the stream.
 			if _, err := fmt.Fprint(a.out, line); err != nil {
 				return nil
