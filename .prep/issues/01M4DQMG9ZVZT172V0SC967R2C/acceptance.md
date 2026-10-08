@@ -1,0 +1,9 @@
+- [ ] On a terminal at or above the width threshold the pane is a right-anchored overlay that never takes keyboard focus; below it a strip of at most three lines sits above the editor
+- [ ] /prep toggles the pane; on a narrow terminal it opens the full pane as a focused overlay that Esc closes; the command never reaches the model
+- [ ] The pane follows successful prep writes, prep guide, prep new and edits under .prep/issues/<id>/, including nested calls, and ignores reads and failures
+- [ ] Without a followed issue it shows the first claim, else the project overview
+- [ ] The Live view shows the same sections as the Claude Code panel's Live view, every line within the width
+- [ ] prep watch starts at session start, stops at shutdown, and each change refreshes the pane; overlapping refreshes keep only the newest
+- [ ] The open, closed or remember preference works per project
+- [ ] Print and JSON modes run unaffected, and a failing pane never changes a tool result
+- [ ] Live: opened, resized across the threshold, followed guide and writes, ignored reads, updated through prep watch

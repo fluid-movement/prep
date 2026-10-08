@@ -1,0 +1,4 @@
+- [ ] /prep project opens the pane on the Project view, and the view header shows which view is on and switches on click in fullscreen mode
+- [ ] The Project view shows counts, check, bootstrap alert, in progress and stale issues and the open-work tree with state, parent progress and marks, as in Claude Code
+- [ ] Project data loads only while the view shows
+- [ ] Live: switched views by command and click, scrolled a long tree

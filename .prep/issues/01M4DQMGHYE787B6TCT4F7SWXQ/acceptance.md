@@ -1,0 +1,5 @@
+- [ ] prep setup lists Pi when pi is on the PATH and installs, refreshes and removes the prep package at user scope
+- [ ] Development builds install from the checkout through PREP_PLUGIN_SOURCE; just install refreshes Pi too
+- [ ] just release sets the package version and the release workflow rejects a tag that differs
+- [ ] Other Pi packages and settings stay untouched; tests use a fake pi
+- [ ] Live: install, refresh to another ref and remove with the real pi in an isolated agent directory

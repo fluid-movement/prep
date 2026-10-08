@@ -1,0 +1,6 @@
+- [ ] In a prep project, the first model request of a Pi session carries the prime briefing as the system prompt section prep
+- [ ] The section text is unchanged across turns and recomputed at session start and after compaction
+- [ ] No section and no error without the binary or outside a prep project; a slow prime is cut off by a timeout
+- [ ] prep prime --plugin reads the version from the Pi package and warns about older or newer packages as for the Claude Code plugin; development versions are not compared
+- [ ] Works in print mode (pi -p) as well as interactive
+- [ ] Live: a new Pi session in this repository answers what prep's briefing said without running prep

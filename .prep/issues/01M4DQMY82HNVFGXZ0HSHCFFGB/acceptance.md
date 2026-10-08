@@ -1,0 +1,5 @@
+- [ ] The Usage view shows context fill, cost, request tokens (input, cache read and write, output), tool output per area and the largest knowledge reads
+- [ ] Areas come from the shared classify module, so they match token-ledger for the same calls
+- [ ] A resumed session rebuilds the numbers from its branch
+- [ ] No second package and no files are needed
+- [ ] Live: numbers move as the agent reads knowledge and code

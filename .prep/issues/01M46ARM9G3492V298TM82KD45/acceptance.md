@@ -1,0 +1,3 @@
+- [ ] Every child is resolved
+- [ ] A knowledge entry /components/pi.md describes the Pi integration with a parity table against Claude Code
+- [ ] Live: a Pi session in this repository gets the briefing and skill, and the pane follows the agent through a whole issue

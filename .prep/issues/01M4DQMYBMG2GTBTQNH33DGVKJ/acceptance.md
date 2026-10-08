@@ -1,0 +1,4 @@
+- [ ] The Pi pane paints with prep theme colors from prep theme colors --json, following the configured theme or a pane-specific theme
+- [ ] An option keeps Pi's own theme colors
+- [ ] A theme switch in prep tui recolors the pane without restarting Pi
+- [ ] When the command fails the pane falls back to Pi theme tokens
