@@ -37,8 +37,11 @@ fi
 
 version="${PREP_VERSION:-}"
 if [ -z "$version" ]; then
-  version=$(resolve "$base/latest" | sed 's|.*/tag/||' | tr -d '\r')
-  [ -n "$version" ] || fail "could not find the latest release"
+  latest=$(resolve "$base/latest" | tr -d '\r')
+  case "$latest" in
+    */tag/*) version=${latest##*/tag/} ;;
+    *) fail "could not find the latest release (no published release at $base)" ;;
+  esac
 fi
 case "$version" in v*) ;; *) version="v$version" ;; esac
 

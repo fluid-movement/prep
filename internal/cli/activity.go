@@ -261,7 +261,9 @@ func activityAdd(a *app, args []string) error {
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
-	if _, err := a.load(false); err != nil {
+	// Harnesses call this after every tool call: find the project, never
+	// load the tree.
+	if err := a.open(); err != nil {
 		return err
 	}
 	dir := a.prepDir()

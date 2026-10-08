@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
@@ -154,15 +155,27 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	return a.fail(usageErr("unknown command %q; run prep help", name))
 }
 
-// globalFlags strips --json, --root and --by from anywhere in args.
+// globalFlags strips --json, --root and --by from anywhere in args before
+// a "--"; from "--" on, args pass through as written (so "--" lets a text
+// argument be "--json"), and the command's own flag parsing stops there.
 func (a *app) globalFlags(args []string) ([]string, error) {
 	var rest []string
 	for k := 0; k < len(args); k++ {
 		arg := args[k]
+		if arg == "--" {
+			return append(rest, args[k:]...), nil
+		}
 		name, val, has := strings.Cut(arg, "=")
 		switch name {
 		case "--json", "-json":
 			a.json = true
+			if has {
+				on, err := strconv.ParseBool(val)
+				if err != nil {
+					return nil, usageErr("%s takes true or false, not %q", name, val)
+				}
+				a.json = on
+			}
 		case "--root", "--by":
 			if !has {
 				if k+1 >= len(args) {
@@ -265,15 +278,20 @@ func parse(fs *flag.FlagSet, args []string) ([]string, error) {
 	fs.SetOutput(io.Discard)
 	var pos []string
 	for {
+		// flag.Parse drops a leading "--" without saying so; everything
+		// after it is positional.
+		if len(args) > 0 && args[0] == "--" {
+			return append(pos, args[1:]...), nil
+		}
 		if err := fs.Parse(args); err != nil {
 			return nil, usageErr("%s: %v", fs.Name(), err)
+		}
+		if n := len(fs.Args()); n < len(args) && args[len(args)-n-1] == "--" {
+			return append(pos, fs.Args()...), nil
 		}
 		args = fs.Args()
 		if len(args) == 0 {
 			return pos, nil
-		}
-		if args[0] == "--" {
-			return append(pos, args[1:]...), nil
 		}
 		pos = append(pos, args[0])
 		args = args[1:]

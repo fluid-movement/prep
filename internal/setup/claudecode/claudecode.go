@@ -110,9 +110,11 @@ func (h *Harness) Install(version string) ([]string, error) {
 		return nil, err
 	}
 	var warnings, others []string
-	if present, err := h.hasMarketplace(); err != nil {
+	present, prev, err := h.marketplaceSource()
+	if err != nil {
 		return nil, err
-	} else if present {
+	}
+	if present {
 		plugins, err := h.plugins()
 		if err != nil {
 			return nil, err
@@ -132,6 +134,9 @@ func (h *Harness) Install(version string) ([]string, error) {
 		}
 	}
 	if _, err := h.run("plugin", "marketplace", "add", src); err != nil {
+		if present {
+			return nil, h.restore(prev, others, err)
+		}
 		return nil, err
 	}
 	out, err := h.run("plugin", "install", pluginID, "--scope", "user", "--json")
@@ -151,6 +156,32 @@ func (h *Harness) Install(version string) ([]string, error) {
 		}
 	}
 	return warnings, nil
+}
+
+// restore adds the marketplace back from its previous source after adding
+// the new one failed, with the plugin and the other user-scope plugins
+// removing it uninstalled, and returns the failure saying how that went.
+func (h *Harness) restore(prev string, others []string, failed error) error {
+	if prev == "" {
+		return fmt.Errorf("%v; the prep marketplace was removed and its previous source is unknown: run prep setup again", failed)
+	}
+	if _, err := h.run("plugin", "marketplace", "add", prev); err != nil {
+		return fmt.Errorf("%v; adding the previous marketplace %s back failed too: %v", failed, prev, err)
+	}
+	var lost []string
+	for _, id := range append([]string{pluginID}, others...) {
+		out, err := h.run("plugin", "install", id, "--scope", "user", "--json")
+		if err == nil {
+			err = checkResult(out)
+		}
+		if err != nil {
+			lost = append(lost, id)
+		}
+	}
+	if len(lost) > 0 {
+		return fmt.Errorf("%v; restored the marketplace from %s, but not %s", failed, prev, strings.Join(lost, ", "))
+	}
+	return fmt.Errorf("%v; kept the previous marketplace %s", failed, prev)
 }
 
 // Remove uninstalls the plugin and removes the marketplace.
@@ -176,22 +207,48 @@ func (h *Harness) Remove() error {
 }
 
 func (h *Harness) hasMarketplace() (bool, error) {
+	present, _, err := h.marketplaceSource()
+	return present, err
+}
+
+// marketplaceSource reports whether the prep marketplace is added and the
+// source marketplace add would take to add it again ("" when the listing
+// does not say).
+func (h *Harness) marketplaceSource() (bool, string, error) {
 	out, err := h.run("plugin", "marketplace", "list", "--json")
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	var ms []struct {
-		Name string `json:"name"`
+		Name   string `json:"name"`
+		Source string `json:"source"`
+		Repo   string `json:"repo"`
+		Ref    string `json:"ref"`
+		URL    string `json:"url"`
+		Path   string `json:"path"`
 	}
 	if err := json.Unmarshal([]byte(jsonPart(out)), &ms); err != nil {
-		return false, fmt.Errorf("reading claude plugin marketplace list: %v", err)
+		return false, "", fmt.Errorf("reading claude plugin marketplace list: %v", err)
 	}
 	for _, m := range ms {
-		if m.Name == marketplace {
-			return true, nil
+		if m.Name != marketplace {
+			continue
 		}
+		src := ""
+		switch m.Source {
+		case "directory":
+			src = m.Path
+		case "github":
+			src = m.Repo
+		case "git", "url":
+			src = m.URL
+		}
+		if src != "" && m.Ref != "" {
+			src += "#" + m.Ref
+		}
+		return true, src, nil
 	}
-	return false, nil
+	return false, "", nil
 }
 
 // checkResult reads the JSON object Claude Code prints as the last line of

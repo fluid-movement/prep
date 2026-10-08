@@ -125,7 +125,9 @@ func Path(prepDir string) string { return filepath.Join(prepDir, Dir, File) }
 
 // Append adds one event to the stream, creating .prep/local when needed.
 func Append(prepDir string, e Event) error {
-	e.Verb, e.Target = clip(e.Verb), clip(e.Target)
+	for _, f := range []*string{&e.Actor, &e.Kind, &e.Session, &e.Op, &e.Issue, &e.Verb, &e.Target, &e.Area} {
+		*f = clip(*f)
+	}
 	line, err := json.Marshal(e)
 	if err != nil {
 		return err
@@ -135,6 +137,9 @@ func Append(prepDir string, e Event) error {
 		if line, err = json.Marshal(e); err != nil {
 			return err
 		}
+	}
+	if len(line) >= maxLine {
+		return fmt.Errorf("activity event of %d bytes is too large for one atomic append", len(line))
 	}
 	line = append(line, '\n')
 	path := Path(prepDir)

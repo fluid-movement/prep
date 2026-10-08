@@ -104,6 +104,19 @@ func TestLongFieldsAreClipped(t *testing.T) {
 	if len([]rune(got[0].Target)) != maxField || !strings.HasSuffix(got[0].Target, "…") {
 		t.Fatalf("target %d runes", len([]rune(got[0].Target)))
 	}
+
+	// Every field a harness sends is clipped, and no line reaches maxLine.
+	e = ev(strings.Repeat("ä", 5000), strings.Repeat("ö", 5000), strings.Repeat("ü", 5000), 0)
+	e.Session, e.Area, e.Target = strings.Repeat("s", 5000), strings.Repeat("\u2028", 900), strings.Repeat("t", 5000)
+	if err := Append(dir, e); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(Path(dir))
+	for _, l := range strings.Split(strings.TrimSpace(string(b)), "\n") {
+		if len(l)+1 >= maxLine {
+			t.Fatalf("line of %d bytes", len(l)+1)
+		}
+	}
 }
 
 func TestFoci(t *testing.T) {

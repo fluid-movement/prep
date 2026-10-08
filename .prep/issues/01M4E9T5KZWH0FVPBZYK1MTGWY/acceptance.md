@@ -1,0 +1,5 @@
+- [x] Arguments after -- are text, and --json=false is off
+- [x] activity add never loads the tree; no event line reaches the atomic size
+- [x] The bridge exports PREP_ACTOR
+- [x] A failed marketplace add restores the previous one; a failed Windows rename restores the binary
+- [x] The watcher reports errors as a full change and sends from one goroutine

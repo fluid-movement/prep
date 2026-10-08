@@ -2,6 +2,7 @@ package claudecode
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -14,6 +15,7 @@ type fakeClaude struct {
 	missing     map[string]bool   // plugins the marketplace no longer has
 	calls       []string
 	failInstall bool
+	failAdd     string // a source marketplace add fails for
 }
 
 func (f *fakeClaude) run(args ...string) (string, error) {
@@ -33,11 +35,15 @@ func (f *fakeClaude) run(args ...string) (string, error) {
 	case cmd == "plugin marketplace list --json":
 		ms := []map[string]any{}
 		if f.marketplace != "" {
-			ms = append(ms, map[string]any{"name": "prep"})
+			repo, ref, _ := strings.Cut(f.marketplace, "#")
+			ms = append(ms, map[string]any{"name": "prep", "source": "github", "repo": repo, "ref": ref})
 		}
 		b, _ := json.Marshal(ms)
 		return string(b), nil
 	case strings.HasPrefix(cmd, "plugin marketplace add "):
+		if src := strings.TrimPrefix(cmd, "plugin marketplace add "); src == f.failAdd {
+			return "", fmt.Errorf("no tag in %s", src)
+		}
 		f.marketplace = strings.TrimPrefix(cmd, "plugin marketplace add ")
 		return "✔ Successfully added marketplace: prep", nil
 	case cmd == "plugin marketplace remove prep":
@@ -138,5 +144,18 @@ func TestUpdateKeepsOtherPluginsFromTheMarketplace(t *testing.T) {
 	if len(warnings) != 2 || !strings.Contains(joined, "gone@prep was uninstalled with the marketplace and could not be installed again: Plugin not found") ||
 		!strings.Contains(joined, "local@prep (project scope) was uninstalled") {
 		t.Fatalf("warnings = %q", warnings)
+	}
+}
+
+func TestFailedUpdateRestoresTheMarketplace(t *testing.T) {
+	t.Setenv(SourceEnv, "")
+	f := &fakeClaude{marketplace: "fluid-movement/prep#v0.2.0", installed: "0.2.0", others: map[string]string{"token-ledger@prep": "user"},
+		failAdd: "fluid-movement/prep#v0.3.0"}
+	_, err := (&Harness{Run: f.run}).Install("v0.3.0")
+	if err == nil || !strings.Contains(err.Error(), "kept the previous marketplace fluid-movement/prep#v0.2.0") {
+		t.Fatalf("err = %v", err)
+	}
+	if f.marketplace != "fluid-movement/prep#v0.2.0" || f.installed != "0.2.0" || f.others["token-ledger@prep"] != "user" {
+		t.Fatalf("not restored: %+v", f)
 	}
 }

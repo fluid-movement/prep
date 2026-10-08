@@ -36,7 +36,7 @@ func newHarness(t *testing.T) *harness {
 
 func (h *harness) run(args ...string) (int, string) {
 	var out, errb bytes.Buffer
-	code := Main(append(args, "--root", h.dir), strings.NewReader(""), &out, &errb)
+	code := Main(append([]string{"--root", h.dir}, args...), strings.NewReader(""), &out, &errb)
 	return code, out.String() + errb.String()
 }
 
@@ -548,6 +548,12 @@ func TestRecordCommands(t *testing.T) {
 	h.ok("dod", r, "--add", "sources linked")
 	if got := h.read(r, "acceptance.md"); got != "- [ ] formats compared\n\n## Definition of Done\n\n- sources linked\n" {
 		t.Fatalf("acceptance.md from empty = %q", got)
+	}
+
+	// After --, arguments are text even when they look like global flags.
+	h.ok("log", a, "--by", "claude-code/2.0", "--", "--json", "--by", "x")
+	if !strings.Contains(h.read(a, "history.md"), "claude-code/2.0: --json --by x") {
+		t.Fatalf("text after -- was taken as flags:\n%s", h.read(a, "history.md"))
 	}
 
 	// log appends a line naming the actor.

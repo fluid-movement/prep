@@ -2,7 +2,8 @@
 // prep cannot see itself, so prep tui's Agent screen shows it: each tool
 // call (what it touched, how much it returned) and each model request (its
 // tokens, the context fill and the cost). The agent's own prep commands are
-// left out; prep records those. PREP_SESSION ties both sides together.
+// left out; prep records those. PREP_SESSION ties both sides together, and
+// PREP_ACTOR names the agent where it gives no --by.
 
 import type { EngineInterface, Register } from 'claude-code'
 
@@ -22,13 +23,18 @@ let lastCost = 0
 const ACTOR = 'claude-code'
 const MAX_TARGET = 200
 
-/** Exports the session for the agent's shell, so its prep calls carry it. */
+/**
+ * Exports the session and the actor for the agent's shell, so its prep calls
+ * carry them: prep records reads only for a named actor, and the bridge
+ * leaves prep commands to prep. An explicit --by still wins.
+ */
 async function joinSession($: EngineInterface): Promise<void> {
   const id = await $.session.id()
   if (id === session) return
   session = id
   lastCost = 0
   await $.env.set('PREP_SESSION', id)
+  await $.env.set('PREP_ACTOR', ACTOR)
 }
 
 /** Sends what is pending to prep activity add, never awaited by a call. */

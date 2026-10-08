@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -48,24 +47,15 @@ func Dir(dir string) (<-chan Change, func(), error) {
 
 	out := make(chan Change, 1)
 	local := filepath.Join(dir, Local)
-	var mu sync.Mutex
-	var timer *time.Timer
-	var pending Change
-	// Only this goroutine sends, so a queued report can be taken back and
-	// merged with the new one.
-	signal := func() {
-		mu.Lock()
-		c := pending
-		pending = Change{}
-		mu.Unlock()
-		select {
-		case old := <-out:
-			c.Tree, c.Local = c.Tree || old.Tree, c.Local || old.Local
-		default:
-		}
-		out <- c
-	}
 	go func() {
+		var pending Change
+		var fire <-chan time.Time // the debounce timer; nil while nothing waits
+		timer := time.NewTimer(debounce)
+		timer.Stop()
+		wait := func() {
+			timer.Reset(debounce)
+			fire = timer.C
+		}
 		for {
 			select {
 			case ev, ok := <-w.Events:
@@ -77,22 +67,32 @@ func Dir(dir string) (<-chan Change, func(), error) {
 						addTree(ev.Name)
 					}
 				}
-				mu.Lock()
 				if ev.Name == local || strings.HasPrefix(ev.Name, local+string(filepath.Separator)) {
 					pending.Local = true
 				} else {
 					pending.Tree = true
 				}
-				if timer == nil {
-					timer = time.AfterFunc(debounce, signal)
-				} else {
-					timer.Reset(debounce)
-				}
-				mu.Unlock()
+				wait()
 			case _, ok := <-w.Errors:
 				if !ok {
 					return
 				}
+				// An overflow or a failed watch means changes may have gone
+				// unseen: report everything, so the reader reloads it all.
+				pending = Change{Tree: true, Local: true}
+				wait()
+			case <-fire:
+				fire = nil
+				// Only this goroutine sends, so a queued report can be taken
+				// back and merged with the new one without blocking.
+				c := pending
+				pending = Change{}
+				select {
+				case old := <-out:
+					c.Tree, c.Local = c.Tree || old.Tree, c.Local || old.Local
+				default:
+				}
+				out <- c
 			}
 		}
 	}()

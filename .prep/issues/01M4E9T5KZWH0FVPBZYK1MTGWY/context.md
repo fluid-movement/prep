@@ -1,0 +1,3 @@
+- `internal/cli/cli.go` `globalFlags` and `parse`; `internal/cli/activity.go` `activityAdd`; `internal/activity/activity.go` `Append`.
+- `plugins/claude-code/hooks/register.ts` `joinSession`; `internal/setup/claudecode/claudecode.go` `marketplaceSource`, `restore`; `internal/update/update.go` `replace`; `install.sh`; `internal/watch/watch.go`.
+- Knowledge: [CLI](/components/cli.md), [Claude Code integration](/components/claude-code.md), [Release, install and update](/components/release.md), [Agent activity](/features/agent-activity.md).

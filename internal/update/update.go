@@ -291,6 +291,13 @@ func replace(exe string, data []byte, windows bool) error {
 		if err := os.Rename(exe, old); err != nil {
 			return err
 		}
+		if err := os.Rename(tmp.Name(), exe); err != nil {
+			if rerr := os.Rename(old, exe); rerr != nil {
+				return fmt.Errorf("%v; the previous binary is at %s", err, old)
+			}
+			return err
+		}
+		return nil
 	}
 	return os.Rename(tmp.Name(), exe)
 }
