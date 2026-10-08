@@ -225,7 +225,7 @@ func validateKnowledge(t *Tree) []Diagnostic {
 			e(CodeKnowledgeCommit, SevWarning, ClassManual, "set confirmed_commit to a commit in this repository", "%s", k.DriftErr)
 		}
 		if len(k.Drifted) > 0 {
-			e(CodeKnowledgeDrift, SevWarning, ClassGuided, "re-check the entry against the code, update it and confirmed_commit", "scoped paths changed since %s: %s", k.ConfirmedCommit, strings.Join(k.Drifted, ", "))
+			e(CodeKnowledgeDrift, SevWarning, ClassGuided, "re-check the entry against the code, update it and confirmed_commit", "scoped paths changed since %s: %s", k.DriftSince, strings.Join(k.Drifted, ", "))
 		}
 	}
 	return ds

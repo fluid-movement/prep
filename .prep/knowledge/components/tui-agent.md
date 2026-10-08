@@ -9,6 +9,7 @@ scope:
   - internal/tui/agent.go
   - internal/tui/agent_test.go
   - internal/tui/ui/activity.go
+confirmed_commit: abbd6b09ec768385fc9c2f346ebcbf1b2a5859b0
 ---
 
 # TUI Agent screen

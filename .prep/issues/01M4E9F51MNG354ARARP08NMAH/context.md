@@ -1,0 +1,3 @@
+- `internal/tui/agent.go`: clamp the Now card's height; `internal/tui/app.go` `switchTab`, `jump` and `internal/tui/knowledge.go` `openKnowledge` clear `wheeled`; `shownEntry` for the entry pane, `o` and `y`; `copyTarget`; screen bindings and `knowFilterKeys`.
+- Tests in `internal/tui/sizes_test.go`: every screen at sizes down to 0×0 in both layouts.
+- Knowledge: [TUI](/components/tui.md), [TUI editing and keys](/components/tui-editing.md), [TUI mouse](/components/tui-mouse.md), [TUI knowledge screen](/components/tui-knowledge.md).

@@ -107,7 +107,7 @@ func (m *Model) click(x, y int) tea.Cmd {
 		case "knowledge":
 			m.know.onEntry = false
 		case "entry":
-			m.know.onEntry = m.know.path != ""
+			m.know.onEntry = m.shownEntry() != ""
 		}
 	case "row":
 		tb := m.current()

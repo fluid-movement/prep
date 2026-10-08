@@ -320,12 +320,12 @@ func (m *Model) agentPane(w, h int) string {
 	}
 	leftW, feedW := m.split(w, 0.42, 44, 48)
 	if feedW == 0 {
-		nowH := min(h-3, nowLines+2+1)
+		nowH := max(0, min(h-3, nowLines+2+1))
 		top := m.nowPane(d, title, w, nowH, true)
 		m.at.y += nowH
 		return top + "\n" + m.feedPane(d, w, h-nowH)
 	}
-	nowH := min(h-3, nowLines+2)
+	nowH := max(0, min(h-3, nowLines+2))
 	left := m.nowPane(d, title, leftW, nowH, false) + "\n"
 	m.at.y += nowH
 	left += m.usagePane(d, leftW, h-nowH)
@@ -549,9 +549,13 @@ var agentBindings = []binding{
 	bind("Agent", "g G pgup pgdn", "newest, oldest, page", false),
 	bind("Agent", "tab", "next agent (back to the first follows the most recent)", true),
 	bind("Agent", "enter", "open the current issue", true),
+	bind("Agent", "y", "copy the current issue's ID", false),
 	bind("Agent", "esc w", "back to the issues", true),
+	bind("Screens", "1-9", "the issues, on view n", false),
 	bind("Screens", "z", "one pane or split", false),
 	bind("Screens", "b", "knowledge", false),
+	bind("Screens", "c", "check", false),
+	bind("Screens", "s", "settings", false),
 	bind("Screens", "?", "all keys", true),
 	bind("Screens", "q", "quit", true),
 }

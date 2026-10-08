@@ -295,8 +295,10 @@ type Entry struct {
 	Size            int      `json:"-"`
 	// Body is the entry's text after the frontmatter, for display.
 	Body string `json:"-"`
-	// Drifted lists scoped paths changed since ConfirmedCommit, computed by the adapter.
-	Drifted []string `json:"drifted,omitempty"`
+	// Drifted lists scoped paths changed since DriftSince, computed by the
+	// adapter: the later of ConfirmedCommit and the entry's last commit.
+	Drifted    []string `json:"drifted,omitempty"`
+	DriftSince string   `json:"-"`
 	// DriftErr is set when drift could not be computed (e.g. unknown commit).
 	DriftErr string `json:"-"`
 }

@@ -34,6 +34,7 @@ var knowledgeCodes = []string{domain.CodeKnowledgeLink, domain.CodeKnowledgeSize
 // and runs the check that marks entries needing attention.
 func (m *Model) openKnowledge(path string) tea.Cmd {
 	m.screen = screenKnowledge
+	m.wheeled = false
 	m.know.onEntry = false
 	if path != "" {
 		m.know.filter, m.know.attention, m.know.path = "", false, path
@@ -68,6 +69,16 @@ func (m *Model) syncKnowledge() {
 	if len(paths) > 0 {
 		m.know.path = paths[m.know.cursor]
 	}
+}
+
+// shownEntry is the selected entry while the list shows it; a filter that
+// leaves the list empty shows no entry but keeps the selection for later.
+func (m *Model) shownEntry() string {
+	paths, _ := m.knowledgePaths()
+	if slices.Contains(paths, m.know.path) {
+		return m.know.path
+	}
+	return ""
 }
 
 // attentionOf returns the check's findings for an entry; empty until the
@@ -168,7 +179,7 @@ func (m *Model) knowledgeFilterKey(text string) {
 // openEntryLinks lists the issues that changed the selected entry; going
 // to one returns to the issue screen.
 func (m *Model) openEntryLinks() tea.Cmd {
-	issues := m.tree.EntryIssues(m.know.path)
+	issues := m.tree.EntryIssues(m.shownEntry())
 	if len(issues) == 0 {
 		return m.flash("no issue has changed this entry yet")
 	}
@@ -282,7 +293,7 @@ func (m *Model) knowledgeRow(path string, selected bool, width int) string {
 func (m *Model) entryPane(w, h int) string {
 	inner := w - 2 - 2*theme.Pad
 	m.pane("entry", w, h)
-	e := m.tree.Knowledge[m.know.path]
+	e := m.tree.Knowledge[m.shownEntry()]
 	if e == nil {
 		return ui.Pane{Title: "Entry", Body: ui.Empty(m.th, "Nothing selected", "", inner, h-2), Width: w, Height: h}.View(m.th)
 	}

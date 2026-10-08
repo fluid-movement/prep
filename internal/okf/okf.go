@@ -78,7 +78,7 @@ func (s *Store) Load(drift bool) ([]*domain.Entry, []domain.Diagnostic, error) {
 				if err != nil {
 					e.DriftErr = err.Error()
 				} else {
-					e.Drifted = changed
+					e.Drifted, e.DriftSince = changed, since
 				}
 			}
 		}

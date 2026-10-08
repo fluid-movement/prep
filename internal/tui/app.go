@@ -581,18 +581,20 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		return tea.Quit
 	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
 		if n := int(s[0] - '1'); n < len(m.tabs) {
+			// Like a click on the tab: the issue screen on that view.
+			m.screen, m.moving = screenIssues, false
 			m.switchTab(n)
 		}
 		return nil
 	case "r":
 		return m.reload()
 	case "y":
-		if id := m.selected(); id != "" {
-			return tea.Batch(tea.SetClipboard(id), m.flash("copied "+id))
+		if v := m.copyTarget(); v != "" {
+			return tea.Batch(tea.SetClipboard(v), m.flash("copied "+v))
 		}
 		return nil
 	case "t":
-		if m.tree == nil {
+		if m.tree == nil || m.screen != screenIssues {
 			return nil
 		}
 		m.treeMode = !m.treeMode
@@ -908,6 +910,7 @@ func (m *Model) jumpToParent() tea.Cmd {
 // otherwise in the first view that contains it (views without flags first),
 // clearing that view's parent focus.
 func (m *Model) jump(id string, remember bool) tea.Cmd {
+	m.wheeled = false // the view follows the selection to where it lands
 	from := m.selected()
 	if !m.selectInCurrent(id) {
 		var order []int
@@ -970,12 +973,29 @@ func (m *Model) flashErr(err error) tea.Cmd {
 	return m.after(errorFor, func(time.Time) tea.Msg { return clearNoticeMsg{n} })
 }
 
+// copyTarget is what y copies on the current screen: the selected issue's
+// ID, the shown knowledge entry's path, or the agent's current issue.
+func (m *Model) copyTarget() string {
+	switch m.screen {
+	case screenIssues:
+		return m.selected()
+	case screenKnowledge:
+		return m.shownEntry()
+	case screenAgent:
+		if m.tree != nil {
+			return m.agentView(m.shownAgent()).focus
+		}
+	}
+	return ""
+}
+
 func (m *Model) switchTab(n int) {
 	if len(m.tabs) == 0 {
 		return
 	}
 	m.active = (n + len(m.tabs)) % len(m.tabs)
 	m.focus = focusList
+	m.wheeled = false // the new tab's view follows its selection
 }
 
 func (m *Model) current() *tab {
@@ -1228,14 +1248,18 @@ var (
 	pageBindings = []binding{
 		bind("Page", "↑↓ pgup pgdn", "scroll", false),
 		bind("Page", "esc", "back", true),
+		bind("Screens", "1-9", "the issues, on view n", false),
+		bind("Screens", "b", "knowledge", false),
+		bind("Screens", "w", "agent", false),
 		bind("Screens", "c", "check", true),
 		bind("Screens", "s", "settings", true),
 		bind("Screens", "?", "all keys", true),
 		bind("Screens", "q", "quit", true),
 	}
-	previewKeys  = []ui.Key{{Keys: "←/→ t T", Desc: "preview"}, {Keys: "enter", Desc: "keep"}, {Keys: "esc", Desc: "back"}}
-	linkModeKeys = []ui.Key{{Keys: "↑/↓ j k", Desc: "select"}, {Keys: "enter", Desc: "go"}, {Keys: "1-9 b c …", Desc: "go to that link"}, {Keys: "esc o", Desc: "leave"}}
-	filterKeys   = []ui.Key{{Keys: "↑/↓", Desc: "choose"}, {Keys: "enter tab", Desc: "pick, or apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --text --stale --blocked --actionable", Desc: "flags; words match titles"}}
+	previewKeys    = []ui.Key{{Keys: "←/→ t T", Desc: "preview"}, {Keys: "enter", Desc: "keep"}, {Keys: "esc", Desc: "back"}}
+	linkModeKeys   = []ui.Key{{Keys: "↑/↓ j k", Desc: "select"}, {Keys: "enter", Desc: "go"}, {Keys: "1-9 b c …", Desc: "go to that link"}, {Keys: "esc o", Desc: "leave"}}
+	filterKeys     = []ui.Key{{Keys: "↑/↓", Desc: "choose"}, {Keys: "enter tab", Desc: "pick, or apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--state --kind --tag --priority --under --text --stale --actionable --blocked --parent --leaf --top", Desc: "flags; words match titles"}}
+	knowFilterKeys = []ui.Key{{Keys: "↑/↓", Desc: "choose"}, {Keys: "enter tab", Desc: "pick, or apply"}, {Keys: "esc", Desc: "clear"}, {Keys: "--type --status --scope", Desc: "flags; words match titles"}}
 )
 
 // nonEssential copies bindings with the given keys left out of the footer.
@@ -1264,9 +1288,13 @@ var knowledgeBindings = []binding{
 	bind("Knowledge", "a", "only entries that need an agent's attention", true),
 	bind("Knowledge", "o", "go to an issue that changed the entry", true),
 	bind("Knowledge", "⌫", "back to the issue you came from", false),
+	bind("Knowledge", "y", "copy the entry path", false),
 	bind("Knowledge", "esc b", "back to the issues", true),
+	bind("Screens", "1-9", "the issues, on view n", false),
 	bind("Screens", "z", "one pane or split", false),
+	bind("Screens", "w", "agent", false),
 	bind("Screens", "c", "check", false),
+	bind("Screens", "s", "settings", false),
 	bind("Screens", "?", "all keys", true),
 	bind("Screens", "q", "quit", true),
 }
@@ -1310,6 +1338,8 @@ func (m *Model) footer() string {
 		return ui.KeyHelp(m.th, m.modalKeys(), m.w)
 	case m.err != nil:
 		return ui.Fit(ui.Error(m.th, m.err.Error()), m.w)
+	case m.filtering && m.screen == screenKnowledge:
+		return ui.KeyHelp(m.th, knowFilterKeys, m.w)
 	case m.filtering:
 		return ui.KeyHelp(m.th, filterKeys, m.w)
 	case m.preview != nil:

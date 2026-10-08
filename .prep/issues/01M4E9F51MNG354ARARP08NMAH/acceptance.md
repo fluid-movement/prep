@@ -1,0 +1,4 @@
+- [x] Every screen renders at any size down to 0x0 without panicking, covered by a test
+- [x] Tab switches and jumps after a wheel scroll show the selection
+- [x] An empty knowledge list shows no entry
+- [x] t, y and 1-9 act on the screen shown; keymaps and the filter footer list what works
