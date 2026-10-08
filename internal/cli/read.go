@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/gitx"
 	"github.com/fluid-movement/prep/internal/mdstore"
@@ -124,6 +125,7 @@ func cmdList(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	a.noteRead(activity.Event{Op: "list", Verb: "listed issues", Area: activity.AreaIssue})
 	if view != "" {
 		flags, ok := t.Project.Config.Views[view]
 		if !ok {
@@ -186,6 +188,7 @@ func cmdNext(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	a.noteRead(activity.Event{Op: "next", Verb: "looked for the next issue", Area: activity.AreaIssue})
 	b := true
 	ids, err := t.Query(domain.Filter{Actionable: &b, Under: under})
 	if err != nil {
@@ -307,6 +310,7 @@ func cmdShow(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	a.noteRead(issueEvent(t, "show", id, "read the issue"))
 	i := t.Issues[id]
 	pending := a.resolveEvidence(t, id)
 	dod, opt := t.EffectiveDoD(id)
@@ -478,6 +482,7 @@ func cmdGuide(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	a.noteRead(issueEvent(t, "guide", id, "read the guide"))
 	g := t.BuildGuide(id, mdstore.IssueDir, a.touchedFiles(t, id))
 	if a.json {
 		if g.Knowledge == nil {
@@ -601,6 +606,7 @@ type primeBrief struct {
 	Check      checkSummary   `json:"check"`
 	Bootstrap  string         `json:"bootstrap,omitempty"` // alert while the knowledge base is not bootstrapped
 	Plugin     string         `json:"plugin,omitempty"`    // alert when the harness plugin and the binary differ
+	Focus      []focusSummary `json:"focus"`               // the newest current issues from the activity stream
 	Hint       string         `json:"hint"`
 }
 
@@ -671,6 +677,11 @@ func cmdPrime(a *app, args []string) error {
 		}
 	}
 	b.Bootstrap = t.BootstrapAlert()
+	b.Focus = a.recentFoci(t, 3)
+	if b.Focus == nil {
+		b.Focus = []focusSummary{}
+	}
+	a.noteRead(activity.Event{Op: "prime", Verb: "read the briefing", Area: activity.AreaPrep})
 	if *plugin != "" {
 		b.Plugin = pluginAlert(*plugin)
 	}
@@ -705,6 +716,12 @@ func cmdPrime(a *app, args []string) error {
 		a.printf("\nIn progress:\n")
 		for _, c := range b.Claims {
 			a.printf("  %s %s — claimed by %s at %s\n", c.ID, c.Title, c.By, c.Since.Format(time.RFC3339))
+		}
+	}
+	if len(b.Focus) > 0 {
+		a.printf("\nRecently worked on (prep focus):\n")
+		for _, f := range b.Focus {
+			a.printf("  %s [%s] %s — %s at %s\n", f.ID, f.State, f.Title, f.By, f.At.Format(time.RFC3339))
 		}
 	}
 	if b.Check.Errors > 0 {

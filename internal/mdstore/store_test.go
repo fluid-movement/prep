@@ -147,7 +147,7 @@ func TestConfigFallsBackToDist(t *testing.T) {
 		t.Fatalf("init wrote %v", written)
 	}
 	file := func(name string) string { return filepath.Join(root, Dir, name) }
-	if b, err := os.ReadFile(file(".gitignore")); err != nil || string(b) != "config.yaml\n" {
+	if b, err := os.ReadFile(file(".gitignore")); err != nil || string(b) != "config.yaml\nlocal/\n" {
 		t.Fatalf(".gitignore = %q, %v", b, err)
 	}
 	if _, err := os.Stat(file("config.yaml")); !errors.Is(err, os.ErrNotExist) {
@@ -261,5 +261,46 @@ func TestConfigKeepsThemes(t *testing.T) {
 		if _, err := Open(root).Apply(c); err == nil {
 			t.Fatal("an unknown theme was written")
 		}
+	}
+}
+
+func TestLocalDirMustBeIgnored(t *testing.T) {
+	root := t.TempDir()
+	s := Open(root)
+	if _, err := s.Init(); err != nil {
+		t.Fatal(err)
+	}
+	ign := filepath.Join(root, Dir, ".gitignore")
+	if err := os.WriteFile(ign, []byte("config.yaml"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	codes := func() string {
+		_, _, diags, err := Open(root).Load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, d := range diags {
+			out = append(out, d.Code)
+		}
+		return strings.Join(out, ",")
+	}
+	if c := codes(); strings.Contains(c, domain.CodeLocalTracked) {
+		t.Fatalf("no local dir yet, but %s", c)
+	}
+	if err := os.MkdirAll(filepath.Join(root, Dir, "local"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if c := codes(); !strings.Contains(c, domain.CodeLocalTracked) || strings.Contains(c, domain.CodeProjectUnknown) {
+		t.Fatalf("local dir unignored: %s", c)
+	}
+	if _, err := Open(root).Fix(); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(ign); string(b) != "config.yaml\nlocal/\n" {
+		t.Fatalf(".gitignore after fix = %q", b)
+	}
+	if c := codes(); strings.Contains(c, domain.CodeLocalTracked) {
+		t.Fatalf("after fix: %s", c)
 	}
 }

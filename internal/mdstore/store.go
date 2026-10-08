@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/palette"
 	"gopkg.in/yaml.v3"
@@ -87,7 +88,7 @@ var (
 	issueFiles   = map[string]bool{"issue.md": true, "acceptance.md": true, "context.md": true, "decisions.md": true, "history.md": true, "findings.md": true, "ready.md": true, "claim.md": true, "resolution.md": true}
 	issueDirs    = map[string]bool{"baselines": true, "attachments": true}
 	schemaFiles  = []string{"acceptance.md", "context.md", "decisions.md", "history.md"}
-	projectFiles = map[string]bool{"project.md": true, "config.yaml": true, "config.yaml.dist": true, "issues": true, "knowledge": true, ".gitignore": true}
+	projectFiles = map[string]bool{"project.md": true, "config.yaml": true, "config.yaml.dist": true, "issues": true, "knowledge": true, ".gitignore": true, activity.Dir: true}
 )
 
 // Load reads the project and every issue.
@@ -121,6 +122,9 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 		}
 	}
 	project.Config, _ = s.LoadConfig()
+	if s.localUnignored() {
+		diag(domain.CodeLocalTracked, domain.SevWarning, domain.ClassFixable, "", ".gitignore", "run prep fix, then commit", ".prep/.gitignore does not ignore %s, the per-machine activity stream", localIgnore)
+	}
 	if why := s.legacyConfig(); len(why) > 0 {
 		diag(domain.CodeConfigLegacy, domain.SevWarning, domain.ClassFixable, "", ConfigOwn, "run prep fix, then commit", "configuration from prep 0.1.0: %s", strings.Join(why, "; "))
 	}
@@ -388,11 +392,26 @@ func (s *Store) legacyConfig() []string {
 	return why
 }
 
+// localIgnore is the .gitignore line for .prep/local, per-machine state
+// such as the activity stream.
+const localIgnore = activity.Dir + "/"
+
+// localUnignored reports whether .prep/local exists without being
+// ignored, so git would offer per-machine state for commit.
+func (s *Store) localUnignored() bool {
+	_, err := os.Stat(s.abs(Dir + "/" + activity.Dir))
+	return err == nil && !s.ignores(localIgnore)
+}
+
 // IgnoresOwnConfig reports whether .prep/.gitignore lists config.yaml.
-func (s *Store) IgnoresOwnConfig() bool {
+func (s *Store) IgnoresOwnConfig() bool { return s.ignores(ConfigOwn) }
+
+// ignores reports whether .prep/.gitignore lists name, with or without a
+// leading slash.
+func (s *Store) ignores(name string) bool {
 	raw, _, _ := s.read(Dir + "/.gitignore")
-	for _, l := range strings.Split(raw, "\n") {
-		if strings.TrimSpace(l) == ConfigOwn || strings.TrimSpace(l) == "/"+ConfigOwn {
+	for l := range strings.SplitSeq(raw, "\n") {
+		if l = strings.TrimSpace(l); l == name || l == "/"+name {
 			return true
 		}
 	}
@@ -542,7 +561,7 @@ func (s *Store) Init() ([]string, error) {
 	files := []struct{ rel, content string }{
 		{Dir + "/project.md", DefaultProject()},
 		{Dir + "/" + ConfigDist, DefaultConfig},
-		{Dir + "/.gitignore", ConfigOwn + "\n"},
+		{Dir + "/.gitignore", ConfigOwn + "\n" + localIgnore + "\n"},
 		{Dir + "/issues/.gitkeep", ""},
 		{Dir + "/knowledge/.gitkeep", ""},
 	}

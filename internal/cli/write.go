@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/gitx"
 	"github.com/fluid-movement/prep/internal/mdstore"
@@ -199,6 +200,7 @@ func cmdNew(a *app, args []string) error {
 		return err
 	}
 	a.afterWrite(files)
+	a.note(activity.Event{Op: "new", Issue: c.IssueID, Verb: "created a " + string(in.Kind) + " issue", Target: in.Title, Area: activity.AreaIssue})
 	a.reportWrite(writeResult{OK: true, Op: "new", ID: c.IssueID, State: domain.StateOpen, Files: files})
 	return nil
 }
@@ -317,6 +319,7 @@ func cmdEdit(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	a.note(issueEvent(after, "edit", id, "edited the issue"))
 	a.reportWrite(writeResult{OK: true, Op: "edit", ID: id, State: after.State(id), Stale: after.Stale(id), Files: files})
 	return nil
 }
@@ -371,6 +374,7 @@ func opCmd(op domain.Op) func(*app, []string) error {
 			return err
 		}
 		a.afterWrite(files)
+		a.note(issueEvent(t, string(op), id, opVerbs[op]))
 		a.reportWrite(writeResult{OK: true, Op: string(op), ID: id, State: t.Apply(c).State(id), Files: files})
 		return nil
 	}
@@ -606,6 +610,7 @@ func recordCmd(op domain.Op) func(*app, []string) error {
 			msg += fmt.Sprintf(" %s %s", c.Decision.ID, c.Decision.Title)
 		}
 		a.afterWrite(files)
+		a.note(issueEvent(t, string(op), id, recordVerb(op, in, c)))
 		a.reportWrite(writeResult{OK: true, Op: string(op), ID: id, Files: files})
 		return nil
 	}

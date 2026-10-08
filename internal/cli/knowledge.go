@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/gitx"
 )
@@ -100,6 +101,11 @@ func knowledgeEdit(a *app, args []string, isNew bool) error {
 	if err != nil {
 		return err
 	}
+	verb := "updated knowledge"
+	if isNew {
+		verb = "wrote new knowledge"
+	}
+	a.note(activity.Event{Op: "knowledge " + op, Verb: verb, Target: path, Area: activity.AreaKnowledge})
 	a.reportWrite(writeResult{OK: true, Op: "knowledge " + op, Entry: path, Files: files})
 	return nil
 }
@@ -145,6 +151,9 @@ func knowledgeConfirm(a *app, args []string) error {
 		}
 		all = append(all, files...)
 		done = append(done, path)
+	}
+	if len(done) > 0 {
+		a.note(activity.Event{Op: "knowledge confirm", Verb: "confirmed knowledge", Target: strings.Join(done, " "), Area: activity.AreaKnowledge})
 	}
 	if a.json {
 		if all == nil {

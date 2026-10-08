@@ -1,8 +1,8 @@
-- [ ] .prep/local/ is gitignored in new projects, prep check warns when an existing project does not ignore it, and this repository is converted
-- [ ] Every write naming an issue, prep new, prep guide, knowledge writes and knowledge and issue reads append one event with actor, verb, target and, for reads, the printed size
-- [ ] Concurrent appends from several processes never interleave lines; the file is pruned past its size limit
-- [ ] An actor's focus is the issue of its latest write, guide or focus event; reads do not move it; prep focus <id> sets it and --clear clears it
-- [ ] prep activity prints the tail (--max, --actor, --json); prep activity add accepts validated tool and request events on stdin
-- [ ] prep prime shows the caller's focus
-- [ ] A failing append never fails the command; recording adds no noticeable latency
-- [ ] The skill and knowledge entries describe the stream, the focus rule and the commands
+- [x] .prep/local/ is gitignored in new projects, prep check warns when an existing project does not ignore it, and this repository is converted
+- [x] Every write naming an issue, prep new, prep guide, knowledge writes and knowledge and issue reads append one event with actor, verb, target and, for reads, the printed size
+- [x] Concurrent appends from several processes never interleave lines; the file is pruned past its size limit
+- [x] An actor's focus is the issue of its latest write, guide or focus event; reads do not move it; prep focus <id> sets it and --clear clears it
+- [x] prep activity prints the tail (--max, --actor, --json); prep activity add accepts validated tool and request events on stdin
+- [x] prep prime shows the caller's focus
+- [x] A failing append never fails the command; recording adds no noticeable latency
+- [x] The skill and knowledge entries describe the stream, the focus rule and the commands

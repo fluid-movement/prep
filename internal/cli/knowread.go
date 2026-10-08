@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 )
 
@@ -45,6 +46,7 @@ func knowledgeList(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	a.noteRead(activity.Event{Op: "knowledge list", Verb: "listed knowledge", Area: activity.AreaKnowledge})
 	paths := t.QueryKnowledge(f)
 	if a.json {
 		out := make([]entryLine, 0, len(paths))
@@ -78,6 +80,7 @@ func knowledgeFind(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	a.noteRead(activity.Event{Op: "knowledge find", Verb: "searched knowledge", Target: strings.Join(pos, " "), Area: activity.AreaKnowledge})
 	hits := t.FindKnowledge(strings.Join(pos, " "), *limit)
 	if a.json {
 		if hits == nil {
@@ -137,6 +140,7 @@ func knowledgeShow(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	a.noteRead(activity.Event{Op: "knowledge show", Verb: "read knowledge", Target: strings.Join(pos, " "), Area: activity.AreaKnowledge})
 	var shown []shownEntry
 	for _, ref := range pos {
 		raw, anchor, _ := strings.Cut(ref, "#")

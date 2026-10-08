@@ -9,7 +9,7 @@ generated:
 scope:
   - cmd/**
   - internal/**
-confirmed_commit: a9b23847bce01161522f5c997cb4fa8b5b0cc393
+confirmed_commit: 4d7af952dcf2a8cd5a0ce0c4c865932f46625c79
 ---
 
 # Architecture
@@ -23,6 +23,7 @@ internal/domain     model, derived state, FSM and gates, validation, query engin
 internal/mdstore    issue store adapter: .prep/issues as markdown
 internal/okf        knowledge store adapter: .prep/knowledge as an OKF v0.2 bundle
 internal/gitx       the few git calls (staging, drift, commit evidence)
+internal/activity   the local activity stream under .prep/local: append, prune, read, derive each actor's current issue (no store imports)
 internal/watch      fsnotify watcher over .prep (recursive, debounced), shared by prep watch and the TUI
 internal/palette    TUI color tokens, built-in themes, custom theme resolution, derived state colors (no TUI imports)
 internal/tui        human interface: screens (Bubble Tea) loading through an injected loader; theme and ui hold the design system

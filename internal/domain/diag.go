@@ -39,6 +39,7 @@ const (
 	CodeProjectUnknown  = "P004" // unknown file in .prep
 	CodeDoDOptOutUnused = "P005"
 	CodeConfigLegacy    = "P006" // config in the prep 0.1.0 layout; prep fix converts it
+	CodeLocalTracked    = "P007" // .prep/.gitignore does not ignore local/; prep fix adds it
 
 	// Issue structure.
 	CodeBadID              = "I001" // directory name is not a valid ID

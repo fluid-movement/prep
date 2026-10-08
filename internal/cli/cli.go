@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/gitx"
 	"github.com/fluid-movement/prep/internal/mdstore"
@@ -55,6 +56,11 @@ type app struct {
 
 	store  *mdstore.Store
 	kstore *okf.Store
+
+	// event is what the command records in the activity stream when it
+	// succeeds; eventReads adds the size of its output.
+	event      *activity.Event
+	eventReads bool
 }
 
 type command struct {
@@ -75,6 +81,7 @@ func init() {
 		{"next", false, "next [--under <id>]        actionable issues: ready, not stale, dependencies done, unclaimed", cmdNext},
 		{"show", false, "show <id>                  read one issue with its derived state", cmdShow},
 		{"check", false, "check [--no-drift]         validate the whole tree", cmdCheck},
+		{"activity", false, "activity [--max N] [--actor a]  what agents did with prep, newest last (local, per machine); activity add: harness events as JSON lines on stdin", cmdActivity},
 		{"watch", false, "watch                      stream a line per change under .prep until killed (for harness integrations)", cmdWatch},
 		{"flags", false, "flags                      every query flag with the values it accepts now and their issue counts", cmdFlags},
 		{"knowledge", false, "knowledge list|find|show   read the knowledge base: list [--type --status --scope words], find <query> [--max N] (best sections), show <entry>[#section]... [--outline]", cmdKnowledge},
@@ -87,6 +94,7 @@ func init() {
 		{"dod", true, "dod <id>                   Definition of Done: --add item, --opt-out item --reason text, --remove item", recordCmd(domain.OpDoD)},
 		{"findings", true, "findings <id>              replace a research issue's findings: --body text | --body-file path|-", recordCmd(domain.OpFindings)},
 		{"log", true, "log <id> <text>            append a line to the work log", recordCmd(domain.OpLog)},
+		{"focus", true, "focus <id> | --clear        set or clear the issue you work on, for prep tui's Agent view (local; writes no records)", cmdFocus},
 		{"import", true, "import                     create the issue that guides importing existing work items (TODOs, GitHub issues, other trackers)", cmdImport},
 		{"knowledge", true, "knowledge new|update|confirm|bootstrap  entries: new <entry> --type --title --description --body..., update <entry> [fields], confirm <entry>... | --drifted, bootstrap", cmdKnowledge},
 		{"define", true, "define <id>                write a requirement baseline (open questions must be empty)", opCmd(domain.OpDefine)},
@@ -116,7 +124,8 @@ var (
 
 // Main runs the CLI and returns the exit code.
 func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	a := &app{out: stdout, errw: stderr, stdin: stdin, now: clock, entropy: entropy}
+	out := &counter{w: stdout}
+	a := &app{out: out, errw: stderr, stdin: stdin, now: clock, entropy: entropy}
 	a.actor = os.Getenv("PREP_ACTOR")
 	a.root = os.Getenv("PREP_ROOT")
 	rest, err := a.globalFlags(args)
@@ -136,6 +145,7 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 			if err := c.run(a, rest[1:]); err != nil {
 				return a.fail(err)
 			}
+			a.recordEvent(out.n)
 			return exitOK
 		}
 	}

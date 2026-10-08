@@ -352,19 +352,25 @@ func (s *Store) fixLegacyConfig() ([]string, error) {
 		changed = append(changed, distRel)
 	}
 	if !s.IgnoresOwnConfig() {
-		ign, _, err := s.read(ignRel)
-		if err != nil {
-			return changed, err
-		}
-		if ign != "" && !strings.HasSuffix(ign, "\n") {
-			ign += "\n"
-		}
-		if err := s.write(ignRel, ign+ConfigOwn+"\n"); err != nil {
+		if err := s.addIgnore(ConfigOwn); err != nil {
 			return changed, err
 		}
 		changed = append(changed, ignRel)
 	}
 	return changed, nil
+}
+
+// addIgnore appends a line to .prep/.gitignore.
+func (s *Store) addIgnore(line string) error {
+	rel := Dir + "/.gitignore"
+	ign, _, err := s.read(rel)
+	if err != nil {
+		return err
+	}
+	if ign != "" && !strings.HasSuffix(ign, "\n") {
+		ign += "\n"
+	}
+	return s.write(rel, ign+line+"\n")
 }
 
 // Fix applies safe automatic repairs: canonical format, missing empty schema
@@ -379,6 +385,12 @@ func (s *Store) Fix() ([]string, error) {
 	changed = append(changed, conf...)
 	if err != nil {
 		return changed, err
+	}
+	if s.localUnignored() {
+		if err := s.addIgnore(localIgnore); err != nil {
+			return changed, err
+		}
+		changed = append(changed, Dir+"/.gitignore")
 	}
 	ids, err := s.issueIDs()
 	if err != nil {
