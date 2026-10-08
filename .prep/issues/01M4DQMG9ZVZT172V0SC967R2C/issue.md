@@ -9,14 +9,15 @@ tags:
   - pi
 ---
 
-A prep pane in Pi shows the issue the agent works on, with the content and behavior of the Claude Code panel's Live view ([Claude Code side panel](/components/claude-code-panel.md)), in the form the design issue chose.
+A prep pane in Pi shows the issue the agent works on, with the content of the Claude Code panel's Live view ([Claude Code side panel](/components/claude-code-panel.md)), in the form decided in D1, opened and closed with `/prep` (D7).
 
-- **Following**: successful Bash calls with a prep write or `prep guide` on an issue, `prep new`'s output, and edits or writes under `.prep/issues/<id>/` set the focus; reads do not. Each session follows its own agent. The shown issue is the pin, else the focus, else the first claim in `prep prime`, else the project overview.
-- **Data and refresh**: `prep show`, `guide`, `list` and `prime` with `--json`; only the newest of overlapping refreshes applies; `prep watch` runs from `session_start` and stops at `session_shutdown`; nothing starts in the extension factory.
-- **Drawing**: header, next transition with unmet gates, requirement, open questions, acceptance with progress, DoD, decisions, surroundings, last history lines and priority marks, colored from Pi theme tokens mapped like the Claude Code panel's states.
-- **Commands**: focus (pin an issue, or follow the agent again without an id) and pane (open or close, or open on a view), answered without reaching the model.
+- **Form**: on a wide terminal a right-anchored overlay that never takes keyboard focus, shown only above a width threshold; on a narrow terminal a widget of two or three lines above the editor (issue, state, step, next transition, acceptance progress), and `/prep` opens the full pane there as a focused overlay that Esc closes. A resize moves between the two without losing state. Works in fullscreen and regular TUI mode.
+- **Following**: successful bash and powershell calls with a prep write or `prep guide` on an issue, `prep new`'s output, and edits or writes under `.prep/issues/<id>/` set the issue, nested calls included, through the shared inference module (D5); reads do not. Each session follows its own agent. The shown issue is the followed one, else the first claim in `prep prime`, else the project overview (bootstrap alert, in progress, actionable, attention, top-level parents).
+- **Data and refresh**: `prep show`, `guide`, `list` and `prime` with `--json`; only the newest of overlapping refreshes applies; `prep watch` runs from `session_start` and stops idempotently at `session_shutdown`.
+- **Drawing**: header (title, id, kind, tags, state, step, source, stale/blocked, priority), next transition with unmet gates, requirement, open questions, acceptance with progress, DoD, decisions, surroundings, last history lines; Pi theme tokens mapped like the Claude Code panel's state colors; every line fits the width.
+- **Command**: `/prep` toggles the pane; `/prep live|project|usage` opens it on a view (the views come with their own issues). Answered without reaching the model.
 - **Opening**: open, closed or remember per project, as `userConfig.pane` does in Claude Code.
 - Only in the interactive TUI; other modes are unaffected, and a pane failure never changes a tool call.
-- Tried live: opening, following guide and writes, ignoring reads, live updates through `prep watch`.
+- Tried live: opening, both forms, following guide and writes, ignoring reads, live updates through `prep watch`.
 
 ## Open questions

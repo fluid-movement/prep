@@ -9,6 +9,6 @@ tags:
   - pi
 ---
 
-The Pi pane gets the Project view of the Claude Code panel: counts, check, bootstrap alert, in progress and stale issues, then the open work as an indented tree with state, parent progress and stale, blocked and actionable marks; display only. Its data loads only while it shows and on each refresh then. The person switches between views as the Pi pane allows (the Claude Code panel uses buttons), and the pane command opens it directly.
+The Pi pane gets the Project view of the Claude Code panel: counts, check, bootstrap alert, in progress and stale issues, then the open work as an indented tree with state, parent progress and stale, blocked and actionable marks; display only. Its data loads only while it shows and on each refresh then. `/prep project` opens it; the pane shows which view is on and lets the person switch with a click in fullscreen mode, with `/prep <view>` as the keyboard path. The narrow strip always shows the Live summary.
 
 ## Open questions

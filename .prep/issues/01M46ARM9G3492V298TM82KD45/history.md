@@ -9,3 +9,5 @@
 - 2026-10-06T18:50:49Z edited by claude-code/opus-5.5: parent
 
 - 2026-10-08T12:25:25Z edited by claude-code/opus-5.5: title, tags, priority, requirement
+
+- 2026-10-08T12:56:54Z edited by claude-code/opus-5.5: requirement
