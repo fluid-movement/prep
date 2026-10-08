@@ -1,0 +1,2 @@
+- [x] prep prime's hint names find instead of grep and smaller-model subagents for wide surveys (test)
+- [x] Skill rule 4 says to search entries with prep knowledge find rather than grep; copies identical

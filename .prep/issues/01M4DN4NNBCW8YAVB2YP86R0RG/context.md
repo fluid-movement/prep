@@ -1,0 +1,1 @@
+`primeBrief.Hint` in `cmdPrime` (`internal/cli/read.go`), tested in `TestGuideJSONAndPrime` (`internal/cli/cli_test.go`); skill rule 4 in `internal/cli/skill.md` with copies in `.claude/skills/prep/SKILL.md` and `plugins/claude-code/skills/prep/SKILL.md`. Follows 01M4DBB9QR8NR19EEH8Y84SZ2M; see [Agent context](/features/agent-context.md).
