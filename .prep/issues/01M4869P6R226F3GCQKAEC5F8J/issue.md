@@ -1,7 +1,7 @@
 ---
 title: Homebrew tap for macOS and Linux
 kind: code
-parent: 01M48KB1NRFQ1A3VWB9SHDM3TM
+parent: 01M498VQD4Q85CZYK965WW3H9Q
 depends_on:
   - 01M46ARP808AXT8MABAYMNHSY3
 tags:
