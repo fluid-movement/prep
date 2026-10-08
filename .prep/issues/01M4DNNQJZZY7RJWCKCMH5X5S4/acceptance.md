@@ -1,0 +1,3 @@
+- [x] prep prime's hint says never the files, pass the rules on unchanged, smallest model for knowledge lookups, smaller for wide surveys, short output and no read-back of saved output (test)
+- [x] Skill rule 5 carries the model split and the single-lookup-inline exception; copies identical
+- [x] TOKEN-EFFICIENCY.md records the three fathom runs and what they showed

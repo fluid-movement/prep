@@ -639,7 +639,7 @@ func cmdPrime(a *app, args []string) error {
 		return ss
 	}
 	b := primeBrief{Issues: len(t.Issues), Parents: []summary{}, Next: []summary{}, Stale: []summary{}, Claims: []claimSummary{},
-		Hint: "Run prep guide <id> for the issue you work on; it lists what to read and where outputs go. Read knowledge with prep knowledge find <words> (where something is documented; instead of grep) or prep knowledge show <entry>[#section], not the files. Give wide surveys to subagents on a smaller model, and tell them to read knowledge the same way."}
+		Hint: "Run prep guide <id> for the issue you work on; it lists what to read and where outputs go. Read knowledge with prep knowledge find <words> (instead of grep) or prep knowledge show <entry>[#section], never the files. Give knowledge lookups across several entries to a subagent on the smallest model and wide surveys to a smaller one, and pass these rules on to them unchanged. Keep command output short; never read back a saved output file."}
 	for _, id := range t.IDs() {
 		i := t.Issues[id]
 		s := t.State(id)

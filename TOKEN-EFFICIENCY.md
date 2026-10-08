@@ -120,10 +120,39 @@ Constraints that apply to every Jev integration:
 - **G4. Trim verbose command output** wherever prep-share shows a command is expensive. Pointers over content, as `prime` and `guide` already do.
 - **G5. Knowledge that replaces code reading.** Where the data shows agents repeatedly reading the same code to understand it, write or extend a scoped entry. One cheap read can replace several expensive ones.
 - **G6. Read late, read narrow.** Skill guidance: open knowledge only when the step needs it, prefer `Grep` and offset reads to whole files, and send wide surveys to subagents so their reads never enter the main context.
+- **G7. Read knowledge through prep.** `prep knowledge list|find|show` (01M4DA304M5VBKKTCQ1C1W6DRS): `find` returns only the matching paragraphs and list items, `show` one section or an outline. Reads through prep are also where J1-style filtering or size caps can apply later. Done.
+- **G8. Model choice for subagents.** Wide surveys on a smaller model, knowledge lookups across several entries on the smallest; a single lookup stays inline, because a subagent starts with ~13k tokens of fixed prompt. The `prep prime` hint carries this, since the skill loads only when invoked and subagents load neither (01M4DN4NNBCW8YAVB2YP86R0RG, 01M4DNNQJZZY7RJWCKCMH5X5S4). Done.
+
+## First measurements: fathom audits
+
+Three runs on 2026-10-08 of the same prompt in fathom (a Rust project of nine crates and targets, with a fresh knowledge base of about 100 entries): "spawn explore subagents to check if our new prep knowledge base and issues are complete". fathom's state changed between runs (issues and entries from the earlier ones), so the comparison is rough.
+
+| | Run 1 `704a70a0` | Run 2 `3b7d87a5` | Run 3 `a2aed92f` |
+| --- | --- | --- | --- |
+| Setup | before G7 | G7 binary; old skill and ledger still loaded (`/clear`, no restart) | G7, G8 hint, fresh session |
+| Subagents | 5 × Opus | 5 × Opus | 4 × Sonnet |
+| Main loop tokens | 1.51M | 0.60M | 0.65M |
+| Subagent tokens | 8.16M | 10.67M | 4.39M |
+| Subagent requests | 128 | 149 | 72 |
+| Tool output read back | ~196k | ~207k | ~159k |
+| of which knowledge files | ~45k | ~64k | ~43k |
+| Final main context | 105k | 78k | 74k |
+| Cost | $7.32 | $7.50 | $3.14 |
+
+What they showed:
+
+- **Subagents are right for wide surveys.** The main context stayed at 74–105k while subagents read 160–200k tokens; inline, the main context would have needed compaction.
+- **Model choice saved the most.** Run 3 cost 57% less than run 1, from the smaller model and fewer requests. Narrower reads contributed little. Whether the Sonnet reports were as thorough as the Opus ones has not been checked.
+- **Rules must be in the briefing.** The main agent never invoked the skill in runs 2 and 3; only the `prep prime` hint reached it, and subagents see only what their prompt says. In run 3 the main agent passed the knowledge rule on but softened it to "or the files directly", and the subagents read the files. The hint now says "never the files" and "unchanged".
+- **Knowledge reads stayed near 27% of tool output** (K-share above the 25% line) in an audit, where comparing whole entries with old docs is the task. Exact-identifier `grep`s returned 2–3k each and are no waste; bulk `cat` loops over entries and read-back saved output files (two of ~27k characters in run 3, three totalling ~134k characters in run 1) are.
+- **Code reads are now the largest share** (~67k in run 3).
+- **Tooling pitfalls found:** `prep setup --refresh` uninstalled token-ledger with the marketplace (fixed in 01M4DMXST6T9VKMVF46H9DFR40), and `/clear` keeps plugins and skill text from before an install, so a measured run needs a fresh Claude Code start.
+
+Still open: measure ordinary issue work (enrichment, implementation), where narrow knowledge reads should matter more than in audits, and check report quality across models.
 
 ## Next steps
 
-1. Merge or install the two plugins, and record ordinary prep work for one to two weeks.
+1. Record ordinary prep work for one to two weeks (the plugins are installed; start a fresh Claude Code session after `just install`).
 2. Compute the metrics above from `~/.claude/token-ledger/*.jsonl`. Claude can do this when given the files.
 3. Read the outcome table, pick the matching action, and record the decision in the knowledge base. If the action is a prototype, open a prep issue for it.
 

@@ -338,10 +338,12 @@ func TestGuideJSONAndPrime(t *testing.T) {
 		t.Fatalf("prime = %+v", pr)
 	}
 	// The briefing reaches every session, unlike the skill, so it carries the knowledge-read rule.
-	if !strings.Contains(pr.Hint, "prep knowledge find") || !strings.Contains(pr.Hint, "instead of grep") || !strings.Contains(pr.Hint, "subagents on a smaller model") {
-		t.Fatalf("prime hint = %q", pr.Hint)
+	for _, want := range []string{"prep knowledge find", "instead of grep", "never the files", "smallest model", "wide surveys to a smaller one", "unchanged", "never read back a saved output file"} {
+		if !strings.Contains(pr.Hint, want) {
+			t.Fatalf("prime hint lacks %q: %q", want, pr.Hint)
+		}
 	}
-	if out := h.ok("prime"); !strings.Contains(out, "tell them to read knowledge the same way.") {
+	if out := h.ok("prime"); !strings.Contains(out, "never read back a saved output file.") {
 		t.Fatalf("prime text lacks the hint:\n%s", out)
 	}
 }
