@@ -1,0 +1,17 @@
+---
+title: 'Agent screen tabs: Issue, Activity, Usage'
+kind: code
+parent: 01M4EA4RB500QF2449Y3914VMQ
+tags:
+  - tui
+---
+
+The Agent screen splits into three tier-two views instead of fitting everything into panes side by side:
+
+- Issue (the default, since the current issue matters more than the tool calls): the agent's current issue in full, not a card. Title, state, kind and step, the requirement, acceptance criteria with their checks, the next transition and what blocks it, and the knowledge the guide points to.
+- Activity: the feed of tool calls and prep commands as now, grouped by issue.
+- Usage: what the Usage pane shows now, and what the Claude Code panel's Usage tab showed: context fill, cost, tokens and cache, requests, and reads by area with the largest knowledge reads.
+
+tab/shift+tab and 1–3 switch views, as lists do on Issues; the agent cycle (tab today) moves to another key. A fresh event can still be signalled on a tab that is not shown.
+
+## Open questions
