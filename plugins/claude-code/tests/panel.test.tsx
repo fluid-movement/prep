@@ -2,7 +2,7 @@ import type { On } from 'claude-code'
 import { describe, expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
-import { issueFromCommand, issueFromPath } from '../hooks/infer'
+import { issueFromCommand, issueFromPath, runsPrepInit } from '../hooks/infer'
 
 // Fixtures: prep's JSON for a project with one parent and one child issue.
 const PARENT = '20261005-152616'
@@ -123,7 +123,8 @@ function fakePrep(on: On, project: Project = {}) {
     }
     return { ...ok({}), exitCode: 2 }
   }
-  on('process.spawn', async function* () {
+  on('process.spawn', async function* (_$, e) {
+    calls.push([...e.argv])
     return { value: { code: 0, signal: null } }
   })
   on('session.start', async (_$, e) => ({ cwd: e.cwd }))
@@ -187,6 +188,13 @@ describe('inference', () => {
     expect(issueFromCommand(`prep show ${CHILD}`)).toBeUndefined()
     expect(issueFromCommand('prep list --json && prep next')).toBeUndefined()
     expect(issueFromCommand('go test ./... | grep prep')).toBeUndefined()
+  })
+
+  test('prep init is recognized wherever it runs in the command', () => {
+    expect(runsPrepInit('prep init')).toBe(true)
+    expect(runsPrepInit('cd /repo && PREP_ACTOR=x ~/.local/bin/prep init --by claude-code/2')).toBe(true)
+    expect(runsPrepInit('prep check; echo prep init')).toBe(false)
+    expect(runsPrepInit("prep new --body-file - <<'EOF'\nprep init\nEOF")).toBe(false)
   })
 
   test('the last issue-naming prep command wins', () => {
@@ -354,13 +362,57 @@ describe('panel', () => {
     expect(panes.has('prep')).toBe(true)
   })
 
-  test('outside a prep project the plugin stays idle', async ($, on) => {
+  test('outside a prep project the plugin stays idle and says why', async ($, on) => {
     fakePrep(on, { isPrep: false })
     const panes = fakePanes(on)
     await $.session.start(START)
     expect(panes.has('prep')).toBe(false)
     const out = await $.command.run({ command: 'prep:pane', args: '' } as never)
-    expect(out.text).toBe('Not a prep project.')
+    expect(out.text).toBe('Not a prep project: no .prep found')
+    const focused = await $.command.run({ command: 'prep:focus', args: '' } as never)
+    expect(focused.text).toBe('Not a prep project: no .prep found')
+  })
+
+  test("the agent's prep init brings the panel up mid-session", async ($, on) => {
+    const project: Project = { isPrep: false }
+    const calls = fakePrep(on, project)
+    const panes = fakePanes(on)
+    const watches = () => calls.filter(c => c[1] === 'watch').length
+    on('tool.call', async () => ({ result: {} as never, text: 'ok' }))
+    await $.session.start(START)
+    await bash($, 'prep check')
+    expect(calls.filter(c => c[1] === 'prime')).toHaveLength(1) // other commands do not retry
+
+    project.isPrep = true
+    await bash($, 'cd /repo && prep init')
+    expect(panes.has('prep')).toBe(true)
+    expect(watches()).toBe(1)
+    expect(await drawn($)).toContain('Other work')
+
+    await bash($, 'prep init')
+    expect(watches()).toBe(1)
+  })
+
+  test('/prep:pane activates once prep prime works', async ($, on) => {
+    const project: Project = { isPrep: false }
+    fakePrep(on, project)
+    const panes = fakePanes(on)
+    await $.session.start(START)
+    project.isPrep = true // prep init run outside the agent
+    const out = await $.command.run({ command: 'prep:pane', args: 'project' } as never)
+    expect(out.text).toBe('prep panel shows the project view.')
+    expect(panes.has('prep')).toBe(true)
+  })
+
+  test('a failed prep init does not activate', async ($, on) => {
+    const project: Project = { isPrep: false }
+    const calls = fakePrep(on, project)
+    fakePanes(on)
+    on('tool.call', async () => ({ result: {} as never, text: 'no', isError: true }) as never)
+    await $.session.start(START)
+    project.isPrep = true
+    await bash($, 'prep init')
+    expect(calls.filter(c => c[1] === 'prime')).toHaveLength(1)
   })
 })
 

@@ -15,7 +15,7 @@ import type {
   PrepTab,
   PrepUsage,
 } from '../types'
-import { issueFromCommand, issueFromPath } from './infer'
+import { issueFromCommand, issueFromPath, runsPrepInit } from './infer'
 import { drawPane, drawPanel } from './panel'
 import { ledgerPath, summarizeLedger } from './usage'
 
@@ -91,7 +91,8 @@ async function loadProject($: EngineInterface): Promise<PrepProjectSnapshot> {
 // Refreshes can overlap (a watch line and a tool call); only the newest writes.
 let generation = 0
 let projectGeneration = 0
-// Set once session.start found a prep project; outside one the module idles.
+// Set once the session is found to be a prep project (activate); until then
+// the module idles.
 let active = false
 
 async function refresh($: EngineInterface): Promise<void> {
@@ -166,6 +167,44 @@ async function isPaneOpen($: EngineInterface): Promise<boolean> {
   return (await $.ui.panes()).some(p => p.id === PANE)
 }
 
+let activating: Promise<string | undefined> | undefined
+
+/**
+ * Brings the panel up once prep prime works here: loads the data and follows
+ * prep watch. Session start tries first; an inactive panel tries again after
+ * the agent's prep init and on /prep:pane and /prep:focus. Undefined once
+ * active, else why prep prime failed.
+ */
+function activate($: EngineInterface): Promise<string | undefined> {
+  if (active) return Promise.resolve(undefined)
+  activating ??= (async () => {
+    try {
+      await prep<PrepPrime>($, ['prime'])
+    } catch (err) {
+      return err instanceof Error ? err.message : String(err) // not a prep project, or no prep binary
+    } finally {
+      activating = undefined
+    }
+    active = true
+    await refresh($)
+    // prep watch prints a line per change under .prep for the session's life.
+    void (async () => {
+      try {
+        for await (const chunk of $.process.spawn({ argv: ['prep', 'watch'] })) {
+          if (chunk.stream === 'stdout') await refresh($)
+        }
+      } catch (err) {
+        $.ui.log(`prep watch stopped: ${err instanceof Error ? err.message : String(err)}`, { to: 'debug' })
+      }
+    })()
+    return undefined
+  })()
+  return activating
+}
+
+/** What the panel commands answer while the panel cannot activate. */
+const notPrep = (why: string) => ({ text: `Not a prep project: ${why}` })
+
 /** Opens the pane at session start as the pane option says. */
 async function openAtStart($: EngineInterface, mode: string, cwd: string): Promise<void> {
   const remembered = await $.store.get(openKey(cwd))
@@ -186,36 +225,25 @@ const passOn = <E, R>(_$: unknown, e: E, next: (e: E) => R): R => next(e)
 export const register: Register = (on, options) => {
   const mode = typeof options.pane === 'string' ? options.pane : 'remember'
   let cwd = ''
+  let interactive = false
 
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     cwd = e.cwd
-    try {
-      await prep<PrepPrime>($, ['prime'])
-    } catch {
-      return started // not a prep project, or no prep binary
-    }
-    active = true
-    await refresh($)
-    if (e.isInteractive) await openAtStart($, mode, cwd)
-    // prep watch prints a line per change under .prep for the session's life.
-    void (async () => {
-      try {
-        for await (const chunk of $.process.spawn({ argv: ['prep', 'watch'] })) {
-          if (chunk.stream === 'stdout') await refresh($)
-        }
-      } catch (err) {
-        $.ui.log(`prep watch stopped: ${err instanceof Error ? err.message : String(err)}`, { to: 'debug' })
-      }
-    })()
+    interactive = e.isInteractive
+    if ((await activate($)) === undefined && interactive) await openAtStart($, mode, cwd)
     return started
   })
 
   // The agent's prep commands and edits under .prep/issues move the focus,
-  // once they succeeded.
+  // once they succeeded; its prep init brings an inactive panel up as
+  // session start would have.
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const ran = await next(e)
     if (ran.deny === undefined && ran.isError !== true) {
+      if (!active && runsPrepInit(e.command) && (await activate($)) === undefined && interactive) {
+        await openAtStart($, mode, cwd)
+      }
       await follow($, issueFromCommand(e.command, ran.text ?? ''))
     }
     return ran
@@ -242,7 +270,8 @@ export const register: Register = (on, options) => {
 
   // /prep:focus and /prep:pane are declared in commands/ and answered here.
   on('command.run', { command: 'prep:focus' }, async ($, e) => {
-    if (!active) return { text: 'Not a prep project.' }
+    const why = await activate($)
+    if (why !== undefined) return notPrep(why)
     const ref = e.args.trim()
     if (ref === '') {
       await update($, pin, () => null)
@@ -262,7 +291,8 @@ export const register: Register = (on, options) => {
   })
 
   on('command.run', { command: 'prep:pane' }, async ($, e) => {
-    if (!active) return { text: 'Not a prep project.' }
+    const why = await activate($)
+    if (why !== undefined) return notPrep(why)
     const arg = e.args.trim()
     if (arg === 'live' || arg === 'project' || arg === 'usage') {
       await showTab($, arg)

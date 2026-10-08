@@ -1,0 +1,5 @@
+- [x] After the agent's successful prep init in a session that started outside a prep project, the panel activates: it loads, starts prep watch and opens as the pane option says
+- [x] /prep:pane and /prep:focus activate an inactive panel when prep prime now succeeds, then do what they normally do
+- [x] When activation fails, /prep:pane and /prep:focus answer with the reason (prime's error, such as no .prep directory found; run prep init)
+- [x] An already active panel is unchanged: no second prep watch, no reload
+- [x] The Claude Code integration knowledge entry describes mid-session activation

@@ -56,6 +56,32 @@ const ISSUE_ID = /\b(\d{8}-\d{6})\b/
  */
 export function issueFromCommand(command: string, output = ''): string | undefined {
   let found: string | undefined
+  for (const { sub, words, vars } of prepCommands(command)) {
+    if (sub === 'new') {
+      const id = lastId(output)
+      if (id) found = id
+      continue
+    }
+    if (!FOLLOWED.has(sub)) continue
+    const args = words.map(w => expand(w, vars))
+    const ref = firstPositional(args)
+    if (ref) found = ref
+    else if (args.some(a => a.startsWith('$'))) found = lastId(output) ?? found
+  }
+  return found
+}
+
+/** Whether a Bash command runs prep init. */
+export function runsPrepInit(command: string): boolean {
+  for (const { sub } of prepCommands(command)) if (sub === 'init') return true
+  return false
+}
+
+/**
+ * The prep commands in a Bash command, in order: the subcommand, the words
+ * after it, and the shell variables assigned so far.
+ */
+function* prepCommands(command: string): Generator<{ sub: string; words: string[]; vars: Map<string, string> }> {
   const vars = new Map<string, string>()
   for (const segment of withoutHeredocs(command).split(/&&|\|\||[;|\n]/)) {
     let words = segment.trim().split(/\s+/).filter(Boolean)
@@ -68,19 +94,8 @@ export function issueFromCommand(command: string, output = ''): string | undefin
       vars.set(m[1]!, expand(unquote(m[2]!), vars))
     }
     if (!/(^|\/)prep$/.test(words[at] ?? '')) continue
-    const sub = words[at + 1] ?? ''
-    if (sub === 'new') {
-      const id = lastId(output)
-      if (id) found = id
-      continue
-    }
-    if (!FOLLOWED.has(sub)) continue
-    const args = words.slice(at + 2).map(w => expand(w, vars))
-    const ref = firstPositional(args)
-    if (ref) found = ref
-    else if (args.some(a => a.startsWith('$'))) found = lastId(output) ?? found
+    yield { sub: words[at + 1] ?? '', words: words.slice(at + 2), vars }
   }
-  return found
 }
 
 function expand(word: string, vars: Map<string, string>): string {
