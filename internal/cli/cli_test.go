@@ -22,6 +22,9 @@ type harness struct {
 }
 
 func newHarness(t *testing.T) *harness {
+	// The agent running the tests may export its session (the Claude Code
+	// plugin does); the tests' events must not carry it.
+	t.Setenv("PREP_SESSION", "")
 	h := &harness{t: t, dir: t.TempDir(), now: time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)}
 	clock = func() time.Time { h.now = h.now.Add(time.Second); return h.now }
 	t.Cleanup(func() { clock = time.Now })
@@ -886,6 +889,7 @@ func TestBootstrap(t *testing.T) {
 }
 
 func newHarnessNoBootstrap(t *testing.T) *harness {
+	t.Setenv("PREP_SESSION", "")
 	h := &harness{t: t, dir: t.TempDir(), now: time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)}
 	clock = func() time.Time { h.now = h.now.Add(time.Second); return h.now }
 	h.ok("init", "--no-bootstrap")

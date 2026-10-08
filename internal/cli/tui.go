@@ -75,12 +75,14 @@ func cmdTUI(a *app, args []string) error {
 	// A broken user configuration leaves the mouse on; prep setup reports it.
 	ucfg, _ := userconfig.Load()
 	return tui.Run(tui.Options{
-		NoMouse:   ucfg.TUI.Mouse != nil && !*ucfg.TUI.Mouse,
-		SaveMouse: saveMouse,
-		Actor:     humanActor(),
-		Write:     write,
-		Load:      func() (*domain.Tree, error) { return load(false) },
-		Watch:     filepath.Join(root, mdstore.Dir),
+		NoMouse:    ucfg.TUI.Mouse != nil && !*ucfg.TUI.Mouse,
+		SaveMouse:  saveMouse,
+		Single:     ucfg.TUI.Layout == "single",
+		SaveLayout: saveLayout,
+		Actor:      humanActor(),
+		Write:      write,
+		Load:       func() (*domain.Tree, error) { return load(false) },
+		Watch:      filepath.Join(root, mdstore.Dir),
 		// The last 2,000 events at most: the stream prunes itself near that.
 		Activity:   func() ([]activity.Event, error) { return activity.Read(filepath.Join(root, mdstore.Dir), 2000) },
 		StartAgent: *agent,
@@ -92,6 +94,21 @@ func cmdTUI(a *app, args []string) error {
 			return domain.Validate(t), nil
 		},
 	}, os.Stdin, os.Stdout)
+}
+
+// saveLayout records the TUI's layout choice in the user configuration,
+// keeping its other choices.
+func saveLayout(single bool) error {
+	c, err := userconfig.Load()
+	if err != nil {
+		return err
+	}
+	c.TUI.Layout = ""
+	if single {
+		c.TUI.Layout = "single"
+	}
+	_, err = userconfig.Save(c)
+	return err
 }
 
 // saveMouse records the TUI's mouse capture choice in the user

@@ -7,7 +7,7 @@ generated:
   at: 2026-10-07T08:11:57Z
 scope:
   - internal/tui/knowledge.go
-confirmed_commit: 1a26cd9183a429cd0de6da33d6eba7f1dde968a0
+confirmed_commit: 81ab0fa274818aa4c3362312bda95dd72e0131dd
 ---
 
 # TUI knowledge screen

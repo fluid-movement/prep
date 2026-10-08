@@ -43,6 +43,11 @@ type Options struct {
 	// SaveMouse records the user's mouse capture choice; nil keeps a
 	// toggle for this session only.
 	SaveMouse func(on bool) error
+	// Single starts with one pane at any width (the user's tui.layout).
+	Single bool
+	// SaveLayout records the layout choice; nil keeps a toggle for this
+	// session only.
+	SaveLayout func(single bool) error
 	// Activity reads the local activity stream for the Agent screen; nil
 	// leaves the screen empty.
 	Activity func() ([]activity.Event, error)
@@ -169,6 +174,7 @@ type Model struct {
 	pendingSelect string            // issue to select after the next load
 	noticeTone    ui.Tone
 	mouse         bool              // capture the mouse: clicks and the wheel act
+	single        bool              // one pane at any width, not the adaptive split
 	wheeled       bool              // the wheel scrolled a list: its view stops following the selection until a key
 	hits          []*lipgloss.Layer // clickable regions of the last render, by ID
 	panes         []*lipgloss.Layer // the panes of the last render, for the wheel
@@ -185,7 +191,7 @@ func NewModel(th *theme.Theme, opts Options) *Model {
 	in.SetStyles(inputStyles(th))
 	m := &Model{th: th, opts: opts, treeMode: true, scope: map[string][]string{}, cursor: map[string]int{}, offset: map[string]int{},
 		vp: newViewport(), page: newViewport(), know: knowState{vp: newViewport()}, filters: map[string]string{}, input: in,
-		pending: map[string]string{}, mouse: !opts.NoMouse, runEditor: execEditor, after: tea.Tick, clock: opts.Now}
+		pending: map[string]string{}, mouse: !opts.NoMouse, single: opts.Single, runEditor: execEditor, after: tea.Tick, clock: opts.Now}
 	if m.clock == nil {
 		m.clock = time.Now
 	}
@@ -604,6 +610,8 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 			return nil
 		}
 		return m.openKnowledge("")
+	case "z":
+		return m.toggleLayout()
 	case "w":
 		if m.tree == nil {
 			return nil
@@ -1069,7 +1077,7 @@ func (m *Model) render() string {
 		body = m.agentPane(m.w, bodyH)
 	default:
 		m.at = point{0, headerLines}
-		listW, detailW := ui.Split(m.w, listRatio, minListW, minDetailW)
+		listW, detailW := m.split(m.w, listRatio, minListW, minDetailW)
 		switch {
 		case detailW == 0 && m.focus == focusDetail:
 			body = m.detailPane(m.w, bodyH)
@@ -1126,6 +1134,28 @@ func (m *Model) header() string {
 	return ui.Fit(line, m.w)
 }
 
+// split divides a screen's width like ui.Split, or gives one pane all of
+// it when the user chose one pane at any width (z).
+func (m *Model) split(w int, ratio float64, minA, minB int) (int, int) {
+	if m.single {
+		return w, 0
+	}
+	return ui.Split(w, ratio, minA, minB)
+}
+
+// toggleLayout switches between the adaptive split and one pane, and
+// records the choice in the user configuration.
+func (m *Model) toggleLayout() tea.Cmd {
+	m.single = !m.single
+	mode := map[bool]string{true: "one pane", false: "split when it fits"}[m.single]
+	if m.opts.SaveLayout != nil {
+		if err := m.opts.SaveLayout(m.single); err != nil {
+			return m.flashErr(fmt.Errorf("%s for this session, not saved: %v", mode, err))
+		}
+	}
+	return m.flash(mode)
+}
+
 func toneIf(cond bool, t ui.Tone) ui.Tone {
 	if cond {
 		return t
@@ -1165,6 +1195,7 @@ var (
 		bind("Screens", "s", "settings", false),
 		bind("Screens", "b", "knowledge", true),
 		bind("Screens", "w", "agent (what it is doing, live)", true),
+		bind("Screens", "z", "one pane or split", false),
 		bind("Screens", "r", "reload", false),
 		bind("Screens", "?", "all keys", true),
 		bind("Screens", "q", "quit", true),
@@ -1234,6 +1265,7 @@ var knowledgeBindings = []binding{
 	bind("Knowledge", "o", "go to an issue that changed the entry", true),
 	bind("Knowledge", "⌫", "back to the issue you came from", false),
 	bind("Knowledge", "esc b", "back to the issues", true),
+	bind("Screens", "z", "one pane or split", false),
 	bind("Screens", "c", "check", false),
 	bind("Screens", "?", "all keys", true),
 	bind("Screens", "q", "quit", true),

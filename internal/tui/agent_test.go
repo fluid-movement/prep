@@ -149,3 +149,31 @@ func TestAgentStartScreen(t *testing.T) {
 		t.Fatal("StartAgent does not open the Agent screen")
 	}
 }
+
+func TestOnePaneLayout(t *testing.T) {
+	var events []activity.Event
+	m, _, _ := agentModel(t, &events, 110, 28)
+	var saved []bool
+	m.opts.SaveLayout = func(single bool) error { saved = append(saved, single); return nil }
+	keys(m, "6", "down")
+	run(m, "z")
+	if !m.single || len(saved) != 1 || !saved[0] {
+		t.Fatalf("z: single %v, saved %v", m.single, saved)
+	}
+	view := m.View().Content
+	checkSize(t, view, 110, 28)
+	golden(t, "screen-110x28-one-pane", view)
+	run(m, "enter")
+	golden(t, "screen-110x28-one-pane-detail", m.View().Content)
+	run(m, "w")
+	checkSize(t, m.View().Content, 110, 28)
+	golden(t, "agent-110x28-one-pane", m.View().Content)
+	run(m, "z")
+	if m.single || len(saved) != 2 || saved[1] {
+		t.Fatalf("z again: single %v, saved %v", m.single, saved)
+	}
+	p, _ := sample(t)
+	if !NewModel(testTheme(), Options{Load: p.load, Single: true}).single {
+		t.Fatal("Options.Single does not start with one pane")
+	}
+}

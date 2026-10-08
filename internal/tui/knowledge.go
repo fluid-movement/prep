@@ -190,7 +190,7 @@ func (m *Model) openEntryLinks() tea.Cmd {
 
 // knowledgePane draws the list of entries beside the selected entry.
 func (m *Model) knowledgePane(w, h int) string {
-	listW, entryW := ui.Split(w, listRatio, minListW, minDetailW)
+	listW, entryW := m.split(w, listRatio, minListW, minDetailW)
 	paths, err := m.knowledgePaths()
 	if entryW == 0 {
 		if m.know.onEntry {

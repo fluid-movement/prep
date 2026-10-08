@@ -8,7 +8,7 @@ generated:
 scope:
   - internal/tui/complete.go
   - internal/tui/app.go
-confirmed_commit: f78c088c490199a1be3a2805a788eab7a2581563
+confirmed_commit: 81ab0fa274818aa4c3362312bda95dd72e0131dd
 ---
 
 # TUI filter bar

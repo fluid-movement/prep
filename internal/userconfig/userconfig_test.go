@@ -63,3 +63,17 @@ func TestTUIMouseChoice(t *testing.T) {
 		t.Fatalf("unset mouse written:\n%s", b)
 	}
 }
+
+func TestTUILayoutChoice(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	p, err := Save(Config{TUI: TUI{Layout: "single"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(p); !strings.Contains(string(b), "tui:\n  layout: single\n") {
+		t.Fatalf("file:\n%s", b)
+	}
+	if c, err := Load(); err != nil || c.TUI.Layout != "single" {
+		t.Fatalf("load: %+v %v", c, err)
+	}
+}

@@ -1,0 +1,4 @@
+- [x] z toggles between the adaptive split and one pane on the issue, knowledge and Agent screens
+- [x] One pane shows the focused pane at any width, as the narrow layout does
+- [x] The choice is saved in the user configuration (tui.layout) and restored at start
+- [x] Goldens, key and config tests; knowledge entries updated

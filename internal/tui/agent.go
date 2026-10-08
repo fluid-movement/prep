@@ -313,7 +313,7 @@ func (m *Model) agentPane(w, h int) string {
 		m.pane("feed", w, h)
 		return ui.Pane{Title: "Agent", Body: ui.Empty(m.th, "No agent activity yet", "Each prep command an agent runs in this project shows up here, live", inner, h-2), Width: w, Height: h}.View(m.th)
 	}
-	leftW, feedW := ui.Split(w, 0.42, 44, 48)
+	leftW, feedW := m.split(w, 0.42, 44, 48)
 	if feedW == 0 {
 		nowH := min(h-3, nowLines+2+1)
 		top := m.nowPane(d, title, w, nowH, true)
@@ -542,6 +542,7 @@ var agentBindings = []binding{
 	bind("Agent", "tab", "next agent (back to the first follows the most recent)", true),
 	bind("Agent", "enter", "open the current issue", true),
 	bind("Agent", "esc w", "back to the issues", true),
+	bind("Screens", "z", "one pane or split", false),
 	bind("Screens", "b", "knowledge", false),
 	bind("Screens", "?", "all keys", true),
 	bind("Screens", "q", "quit", true),

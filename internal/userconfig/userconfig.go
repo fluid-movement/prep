@@ -29,6 +29,9 @@ type TUI struct {
 	// Mouse false turns mouse capture off, so the terminal selects text
 	// with a plain drag; unset means on.
 	Mouse *bool `yaml:"mouse,omitempty"`
+	// Layout single shows one pane at any width; unset splits the screens
+	// when they fit.
+	Layout string `yaml:"layout,omitempty"`
 }
 
 // Path returns the config file location.

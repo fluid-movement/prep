@@ -3,4 +3,4 @@
 - [x] The bridge is silent outside a prep project or without the binary and never changes a tool call or turn
 - [x] token-ledger is gone from the repository and the marketplace; prep setup installs and refreshes the plugin cleanly
 - [x] claude plugin validate passes; knowledge entries describe the slim plugin and the panel entry is removed
-- [ ] Live: after /reload-plugins this session's tool calls and tokens appear in prep tui --agent
+- [x] Live: after /reload-plugins this session's tool calls and tokens appear in prep tui --agent
