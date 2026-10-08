@@ -45,14 +45,18 @@ const VALUED = new Set([
   '--no-impact',
 ])
 
-const ISSUE_ID = /\b(\d{8}-\d{6})\b/
+// Issue IDs are ULIDs: 26 characters of Crockford base32. Commands accept
+// any unique suffix of one.
+const ISSUE_ID = /\b([0-7][0-9A-HJKMNP-TV-Z]{25})\b/
+const ISSUE_REF = /^[0-9A-HJKMNP-TV-Z]{1,26}$/
 
 /**
  * The issue a Bash command makes current: the reference of the last prep
  * command in it that names one, or for prep new the ID its output reports.
  * Shell variables assigned earlier in the command (I=<id> && prep log $I)
  * are expanded; a reference that stays a variable falls back to the last
- * issue ID in the output. Undefined when the command does not move focus.
+ * issue ID in the output. A suffix becomes the full ID when the output shows
+ * the one it ends. Undefined when the command does not move focus.
  */
 export function issueFromCommand(command: string, output = ''): string | undefined {
   let found: string | undefined
@@ -65,7 +69,7 @@ export function issueFromCommand(command: string, output = ''): string | undefin
     if (!FOLLOWED.has(sub)) continue
     const args = words.map(w => expand(w, vars))
     const ref = firstPositional(args)
-    if (ref) found = ref
+    if (ref) found = fullId(ref, output)
     else if (args.some(a => a.startsWith('$'))) found = lastId(output) ?? found
   }
   return found
@@ -106,6 +110,12 @@ function lastId(output: string): string | undefined {
   return [...output.matchAll(new RegExp(ISSUE_ID, 'g'))].pop()?.[1]
 }
 
+function fullId(ref: string, output: string): string {
+  if (ref.length === 26) return ref
+  for (const m of output.matchAll(new RegExp(ISSUE_ID, 'g'))) if (m[1]!.endsWith(ref)) return m[1]!
+  return ref
+}
+
 // Heredoc bodies are text, not commands: a requirement may mention prep guide.
 function withoutHeredocs(command: string): string {
   return command.replace(/(<<-?\s*(['"]?)(\w+)\2[^\n]*)\n[\s\S]*?\n\s*\3[ \t]*(?=\n|$)/g, '$1')
@@ -118,7 +128,7 @@ function firstPositional(args: string[]): string | undefined {
       if (VALUED.has(a)) k++
       continue
     }
-    return /^[0-9-]+$/.test(a) ? a : undefined
+    return ISSUE_REF.test(a) ? a : undefined
   }
   return undefined
 }
@@ -129,5 +139,5 @@ function unquote(word: string): string {
 
 /** The issue an edited file belongs to: a path under .prep/issues/<id>/. */
 export function issueFromPath(path: string): string | undefined {
-  return /(?:^|\/)\.prep\/issues\/(\d{8}-\d{6})\//.exec(path)?.[1]
+  return new RegExp(`(?:^|/)\\.prep/issues/${ISSUE_ID.source}/`).exec(path)?.[1]
 }

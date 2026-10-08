@@ -5,9 +5,9 @@ import type { Engine } from 'claude-code/testing'
 import { issueFromCommand, issueFromPath, runsPrepInit } from '../hooks/infer'
 
 // Fixtures: prep's JSON for a project with one parent and one child issue.
-const PARENT = '20261005-152616'
-const CHILD = '20261005-152621'
-const OTHER = '20261005-190543'
+const PARENT = '01M48KB1NRFQ1A3VWB9SHDM3TM'
+const CHILD = '01M4AHPY6HZ0ZFMMH349V1V2TC'
+const OTHER = '01M4AJ9DN4CK5S4WX2N68VBR98'
 
 const summary = (id: string, title: string, state: string, extra = {}) => ({
   id,
@@ -182,7 +182,7 @@ async function bash($: Engine, command: string) {
 describe('inference', () => {
   test('prep writes and guide name the current issue; reads do not', () => {
     expect(issueFromCommand(`prep guide ${CHILD}`)).toBe(CHILD)
-    expect(issueFromCommand('prep criterion 152621 --check 2 --by claude-code/2')).toBe('152621')
+    expect(issueFromCommand('prep criterion H349V1V2TC --check 2 --by claude-code/2')).toBe('H349V1V2TC')
     expect(issueFromCommand(`cd /repo && PREP_ACTOR=x prep log ${CHILD} "did it"`)).toBe(CHILD)
     expect(issueFromCommand(`prep context --by claude-code/2 ${CHILD} --body-file -`)).toBe(CHILD)
     expect(issueFromCommand(`prep show ${CHILD}`)).toBeUndefined()
@@ -215,6 +215,11 @@ describe('inference', () => {
   test('a reference left a variable falls back to the output', () => {
     expect(issueFromCommand('prep define $ID', `define ${OTHER}: now defined`)).toBe(OTHER)
     expect(issueFromCommand('prep define $ID', '')).toBeUndefined()
+  })
+
+  test('a suffix becomes the full id its output shows', () => {
+    expect(issueFromCommand('prep guide V1V2TC', `# ${OTHER}\n# ${CHILD} Child work`)).toBe(CHILD)
+    expect(issueFromCommand('prep guide V1V2TC', 'no ids here')).toBe('V1V2TC')
   })
 
   test('prep new takes the id from its output', () => {
@@ -335,7 +340,7 @@ describe('panel', () => {
     await $.session.start(START)
     await bash($, `prep guide ${CHILD}`)
 
-    const pinned = await $.command.run({ command: 'prep:focus', args: '190543' } as never)
+    const pinned = await $.command.run({ command: 'prep:focus', args: '4WX2N68VBR98' } as never)
     expect(pinned.text).toContain(`pinned to ${OTHER}`)
     expect(panes.has('prep')).toBe(true)
     await bash($, `prep log ${CHILD} more`)
