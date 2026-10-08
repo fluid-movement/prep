@@ -1,11 +1,11 @@
 import type { On } from 'claude-code'
 import { describe, expect, test } from 'claude-code/testing'
 
-import { classify, prepSubcommands } from '../hooks/classify'
+import { classify, prepSubcommands, readPathIn } from '../hooks/classify'
 import { summarize } from '../hooks/register'
 
 /** An in-memory file system and the session facts the ledger asks for. */
-function fakeHost(on: On) {
+function fakeHost(on: On, sessionId = () => 's1') {
   const files = new Map<string, string>()
   on('fs.exists', async (_$, e) => ({ value: files.has(e.path) || e.path.endsWith('/.prep') }))
   on('fs.read', async (_$, e) => ({ value: files.get(e.path) ?? '' }) as never)
@@ -14,7 +14,7 @@ function fakeHost(on: On) {
     return { value: undefined }
   })
   on('env.get', async () => ({ value: '/home/u' }))
-  on('session.id', async () => ({ value: 's1' }))
+  on('session.id', async () => ({ value: sessionId() }))
   on('session.usage', async () => ({ value: { startedAt: 0, context: { tokens: 1234, window: 200000 }, rateLimits: [] } }) as never)
   on('clock.now', async () => ({ value: 1 }))
   on('command.register', async (_$, e) => ({ value: { command: e.name } }) as never)
@@ -41,6 +41,15 @@ describe('classify', () => {
     const ctx = classify('Bash', { command: "prep context 01ABC --body-file - <<'EOF'\nlong text\nEOF" })
     expect(ctx).toEqual({ target: "prep context 01ABC --body-file - <<'EOF' …", area: 'prep-cli', prep: ['context'] })
     expect(classify('Bash', { command: 'prep show 01ABC' })).toEqual({ target: 'prep show 01ABC', area: 'prep-cli', prep: ['show'] })
+  })
+
+  test('plain reads of a file are classified by its path', () => {
+    expect(readPathIn('cd /r; git show HEAD:docs/dsp.md; echo ==')).toBe('docs/dsp.md')
+    expect(readPathIn('head -n 40 internal/x.go')).toBe('internal/x.go')
+    expect(readPathIn("sed -n '1,20p' .prep/knowledge/a.md")).toBe('.prep/knowledge/a.md')
+    expect(readPathIn('go test ./... | head -5')).toBeUndefined()
+    expect(classify('Bash', { command: 'git show HEAD:docs/dsp.md' }).area).toBe('code')
+    expect(classify('Bash', { command: 'cat src/main.rs' }).area).toBe('code')
   })
 })
 
@@ -78,6 +87,25 @@ describe('issues', () => {
 
     const rows = files.get('/home/u/.claude/token-ledger/s1.jsonl')!.trim().split('\n').map(l => JSON.parse(l))
     expect(rows.filter(r => r.type === 'tool').map(r => r.issue)).toEqual([undefined, A, A, B])
+  })
+})
+
+describe('sessions', () => {
+  test('a new session id drops the issue even without session.start', async ($, on) => {
+    let id = 's1'
+    const files = fakeHost(on, () => id)
+    const A = '01M4AHPY6HZ0ZFMMH349V1V2TC'
+    await $.session.start({ cwd: '/r', surface: 'terminal', isInteractive: true })
+    await $.turn.start({ text: 'hi', turnId: 'turn1' })
+    await $.tool.call({ tool: 'Bash', tool_use_id: 't1', command: `prep guide ${A}` } as never)
+    await $.turn.complete({ turnId: 'turn1', answer: '', reason: 'answer' } as never)
+    id = 's2'
+    await $.turn.start({ text: 'again', turnId: 'turn2' })
+    await $.tool.call({ tool: 'Bash', tool_use_id: 't2', command: 'prep new --help; prep show 01ABC' } as never)
+    await $.turn.complete({ turnId: 'turn2', answer: '', reason: 'answer' } as never)
+
+    const rows = files.get('/home/u/.claude/token-ledger/s2.jsonl')!.trim().split('\n').map(l => JSON.parse(l))
+    expect(rows.filter(r => r.type === 'tool').map(r => r.issue)).toEqual([undefined])
   })
 })
 

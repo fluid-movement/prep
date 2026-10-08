@@ -24,7 +24,7 @@ export function classify(tool: string, input: Record<string, unknown>): Target {
       const command = withoutHeredocs(str('command') ?? '')
       const subs = prepSubcommands(command)
       if (subs.length > 0) return { target: clip(command), area: 'prep-cli', prep: subs }
-      const path = prepPathIn(command)
+      const path = prepPathIn(command) ?? readPathIn(command)
       return { target: clip(command), area: path ? areaOfPath(path) : undefined }
     }
     case 'Grep':
@@ -66,6 +66,24 @@ function withoutHeredocs(command: string): string {
 
 function prepPathIn(command: string): string | undefined {
   return command.match(/\S*\.prep\/\S+/)?.[0]
+}
+
+/**
+ * The file a shell command reads, when it is a plain read: git show <rev>:<path>
+ * anywhere in it, or cat, head, tail or sed starting a command.
+ */
+export function readPathIn(command: string): string | undefined {
+  const shown = /\bgit\s+show\s+[^\s:]*:([^\s;|&]+)/.exec(command)?.[1]
+  if (shown) return shown
+  for (const segment of command.split(/&&|\|\||[;|\n]/)) {
+    const words = segment.trim().split(/\s+/)
+    if (!['cat', 'head', 'tail', 'sed'].includes(words[0] ?? '')) continue
+    // The first word after options and their counts; sed's comes after its script.
+    const args = words.slice(1).filter(w => !w.startsWith('-') && !/^\d+$/.test(w))
+    const path = words[0] === 'sed' ? args[1] : args[0]
+    if (path) return path.replace(/^['"]|['"]$/g, '')
+  }
+  return undefined
 }
 
 /** knowledge or issue for paths under .prep, code otherwise. */

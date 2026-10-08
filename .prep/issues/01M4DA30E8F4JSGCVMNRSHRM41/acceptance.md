@@ -1,0 +1,4 @@
+- [x] After a session ID change without session.start, rows carry no issue until a prep command or issue edit names one (test)
+- [x] prep new -h / --help does not move to an issue, in the ledger and in the panel (tests in both)
+- [x] git show <rev>:<path>, and cat/head/tail/sed reads of a file, are classified by the file's path (knowledge, issue or code) (test)
+- [x] README documents the reset and the classification

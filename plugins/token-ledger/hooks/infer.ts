@@ -64,6 +64,7 @@ export function issueFromCommand(command: string, output = ''): string | undefin
   let found: string | undefined
   for (const { sub, words, vars } of prepCommands(command)) {
     if (sub === 'new') {
+      if (words.some(w => w === '-h' || w === '--help')) continue // prints usage, creates nothing
       const id = lastId(output)
       if (id) found = id
       continue

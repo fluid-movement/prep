@@ -11,7 +11,7 @@ scope:
   - plugins/claude-code/tests
   - plugins/claude-code/commands/focus.md
   - plugins/claude-code/commands/pane.md
-confirmed_commit: 8ee5cf884bcd31be139b3660f430cb017c4beacc
+confirmed_commit: 1befaf298ace4ab6b58f598ad21dc03209bcc6e7
 ---
 
 # Claude Code side panel

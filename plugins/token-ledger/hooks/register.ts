@@ -18,6 +18,9 @@ let turnId: string | undefined
 // The issue being worked on, as the prep panel infers it: the last one a prep
 // write or guide named, or whose files were edited.
 let issue: string | undefined
+// The session issue belongs to: Claude Code can move to a new session ID
+// without session.start, and the issue must not carry over.
+let issueSession: string | undefined
 let writes: Promise<void> = Promise.resolve()
 
 async function ledgerPath($: EngineInterface): Promise<string> {
@@ -61,6 +64,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'token-ledger', description: "Summarize this session's token usage and tool calls" })
     issue = undefined
+    issueSession = await $.session.id()
     const isPrep = await $.fs.exists(`${e.cwd}/.prep`)
     await record($, { type: 'session', sessionId: await $.session.id(), cwd: e.cwd, isPrep, interactive: e.isInteractive })
     return next(e)
@@ -68,6 +72,11 @@ export const register: Register = on => {
 
   on('turn.start', async ($, e, next) => {
     turnId = e.turnId
+    const session = await $.session.id()
+    if (session !== issueSession) {
+      issue = undefined
+      issueSession = session
+    }
     await record($, { type: 'turn', turnId: e.turnId, promptChars: e.text.length })
     return next(e)
   })

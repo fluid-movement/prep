@@ -227,6 +227,7 @@ describe('inference', () => {
       OTHER,
     )
     expect(issueFromCommand('prep new --title T --kind code', '')).toBeUndefined()
+    expect(issueFromCommand(`prep new --help; prep show ${CHILD}`, `${CHILD} Child work`)).toBeUndefined()
   })
 
   test('edits under .prep/issues name their issue', () => {
