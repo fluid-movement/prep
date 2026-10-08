@@ -1,7 +1,7 @@
 import type { On } from 'claude-code'
 import { describe, expect, test } from 'claude-code/testing'
 
-import { classify, prepSubcommands, readPathIn } from '../hooks/classify'
+import { classify, prepSubcommands, readPathIn, readsKnowledge } from '../hooks/classify'
 import { summarize } from '../hooks/register'
 
 /** An in-memory file system and the session facts the ledger asks for. */
@@ -31,6 +31,7 @@ describe('classify', () => {
     expect(prepSubcommands('/usr/local/bin/prep complete 01ABC')).toEqual(['complete'])
     expect(prepSubcommands('go test ./... | grep prep')).toEqual([])
     expect(prepSubcommands('cd /r && prep guide 01ABC')).toEqual(['guide'])
+    expect(prepSubcommands('for e in a b; do prep knowledge show $e; done')).toEqual(['knowledge'])
     expect(prepSubcommands('I=01ABC B=x && prep criterion $I --add y && prep ready $I')).toEqual(['criterion', 'ready'])
     expect(prepSubcommands('cd /r && PREP_ACTOR=x prep show 01ABC | head')).toEqual(['show'])
     expect(prepSubcommands("echo prep guide; cat <<'EOF'\nprep init\nEOF")).toEqual([])
@@ -41,6 +42,14 @@ describe('classify', () => {
     const ctx = classify('Bash', { command: "prep context 01ABC --body-file - <<'EOF'\nlong text\nEOF" })
     expect(ctx).toEqual({ target: "prep context 01ABC --body-file - <<'EOF' …", area: 'prep-cli', prep: ['context'] })
     expect(classify('Bash', { command: 'prep show 01ABC' })).toEqual({ target: 'prep show 01ABC', area: 'prep-cli', prep: ['show'] })
+  })
+
+  test('knowledge reads through prep count as knowledge, writes as prep-cli', () => {
+    expect(classify('Bash', { command: 'cd /r; prep knowledge find D65 | head' })).toMatchObject({ area: 'knowledge', prep: ['knowledge'] })
+    expect(classify('Bash', { command: 'for e in a b; do prep knowledge show $e; done' }).area).toBe('knowledge')
+    expect(classify('Bash', { command: "prep knowledge update a --body-file - <<'EOF'\nprep knowledge show x\nEOF" }).area).toBe('prep-cli')
+    expect(readsKnowledge('prep list && prep knowledge list --type component')).toBe(true)
+    expect(readsKnowledge('prep show 01ABC')).toBe(false)
   })
 
   test('plain reads of a file are classified by its path', () => {

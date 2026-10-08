@@ -1,0 +1,1 @@
+`classify` in `plugins/token-ledger/hooks/classify.ts` sets `prep-cli` whenever `prepSubcommands` finds a prep command; it only knows the first word after prep. Tests in `plugins/token-ledger/tests/ledger.test.ts`. The pane's Usage tab (`plugins/claude-code/hooks/usage.ts`) groups by the same area; see [Claude Code side panel](/components/claude-code-panel.md).

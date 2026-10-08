@@ -1,0 +1,10 @@
+---
+title: 'token-ledger: prep knowledge reads count as knowledge'
+kind: code
+tags:
+  - tokens
+---
+
+Knowledge read through `prep knowledge list|find|show` lands in the `prep-cli` area, so the Usage tab and K-share undercount knowledge reads once agents stop reading the files (fathom run 174fa6b3: ~41k of ~45k tokens in `prep-cli` were knowledge). A Bash command that runs a knowledge read is classified as `knowledge`; its `prep` subcommands are still recorded. Knowledge writes stay `prep-cli`.
+
+## Open questions

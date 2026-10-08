@@ -1,0 +1,2 @@
+- [x] A command running prep knowledge list, find or show is area knowledge; prep knowledge new/update/confirm and other prep commands stay prep-cli (test)
+- [x] README says so

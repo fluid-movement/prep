@@ -23,7 +23,7 @@ export function classify(tool: string, input: Record<string, unknown>): Target {
     case 'Bash': {
       const command = withoutHeredocs(str('command') ?? '')
       const subs = prepSubcommands(command)
-      if (subs.length > 0) return { target: clip(command), area: 'prep-cli', prep: subs }
+      if (subs.length > 0) return { target: clip(command), area: readsKnowledge(command) ? 'knowledge' : 'prep-cli', prep: subs }
       const path = prepPathIn(command) ?? readPathIn(command)
       return { target: clip(command), area: path ? areaOfPath(path) : undefined }
     }
@@ -43,12 +43,15 @@ export function classify(tool: string, input: Record<string, unknown>): Target {
 
 /**
  * The prep subcommands a shell command runs, in order: prep wherever it
- * starts a command in the line (after cd ... &&, assignments, export).
+ * starts a command in the line (after cd ... &&, assignments, export, or
+ * a shell keyword such as do).
  */
 export function prepSubcommands(command: string): string[] {
   const subs: string[] = []
   for (const segment of withoutHeredocs(command).split(/&&|\|\||[;|\n]/)) {
     let words = segment.trim().split(/\s+/).filter(Boolean)
+    // Shell keywords before a command, as in for ...; do prep knowledge show $e; done.
+    while (['do', 'then', 'else', 'time', '!', '{', '('].includes(words[0] ?? '')) words = words.slice(1)
     if (words[0] === 'export') words = words.slice(1)
     let at = 0
     while (at < words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[at]!)) at++
@@ -57,6 +60,11 @@ export function prepSubcommands(command: string): string[] {
     if (sub !== undefined && /^[a-z][a-z-]*$/.test(sub)) subs.push(sub)
   }
   return subs
+}
+
+/** Whether a shell command reads the knowledge base through prep knowledge list, find or show. */
+export function readsKnowledge(command: string): boolean {
+  return /(?:^|[\s/;&|])prep\s+knowledge\s+(?:list|find|show)\b/.test(withoutHeredocs(command))
 }
 
 // Heredoc bodies are text, not commands, and can be long: keep the marker.

@@ -18,7 +18,7 @@ Every row has `type` and `t` (milliseconds since the epoch).
 | `session` | `sessionId`, `cwd`, `isPrep` (a `.prep` directory exists), `interactive` |
 | `turn` | `turnId`, `promptChars` |
 | `step` | one model request: `turnId`, `index`, `agentId` (subagents), `issue`, `messages`, `model`, `usage` (`input`, `cacheRead`, `cacheWrite`, `output` tokens), `answerChars`, `tools` (names requested), `stop` |
-| `tool` | `turnId` (main loop) or `agentId`, `tool`, `issue`, `target` (path, command or pattern; heredoc bodies dropped, clipped to 1000 chars), `area` (`prep-cli`, `knowledge`, `issue`, `code`, by the path a call names: a file tool's path, a `.prep` path in a command, or the file a plain `git show <rev>:<path>`, `cat`, `head`, `tail` or `sed` reads; empty when none applies), `prep` (the subcommands the command runs, in order), `resultChars` (what the model read back; ≈ chars/4 tokens), `isError`, `ms` |
+| `tool` | `turnId` (main loop) or `agentId`, `tool`, `issue`, `target` (path, command or pattern; heredoc bodies dropped, clipped to 1000 chars), `area` (`prep-cli`, `knowledge`, `issue`, `code`; `knowledge` for commands that run `prep knowledge list|find|show`, `prep-cli` for other prep commands, else by the path a call names: a file tool's path, a `.prep` path in a command, or the file a plain `git show <rev>:<path>`, `cat`, `head`, `tail` or `sed` reads; empty when none applies), `prep` (the subcommands the command runs, in order), `resultChars` (what the model read back; ≈ chars/4 tokens), `isError`, `ms` |
 | `turn.end` | `turnId`, `contextTokens`, `window`, `costUsd` |
 | `session.end` | `reason` |
 
