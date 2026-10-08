@@ -1,0 +1,2 @@
+- [x] prep prime's hint (text and JSON) names prep knowledge find/show as the way to read knowledge and says subagents need the rule passed on
+- [x] A test checks the hint

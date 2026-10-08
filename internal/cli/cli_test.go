@@ -337,6 +337,13 @@ func TestGuideJSONAndPrime(t *testing.T) {
 	if pr.Issues != 2 || len(pr.Parents) != 1 || pr.Parents[0].ID != p {
 		t.Fatalf("prime = %+v", pr)
 	}
+	// The briefing reaches every session, unlike the skill, so it carries the knowledge-read rule.
+	if !strings.Contains(pr.Hint, "prep knowledge find") || !strings.Contains(pr.Hint, "subagents") {
+		t.Fatalf("prime hint = %q", pr.Hint)
+	}
+	if out := h.ok("prime"); !strings.Contains(out, "not the files, and tell subagents to do the same.") {
+		t.Fatalf("prime text lacks the hint:\n%s", out)
+	}
 }
 
 func TestKnowledgeRetrievalByScope(t *testing.T) {

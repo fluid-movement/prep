@@ -639,7 +639,7 @@ func cmdPrime(a *app, args []string) error {
 		return ss
 	}
 	b := primeBrief{Issues: len(t.Issues), Parents: []summary{}, Next: []summary{}, Stale: []summary{}, Claims: []claimSummary{},
-		Hint: "Run prep guide <id> for the issue you work on; it lists what to read and where outputs go."}
+		Hint: "Run prep guide <id> for the issue you work on; it lists what to read and where outputs go. Read knowledge with prep knowledge find <words> or prep knowledge show <entry>[#section], not the files, and tell subagents to do the same."}
 	for _, id := range t.IDs() {
 		i := t.Issues[id]
 		s := t.State(id)

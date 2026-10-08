@@ -1,0 +1,11 @@
+---
+title: Session briefing names the knowledge-read rule
+kind: code
+tags:
+  - tokens
+  - knowledge
+---
+
+The skill's rules reach an agent only when it invokes the skill, and subagents never load it: in a fathom audit (session 3b7d87a5) the main agent never invoked the skill and no agent used `prep knowledge`. The session-start briefing (`prep prime`, which the SessionStart hook injects into every session) does reach every session, so its hint names the knowledge-read rule: read knowledge with `prep knowledge find` or `show`, not the files, and pass the rule on to subagents.
+
+## Open questions
