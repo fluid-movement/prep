@@ -2,7 +2,6 @@
 - [ ] The package skill equals internal/cli/skill.md; just sync-skill writes it and a Go test fails when it differs
 - [ ] Skill and prime briefing word the subagent advice so it holds in harnesses without subagents
 - [ ] The extension sets PREP_ACTOR to pi/<version> at session start unless already set, and starts nothing in its factory
-- [ ] Inference and usage-area rules live once in plugins/shared; the Claude Code and token-ledger copies are checked identical by a test
 - [ ] just test-pi runs the unit tests and an SDK session test with the faux provider; just ci includes it
 - [ ] plugins/pi/README.md documents loading from the checkout
 - [ ] Live: pi started with the package from the checkout lists the prep skill and loads it on /skill:prep

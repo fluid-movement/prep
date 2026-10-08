@@ -55,7 +55,7 @@ func From(p palette.Palette, profile colorprofile.Profile) *Theme {
 	t := &Theme{Palette: p, Dark: !p.Light, Profile: profile, Border: lipgloss.RoundedBorder()}
 	t.C = Colors{
 		Text: t.color("text"), Muted: t.color("muted"), Subtle: t.color("subtle"), Accent: t.color("accent"),
-		Border: t.color("subtle"), Focus: t.color("accent"), Selection: t.color("selection"),
+		Border: t.color(palette.BorderToken), Focus: t.color("accent"), Selection: t.color("selection"),
 		Success: t.color("success"), Warning: t.color("warning"), Error: t.color("error"),
 	}
 	st := lipgloss.NewStyle
@@ -93,29 +93,12 @@ func (t *Theme) color(token string) color.Color {
 	return lipgloss.Complete(t.Profile)(ansi, ansi256, hex)
 }
 
-// stateTokens draws each state from the palette: the glyph tells states
-// apart, the color only marks what needs attention (ready, in progress)
-// and lets finished work fade.
-var stateTokens = map[domain.State]string{
-	domain.StateOpen:       "muted",
-	domain.StateDefined:    "text",
-	domain.StateReady:      "success",
-	domain.StateInProgress: "accent",
-	domain.StateDone:       "subtle",
-	domain.StateDropped:    "subtle",
-}
-
 // State returns the color of an issue state.
-func (t *Theme) State(s domain.State) color.Color {
-	if tok, ok := stateTokens[s]; ok {
-		return t.color(tok)
-	}
-	return t.C.Muted
-}
+func (t *Theme) State(s domain.State) color.Color { return t.color(palette.StateToken(s)) }
 
 // Kind returns the color of an issue kind: kinds are written out, so they
 // stay muted.
-func (t *Theme) Kind(domain.Kind) color.Color { return t.C.Muted }
+func (t *Theme) Kind(domain.Kind) color.Color { return t.color(palette.KindToken) }
 
 // Hex returns the true-color value of a token for the theme's background,
 // for libraries that take color strings (Glamour).

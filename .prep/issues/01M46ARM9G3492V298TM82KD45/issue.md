@@ -9,17 +9,14 @@ tags:
   - pi
 ---
 
-prep works in Pi as well as it works in Claude Code: an agent in a Pi session gets the same skill and briefing, and the person sees the issue the agent works on in a prep pane. `prep setup` installs and updates the integration like the Claude Code plugin. The integration is a Pi package served from this repository, a thin TypeScript adapter over the CLI's JSON output with no FSM logic ([Stack](/decisions/stack.md)).
-
-Parity with [Claude Code integration](/components/claude-code.md) and [Claude Code side panel](/components/claude-code-panel.md) comes first, with one deliberate difference: in the agent the person only opens and closes the pane; everything else is done in `prep tui` (D3). The children are the parity work:
+prep works in Pi as well as it works in Claude Code: a Pi agent gets the same skill and briefing, and its activity (prep commands, tool calls, tokens) reaches the Agent view of `prep tui`, which the person runs next to Pi. `prep setup` installs and updates the integration like the Claude Code plugin. The integration is a Pi package served from this repository: the skill and one thin extension over the CLI, with no FSM logic ([Stack](/decisions/stack.md)).
 
 - the prep skill, identical to `internal/cli/skill.md` and worded so it holds in either harness
-- the briefing from `prep prime` as a system prompt section, with the version warning
-- the pane: Live view following the agent, `/prep:pane`, Project and Usage views, the prep theme
+- the briefing from `prep prime` as a system prompt section, with the version warning, and the session's tool and request events sent to `prep activity add`
 - installation, refresh and removal through `prep setup`, pinned to the binary's version
 
-The integration follows Pi's extension practices so agents stay efficient and reliable: long-lived resources start at `session_start` and stop idempotently at `session_shutdown`, terminal UI is guarded by the mode so print, JSON and RPC runs keep working, the briefing keeps the prompt prefix stable for caching, and a failure in the extension never changes a tool call.
+The extension follows Pi's practices: nothing starts in its factory, long-lived resources start at `session_start` and stop idempotently at `session_shutdown`, it works in print, JSON and RPC modes, the briefing keeps the prompt prefix stable for caching, and a failure in the extension never changes a tool call.
 
-What Pi can do beyond Claude Code (own tools, prompt shaping, and so on) is discussed once parity is reached and comes as separate issues.
+What Pi can do beyond this (own tools, prompt shaping) comes as separate issues.
 
 ## Open questions

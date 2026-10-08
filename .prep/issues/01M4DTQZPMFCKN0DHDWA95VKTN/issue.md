@@ -1,0 +1,18 @@
+---
+title: 'Agent view: one TUI for every harness'
+kind: code
+parent: 01M48KB1NRFQ1A3VWB9SHDM3TM
+tags:
+  - tui
+  - integration
+---
+
+Harness panels rebuild `prep tui` in each harness's toolkit. Instead, the person runs `prep tui` next to any agent (a tmux, terminal or editor split), and its Agent view shows what the agent is doing: the issue it works on, a live feed of its actions, and its usage, in one view that is fun to watch. Harness integrations shrink to the skill, a briefing hook and a small bridge that reports tool calls and tokens.
+
+- prep records every agent action it sees in a local activity stream, gitignored, and derives each agent's current issue from it; `prep focus` sets it explicitly.
+- The TUI's Agent view follows the newest actor live.
+- The Claude Code plugin loses its panel and commands; token-ledger folds into it as the activity bridge.
+
+Decided while planning 0.2.0 (D8 on 01M46ARM9G3492V298TM82KD45); there are no outside users, so nothing is kept for compatibility.
+
+## Open questions

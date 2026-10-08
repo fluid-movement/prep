@@ -4,3 +4,5 @@
 - [ ] prep prime --plugin reads the version from the Pi package and warns about older or newer packages as for the Claude Code plugin; development versions are not compared
 - [ ] Works in print mode (pi -p) as well as interactive
 - [ ] Live: a new Pi session in this repository answers what prep's briefing said without running prep
+- [ ] Successful tool results and each request's tokens, context fill and cost reach prep activity add in prep's event format, matching what the Claude Code bridge sends
+- [ ] Live: prep tui --agent shows the Pi session's tool calls and token figures

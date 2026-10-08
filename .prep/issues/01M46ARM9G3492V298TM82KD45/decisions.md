@@ -33,3 +33,9 @@ date: 2026-10-08
 supersedes: D3
 
 The user wants the agent to open and close the pane and nothing more; anything else is done in prep tui. Pi gets one command, `/prep [live|project|usage]`: without an argument it toggles the pane, with a view it opens the pane on that view. No status, next, guide or focus commands; the pane follows the agent without pinning. Pi's skill commands are `/skill:<name>`, so `/prep` does not collide with the prep skill. Claude Code moves to the same name in its own issue. This deliberately departs from parity with the Claude Code plugin as it stands.
+
+## D8: No pane: prep tui's Agent view follows the agent
+date: 2026-10-08
+supersedes: D1
+
+Rebuilding the TUI in every harness's toolkit (the Claude Code panel, the Pi pane, a theme bridge between them) is the wrong layer. The person runs `prep tui` in a split next to any agent; its Agent view shows the issue the agent works on, a live feed of what it does, and its usage. The binary records an activity stream under `.prep/local/` (gitignored) from every prep command, and the agent's current issue is derived from it, so issue inference moves from TypeScript into prep (also superseding D5). Harnesses add token and tool events through `prep activity add`. The Pi integration is the skill plus one extension: the briefing section (D2) and activity events. No `/prep` command (supersedes D7). Decided by the user while planning 0.2.0.

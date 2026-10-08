@@ -1,0 +1,1 @@
+Plan: /Users/azaharias/.claude/plans/i-just-had-a-reactive-bunny.md. Children: activity stream (base), TUI Agent view, slim Claude Code plugin. Pi follows in Release 0.3.0 through 01M46ARM9G3492V298TM82KD45.

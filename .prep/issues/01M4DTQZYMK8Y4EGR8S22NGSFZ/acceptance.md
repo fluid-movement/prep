@@ -1,0 +1,9 @@
+- [ ] w opens the Agent screen from any screen and leaves it; prep tui --agent starts on it
+- [ ] The Now card shows the followed actor's issue with state, step, acceptance progress and the next transition, and enter opens its detail
+- [ ] The feed shows the stream newest first with a glyph per area, relative time, verb and target, grouped by issue, and scrolls with keys and the wheel
+- [ ] The usage section shows context fill, session tokens, read-back by area, largest knowledge reads and per-issue figures when request events exist
+- [ ] It follows the most recent actor, tab cycles actors, and the header names the actor
+- [ ] A new event highlights briefly, a completed issue gets a celebration line, a quiet spell shows an idle note, and nothing redraws while nothing happens
+- [ ] Changes under .prep/local refresh the Agent data without reloading the issue tree
+- [ ] Golden snapshots at both sizes and gallery entries for new components; TUI knowledge entries updated
+- [ ] Live: prep tui --agent in a split follows this Claude Code session through an issue

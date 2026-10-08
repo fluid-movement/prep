@@ -1,0 +1,7 @@
+- [x] prep theme colors --json prints the theme name, light flag, the eight tokens and the derived state, kind and border colors as hex
+- [x] Without --theme it uses the configured theme or default; --theme takes built-in and custom names; an unknown theme fails with a clear error
+- [x] The TUI and the command take state, kind and border colors from one mapping in internal/palette
+- [x] The panel option theme: empty follows prep's theme, a name themes the panel only, claude keeps Claude Code's colors
+- [x] The panel reloads the colors at activation and on each prep watch change, and falls back to Claude Code's colors when the command fails
+- [x] Knowledge entries for the CLI, palette and side panel describe the command and the option
+- [ ] Live: the panel recolors after a theme switch in prep tui

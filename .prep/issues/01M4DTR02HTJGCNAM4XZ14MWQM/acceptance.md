@@ -1,0 +1,6 @@
+- [ ] The plugin has no panel module, no commands and no pane option; the skill and SessionStart briefing remain
+- [ ] Tool calls and each turn's tokens, context fill and cost reach prep activity add in prep's format
+- [ ] The bridge is silent outside a prep project or without the binary and never changes a tool call or turn
+- [ ] token-ledger is gone from the repository and the marketplace; prep setup installs and refreshes the plugin cleanly
+- [ ] claude plugin validate passes; knowledge entries describe the slim plugin and the panel entry is removed
+- [ ] Live: after /reload-plugins this session's tool calls and tokens appear in prep tui --agent

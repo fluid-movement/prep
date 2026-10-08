@@ -1,0 +1,18 @@
+---
+title: Activity stream, prep focus and prep activity
+kind: code
+parent: 01M4DTQZPMFCKN0DHDWA95VKTN
+tags:
+  - cli
+  - agent-context
+---
+
+prep records what agents do with it in a local, per-machine activity stream, so any UI can follow an agent without parsing its shell commands.
+
+- **Location**: `.prep/local/`, ignored through `.prep/.gitignore` (`local/`), which the scaffold writes and `prep check` warns about when missing. `activity.jsonl` there, append-only, one JSON object per line, small enough that concurrent appends never interleave, pruned to the newest lines when it grows past a limit.
+- **Events**: `{at, actor, kind, issue?, verb, target?, area?, chars?, tokens?, context?, cost?}`. The binary writes `prep` events for every write naming an issue, for `prep new`, `prep guide`, knowledge writes, and knowledge and issue reads with the size of what they printed; verbs read as plain English ("checked criterion 3", "recorded decision D2", "read the guide", "searched knowledge for theme"). Harnesses add `tool` and `request` events through `prep activity add` (JSON on stdin, validated), so prep owns the format and never reads harness files.
+- **Focus**: an actor's current issue is the issue of its latest write, guide or `prep focus` event; reads do not move it. `prep focus <id>` sets it, `prep focus --clear` clears it. The actor is `--by`/`PREP_ACTOR`, else `unknown`.
+- `prep activity [--max n] [--actor a] [--json]` prints the tail; `prep prime` names the caller's own focus when it has one, so a resumed or compacted session knows where it was.
+- Recording never fails or slows a command noticeably; a read-only or missing `.prep/local` is silently skipped. Reads still never change records; the stream is local UI state, and the docs say so.
+
+## Open questions
