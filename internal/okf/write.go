@@ -94,6 +94,10 @@ func (s *Store) Apply(e *domain.KnowledgeEdit) ([]string, error) {
 		tmp.Close()
 		return nil, err
 	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return nil, err
+	}
 	if err := tmp.Close(); err != nil {
 		return nil, err
 	}

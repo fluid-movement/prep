@@ -382,3 +382,10 @@ func TestApplyWritesNothingOnConflict(t *testing.T) {
 		t.Fatal("context.md was written before the conflict on history.md")
 	}
 }
+
+func TestFrontmatterAfterBOM(t *testing.T) {
+	fm, body, ok, err := splitFrontmatter("\xef\xbb\xbf---\ntitle: X\n---\n\nBody.\n")
+	if err != nil || !ok || fm != "title: X\n" || strings.TrimSpace(body) != "Body." {
+		t.Fatalf("fm %q body %q ok %v err %v", fm, body, ok, err)
+	}
+}

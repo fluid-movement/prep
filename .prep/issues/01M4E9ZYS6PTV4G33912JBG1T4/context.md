@@ -1,0 +1,2 @@
+- `tmp.Sync()` in `internal/okf/write.go` `Apply`, `internal/okf/index.go` and `internal/userconfig/userconfig.go`; `splitFrontmatter` in `internal/mdstore/text.go`; `linkText` in `internal/okf/index.go`.
+- Knowledge: [OKF store](/components/okf-store.md), [Markdown store](/components/markdown-store.md).

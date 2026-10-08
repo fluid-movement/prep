@@ -13,7 +13,7 @@ import (
 // splitFrontmatter separates a leading YAML frontmatter block from the body.
 // ok is false when the file does not start with a frontmatter fence.
 func splitFrontmatter(raw string) (fm, body string, ok bool, err error) {
-	raw = strings.ReplaceAll(raw, "\r\n", "\n")
+	raw = strings.TrimPrefix(strings.ReplaceAll(raw, "\r\n", "\n"), "\ufeff") // a BOM some editors add
 	if !strings.HasPrefix(raw, "---\n") {
 		return "", raw, false, nil
 	}

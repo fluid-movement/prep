@@ -16,6 +16,9 @@ import (
 // OKFVersion is the Open Knowledge Format version the bundle follows.
 const OKFVersion = "0.2"
 
+// linkText escapes what would end a link's text early.
+var linkText = strings.NewReplacer(`\`, `\\`, `[`, `\[`, `]`, `\]`)
+
 // IndexFiles computes the OKF index.md of every bundle directory that holds
 // entries, directly or below it, keyed by bundle path ("/index.md",
 // "/components/index.md"). Without entries there are no index files.
@@ -57,7 +60,7 @@ func IndexFiles(entries []*domain.Entry) map[string]string {
 				if title == "" {
 					title = path.Base(e.Path)
 				}
-				line := fmt.Sprintf("* [%s](%s)", title, e.Path)
+				line := fmt.Sprintf("* [%s](%s)", linkText.Replace(title), e.Path)
 				if d := strings.Join(strings.Fields(e.Description), " "); d != "" {
 					line += " - " + d
 				}
@@ -164,6 +167,10 @@ func writeAtomic(p, content string) error {
 	}
 	defer os.Remove(tmp.Name())
 	if _, err := tmp.WriteString(content); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
 		tmp.Close()
 		return err
 	}

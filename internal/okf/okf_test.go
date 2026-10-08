@@ -217,3 +217,9 @@ func TestNewEntryKeepsUnreadableFile(t *testing.T) {
 		t.Fatalf("expected conflict, got %v", err)
 	}
 }
+
+func TestIndexEscapesLinkText(t *testing.T) {
+	if got := linkText.Replace(`A [draft] \ note`); got != `A \[draft\] \\ note` {
+		t.Fatalf("escaped = %q", got)
+	}
+}

@@ -1,0 +1,3 @@
+- [x] Every atomic write syncs its temp file before the rename
+- [x] Frontmatter after a BOM parses
+- [x] Index links escape brackets in titles

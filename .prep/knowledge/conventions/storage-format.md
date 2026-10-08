@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/mdstore
   - testdata/contract
-confirmed_commit: b02849e589a03a17c2fd8730d5445263307734de
+confirmed_commit: 6d9cdd0408e8159037b558c02e0c22b9cb333a5c
 ---
 
 # Storage format
