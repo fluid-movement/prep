@@ -22,7 +22,7 @@ just install
 
 ## Harness integrations
 
-The binary is half of prep; the other half teaches your agent to use it. After installing, the script runs `prep setup`, which detects your agent harnesses and installs their integration per user. For Claude Code that is the prep plugin: the prep skill, a briefing at the start of every session in a prep project, and a bridge that reports the session's tool calls and tokens. Run `prep tui --agent` in a split next to your agent to watch what it does: its current issue, a live feed of its actions and its usage. Run `prep setup` again at any time to add or remove harnesses; your choices live in `~/.config/prep/config.yaml`.
+The binary is half of prep; the other half teaches your agent to use it. After installing, the script runs `prep setup`, which detects your agent harnesses and installs their integration per user. For Claude Code that is the prep plugin: the prep skill, a briefing at the start of every session in a prep project, and a bridge that reports the session's tool calls and tokens. Run `prep tui --agent` next to your agent, beside it or in a strip above or below, to watch what it does: its current issue in full, a live feed of its actions, and its usage. Run `prep setup` again at any time to add or remove harnesses; your choices live in `~/.config/prep/config.yaml`.
 
 ## Update
 
@@ -31,7 +31,7 @@ prep update          # replace prep with the latest release, checksum verified
 prep update --check  # only report whether a newer release exists
 ```
 
-When prep was installed with Homebrew or `go install`, `prep update` names the command that updates it instead. Releases are cut by pushing a version tag (`git tag v0.1.0 && git push origin v0.1.0`); the release workflow builds and publishes them with GoReleaser.
+When prep was installed with Homebrew or `go install`, `prep update` names the command that updates it instead. Releases are cut with `just release vX.Y.Z` (it sets the plugin version, runs the tests, commits and tags) and published by pushing the tag; the release workflow builds and publishes them with GoReleaser.
 
 ## Quick start
 
@@ -65,6 +65,10 @@ State is derived from which records exist in `.prep/issues/<id>/`, never stored:
 | done / dropped | `resolution.md` | `prep complete`, `prep drop` |
 
 An issue is **stale** when its requirement or kind differs from the newest baseline: `prep ack` for a trivial change, `prep define` and re-enrichment for a real one. **Actionable** = ready, not stale, dependencies done, unclaimed, not a parent.
+
+## The TUI
+
+`prep tui` has two rows of navigation. The top row is the screens: Issues (`i`), Agent (`w`) and Knowledge (`b`), with the check's counts and a gear for the settings at its right end. Below it are the views of the screen you are on: your saved issue lists on Issues; Issue, Activity and Usage on Agent. `tab` and `1`–`9` move between views on every screen, and backspace (or the mouse's back button) returns to where you were, across screens. Everything can be clicked. On the issue list, `a` opens the actions that apply to the selected issue, `e` edits it, `p` sets its priority and `n` creates one; `?` lists every key. In a terminal under 16 rows both navigation rows share one line.
 
 ## Views
 
