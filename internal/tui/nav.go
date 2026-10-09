@@ -197,7 +197,9 @@ func (m *Model) setView(n int) tea.Cmd {
 // header draws both tiers and marks what can be clicked: the screens, the
 // check counts, the settings gear and the views.
 func (m *Model) header() string {
-	left := gutter + m.th.S.Title.Render("prep") + space(theme.SpaceL)
+	// prep is the app's name, not a place: plain text, white on dark
+	// themes, never the accent and bold the current screen gets.
+	left := gutter + m.th.S.Body.Render("prep") + space(theme.SpaceL)
 	var items []ui.NavItem
 	active := -1
 	for k, sc := range navScreens {

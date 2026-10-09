@@ -1,0 +1,1 @@
+- `internal/tui/nav.go` `header`. Knowledge: [TUI navigation](/components/tui-navigation.md).
