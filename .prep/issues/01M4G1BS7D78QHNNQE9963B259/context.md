@@ -1,0 +1,1 @@
+- `internal/tui/app.go` `relations` (the `children` heading, `maxChildren`, `childRank`) and `relationBlock`; `internal/tui/editing.go` `listChildren`, `followRel`, `linkTargets`. Knowledge: [TUI detail links](/components/tui-detail.md).

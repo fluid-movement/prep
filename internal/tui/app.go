@@ -80,6 +80,7 @@ const (
 	minDetailW   = 40
 	footerLines  = 1
 	maxRelations = 6
+	maxChildren  = 4 // unresolved children the detail lists; the rest are in the list
 	noticeFor    = 2 * time.Second
 )
 
@@ -987,9 +988,20 @@ func (m *Model) relations(id string) []relation {
 			out = append(out, relation{"path", anc[k]})
 		}
 	}
-	_ = i.Parent
-	for _, c := range m.tree.ByPriority(m.tree.Children(id)) {
-		out = append(out, relation{"child", c})
+	// Children: a heading that opens them all in the list, then the first
+	// unresolved ones, work in progress first.
+	if kids := m.tree.Children(id); len(kids) > 0 {
+		out = append(out, relation{"children", id})
+		var open []string
+		for _, c := range m.tree.ByPriority(kids) {
+			if !m.tree.State(c).Terminal() {
+				open = append(open, c)
+			}
+		}
+		slices.SortStableFunc(open, func(a, b string) int { return childRank(m.tree.State(a)) - childRank(m.tree.State(b)) })
+		for _, c := range open[:min(len(open), maxChildren)] {
+			out = append(out, relation{"child", c})
+		}
 	}
 	for _, d := range i.DependsOn {
 		if m.tree.Issues[d] != nil {
@@ -1003,6 +1015,19 @@ func (m *Model) relations(id string) []relation {
 		out = append(out, relation{"knowledge", p})
 	}
 	return out
+}
+
+// childRank orders unresolved children by how far along they are.
+func childRank(s domain.State) int {
+	switch s {
+	case domain.StateInProgress:
+		return 0
+	case domain.StateReady:
+		return 1
+	case domain.StateDefined:
+		return 2
+	}
+	return 3
 }
 
 // --- view ---
@@ -1428,6 +1453,7 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) (out []stri
 		return line{ui.LinkLine(m.th, l, k == selected, inner), k}
 	}
 	var children []int
+	heading := -1
 	for k, r := range rels {
 		switch r.label {
 		case "path":
@@ -1435,6 +1461,8 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) (out []stri
 			title = m.th.S.Muted.Render(title)
 			path = append(path, title)
 			parent = k
+		case "children":
+			heading = k
 		case "child":
 			children = append(children, k)
 		}
@@ -1445,9 +1473,17 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) (out []stri
 		out = append(out, mark(parent, sub.Render("↑ ")+strings.Join(path, sub.Render(" › "))))
 		links = append(links, parent)
 	}
-	if len(children) > 0 {
+	if heading >= 0 {
+		// One line for any number of children: progress, what is open, and
+		// the way to all of them.
 		p := m.tree.ChildProgress(id)
-		lines = append(lines, line{m.th.S.Muted.Render("Children ") + ui.Progress(m.th, p.Done+p.Dropped, p.Total), -1})
+		open := p.Total - p.Done - p.Dropped
+		text := "  " + m.th.S.Muted.Render("Children ") + ui.Progress(m.th, p.Done+p.Dropped, p.Total)
+		if open > 0 {
+			text += m.th.S.Muted.Render(fmt.Sprintf(" · %d open", open))
+		}
+		text += sub.Render("  list all ›")
+		lines = append(lines, line{mark(heading, text), heading})
 		for n, k := range children {
 			lead := "├─ "
 			if n == len(children)-1 {

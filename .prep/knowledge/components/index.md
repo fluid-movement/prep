@@ -15,6 +15,7 @@
 * [Harness setup and user configuration](/components/setup.md) - prep setup installs, refreshes and removes harness integrations through the setup.Harness interface; ~/.config/prep/config.yaml records which harnesses the user chose.
 * [TUI Agent screen](/components/tui-agent.md) - prep tui's Agent screen: the followed agent's current issue, its activity feed by issue, its usage; keys, layout, liveliness and data from the activity stream.
 * [TUI design system](/components/tui-design-system.md) - internal/tui/theme tokens and text styles, internal/tui/ui components, layout helpers, the gallery and golden snapshots; how to change looks or add a component.
+* [TUI detail links](/components/tui-detail.md) - The issue detail's links above its document: breadcrumb, a children heading for any number of children, dependencies and knowledge, and link mode (o) for following them.
 * [TUI editing and keys](/components/tui-editing.md) - How the TUI writes and which keys do what: the write pipeline, action and edit menus, letter melodies, the keymap and ?, dialogs over the screen, inline text editing with $EDITOR hand-off, the create wizard and the editable settings.
 * [TUI filter bar](/components/tui-filter.md) - internal/tui filter bar: query flags and words per tab, and the picker that suggests flags and their values while typing.
 * [TUI knowledge screen](/components/tui-knowledge.md) - internal/tui knowledge screen: entries with attention marks, the entry view, filters and links between issues and entries.

@@ -953,9 +953,10 @@ func TestMenusMoveWithJK(t *testing.T) {
 	if !m.linkMode || m.linkSel != 1 {
 		t.Fatalf("j j k in link mode: mode %v selection %d, targets %v", m.linkMode, m.linkSel, m.relations(m.selected()))
 	}
+	want := m.relations(ids["export"])[linkTargets(m.relations(ids["export"]))[1]].id
 	run(m, "enter")
-	if m.selected() != ids["json"] {
-		t.Fatalf("enter after j j k went to %s, want the second link", m.selected())
+	if m.selected() != want {
+		t.Fatalf("enter after j j k went to %s, want the second link %s", m.selected(), want)
 	}
 	run(m, "esc")
 	run(m, "a")
@@ -1564,25 +1565,52 @@ func TestLinkModeSelectsInPlace(t *testing.T) {
 	}
 }
 
-func TestLinkModeScrollsToTheSelection(t *testing.T) {
+// However many children a parent has, the detail shows one heading with
+// the progress and the first unresolved ones; the heading opens them all in
+// the list, focused on the parent, and backspace comes back.
+func TestManyChildren(t *testing.T) {
 	p, ids := sample(t)
-	for n := range 9 {
+	for n := range 30 {
 		p.issue(fmt.Sprintf("Part %d", n+1), domain.KindCode, "", ids["export"])
 	}
 	m := openModel(t, p, 110, 40)
 	run(m, "6")
 	m.selectInCurrent(ids["export"])
-	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "more · o selects") {
-		t.Fatalf("no overflow line:\n%s", v)
-	}
-	run(m, "o")
-	for range 10 {
-		run(m, "j")
-	}
+	kids := len(m.tree.Children(ids["export"]))
 	v := ansi.Strip(m.View().Content)
-	sel := m.relations(ids["export"])[linkTargets(m.relations(ids["export"]))[m.linkSel]].id
-	if !strings.Contains(v, m.tree.Issues[sel].Title) || !strings.Contains(v, "above") {
-		t.Fatalf("selection %s not scrolled into view:\n%s", m.tree.Issues[sel].Title, v)
+	pr := m.tree.ChildProgress(ids["export"])
+	head := fmt.Sprintf("%d/%d · %d open  list all ›", pr.Done+pr.Dropped, kids, kids-pr.Done-pr.Dropped)
+	if !strings.Contains(v, head) || strings.Contains(v, "more · o selects") {
+		t.Fatalf("children heading missing or the block overflows:\n%s", v)
+	}
+	shown := 0
+	for _, r := range m.relations(ids["export"]) {
+		if r.label == "child" {
+			shown++
+			if m.tree.State(r.id).Terminal() {
+				t.Fatalf("a resolved child is listed: %s", r.id)
+			}
+		}
+	}
+	if shown != maxChildren {
+		t.Fatalf("%d children listed, want %d", shown, maxChildren)
+	}
+	// The heading is the first link; following it focuses the list.
+	run(m, "o")
+	run(m, "enter")
+	tb := m.current()
+	if m.focus != focusList || m.scopeTop() != ids["export"] || len(tb.rows) < kids+1 {
+		t.Fatalf("heading: focus %d, scope %q, %d rows for %d children", m.focus, m.scopeTop(), len(tb.rows), kids)
+	}
+	run(m, "backspace")
+	if m.selected() != ids["export"] {
+		t.Fatalf("backspace after the heading: selected %s", m.selected())
+	}
+	// A click on the heading does the same.
+	m.focus = focusDetail
+	clickText(t, m, "list all", 50, 110)
+	if m.scopeTop() != ids["export"] {
+		t.Fatal("a click on the heading did not focus the parent")
 	}
 }
 

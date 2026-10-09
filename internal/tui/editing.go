@@ -222,7 +222,29 @@ func (m *Model) followRel(id string, r relation) tea.Cmd {
 		m.pushBack()
 		return m.openKnowledge(r.id)
 	}
+	if r.label == "children" {
+		return m.listChildren(r.id)
+	}
 	return m.jump(r.id, true)
+}
+
+// listChildren shows all of a parent's children: the list, focused on the
+// parent as → does, on its first child.
+func (m *Model) listChildren(id string) tea.Cmd {
+	m.pushBack()
+	m.linkMode = false
+	cmd := m.jump(id, false)
+	tb := m.current()
+	if tb == nil || m.selected() != id {
+		return cmd
+	}
+	if m.scopeTop() != id {
+		m.scope[tb.name] = append(m.scope[tb.name], id)
+		m.rebuild()
+	}
+	m.cursor[tb.name] = min(1, len(tb.rows)-1)
+	m.focus = focusList
+	return cmd
 }
 
 // linkTargets lists the relations link mode moves over, as the detail
@@ -239,7 +261,7 @@ func linkTargets(rels []relation) []int {
 	if parent >= 0 {
 		out = append(out, parent)
 	}
-	for _, label := range []string{"child", "depends on", "blocks", "knowledge"} {
+	for _, label := range []string{"children", "child", "depends on", "blocks", "knowledge"} {
 		for k, r := range rels {
 			if r.label == label {
 				out = append(out, k)

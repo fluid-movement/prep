@@ -1,0 +1,2 @@
+- [x] A parent of any size shows one children heading with progress, open count and list all, over at most four unresolved children
+- [x] The heading opens the list focused on the parent, by click or link mode; backspace returns
