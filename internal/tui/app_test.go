@@ -201,7 +201,7 @@ func TestKnowledgeScreen(t *testing.T) {
 	}
 
 	// a lists only what needs an agent's attention: the broken link.
-	run(m, "a")
+	run(m, "!")
 	if paths, _ := m.knowledgePaths(); len(paths) != 1 || paths[0] != "/components/cli.md" {
 		t.Fatalf("attention-only = %v", paths)
 	}
@@ -209,7 +209,7 @@ func TestKnowledgeScreen(t *testing.T) {
 	if !strings.Contains(v, "Needs an agent's attention") || !strings.Contains(v, "K003 broken link to /components/gone.md") {
 		t.Fatalf("entry lacks its finding:\n%s", v)
 	}
-	run(m, "a")
+	run(m, "!")
 
 	// f filters by type; the entry shows its body and who changed it.
 	run(m, "f")
@@ -808,12 +808,12 @@ func TestActionMenu(t *testing.T) {
 	}
 	// Only what applies is listed: survey has open questions, so no Define.
 	v := ansi.Strip(m.View().Content)
-	for _, want := range []string{"Actions · " + shortID(ids["survey"]) + " Survey export tools", "Edit requirement", "Set priority", "Drop"} {
+	for _, want := range []string{"Actions · " + shortID(ids["survey"]) + " Survey export tools", "Move to another parent", "Drop"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("menu lacks %q:\n%s", want, v)
 		}
 	}
-	for _, gone := range []string{"Define", "Mark ready", "Complete"} {
+	for _, gone := range []string{"Define", "Mark ready", "Complete", "Edit requirement", "Set priority", "Edit tags", "New issue"} {
 		if strings.Contains(v, gone) {
 			t.Fatalf("menu lists %q, which does not apply:\n%s", gone, v)
 		}
@@ -1098,10 +1098,9 @@ func TestSetPriority(t *testing.T) {
 	m := editable(t, p, &edits)
 	run(m, "6")
 	m.selectInCurrent(ids["csv"])
-	run(m, "a")
 	run(m, "p")
 	if m.modal == nil || m.modal.heading != "Priority" {
-		t.Fatal("i does not open the priority menu")
+		t.Fatal("p does not open the priority menu")
 	}
 	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Priority · ") || !strings.Contains(v, "Medium (current)") {
 		t.Fatalf("priority menu:\n%s", v)
@@ -1115,7 +1114,6 @@ func TestSetPriority(t *testing.T) {
 		t.Fatalf("row mark or detail missing:\n%s", v)
 	}
 	// Medium unsets the priority again.
-	run(m, "a")
 	run(m, "p")
 	run(m, "m")
 	if got := issue(t, p, ids["csv"]).Priority; got != "" {
@@ -1154,7 +1152,7 @@ func TestCreateRenameAndEdit(t *testing.T) {
 		t.Fatalf("unchanged editor text: notice %q", m.notice)
 	}
 
-	run(m, "a")
+	run(m, "e")
 	run(m, "t")
 	for range "XML writer" {
 		m.modal.inputs[0], _ = m.modal.inputs[0].Update(keyMsg("backspace"))
@@ -1170,7 +1168,7 @@ func TestCreateRenameAndEdit(t *testing.T) {
 
 	// Context goes through the record command.
 	edits = append(edits, "Use `encoding/xml`.")
-	viaEditor(m, "a", "c")
+	viaEditor(m, "e", "c")
 	if got := issue(t, p, id).Context; got != "Use `encoding/xml`." {
 		t.Fatalf("context = %q", got)
 	}
@@ -1625,10 +1623,10 @@ func TestEditTags(t *testing.T) {
 	run(m, "6")
 	// A resolved issue may change its tags.
 	m.selectInCurrent(ids["format"])
-	run(m, "a")
+	run(m, "e")
 	run(m, "g")
 	if m.modal == nil || m.modal.kind != modalTags {
-		t.Fatal("a g did not open the tags dialog")
+		t.Fatal("e g did not open the tags dialog")
 	}
 	typeIn(m, "export cli")
 	run(m, "enter")
@@ -1657,7 +1655,7 @@ func TestEditTags(t *testing.T) {
 	}
 
 	// Invalid tags keep the dialog with the error; empty removes all.
-	run(m, "a")
+	run(m, "e")
 	run(m, "g")
 	m.modal.inputs[0].SetValue("not-ready")
 	run(m, "enter")

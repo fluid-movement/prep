@@ -135,7 +135,7 @@ func (m *Model) shownAgent() string {
 }
 
 // agentKey handles the Agent screen: j/k and pages scroll the view shown,
-// a cycles the agents, enter opens the current issue. tab and the digits
+// n cycles the agents, enter opens the current issue. tab and the digits
 // switch the views and esc leaves, as on every screen.
 func (m *Model) agentKey(s string) tea.Cmd {
 	a := &m.agentS
@@ -153,7 +153,7 @@ func (m *Model) agentKey(s string) tea.Cmd {
 		*off = 0
 	case "G", "end":
 		*off = 1 << 30 // rendering clamps it
-	case "a":
+	case "n":
 		as := m.agents()
 		if len(as) < 2 {
 			return m.flash("only one agent so far")
@@ -568,7 +568,7 @@ var agentBindings = []binding{
 	bind("Agent", "tab 1-3", "issue, activity or usage", true),
 	bind("Agent", "↑↓ j k", "scroll the view", false),
 	bind("Agent", "g G pgup pgdn", "top, bottom, page", false),
-	bind("Agent", "a", "next agent (back to the first follows the most recent)", true),
+	bind("Agent", "n", "next agent (back to the first follows the most recent)", true),
 	bind("Agent", "enter", "open the current issue", true),
 	bind("Agent", "y", "copy the current issue's ID", false),
 	bind("Screens", "i b", "issues, knowledge", false),

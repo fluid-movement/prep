@@ -1,2 +1,2 @@
-- [ ] Every child is resolved
-- [ ] Live: this repository's Claude Code session, watched in prep tui --agent, shows its issue, feed and usage through a whole issue
+- [x] Every child is resolved
+- [x] Live: this repository's Claude Code session, watched in prep tui --agent, shows its issue, feed and usage through a whole issue

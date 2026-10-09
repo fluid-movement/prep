@@ -1204,7 +1204,7 @@ var knowledgeBindings = []binding{
 	bind("Knowledge", "↑↓ j k", "select an entry", false),
 	bind("Knowledge", "enter → l", "read the entry (arrows scroll, esc back)", false),
 	bind("Knowledge", "f", "filter: --type --status --scope, words match titles", true),
-	bind("Knowledge", "a", "only entries that need an agent's attention", true),
+	bind("Knowledge", "!", "only entries that need an agent's attention (marked !)", true),
 	bind("Knowledge", "o", "go to an issue that changed the entry", true),
 	bind("Knowledge", "y", "copy the entry path", false),
 	bind("Screens", "esc b", "back to the issues", true),

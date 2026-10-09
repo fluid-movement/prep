@@ -146,14 +146,18 @@ func (m *Model) openEditMenu() tea.Cmd {
 	if id == "" || m.tree == nil {
 		return nil
 	}
+	tags := action{key: "g", label: "Tags", run: m.openTags}
 	if m.tree.State(id).Terminal() {
-		return m.flashErr(fmt.Errorf("resolved issues are history; only their priority and tags change"))
+		// Resolved issues are history; only their tags (and priority, p)
+		// still change.
+		m.modal = &modal{kind: modalMenu, id: id, heading: "Edit", items: []action{tags}}
+		return nil
 	}
 	m.modal = &modal{kind: modalMenu, id: id, heading: "Edit", items: []action{
 		{key: "r", label: "Requirement", run: func() tea.Cmd { return m.openText(id, "requirement") }},
 		{key: "c", label: "Context", run: func() tea.Cmd { return m.openText(id, "context") }},
 		{key: "t", label: "Title", run: m.openRename},
-		{key: "g", label: "Tags", run: m.openTags},
+		tags,
 	}}
 	return nil
 }

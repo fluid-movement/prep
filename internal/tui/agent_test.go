@@ -125,12 +125,12 @@ func TestAgentScreenKeys(t *testing.T) {
 		t.Fatalf("shift+tab before the first view: view %d", m.agentS.view)
 	}
 	run(m, "1")
-	// a cycles the agents; back at the first it follows the newest again.
-	run(m, "a")
+	// n cycles the agents; back at the first it follows the newest again.
+	run(m, "n")
 	if got := ansi.Strip(m.View().Content); !strings.Contains(got, "pi/1.1") || !strings.Contains(got, "JSON writer") {
-		t.Fatalf("a does not show the other agent:\n%s", got)
+		t.Fatalf("n does not show the other agent:\n%s", got)
 	}
-	run(m, "a")
+	run(m, "n")
 	if m.agentS.agent != "" {
 		t.Fatalf("back to the first agent should follow again, pinned %q", m.agentS.agent)
 	}

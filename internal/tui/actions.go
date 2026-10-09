@@ -156,16 +156,21 @@ func (m *Model) openMenu() tea.Cmd {
 			items = append(items, a)
 		}
 	}
+	if len(items) == 0 {
+		return m.flash("nothing to do with this issue now; ? lists every action and why")
+	}
 	m.modal = &modal{kind: modalMenu, id: m.selected(), items: items}
 	return nil
 }
 
-// actions lists what the user can do with the selected issue. Transitions
-// are checked with the domain's gates for the human actor; placeholder
-// arguments keep argument gates (reason, documentation) out of the way.
+// actions lists what the user can do with the selected issue that no key
+// of its own does: the lifecycle and the records it checks (editing is e,
+// priority p, a new issue n). Transitions are checked with the domain's
+// gates for the human actor; placeholder arguments keep argument gates
+// (reason, documentation) out of the way.
 func (m *Model) actions() []action {
 	id := m.selected()
-	items := []action{{key: "n", label: "New issue", run: m.openCreate}}
+	var items []action
 	if id == "" || m.tree == nil {
 		return items
 	}
@@ -183,13 +188,8 @@ func (m *Model) actions() []action {
 		complete = "code issues are completed by an agent with commit evidence"
 	}
 	return append(items,
-		action{key: "t", label: "Edit title", reason: edit, run: m.openRename},
-		action{key: "e", label: "Edit requirement", reason: edit, run: func() tea.Cmd { return m.openText(id, "requirement") }},
-		action{key: "c", label: "Edit context", reason: edit, run: func() tea.Cmd { return m.openText(id, "context") }},
 		action{key: "v", label: "Tick off criteria (verify)", reason: crit, run: m.openCriteria},
 		action{key: "m", label: "Move to another parent", reason: edit, run: m.openReparent},
-		action{key: "p", label: "Set priority", run: m.openPriority},
-		action{key: "g", label: "Edit tags", run: m.openTags},
 		action{key: "d", label: "Define", reason: m.gate(id, domain.OpDefine), run: m.transition(id, domain.OpDefine, "defined")},
 		action{key: "r", label: "Mark ready", reason: m.gate(id, domain.OpReady), run: m.transition(id, domain.OpReady, "marked ready")},
 		action{key: "a", label: "Acknowledge change", reason: m.gate(id, domain.OpAck), run: m.transition(id, domain.OpAck, "acknowledged")},

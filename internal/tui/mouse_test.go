@@ -310,20 +310,15 @@ func TestClickDialogs(t *testing.T) {
 	m.selectInCurrent(ids["csv"])
 
 	// Menu entries: a click selects, a second click runs; outside does nothing.
-	run(m, "a")
-	clickText(t, m, "Set priority", 0, 120)
-	if m.modal == nil || m.modal.items[m.modal.cursor].key != "p" {
+	run(m, "p")
+	clickText(t, m, "High", 0, 120)
+	if m.modal == nil || m.modal.items[m.modal.cursor].key != "h" {
 		t.Fatalf("menu click: %+v", m.modal)
 	}
 	click(m, 0, 0)
 	if m.modal == nil {
 		t.Fatal("a click outside the dialog closed it")
 	}
-	clickText(t, m, "Set priority", 0, 120)
-	if m.modal == nil || m.modal.heading != "Priority" {
-		t.Fatalf("second menu click did not run the entry: %+v", m.modal)
-	}
-	clickText(t, m, "High", 0, 120)
 	clickText(t, m, "High", 0, 120)
 	if got := issue(t, p, ids["csv"]).Priority; got != "high" {
 		t.Fatalf("priority by clicks: %q", got)

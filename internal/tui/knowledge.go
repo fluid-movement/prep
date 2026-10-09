@@ -134,7 +134,7 @@ func (m *Model) knowledgeKey(s string, k tea.KeyPressMsg) tea.Cmd {
 		m.input.SetValue(m.know.filter)
 		m.input.CursorEnd()
 		return m.input.Focus()
-	case "a":
+	case "!":
 		m.know.attention = !m.know.attention
 		m.syncKnowledge()
 		if m.know.attention && !m.diagDone {

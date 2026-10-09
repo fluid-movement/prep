@@ -1,0 +1,1 @@
+- `internal/tui/actions.go` `actions`, `openMenu`; `internal/tui/editing.go` `openEditMenu`; `internal/tui/agent.go` `agentKey`; `internal/tui/knowledge.go` `knowledgeKey`; keymaps in `internal/tui/app.go`. Knowledge: [TUI editing and keys](/components/tui-editing.md), [TUI Agent screen](/components/tui-agent.md), [TUI knowledge screen](/components/tui-knowledge.md).

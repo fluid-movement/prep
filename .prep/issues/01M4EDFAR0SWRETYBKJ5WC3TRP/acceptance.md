@@ -1,0 +1,2 @@
+- [x] a is the action menu only; n cycles agents; ! toggles knowledge attention
+- [x] The action menu lists no action that has its own key; e g edits tags on resolved issues
