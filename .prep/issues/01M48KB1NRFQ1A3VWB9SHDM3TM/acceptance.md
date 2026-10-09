@@ -1,5 +1,5 @@
 - [x] Every child is resolved
 - [x] just release v0.2.0 tagged the release; plugin.json and marketplace.json carry 0.2.0
 - [x] The release workflow published v0.2.0 with archives for macOS, Linux and Windows (amd64, arm64) and checksums.txt
-- [ ] prep update on a 0.1.0 install moves to 0.2.0 and refreshes the Claude Code plugin; prep fix converts a 0.1.0 project
+- [x] prep update on a 0.1.0 install moves to 0.2.0 and refreshes the Claude Code plugin; prep fix converts a 0.1.0 project
 - [x] The README describes the TUI navigation and how releases are cut
