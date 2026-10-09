@@ -1,0 +1,2 @@
+- [x] Both tiers draw items the same way: plain, current accent and bold
+- [x] No back crumb and no agent dot in the bar

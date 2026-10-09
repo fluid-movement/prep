@@ -1,0 +1,2 @@
+- `internal/tui/ui/nav.go` `Nav`, `navStyle`; `internal/tui/ui/components.go` `Tabs`, `TabSpans`; `internal/tui/nav.go` `header`, `utilities`; `internal/tui/mouse.go`.
+- Knowledge: [TUI navigation](/components/tui-navigation.md), [TUI design system](/components/tui-design-system.md).

@@ -67,10 +67,9 @@ func Gallery(t *theme.Theme, width int) string {
 	}
 
 	section("Navigation")
-	// The screens bar: Agent active, then idle; the views of the screen below.
-	live, idle := ToneAccent, ToneMuted
-	b.WriteString(Fit(Nav(t, []NavItem{{Label: "Issues"}, {Label: "Agent", Dot: &live}, {Label: "Knowledge"}}, 1), width) + "\n")
-	b.WriteString(Fit(Nav(t, []NavItem{{Label: "Issues"}, {Label: "Agent", Dot: &idle}, {Label: "Knowledge"}}, 0), width) + "\n")
+	// The screens bar with Issues, then Agent current.
+	b.WriteString(Fit(Nav(t, []NavItem{{Label: "Issues"}, {Label: "Agent"}, {Label: "Knowledge"}}, 0), width) + "\n")
+	b.WriteString(Fit(Nav(t, []NavItem{{Label: "Issues"}, {Label: "Agent"}, {Label: "Knowledge"}}, 1), width) + "\n")
 
 	section("Tabs")
 	// The views prep init writes, then two a project added.

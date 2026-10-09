@@ -105,19 +105,15 @@ type Tab struct {
 	Count int
 }
 
-// Tabs renders a one-line tabs bar with the active tab highlighted,
-// truncated to width.
+// Tabs renders a screen's views, the second navigation tier, in the
+// grammar of Nav: the active view accent and bold, the others muted, plain
+// labels SpaceS apart inside their SpaceS padding; truncated to width.
 func Tabs(t *theme.Theme, tabs []Tab, active, width int) string {
 	var parts []string
 	for k, tb := range tabs {
-		label := tb.label()
-		if k == active {
-			parts = append(parts, lipgloss.NewStyle().Foreground(t.C.Accent).Background(t.C.Selection).Bold(true).Padding(0, 1).Render(label))
-		} else {
-			parts = append(parts, lipgloss.NewStyle().Foreground(t.C.Muted).Padding(0, 1).Render(label))
-		}
+		parts = append(parts, navStyle(t, k == active).Padding(0, theme.SpaceS).Render(tb.label()))
 	}
-	return Fit(strings.Join(parts, t.S.Subtle.Render("│")), width)
+	return Fit(strings.Join(parts, strings.Repeat(" ", theme.SpaceS)), width)
 }
 
 func (tb Tab) label() string {
@@ -133,12 +129,12 @@ func (tb Tab) label() string {
 func TabSpans(tabs []Tab, width int) (x, w []int) {
 	at := 0
 	for _, tb := range tabs {
-		tw := ansi.StringWidth(tb.label()) + 2 // Padding(0, 1)
+		tw := ansi.StringWidth(tb.label()) + 2*theme.SpaceS // the padding
 		if at+tw > width {
 			break
 		}
 		x, w = append(x, at), append(w, tw)
-		at += tw + 1 // the │ between tabs
+		at += tw + theme.SpaceS // the space between tabs
 	}
 	return x, w
 }

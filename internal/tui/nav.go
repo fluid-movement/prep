@@ -194,39 +194,14 @@ func (m *Model) setView(n int) tea.Cmd {
 	return nil
 }
 
-// agentDot is the Agent item's status dot: accent while the followed
-// agent is active, muted once idle, none before any activity.
-func (m *Model) agentDot() *ui.Tone {
-	key := m.shownAgent()
-	if key == "" {
-		return nil
-	}
-	tone := ui.ToneAccent
-	if m.clock().Sub(m.agentView(key).last) >= idleAfter {
-		tone = ui.ToneMuted
-	}
-	return &tone
-}
-
-// header draws both tiers and marks what can be clicked: the back crumb,
-// the screens, the check counts, the settings gear and the views.
+// header draws both tiers and marks what can be clicked: the screens, the
+// check counts, the settings gear and the views.
 func (m *Model) header() string {
 	left := gutter + m.th.S.Title.Render("prep") + space(theme.SpaceL)
-	// The crumb's place is kept while there is nowhere to go back to, so
-	// the screens never shift.
-	if len(m.back) > 0 {
-		m.markAt("back", lipgloss.Width(left), 0, 1, 1, zRow)
-		left += m.th.S.Muted.Render("‹") + space(theme.SpaceM)
-	} else {
-		left += space(1 + theme.SpaceM)
-	}
 	var items []ui.NavItem
 	active := -1
 	for k, sc := range navScreens {
 		it := ui.NavItem{Label: navLabels[sc]}
-		if sc == screenAgent {
-			it.Dot = m.agentDot()
-		}
 		if sc == m.screen {
 			active = k
 		}
@@ -271,7 +246,7 @@ func (m *Model) utilities() string {
 	out := ""
 	if m.diagDone {
 		errs, warns := m.diagCounts()
-		out = ui.Note(m.th, fmt.Sprintf("✕ %d", errs), toneIf(errs > 0, ui.ToneError)) + space(theme.SpaceS) + ui.Note(m.th, fmt.Sprintf("▲ %d", warns), toneIf(warns > 0, ui.ToneWarning)) + space(theme.SpaceL)
+		out = ui.Note(m.th, fmt.Sprintf("✕ %d", errs), toneIf(errs > 0, ui.ToneError)) + space(theme.SpaceM) + ui.Note(m.th, fmt.Sprintf("▲ %d", warns), toneIf(warns > 0, ui.ToneWarning)) + space(theme.SpaceL)
 	}
 	return out + ui.Note(m.th, "⚙", toneIf(m.screen == screenSettings, ui.ToneAccent))
 }
@@ -281,7 +256,7 @@ func (m *Model) utilities() string {
 func (m *Model) markUtilities(x int) {
 	if m.diagDone {
 		errs, warns := m.diagCounts()
-		w := len(fmt.Sprintf("✕ %d ▲ %d", errs, warns)) - 4 // ✕ and ▲ are three bytes, one cell
+		w := len(fmt.Sprintf("✕ %d  ▲ %d", errs, warns)) - 4 // ✕ and ▲ are three bytes, one cell
 		m.markAt("check", x, 0, w, 1, zRow)
 		x += w + theme.SpaceL
 	}

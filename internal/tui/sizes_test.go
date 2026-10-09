@@ -103,7 +103,7 @@ func TestScreenKeys(t *testing.T) {
 func TestShortTerminal(t *testing.T) {
 	var events []activity.Event
 	m, _, _ := agentModel(t, &events, 110, 12)
-	for _, c := range []struct{ key, name, tier2 string }{{"", "issues", "Attention"}, {"w", "agent", "Issue │ Activity"}, {"b", "knowledge", "entries"}} {
+	for _, c := range []struct{ key, name, tier2 string }{{"", "issues", "Attention"}, {"w", "agent", "Issue   Activity"}, {"b", "knowledge", "entries"}} {
 		if c.key != "" {
 			run(m, c.key)
 		}

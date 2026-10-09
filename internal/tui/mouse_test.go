@@ -72,16 +72,16 @@ func TestClickTabsRowsAndRelations(t *testing.T) {
 			listW = w
 		}
 
-		// The screens bar switches screens and the crumb goes back; a tab
+		// The screens bar switches screens and backspace goes back; a tab
 		// switches the view of the screen shown.
 		m.after = func(time.Duration, func(time.Time) tea.Msg) tea.Cmd { return nil }
 		clickText(t, m, "Agent", 0, w)
 		if m.screen != screenAgent {
 			t.Fatalf("%dx%d: Agent click left screen %d", w, h, m.screen)
 		}
-		clickText(t, m, "‹", 0, 20)
+		keys(m, "backspace")
 		if m.screen != screenIssues {
-			t.Fatalf("%dx%d: back crumb left screen %d", w, h, m.screen)
+			t.Fatalf("%dx%d: backspace left screen %d", w, h, m.screen)
 		}
 		clickText(t, m, "⚙", 0, w)
 		if m.screen != screenSettings {

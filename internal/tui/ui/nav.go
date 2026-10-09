@@ -13,31 +13,28 @@ import (
 // screen's views (Tabs).
 type NavItem struct {
 	Label string
-	// Dot puts a status dot before the label in its tone, such as an
-	// agent that is active (accent) or idle (subtle); nil shows none.
-	Dot *Tone
 }
 
 // navGap separates the screens: wide, so the bar reads as a few places,
 // not as a row of tabs.
 var navGap = strings.Repeat(" ", theme.SpaceL)
 
-// Nav renders the screens bar: the current screen bold and underlined in
-// the accent, the others muted, so it never reads as a row of view tabs.
+// Nav renders the screens bar in the grammar Tabs uses for views: the
+// current screen accent and bold, the others muted, plain text.
 func Nav(t *theme.Theme, items []NavItem, active int) string {
 	var parts []string
 	for k, it := range items {
-		style := lipgloss.NewStyle().Foreground(t.C.Muted)
-		if k == active {
-			style = lipgloss.NewStyle().Foreground(t.C.Accent).Bold(true).Underline(true)
-		}
-		label := style.Render(it.Label)
-		if it.Dot != nil {
-			label = Note(t, "●", *it.Dot) + " " + label
-		}
-		parts = append(parts, label)
+		parts = append(parts, navStyle(t, k == active).Render(it.Label))
 	}
 	return strings.Join(parts, navGap)
+}
+
+// navStyle is how both navigation tiers draw an item.
+func navStyle(t *theme.Theme, current bool) lipgloss.Style {
+	if current {
+		return lipgloss.NewStyle().Foreground(t.C.Accent).Bold(true)
+	}
+	return lipgloss.NewStyle().Foreground(t.C.Muted)
 }
 
 // NavSpans returns where each item of a Nav bar starts and how wide it is,
@@ -46,9 +43,6 @@ func NavSpans(items []NavItem) (x, w []int) {
 	at := 0
 	for _, it := range items {
 		iw := ansi.StringWidth(it.Label)
-		if it.Dot != nil {
-			iw += 2
-		}
 		x, w = append(x, at), append(w, iw)
 		at += iw + len(navGap)
 	}

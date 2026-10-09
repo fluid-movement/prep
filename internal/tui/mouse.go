@@ -95,8 +95,6 @@ func (m *Model) click(x, y int) tea.Cmd {
 	switch kind {
 	case "screen":
 		return m.goScreen(navScreens[n])
-	case "back":
-		return m.goBack()
 	case "check":
 		return m.goScreen(screenCheck)
 	case "settings":

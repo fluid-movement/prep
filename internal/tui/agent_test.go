@@ -71,7 +71,7 @@ func TestAgentScreenSnapshots(t *testing.T) {
 		name string
 		want []string
 	}{
-		{"agent", []string{"claude-code/opus · 4f1c9a2e", "Issue │ Activity │ Usage", "CSV writer", "1/2 acceptance", "step implement", "Write rows as CSV"}},
+		{"agent", []string{"claude-code/opus · 4f1c9a2e", "Issue   Activity   Usage", "CSV writer", "1/2 acceptance", "step implement", "Write rows as CSV"}},
 		{"agent-activity", []string{"checked criterion 1", "searched knowledge", "done in 3 prep commands", "Choose the default format"}},
 		{"agent-usage", []string{"74k/200k", "Largest knowledge reads", "This issue"}},
 	}

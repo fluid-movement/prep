@@ -16,7 +16,7 @@ confirmed_commit: ad855be3907fbc5ab7df8b7e06529318670b1a9b
 
 Applies when changing the Agent screen of `prep tui`. Decided in 01M4DTQZPMFCKN0DHDWA95VKTN: harnesses draw no panels of their own; the person runs `prep tui --agent` next to the agent.
 
-- `w` opens or leaves it from any screen, `prep tui --agent` starts on it (`Options.StartAgent`); its place in the screens bar carries the followed agent's live dot ([TUI navigation](/components/tui-navigation.md)).
+- `w` opens or leaves it from any screen, `prep tui --agent` starts on it (`Options.StartAgent`) ([TUI navigation](/components/tui-navigation.md)); the bar shows no agent status, the screen's second tier does.
 - **Data**: what an agent does comes from the [activity stream](/features/agent-activity.md) (`Options.Activity`, the newest 2,000 events).
 - **Label**: the actor of the agent's latest prep or focus event (the name the agent gives itself; its bridge reports as `claude-code`), else of any event, with the session's first 8 characters.
 - **Agent shown**: the pinned one (`a` cycles `activity.Agents`; cycling back to the first follows the most recent again), else the most recently active.
