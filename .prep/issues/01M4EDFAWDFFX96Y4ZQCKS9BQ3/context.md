@@ -1,0 +1,2 @@
+- `internal/tui/theme/theme.go` scale; `internal/tui/ui/components.go` `Inner`; `internal/tui/nav.go` `header`, `gutter`, `tallHeight`; `internal/tui/app.go` `footer`; `internal/tui/ui/gallery.go` Spacing section; `internal/tui/sizes_test.go` `TestTallTerminal`.
+- Knowledge: [TUI design system](/components/tui-design-system.md), [TUI navigation](/components/tui-navigation.md).

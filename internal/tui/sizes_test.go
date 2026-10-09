@@ -116,3 +116,20 @@ func TestShortTerminal(t *testing.T) {
 		}
 	}
 }
+
+// From tallHeight on, a blank row sets the navigation off from the body;
+// header, tabs and footer start at the gutter, where pane text starts.
+func TestTallTerminal(t *testing.T) {
+	p, _ := sample(t)
+	m := openModel(t, p, 110, 34)
+	view := m.View().Content
+	checkSize(t, view, 110, 34)
+	golden(t, "tall-issues-110x34", view)
+	lines := strings.Split(ansi.Strip(view), "\n")
+	if strings.TrimSpace(lines[2]) != "" || !strings.HasPrefix(lines[3], "╭") {
+		t.Fatalf("no blank row under the navigation:\n%s", strings.Join(lines[:4], "\n"))
+	}
+	if !strings.HasPrefix(lines[0], gutter+"prep") || !strings.HasPrefix(lines[len(lines)-1], gutter) {
+		t.Fatalf("header or footer not in the gutter:\n%s\n%s", lines[0], lines[len(lines)-1])
+	}
+}

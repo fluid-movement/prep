@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/fluid-movement/prep/internal/domain"
+	"github.com/fluid-movement/prep/internal/tui/theme"
 	"github.com/fluid-movement/prep/internal/tui/ui"
 )
 
@@ -31,16 +32,30 @@ const (
 var agentViews = []string{"Issue", "Activity", "Usage"}
 
 // shortHeight is the terminal height below which the two tiers share one
-// line, so the TUI fits in a strip above or below the agent.
-const shortHeight = 16
+// line, so the TUI fits in a strip above or below the agent; from
+// tallHeight on, a blank row sets the navigation off from the body.
+const (
+	shortHeight = 16
+	tallHeight  = 30
+)
 
 // headerH is how many lines the navigation takes.
 func (m *Model) headerH() int {
-	if m.h < shortHeight {
+	switch {
+	case m.h < shortHeight:
 		return 1
+	case m.h >= tallHeight:
+		return 2 + theme.Row
 	}
 	return 2
 }
+
+// gutter is the space at the screen's left and right edges of the header
+// and footer: as wide as a pane's border and padding, so their text lines
+// up with the text inside the panes.
+var gutter = strings.Repeat(" ", theme.SpaceM)
+
+func space(n int) string { return strings.Repeat(" ", n) }
 
 // place is where the person was: a screen and what it had selected.
 type place struct {
@@ -196,11 +211,14 @@ func (m *Model) agentDot() *ui.Tone {
 // header draws both tiers and marks what can be clicked: the back crumb,
 // the screens, the check counts, the settings gear and the views.
 func (m *Model) header() string {
-	left := m.th.S.Title.Render("prep") + " "
+	left := gutter + m.th.S.Title.Render("prep") + space(theme.SpaceL)
+	// The crumb's place is kept while there is nowhere to go back to, so
+	// the screens never shift.
 	if len(m.back) > 0 {
-		x := lipgloss.Width(left)
-		left += m.th.S.Muted.Render("‹") + " "
-		m.markAt("back", x, 0, 1, 1, zRow)
+		m.markAt("back", lipgloss.Width(left), 0, 1, 1, zRow)
+		left += m.th.S.Muted.Render("‹") + space(theme.SpaceM)
+	} else {
+		left += space(1 + theme.SpaceM)
 	}
 	var items []ui.NavItem
 	active := -1
@@ -221,24 +239,31 @@ func (m *Model) header() string {
 	line := left + ui.Nav(m.th, items, active)
 
 	right := m.utilities()
-	tier2, tier2X, tier2Y := "", 0, 1
+	end := m.w - theme.SpaceM // the right gutter
+	tier2 := ""
 	if m.headerH() == 1 {
-		sep := m.th.S.Subtle.Render("  ›  ")
-		tier2X, tier2Y = lipgloss.Width(line)+lipgloss.Width(sep), 0
-		tier2 = m.secondTier(m.w-tier2X-lipgloss.Width(right)-1, tier2X, tier2Y)
-		if tier2 != "" {
+		sep := space(theme.SpaceM) + m.th.S.Subtle.Render("›") + space(theme.SpaceM-theme.SpaceS)
+		x := lipgloss.Width(line) + lipgloss.Width(sep)
+		if tier2 = m.secondTier(end-x-lipgloss.Width(right)-theme.SpaceM, x, 0); tier2 != "" {
 			line += sep + tier2
 		}
 	} else {
-		tier2 = m.secondTier(m.w, 0, 1)
+		// Tabs pad their labels by SpaceS, so the bar starts that much
+		// left of the gutter and the labels line up with it.
+		x := theme.SpaceM - theme.SpaceS
+		tier2 = space(x) + m.secondTier(end-x, x, 1)
 	}
-	x := max(lipgloss.Width(line)+1, m.w-lipgloss.Width(right))
+	x := max(lipgloss.Width(line)+theme.SpaceM, end-lipgloss.Width(right))
 	m.markUtilities(x)
-	line += strings.Repeat(" ", max(0, x-lipgloss.Width(line))) + right
-	if m.headerH() == 1 {
-		return ui.Fit(line, m.w)
+	line += space(max(0, x-lipgloss.Width(line))) + right
+	out := ui.Fit(line, m.w)
+	if m.headerH() > 1 {
+		out += "\n" + ui.Fit(tier2, m.w)
 	}
-	return ui.Fit(line, m.w) + "\n" + ui.Fit(tier2, m.w)
+	if m.headerH() > 2 {
+		out += strings.Repeat("\n", theme.Row)
+	}
+	return out
 }
 
 // utilities is the bar's right end: the check's counts and the gear.
@@ -246,9 +271,9 @@ func (m *Model) utilities() string {
 	out := ""
 	if m.diagDone {
 		errs, warns := m.diagCounts()
-		out = ui.Note(m.th, fmt.Sprintf("✕ %d", errs), toneIf(errs > 0, ui.ToneError)) + " " + ui.Note(m.th, fmt.Sprintf("▲ %d", warns), toneIf(warns > 0, ui.ToneWarning)) + "  "
+		out = ui.Note(m.th, fmt.Sprintf("✕ %d", errs), toneIf(errs > 0, ui.ToneError)) + space(theme.SpaceS) + ui.Note(m.th, fmt.Sprintf("▲ %d", warns), toneIf(warns > 0, ui.ToneWarning)) + space(theme.SpaceL)
 	}
-	return out + ui.Note(m.th, "⚙", toneIf(m.screen == screenSettings, ui.ToneAccent)) + " "
+	return out + ui.Note(m.th, "⚙", toneIf(m.screen == screenSettings, ui.ToneAccent))
 }
 
 // markUtilities marks the counts (they open the check) and the gear
@@ -258,7 +283,7 @@ func (m *Model) markUtilities(x int) {
 		errs, warns := m.diagCounts()
 		w := len(fmt.Sprintf("✕ %d ▲ %d", errs, warns)) - 4 // ✕ and ▲ are three bytes, one cell
 		m.markAt("check", x, 0, w, 1, zRow)
-		x += w + 2
+		x += w + theme.SpaceL
 	}
 	m.markAt("settings", x, 0, 1, 1, zRow)
 }
@@ -282,8 +307,8 @@ func (m *Model) secondTier(width, x, y int) string {
 	}
 	vs := m.views()
 	if len(vs) == 0 {
-		// One cell in, where a tab's label starts.
-		return ui.Fit(" "+m.th.S.Muted.Render(m.caption()), width)
+		// SpaceS in, where a tab's label starts.
+		return ui.Fit(space(theme.SpaceS)+m.th.S.Muted.Render(m.caption()), width)
 	}
 	xs, ws := ui.TabSpans(vs, width)
 	for k := range xs {
@@ -291,8 +316,12 @@ func (m *Model) secondTier(width, x, y int) string {
 	}
 	line := ui.Tabs(m.th, vs, m.activeView(), width)
 	if m.screen == screenAgent && y > 0 {
-		if s := m.agentStatus(); s != "" && lipgloss.Width(line)+lipgloss.Width(s)+2 <= width {
-			line += strings.Repeat(" ", width-lipgloss.Width(line)-lipgloss.Width(s)) + s
+		// The fullest status that fits: label, liveliness, position.
+		for detail := 2; detail >= 0; detail-- {
+			if s := m.agentStatus(detail); s != "" && lipgloss.Width(line)+lipgloss.Width(s)+theme.SpaceM <= width {
+				line += space(width-lipgloss.Width(line)-lipgloss.Width(s)) + s
+				break
+			}
 		}
 	}
 	return line

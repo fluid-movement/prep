@@ -1,0 +1,3 @@
+- [x] The spacing scale replaces Gap, Pad and Section; ui.Inner replaces the repeated arithmetic
+- [x] Header and footer sit in the gutter, aligned with pane text; screens SpaceL apart; the crumb's place is kept
+- [x] A blank row under the navigation from 30 rows; nothing lost at 80x24 or in the short layout

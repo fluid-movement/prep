@@ -143,6 +143,10 @@ func TabSpans(tabs []Tab, width int) (x, w []int) {
 	return x, w
 }
 
+// Inner is the width of a pane's content: the pane less its border and its
+// padding on both sides.
+func Inner(w int) int { return w - 2 - 2*theme.SpaceS }
+
 // Row is the data of one issue list row.
 type Row struct {
 	ID     string
@@ -253,7 +257,7 @@ func (p Pane) View(t *theme.Theme) string {
 	}
 	top := edge.Render(b.TopLeft+b.Top) + title + edge.Render(strings.Repeat(b.Top, fill)+b.TopRight)
 
-	bodyW := inner - 2*theme.Pad
+	bodyW := inner - 2*theme.SpaceS
 	bodyH := p.Height - 2
 	lines := strings.Split(p.Body, "\n")
 	if len(lines) > bodyH {
@@ -261,7 +265,7 @@ func (p Pane) View(t *theme.Theme) string {
 	}
 	var out []string
 	out = append(out, top)
-	pad := strings.Repeat(" ", theme.Pad)
+	pad := strings.Repeat(" ", theme.SpaceS)
 	for k := 0; k < bodyH; k++ {
 		l := ""
 		if k < len(lines) {

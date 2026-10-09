@@ -1248,26 +1248,33 @@ func essentials(bs []binding) []ui.Key {
 	return out
 }
 
+// footer is the bottom line inside the gutters: a notice, an error, or the
+// keys that work now.
 func (m *Model) footer() string {
+	w := max(1, m.w-2*theme.SpaceM)
+	return ui.Fit(gutter+m.footerLine(w), w)
+}
+
+func (m *Model) footerLine(w int) string {
 	switch {
 	case m.notice != "":
-		return ui.Fit(ui.Note(m.th, m.notice, m.noticeTone), m.w)
+		return ui.Fit(ui.Note(m.th, m.notice, m.noticeTone), w)
 	case m.modal != nil:
-		return ui.KeyHelp(m.th, m.modalKeys(), m.w)
+		return ui.KeyHelp(m.th, m.modalKeys(), w)
 	case m.err != nil:
-		return ui.Fit(ui.Error(m.th, m.err.Error()), m.w)
+		return ui.Fit(ui.Error(m.th, m.err.Error()), w)
 	case m.filtering && m.screen == screenKnowledge:
-		return ui.KeyHelp(m.th, knowFilterKeys, m.w)
+		return ui.KeyHelp(m.th, knowFilterKeys, w)
 	case m.filtering:
-		return ui.KeyHelp(m.th, filterKeys, m.w)
+		return ui.KeyHelp(m.th, filterKeys, w)
 	case m.preview != nil:
 		pv := m.preview
 		bar := m.th.S.Title.Render("Theme ") + m.th.S.Heading.Render(pv.names[pv.idx]) + m.th.S.Subtle.Render(fmt.Sprintf(" %d/%d  ", pv.idx+1, len(pv.names)))
-		return ui.Fit(bar+ui.KeyHelp(m.th, previewKeys, max(1, m.w-lipgloss.Width(bar))), m.w)
+		return ui.Fit(bar+ui.KeyHelp(m.th, previewKeys, max(1, w-lipgloss.Width(bar))), w)
 	case m.linkMode:
-		return ui.KeyHelp(m.th, linkModeKeys, m.w)
+		return ui.KeyHelp(m.th, linkModeKeys, w)
 	}
-	return ui.KeyHelp(m.th, essentials(m.bindings()), m.w)
+	return ui.KeyHelp(m.th, essentials(m.bindings()), w)
 }
 
 func (m *Model) listTitle(tb *tab) string {
@@ -1294,7 +1301,7 @@ func (m *Model) listPane(w, h int) string {
 	if tb != nil {
 		title = m.listTitle(tb)
 	}
-	inner := w - 2 - 2*theme.Pad
+	inner := ui.Inner(w)
 	rows := h - 2
 	var bar []string
 	if m.filtering {
@@ -1488,7 +1495,7 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) (out []stri
 
 func (m *Model) detailPane(w, h int) string {
 	id := m.selected()
-	inner := w - 2 - 2*theme.Pad
+	inner := ui.Inner(w)
 	focused := m.focus == focusDetail
 	m.pane("detail", w, h)
 	if id == "" {
@@ -1558,7 +1565,7 @@ func (m *Model) staleDiff(id string, width int) string {
 
 // checkPane shows every diagnostic of the last check run.
 func (m *Model) checkPane(w, h int) string {
-	inner := w - 2 - 2*theme.Pad
+	inner := ui.Inner(w)
 	var body string
 	switch {
 	case m.opts.Check == nil:
@@ -1605,7 +1612,7 @@ func (m *Model) checkPane(w, h int) string {
 // views numbered like the tabs they show as, then the user's mouse choice.
 // The schema and the project's Definition of Done follow, read-only.
 func (m *Model) settingsPane(w, h int) string {
-	inner := w - 2 - 2*theme.Pad
+	inner := ui.Inner(w)
 	p := m.tree.Project
 	m.setIdx = clamp(m.setIdx, 0, m.settingsRows()-1)
 	row := func(k int, key, label, value string) string {
@@ -1658,7 +1665,7 @@ func (m *Model) settingsPane(w, h int) string {
 
 func (m *Model) pagePane(title, body string, w, h int) string {
 	m.pane("page", w, h)
-	m.page.SetWidth(w - 2 - 2*theme.Pad)
+	m.page.SetWidth(ui.Inner(w))
 	m.page.SetHeight(h - 2)
 	m.page.SetContent(body)
 	if m.page.TotalLineCount() > m.page.Height() {

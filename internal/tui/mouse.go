@@ -48,7 +48,7 @@ func (m *Model) pane(name string, w, h int) {
 }
 
 // paneInner is where a pane's body starts, relative to the pane.
-var paneInner = point{1 + theme.Pad, 1}
+var paneInner = point{1 + theme.SpaceS, 1}
 
 func blank(w, h int) string {
 	return strings.TrimSuffix(strings.Repeat(strings.Repeat(" ", w)+"\n", h), "\n")

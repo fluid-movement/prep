@@ -10,7 +10,6 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/fluid-movement/prep/internal/domain"
-	"github.com/fluid-movement/prep/internal/tui/theme"
 	"github.com/fluid-movement/prep/internal/tui/ui"
 )
 
@@ -208,7 +207,7 @@ func (m *Model) knowledgePane(w, h int) string {
 }
 
 func (m *Model) knowledgeList(paths []string, err error, w, h int) string {
-	inner := w - 2 - 2*theme.Pad
+	inner := ui.Inner(w)
 	rows := h - 2
 	title := "Knowledge"
 	if m.know.attention {
@@ -284,7 +283,7 @@ func (m *Model) knowledgeRow(path string, selected bool, width int) string {
 // entryPane renders the selected entry: meta, findings, body, and the
 // issues that changed it.
 func (m *Model) entryPane(w, h int) string {
-	inner := w - 2 - 2*theme.Pad
+	inner := ui.Inner(w)
 	m.pane("entry", w, h)
 	e := m.tree.Knowledge[m.shownEntry()]
 	if e == nil {

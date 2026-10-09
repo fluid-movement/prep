@@ -18,7 +18,9 @@ type NavItem struct {
 	Dot *Tone
 }
 
-const navGap = "  "
+// navGap separates the screens: wide, so the bar reads as a few places,
+// not as a row of tabs.
+var navGap = strings.Repeat(" ", theme.SpaceL)
 
 // Nav renders the screens bar: the current screen bold and underlined in
 // the accent, the others muted, so it never reads as a row of view tabs.

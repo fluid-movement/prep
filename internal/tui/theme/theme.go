@@ -23,11 +23,14 @@ type Styles struct {
 	Title, Heading, Body, Muted, Subtle, Code, Key, KeyDesc lipgloss.Style
 }
 
-// Spacing tokens, in cells.
+// Spacing scale, in cells: columns across, rows down. A row is about two
+// columns tall and the smallest vertical step, so rows are spent only to
+// separate the header, the body and sections, never as margins.
 const (
-	Gap     = 1 // between inline elements
-	Pad     = 1 // inside panes
-	Section = 1 // blank lines between sections
+	SpaceS = 1 // inside elements: pane padding, tab labels, between inline parts
+	SpaceM = 2 // gutters: the screen's left and right edges, between groups
+	SpaceL = 4 // between the main parts of the header
+	Row    = 1 // a blank row between blocks
 )
 
 // Theme is the design system resolved for one palette and color profile.

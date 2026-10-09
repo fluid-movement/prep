@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -18,7 +19,7 @@ func Gallery(t *theme.Theme, width int) string {
 		if b.Len() > 0 {
 			cur := strings.TrimRight(b.String(), "\n")
 			b.Reset()
-			b.WriteString(cur + strings.Repeat("\n", theme.Section+1))
+			b.WriteString(cur + strings.Repeat("\n", theme.Row+1))
 		}
 		b.WriteString(t.S.Title.Render(title) + "\n")
 	}
@@ -55,6 +56,15 @@ func Gallery(t *theme.Theme, width int) string {
 	section("Progress and notes")
 	b.WriteString(Fit(Progress(t, 0, 3)+"   "+Progress(t, 2, 3)+"   "+Progress(t, 3, 3), width) + "\n")
 	b.WriteString(Fit(Note(t, "blocked", ToneWarning)+"  "+Note(t, "stale", ToneError)+"  "+Note(t, "actionable", ToneSuccess)+"  "+Note(t, "claimed", ToneAccent)+"  "+Note(t, "note", ToneMuted), width))
+
+	section("Spacing")
+	// The scale, each step drawn as the space it leaves between two marks.
+	for _, sp := range []struct {
+		name string
+		n    int
+	}{{"S", theme.SpaceS}, {"M", theme.SpaceM}, {"L", theme.SpaceL}} {
+		b.WriteString(Fit(t.S.Muted.Render(fmt.Sprintf("%-3s%d  ", sp.name, sp.n))+Note(t, "▏"+strings.Repeat(" ", sp.n)+"▏", ToneAccent), width) + "\n")
+	}
 
 	section("Navigation")
 	// The screens bar: Agent active, then idle; the views of the screen below.

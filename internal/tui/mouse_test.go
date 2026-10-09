@@ -79,7 +79,7 @@ func TestClickTabsRowsAndRelations(t *testing.T) {
 		if m.screen != screenAgent {
 			t.Fatalf("%dx%d: Agent click left screen %d", w, h, m.screen)
 		}
-		clickText(t, m, "‹", 0, 10)
+		clickText(t, m, "‹", 0, 20)
 		if m.screen != screenIssues {
 			t.Fatalf("%dx%d: back crumb left screen %d", w, h, m.screen)
 		}

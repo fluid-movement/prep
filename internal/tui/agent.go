@@ -306,7 +306,7 @@ func ago(now, t time.Time) string {
 func (m *Model) agentPane(w, h int) string {
 	d := m.agentView(m.shownAgent())
 	if m.agentS.err == nil && len(m.agentS.events) == 0 {
-		inner := w - 2 - 2*theme.Pad
+		inner := ui.Inner(w)
 		m.pane("feed", w, h)
 		return ui.Pane{Title: "Agent", Body: ui.Empty(m.th, "No agent activity yet", "Each prep command an agent runs in this project shows up here, live", inner, h-2), Width: w, Height: h}.View(m.th)
 	}
@@ -320,20 +320,24 @@ func (m *Model) agentPane(w, h int) string {
 }
 
 // agentStatus names the agent shown and whether it is active, for the
-// second tier's right end.
-func (m *Model) agentStatus() string {
+// second tier's right end: with detail 2 also its position among the
+// agents, with 1 its label and liveliness, with 0 only the liveliness.
+func (m *Model) agentStatus(detail int) string {
 	key := m.shownAgent()
 	if key == "" {
 		return ""
 	}
 	d := m.agentView(key)
 	now := m.clock()
-	status := m.th.S.Muted.Render(d.label) + "  " + ui.Note(m.th, "● active "+ago(now, d.last), ui.ToneAccent)
+	status := ui.Note(m.th, "● active "+ago(now, d.last), ui.ToneAccent)
 	if now.Sub(d.last) >= idleAfter {
-		status = m.th.S.Muted.Render(d.label) + "  " + ui.Note(m.th, "idle for "+ago(now, d.last), ui.ToneMuted)
+		status = ui.Note(m.th, "idle for "+ago(now, d.last), ui.ToneMuted)
 	}
-	if as := m.agents(); len(as) > 1 {
-		pos := fmt.Sprintf("  agent %d/%d", slices.Index(as, d.key)+1, len(as))
+	if detail >= 1 {
+		status = m.th.S.Muted.Render(d.label) + space(theme.SpaceM) + status
+	}
+	if as := m.agents(); detail >= 2 && len(as) > 1 {
+		pos := fmt.Sprintf("%sagent %d/%d", space(theme.SpaceM), slices.Index(as, d.key)+1, len(as))
 		if m.agentS.agent != "" {
 			pos += " pinned"
 		}
@@ -346,7 +350,7 @@ func (m *Model) agentStatus() string {
 // step, acceptance, the next transition, the knowledge its guide points
 // to) over the issue's document, scrolled with j/k.
 func (m *Model) issuePane(d agentData, w, h int) string {
-	inner := w - 2 - 2*theme.Pad
+	inner := ui.Inner(w)
 	rows := max(1, h-2)
 	m.pane("issue", w, h)
 	switch {
@@ -440,7 +444,7 @@ func nextTransition(g domain.Guide, stale bool) (domain.Transition, bool) {
 // usagePane shows what the agent read back, and its tokens when its
 // harness reports them.
 func (m *Model) usagePane(d agentData, w, h int) string {
-	inner := w - 2 - 2*theme.Pad
+	inner := ui.Inner(w)
 	m.pane("usage", w, h)
 	var lines []string
 	if d.requests > 0 {
@@ -504,7 +508,7 @@ func (m *Model) usagePane(d agentData, w, h int) string {
 // feedPane is the agent's activity, newest first, under a heading per
 // issue; completing an issue gets its own line.
 func (m *Model) feedPane(d agentData, w, h int) string {
-	inner := w - 2 - 2*theme.Pad
+	inner := ui.Inner(w)
 	rows := max(1, h-2)
 	m.pane("feed", w, h)
 	now := m.clock()
