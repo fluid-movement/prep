@@ -9,7 +9,7 @@
       "name": "prep",
       "source": "./plugins/claude-code",
       "description": "Makes Claude Code work with prep: the prep skill, a SessionStart briefing, and the activity bridge behind prep tui's Agent screen.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     }
   ]
 }
