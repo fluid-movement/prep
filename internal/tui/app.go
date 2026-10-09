@@ -113,9 +113,9 @@ type tab struct {
 	name      string
 	transient bool // the children view: unfiltered, one parent's subtree, gone when left
 	flags     string
-	count int // matching issues in the whole view, ignoring parent focus
-	rows  []row
-	err   error
+	count     int // matching issues in the whole view, ignoring parent focus
+	rows      []row
+	err       error
 }
 
 // relation is one navigable link in the detail pane.
@@ -146,8 +146,8 @@ type Model struct {
 	// shows ("" when it is closed); childFrom the view it was opened from.
 	childView string
 	childFrom int
-	notice   string
-	changes  <-chan watch.Change
+	notice    string
+	changes   <-chan watch.Change
 
 	filters   map[string]string // per tab name: the applied filter text
 	filtering bool              // the filter bar has the keyboard
