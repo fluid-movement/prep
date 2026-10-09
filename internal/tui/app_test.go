@@ -1595,22 +1595,49 @@ func TestManyChildren(t *testing.T) {
 	if shown != maxChildren {
 		t.Fatalf("%d children listed, want %d", shown, maxChildren)
 	}
-	// The heading is the first link; following it focuses the list.
+	// The heading is the first link; following it opens the children view:
+	// unfiltered, every child, open ones first, resolved last.
+	p.op(ids["survey"], domain.OpDrop, domain.Input{Reason: "not needed"})
+	m.Update(loadedMsg(func() loadedMsg { tr, err := p.load(); return loadedMsg{tr, err} }()))
+	run(m, "1") // a filtered view: Attention
+	m.jump(ids["export"], false)
+	m.focus = focusDetail
+	from := m.active
 	run(m, "o")
 	run(m, "enter")
 	tb := m.current()
-	if m.focus != focusList || m.scopeTop() != ids["export"] || len(tb.rows) < kids+1 {
-		t.Fatalf("heading: focus %d, scope %q, %d rows for %d children", m.focus, m.scopeTop(), len(tb.rows), kids)
+	if !tb.transient || m.focus != focusList || m.scopeTop() != ids["export"] || len(tb.rows) < kids+1 {
+		t.Fatalf("heading: tab %q transient %v, focus %d, scope %q, %d rows for %d children", tb.name, tb.transient, m.focus, m.scopeTop(), len(tb.rows), kids)
 	}
-	run(m, "backspace")
-	if m.selected() != ids["export"] {
-		t.Fatalf("backspace after the heading: selected %s", m.selected())
+	if m.tree.Issues[ids["survey"]].Parent == ids["export"] && tb.index(ids["survey"]) < 0 {
+		t.Fatal("the dropped child is missing: the children view must not filter")
 	}
-	// A click on the heading does the same.
+	last := -1
+	for _, r := range tb.rows[1:] {
+		if m.tree.Issues[r.id].Parent != ids["export"] {
+			continue
+		}
+		rank := stateRank(m.tree.State(r.id))
+		if rank < last {
+			t.Fatalf("children not ordered by state: %v", rowIDs(m))
+		}
+		last = rank
+	}
+	// ← at its top closes it and returns to the view it came from.
+	run(m, "left")
+	if m.current().transient || m.active != from || m.childView != "" {
+		t.Fatalf("left: tab %q, active %d (from %d)", m.current().name, m.active, from)
+	}
+	// A click on the heading opens it too; switching views closes it.
+	m.jump(ids["export"], false)
 	m.focus = focusDetail
 	clickText(t, m, "list all", 50, 110)
-	if m.scopeTop() != ids["export"] {
-		t.Fatal("a click on the heading did not focus the parent")
+	if !m.current().transient {
+		t.Fatal("a click on the heading did not open the children view")
+	}
+	run(m, "1")
+	if m.childView != "" || len(m.tabs) != len(domain.ViewNames(m.tree.Project.Config)) {
+		t.Fatal("switching views did not close the children view")
 	}
 }
 

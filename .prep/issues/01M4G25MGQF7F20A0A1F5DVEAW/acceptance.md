@@ -1,0 +1,2 @@
+- [x] list all opens an unfiltered children view from any view, children by state, open first
+- [x] Switching views or ← at its top closes it and returns to where it was opened

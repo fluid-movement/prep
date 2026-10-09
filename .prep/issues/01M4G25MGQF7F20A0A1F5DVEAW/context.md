@@ -1,0 +1,1 @@
+- `internal/tui/app.go` `rebuild` (the children view), `buildTab` (`byStateOrder`), `byState`, `stateRank`, `switchTab`, `closeChildren`, `scopeTop`, `listKey`; `internal/tui/editing.go` `listChildren`. Knowledge: [TUI detail links](/components/tui-detail.md).

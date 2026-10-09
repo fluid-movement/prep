@@ -228,23 +228,23 @@ func (m *Model) followRel(id string, r relation) tea.Cmd {
 	return m.jump(r.id, true)
 }
 
-// listChildren shows all of a parent's children: the list, focused on the
-// parent as → does, on its first child.
+// listChildren shows all of a parent's children in the children view: a
+// view after the configured ones, unfiltered, focused on the parent, the
+// children by state with the open ones first, on the first child.
 func (m *Model) listChildren(id string) tea.Cmd {
 	m.pushBack()
 	m.linkMode = false
-	cmd := m.jump(id, false)
+	if !m.current().transient {
+		m.childFrom = m.active
+	}
+	m.childView = id
+	m.rebuild()
+	m.active = len(m.tabs) - 1
 	tb := m.current()
-	if tb == nil || m.selected() != id {
-		return cmd
-	}
-	if m.scopeTop() != id {
-		m.scope[tb.name] = append(m.scope[tb.name], id)
-		m.rebuild()
-	}
 	m.cursor[tb.name] = min(1, len(tb.rows)-1)
-	m.focus = focusList
-	return cmd
+	m.offset[tb.name] = 0
+	m.focus, m.wheeled = focusList, false
+	return nil
 }
 
 // linkTargets lists the relations link mode moves over, as the detail

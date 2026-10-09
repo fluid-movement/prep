@@ -110,8 +110,9 @@ type row struct {
 
 // tab is one saved view and its current rows.
 type tab struct {
-	name  string
-	flags string
+	name      string
+	transient bool // the children view: unfiltered, one parent's subtree, gone when left
+	flags     string
 	count int // matching issues in the whole view, ignoring parent focus
 	rows  []row
 	err   error
@@ -140,7 +141,11 @@ type Model struct {
 	vp       viewport.Model
 	docKey   string  // issue, width and generation of the rendered detail
 	gen      int     // increases on every successful load
-	back     []place // where the person was, for backspace and the back crumb
+	back     []place // where the person was, for backspace
+	// childView is the parent whose children the transient children view
+	// shows ("" when it is closed); childFrom the view it was opened from.
+	childView string
+	childFrom int
 	notice   string
 	changes  <-chan watch.Change
 
@@ -336,7 +341,7 @@ func (m *Model) rebuild() {
 			}
 		}
 		m.scope[n] = sc
-		tb := buildTab(m.tree, n, m.tree.Project.Config.Views[n], m.filters[n], sc, m.treeMode)
+		tb := buildTab(m.tree, n, m.tree.Project.Config.Views[n], m.filters[n], sc, m.treeMode, false)
 		c := m.cursor[n]
 		if id, ok := selected[n]; ok {
 			if k := tb.index(id); k >= 0 {
@@ -346,14 +351,70 @@ func (m *Model) rebuild() {
 		m.cursor[n] = clamp(c, 0, len(tb.rows)-1)
 		m.tabs = append(m.tabs, tb)
 	}
+	if p := m.tree.Issues[m.childView]; p != nil {
+		// The children view: no view flags, the parent's whole subtree,
+		// children by state with the open ones first.
+		n := childTabName(p.Title)
+		sc := []string{m.childView} // the parent, then what → focused inside it
+		for _, id := range m.scope[n] {
+			if m.tree.Issues[id] != nil {
+				sc = append(sc, id)
+			}
+		}
+		tb := buildTab(m.tree, n, "", m.filters[n], sc, m.treeMode, true)
+		tb.transient = true
+		tb.count = len(m.tree.Descendants(m.childView)) // its subtree, not the whole project
+		c := m.cursor[n]
+		if id, ok := selected[n]; ok {
+			if k := tb.index(id); k >= 0 {
+				c = k
+			}
+		}
+		m.cursor[n] = clamp(c, 0, len(tb.rows)-1)
+		m.tabs = append(m.tabs, tb)
+	} else {
+		m.childView = ""
+	}
 	if m.active >= len(m.tabs) {
 		m.active = 0
 	}
 }
 
+// childTabName names the children view after its parent.
+func childTabName(title string) string { return "↳ " + ui.Fit(title, 24) }
+
+// stateRank orders issues by lifecycle state for the children view: open
+// first, resolved last.
+func stateRank(s domain.State) int {
+	return slices.Index([]domain.State{domain.StateOpen, domain.StateDefined, domain.StateReady, domain.StateInProgress, domain.StateDone, domain.StateDropped}, s)
+}
+
+// byState reorders a laid-out list whose first entry is root: the root
+// stays first, and each direct child moves with its subtree, ordered by
+// the child's state (stable, so priority order holds within a state).
+func byState(t *domain.Tree, root string, list []string) []string {
+	if len(list) == 0 || list[0] != root {
+		return list
+	}
+	var chunks [][]string
+	for _, id := range list[1:] {
+		if t.Issues[id].Parent == root || len(chunks) == 0 {
+			chunks = append(chunks, nil)
+		}
+		chunks[len(chunks)-1] = append(chunks[len(chunks)-1], id)
+	}
+	slices.SortStableFunc(chunks, func(a, b []string) int { return stateRank(t.State(a[0])) - stateRank(t.State(b[0])) })
+	out := []string{root}
+	for _, c := range chunks {
+		out = append(out, c...)
+	}
+	return out
+}
+
 // buildTab queries a view, narrows it to the focused parent's subtree, and
-// lays it out flat or as a tree with context ancestors.
-func buildTab(t *domain.Tree, name, flags, filter string, scope []string, treeMode bool) tab {
+// lays it out flat or as a tree with context ancestors; byStateOrder orders
+// the focused parent's children by state, open first.
+func buildTab(t *domain.Tree, name, flags, filter string, scope []string, treeMode, byStateOrder bool) tab {
 	tb := tab{name: name, flags: flags}
 	f, err := domain.ParseFilter(strings.Fields(flags))
 	var ids []string
@@ -428,6 +489,16 @@ func buildTab(t *domain.Tree, name, flags, filter string, scope []string, treeMo
 			list = append(list, root)
 		}
 		list = append(list, ids...)
+	}
+	if byStateOrder && root != "" {
+		if !treeMode {
+			// Flat: the root first, then everything below by state.
+			rest := slices.DeleteFunc(slices.Clone(list), func(id string) bool { return id == root })
+			slices.SortStableFunc(rest, func(a, b string) int { return stateRank(t.State(a)) - stateRank(t.State(b)) })
+			list = append([]string{root}, rest...)
+		} else {
+			list = byState(t, root, list)
+		}
 	}
 
 	inList := map[string]bool{}
@@ -688,6 +759,16 @@ func (m *Model) listKey(s string) tea.Cmd {
 		}
 		return nil
 	case "left", "h", "esc":
+		if tb.transient && len(m.scope[tb.name]) == 0 && !(s == "esc" && m.filters[tb.name] != "") {
+			// Out of the children view: back to the view it was opened
+			// from, on the parent.
+			parent := m.childView
+			m.childView = ""
+			m.rebuild()
+			m.active = clamp(m.childFrom, 0, len(m.tabs)-1)
+			m.selectInCurrent(parent)
+			return nil
+		}
 		if sc := m.scope[tb.name]; len(sc) > 0 {
 			up := sc[len(sc)-1]
 			m.scope[tb.name] = sc[:len(sc)-1]
@@ -946,6 +1027,24 @@ func (m *Model) switchTab(n int) {
 	m.active = (n + len(m.tabs)) % len(m.tabs)
 	m.focus = focusList
 	m.wheeled = false // the new tab's view follows its selection
+	if tb := m.current(); m.childView != "" && !tb.transient {
+		m.closeChildren() // leaving the children view closes it
+	}
+}
+
+// closeChildren removes the children view, keeping the view shown.
+func (m *Model) closeChildren() {
+	if m.childView == "" {
+		return
+	}
+	name := m.current().name
+	m.childView = ""
+	m.rebuild()
+	for k, tb := range m.tabs {
+		if tb.name == name {
+			m.active = k
+		}
+	}
 }
 
 func (m *Model) current() *tab {
@@ -962,6 +1061,9 @@ func (m *Model) scopeTop() string {
 	}
 	if sc := m.scope[tb.name]; len(sc) > 0 {
 		return sc[len(sc)-1]
+	}
+	if tb.transient {
+		return m.childView
 	}
 	return ""
 }
