@@ -1,0 +1,1 @@
+- `internal/tui/mouse.go` `mouseMsg`; tests in `mouse_test.go` and `program_test.go` (SGR code 128). Knowledge: [TUI navigation](/components/tui-navigation.md), [TUI mouse](/components/tui-mouse.md).

@@ -67,8 +67,15 @@ func (m *Model) mouseMsg(msg tea.MouseMsg) tea.Cmd {
 	}
 	switch msg := msg.(type) {
 	case tea.MouseClickMsg:
-		if msg.Button == tea.MouseLeft {
+		switch msg.Button {
+		case tea.MouseLeft:
 			return m.click(msg.X, msg.Y)
+		case tea.MouseBackward:
+			// The mouse's back button is backspace: back where the person
+			// was. An open dialog or the filter bar keeps it, as with clicks.
+			if m.modal == nil && !m.filtering {
+				return m.goBack()
+			}
 		}
 	case tea.MouseWheelMsg:
 		return m.wheel(msg)

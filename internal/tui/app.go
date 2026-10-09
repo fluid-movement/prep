@@ -1131,7 +1131,7 @@ var (
 	screenBindings = []binding{
 		bind("Screens", "w", "agent (what it is doing, live)", true),
 		bind("Screens", "b", "knowledge", true),
-		bind("Screens", "⌫", "back to where you were, across screens", false),
+		bind("Screens", "⌫", "back to where you were, across screens (the mouse's back button too)", false),
 		bind("Screens", "c", "check (or click ✕ ▲)", false),
 		bind("Screens", "s", "settings (or click ⚙)", false),
 		bind("Screens", "z", "one pane or split", false),

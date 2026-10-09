@@ -1,0 +1,1 @@
+- [x] The mouse's back button runs the back stack like backspace, except in dialogs and the filter bar

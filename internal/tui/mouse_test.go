@@ -79,9 +79,11 @@ func TestClickTabsRowsAndRelations(t *testing.T) {
 		if m.screen != screenAgent {
 			t.Fatalf("%dx%d: Agent click left screen %d", w, h, m.screen)
 		}
-		keys(m, "backspace")
+		m.View()
+		_, cmd := m.Update(tea.MouseClickMsg{X: 1, Y: 5, Button: tea.MouseBackward})
+		settle(m, cmd)
 		if m.screen != screenIssues {
-			t.Fatalf("%dx%d: backspace left screen %d", w, h, m.screen)
+			t.Fatalf("%dx%d: the mouse's back button left screen %d", w, h, m.screen)
 		}
 		clickText(t, m, "⚙", 0, w)
 		if m.screen != screenSettings {
