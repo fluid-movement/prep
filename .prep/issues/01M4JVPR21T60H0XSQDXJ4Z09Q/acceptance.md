@@ -1,0 +1,4 @@
+- [x] desktop/ is a SwiftPM package with PrepKit (models, CLI runner, watch follower) and the PrepDesktop app; swift test passes
+- [x] just desktop builds desktop/build/Prep.app that opens a project and lists its issues from prep list --json, refreshing on prep watch
+- [x] CI runs the desktop build and tests on a macOS runner
+- [x] Developer ID signing, notarization and the Homebrew cask are filed as a follow-up issue

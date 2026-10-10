@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/fluid-movement/prep/internal/mdstore"
 	"github.com/fluid-movement/prep/internal/watch"
@@ -16,8 +17,34 @@ import (
 // watchContext ends prep watch; tests replace it to stop the stream.
 var watchContext = defaultWatchContext
 
+// startParent is the parent process at start, read before any setup so a
+// parent that exits while prep watch starts up is still noticed.
+var startParent = os.Getppid()
+
 func defaultWatchContext() (context.Context, context.CancelFunc) {
-	return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	go endWithParent(ctx, cancel, startParent, time.Second)
+	return ctx, cancel
+}
+
+// endWithParent cancels when the process that started prep watch is gone
+// (on Unix the orphan is re-parented, so its parent ID changes). A client
+// that crashes or is killed never gets to stop its watcher, and an idle
+// watcher would otherwise notice the closed output only on the next change.
+func endWithParent(ctx context.Context, cancel context.CancelFunc, parent int, every time.Duration) {
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			if os.Getppid() != parent {
+				cancel()
+				return
+			}
+		}
+	}
 }
 
 // cmdWatch prints one line per debounced change under .prep until it is

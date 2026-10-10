@@ -1,0 +1,1 @@
+- 2026-10-10T12:37:20Z claude-code/opus-5.5: No prep desktop command yet: open -a Prep <dir> or PrepDesktop <dir> launch on a project.

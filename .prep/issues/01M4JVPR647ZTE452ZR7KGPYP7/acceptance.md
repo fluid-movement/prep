@@ -1,0 +1,3 @@
+- [x] One workflow is chosen with the alternatives considered (screencapture, XCUITest, accessibility dumps, ImageRenderer, offscreen NSView caching)
+- [x] The workflow is proven on the scaffold: a PNG of the main window with real project data, produced from the terminal without extra permissions
+- [x] The workflow is documented in the desktop knowledge entry

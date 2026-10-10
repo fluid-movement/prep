@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -72,5 +73,24 @@ func TestShowIncludesHistory(t *testing.T) {
 	h.jsonOf(&s, "show", id)
 	if !strings.Contains(s.History, "tried encoding/csv") {
 		t.Fatalf("history missing from show --json: %q", s.History)
+	}
+}
+
+func TestWatchEndsWhenItsParentIsGone(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{})
+	go func() {
+		// A parent ID that is not ours stands for a parent that went away.
+		endWithParent(ctx, cancel, os.Getppid()+1, time.Millisecond)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("watch did not end after its parent changed")
+	}
+	if ctx.Err() == nil {
+		t.Fatal("context not cancelled")
 	}
 }

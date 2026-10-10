@@ -1,0 +1,1 @@
+- 2026-10-10T12:37:19Z claude-code/opus-5.5: CI desktop job (macos-15) is added but has not run yet; it builds with the runner's Xcode, not 26.6 used locally.

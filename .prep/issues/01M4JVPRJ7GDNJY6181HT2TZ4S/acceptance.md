@@ -1,0 +1,3 @@
+- [x] The toolbar dropdown lists projects from prep projects and switches the window to the chosen one
+- [x] Opening the app with a directory selects that project (any directory inside it), else the last one used
+- [x] Each window has its own project and watcher
