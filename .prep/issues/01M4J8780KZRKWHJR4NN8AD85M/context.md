@@ -1,0 +1,5 @@
+Question: where did agents in this repository bypass prep when a prep command for the job existed, and why?
+
+Scope: all Claude Code sessions in this repository (13 main transcripts and their subagents, 2026-10-05 to 2026-10-10) and the activity stream ([Agent activity](/features/agent-activity.md), fed by the [Claude Code integration](/components/claude-code.md)'s activity bridge). Tool calls are deduplicated by tool-use ID (a resumed session repeats its parent's history). A Read/Grep/Edit/Write on `.prep` or a shell command whose arguments touch `.prep` counts as a bypass; heredoc bodies, commit messages, git calls, prep's own calls and test fixtures are excluded. A miss counts as avoidable only when the command existed: knowledge reads from 2026-10-08 08:33 UTC (`prep knowledge find|show`, d3dbd02), knowledge writes from 2026-10-06 06:30 UTC (`prep knowledge update`, 316d841), issue reads and writes always.
+
+Answered when each kind of miss has a count, a cause and a proposed change, and the proposals exist as issues.

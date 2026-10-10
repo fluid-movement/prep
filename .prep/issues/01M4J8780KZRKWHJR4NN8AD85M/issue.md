@@ -8,8 +8,10 @@ tags:
 priority: high
 ---
 
-The activity stream (the ledger: `prep activity`, fed by the Claude Code activity bridge and by prep itself) records every tool call and prep command of past sessions. Analyse those sessions to find where an agent should have called prep and did not: reading `.prep/knowledge` files or grepping them instead of `prep knowledge find|show`, editing `.prep` records by hand, starting work on an issue without `prep guide`, finishing without `prep complete`, or skipping `prep prime`/the skill altogether.
+Analyse past Claude Code sessions in this repository to find where an agent should have called prep and did not: reading or grepping `.prep/knowledge` or `.prep/issues` files instead of `prep knowledge find|show` or `prep show`, editing `.prep` records by hand or through scripts, working through an issue's lifecycle without `prep guide`, or skipping the skill and briefing.
 
-For each kind of miss, work out why: the skill was never loaded, the briefing did not mention the call, the wording did not trigger, the call was costlier than the alternative, or the agent did not know the command existed. Findings list the misses with their frequency and cause, and propose the hooks, briefing or skill changes that would turn each into a prep call; those proposals become the code issues of this release.
+Two sources: the activity stream (`.prep/local/activity.jsonl`, written by the prep plugin's activity bridge and by prep itself; it starts 2026-10-08 16:23 UTC) and, for the full history since 2026-10-05, Claude Code's own session transcripts (`~/.claude/projects/-Users-azaharias-coding-prep/`, main sessions and subagents), which hold every tool input. A miss only counts when the prep command for it existed at the time.
+
+For each kind of miss, the findings give its frequency and its cause (skill not loaded, briefing silent, wording, cost, missing capability) and propose the hook, briefing, skill or command change that would turn it into a prep call. Those proposals feed 01M4J8789E81QAJHG8R8ZPEMRD and new issues.
 
 ## Open questions

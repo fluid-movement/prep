@@ -1,0 +1,4 @@
+- [x] Every bypass category has a count over the whole history, split into before and after the matching prep command existed
+- [x] Every category with avoidable misses has a cause and a proposed change
+- [x] The proposed changes exist as issues or as open questions on 01M4J8789E81QAJHG8R8ZPEMRD
+- [x] The findings say whether the activity stream can serve the before/after measurements Release 0.3.0 needs
