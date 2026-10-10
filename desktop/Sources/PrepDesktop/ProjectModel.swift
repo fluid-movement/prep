@@ -4,10 +4,11 @@ import Observation
 import PrepKit
 
 enum Tab: String, CaseIterable, Identifiable {
-    case issues = "Issues", knowledge = "Knowledge", agent = "Agents"
+    case inbox = "Inbox", issues = "Issues", knowledge = "Knowledge", agent = "Agents"
     var id: String { rawValue }
     var symbol: String {
         switch self {
+        case .inbox: "tray"
         case .issues: "checklist"
         case .knowledge: "books.vertical"
         case .agent: "sparkles"
@@ -29,7 +30,7 @@ final class ProjectModel {
     private(set) var cli: PrepCLI?
     private var watcher: Watcher?
 
-    var tab: Tab = .issues
+    var tab: Tab = .inbox
     var projects: [ProjectRef] = []
 
     // Issues
@@ -50,6 +51,10 @@ final class ProjectModel {
     private(set) var guide: Guide?
     private var back: [String] = []
     private var forward: [String] = []
+
+    // Inbox
+    private(set) var inbox: [InboxItem] = []
+    private var inboxLoaded = false
 
     // Knowledge
     private(set) var entries: [KnowledgeEntry] = []
@@ -164,8 +169,65 @@ final class ProjectModel {
             self.error = error.localizedDescription
         }
         await reloadList()
+        await reloadInbox()
         await loadDetail()
         await loadEntry()
+    }
+
+    /// Rebuilds the inbox, and tells the person about what newly needs them.
+    func reloadInbox() async {
+        guard let cli, let root = project?.root else { return }
+        let defined = all.values.filter { $0.state == "defined" && !$0.stale }.map(\.id)
+        var allowed: Set<String> = []
+        await withTaskGroup(of: (String, Bool).self) { group in
+            for id in defined {
+                group.addTask {
+                    let g = try? await cli.guide(id)
+                    return (id, g?.transitions?.contains { $0.op == "ready" && $0.allowed } ?? false)
+                }
+            }
+            for await (id, ok) in group where ok { allowed.insert(id) }
+        }
+        let defaults = UserDefaults.standard
+        let sinceKey = "inboxSince:\(root)"
+        if defaults.object(forKey: sinceKey) == nil { defaults.set(Date.now, forKey: sinceKey) }
+        let since = defaults.object(forKey: sinceKey) as? Date ?? .now
+        let reviewed = Set(defaults.stringArray(forKey: "reviewed:\(root)") ?? [])
+        let fresh = Inbox.build(Array(all.values), readyAllowed: allowed, since: since, reviewed: reviewed)
+        if inboxLoaded {
+            let before = Set(inbox.map(\.id))
+            Notifier.shared.announce(fresh.filter { !before.contains($0.id) && $0.kind != .define }, project: project?.name ?? "")
+        }
+        inbox = fresh
+        inboxLoaded = true
+        Notifier.shared.badge(fresh.filter { $0.kind != .define }.count)
+    }
+
+    /// The inbox item for the current issue, if it waits on the person.
+    var currentInboxItem: InboxItem? {
+        guard let id = current else { return nil }
+        return inbox.first { $0.issue.id == id }
+    }
+
+    func markReviewed(_ ids: [String]) {
+        guard let root = project?.root else { return }
+        let key = "reviewed:\(root)"
+        let old = UserDefaults.standard.stringArray(forKey: key) ?? []
+        UserDefaults.standard.set(Array(Set(old + ids)), forKey: key)
+        Task { await reloadInbox() }
+    }
+
+    /// The one action that clears an inbox item.
+    func resolve(_ item: InboxItem) {
+        switch item.kind {
+        case .review: markReviewed([item.issue.id])
+        case .acknowledge: Task { await write(["ack", item.issue.id]) }
+        case .signOff: Task { await write(["ready", item.issue.id]) }
+        case .define: Task { await write(["define", item.issue.id]) }
+        case .questions:
+            show(item.issue.id)
+            editing = .requirement
+        }
     }
 
     func reloadList() async {
@@ -252,7 +314,7 @@ final class ProjectModel {
 
     /// Follows a link to an issue from anywhere in the window.
     func go(to id: String) {
-        tab = .issues
+        if tab != .inbox || !inbox.contains(where: { $0.issue.id == id }) { tab = .issues }
         show(id)
     }
 

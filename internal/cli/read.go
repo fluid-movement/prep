@@ -33,7 +33,12 @@ type summary struct {
 	Priority   domain.Priority  `json:"priority"`
 	Children   int              `json:"children"`
 	Progress   *domain.Progress `json:"progress,omitempty"`
-	Depth      int              `json:"depth,omitempty"`
+	// OpenQuestions is set while the requirement's Open questions section
+	// has content: the issue waits on the person who owns the requirement.
+	OpenQuestions bool       `json:"open_questions,omitempty"`
+	ResolvedAt    *time.Time `json:"resolved_at,omitempty"`
+	ResolvedBy    string     `json:"resolved_by,omitempty"`
+	Depth         int        `json:"depth,omitempty"`
 }
 
 func summarize(t *domain.Tree, id string) summary {
@@ -43,6 +48,11 @@ func summarize(t *domain.Tree, id string) summary {
 	if s.Children > 0 {
 		p := t.ChildProgress(id)
 		s.Progress = &p
+	}
+	s.OpenQuestions = strings.TrimSpace(i.OpenQuestions) != ""
+	if r := i.Resolution; r != nil {
+		at := r.At
+		s.ResolvedAt, s.ResolvedBy = &at, r.By
 	}
 	return s
 }

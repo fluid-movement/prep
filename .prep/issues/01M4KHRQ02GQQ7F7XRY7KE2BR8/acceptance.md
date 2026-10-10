@@ -1,0 +1,4 @@
+- [x] The Inbox lists completed work to review, stale issues to acknowledge, defined issues ready for sign-off, open questions to answer and issues to define, each with one action
+- [x] prep list --json carries open_questions and resolved_at/resolved_by, covered by a CLI test
+- [x] New items notify while the app is in the background; the Dock badge counts what waits
+- [x] Completed work can be marked reviewed and stays reviewed

@@ -82,6 +82,27 @@ import Testing
         #expect(d! < PrepDate.parse("2027-01-01T00:00:00Z")!)
     }
 
+    @Test func inboxSortsWhatWaitsOnThePerson() {
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        let issues = [
+            IssueSummary(id: "A", title: "open", priority: "medium"),
+            IssueSummary(id: "B", title: "questions", openQuestions: true),
+            IssueSummary(id: "C", title: "defined, enriched", state: "defined"),
+            IssueSummary(id: "D", title: "defined, not enriched", state: "defined"),
+            IssueSummary(id: "E", title: "stale", state: "ready", stale: true),
+            IssueSummary(id: "F", title: "done by agent", state: "done", resolvedAt: t0.addingTimeInterval(60), resolvedBy: "claude-code/x"),
+            IssueSummary(id: "G", title: "done before", state: "done", resolvedAt: t0.addingTimeInterval(-60), resolvedBy: "claude-code/x"),
+            IssueSummary(id: "H", title: "done by me", state: "done", resolvedAt: t0.addingTimeInterval(60), resolvedBy: "human:me"),
+            IssueSummary(id: "I", title: "release", kind: "manual"),
+            IssueSummary(id: "J", title: "high", priority: "high"),
+            IssueSummary(id: "K", title: "reviewed", state: "done", resolvedAt: t0.addingTimeInterval(60), resolvedBy: "claude-code/x"),
+        ]
+        let inbox = Inbox.build(issues, readyAllowed: ["C"], since: t0, reviewed: ["K"])
+        #expect(inbox.map { "\($0.kind.rawValue):\($0.issue.id)" } == [
+            "review:F", "acknowledge:E", "signOff:C", "questions:B", "define:J", "define:A",
+        ])
+    }
+
     @Test func shellSplit() {
         #expect(Shell.split(#"--reason "not needed" --docs /a.md"#) == ["--reason", "not needed", "--docs", "/a.md"])
         #expect(Shell.split("--note ''") == ["--note", ""])

@@ -18,15 +18,27 @@ public struct IssueSummary: Codable, Identifiable, Hashable, Sendable {
     public var priority: String?
     public var children: Int?
     public var progress: Progress?
+    public var openQuestions: Bool?
+    public var resolvedAt: Date?
+    public var resolvedBy: String?
 
     public init(id: String, title: String, kind: String = "code", state: String = "open",
                 stale: Bool = false, blocked: Bool = false, actionable: Bool = false,
                 parent: String? = nil, tags: [String]? = nil, priority: String? = nil,
-                children: Int? = nil, progress: Progress? = nil) {
+                children: Int? = nil, progress: Progress? = nil, openQuestions: Bool? = nil,
+                resolvedAt: Date? = nil, resolvedBy: String? = nil) {
         self.id = id; self.title = title; self.kind = kind; self.state = state
         self.stale = stale; self.blocked = blocked; self.actionable = actionable
         self.parent = parent; self.tags = tags; self.priority = priority
         self.children = children; self.progress = progress
+        self.openQuestions = openQuestions; self.resolvedAt = resolvedAt; self.resolvedBy = resolvedBy
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, kind, state, stale, blocked, actionable, parent, tags, priority, children, progress
+        case openQuestions = "open_questions"
+        case resolvedAt = "resolved_at"
+        case resolvedBy = "resolved_by"
     }
 
     /// The last six characters, as the TUI shows IDs.

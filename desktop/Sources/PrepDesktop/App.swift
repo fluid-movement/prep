@@ -1,4 +1,5 @@
 import AppKit
+import UserNotifications
 import SwiftUI
 import PrepKit
 
@@ -85,6 +86,9 @@ struct WindowRoot: View {
 
     var body: some View {
         ContentView(model: model)
+            .onReceive(NotificationCenter.default.publisher(for: .openIssue)) { n in
+                if let id = n.userInfo?["issue"] as? String, model.all[id] != nil { model.go(to: id) }
+            }
             .task {
                 guard !started else { return }
                 started = true
@@ -99,7 +103,21 @@ struct WindowRoot: View {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+extension Notification.Name {
+    /// A notification was clicked: the userInfo's "issue" should open.
+    static let openIssue = Notification.Name("prep.openIssue")
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        if let id = response.notification.request.content.userInfo["issue"] as? String {
+            await MainActor.run {
+                NSApp.activate(ignoringOtherApps: true)
+                NotificationCenter.default.post(name: .openIssue, object: nil, userInfo: ["issue": id])
+            }
+        }
+    }
+
     nonisolated(unsafe) static var launchProject: String?
     nonisolated(unsafe) static var claimed = false
 
@@ -112,6 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
+        if Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
         // The bundle carries AppIcon.icns; a bare build draws it here.
         if Bundle.main.object(forInfoDictionaryKey: "CFBundleIconFile") == nil {
             let r = ImageRenderer(content: AppIconView().frame(width: 512, height: 512))

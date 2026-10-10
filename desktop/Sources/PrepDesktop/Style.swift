@@ -276,6 +276,7 @@ struct HoverButtonStyle: ButtonStyle {
 
 extension Date {
     var relative: String {
+        if abs(timeIntervalSinceNow) < 10 { return "just now" }
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .short
         return f.localizedString(for: self, relativeTo: .now)

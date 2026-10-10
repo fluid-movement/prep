@@ -14,7 +14,8 @@ struct IssueDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if !model.isListed(issue.id) { NotInListBanner(model: model) }
+                if let item = model.currentInboxItem { InboxBanner(model: model, item: item) }
+                else if model.tab == .issues, !model.isListed(issue.id) { NotInListBanner(model: model) }
                 Breadcrumbs(model: model, issue: issue)
                 header
                 if let r = issue.resolution { ResolutionBanner(model: model, resolution: r) }

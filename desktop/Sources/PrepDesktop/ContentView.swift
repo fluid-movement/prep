@@ -54,13 +54,16 @@ struct ContentView: View {
     /// The inspector belongs to an issue; it hides on the other screens.
     var inspectorShown: Binding<Bool> {
         Binding(
-            get: { model.showInspector && model.tab == .issues && model.detail != nil },
+            get: { model.showInspector && (model.tab == .issues || model.tab == .inbox) && model.detail != nil },
             set: { model.showInspector = $0 }
         )
     }
 
     var subtitle: String {
         switch model.tab {
+        case .inbox:
+            let n = model.inbox.filter { $0.kind != .define }.count
+            return n == 0 ? "Nothing urgent" : "\(n) waiting on you"
         case .issues:
             let open = model.all.values.filter { !$0.isResolved }.count
             return "\(open) unresolved of \(model.all.count)"
@@ -74,6 +77,7 @@ struct ContentView: View {
     @ViewBuilder
     var sidebar: some View {
         switch model.tab {
+        case .inbox: InboxSidebar(model: model)
         case .issues: IssueSidebar(model: model)
         case .knowledge: KnowledgeSidebar(model: model)
         case .agent: AgentSidebar(model: model)
@@ -83,7 +87,7 @@ struct ContentView: View {
     @ViewBuilder
     var detailPane: some View {
         switch model.tab {
-        case .issues:
+        case .inbox, .issues:
             if let d = model.detail {
                 IssueDetailView(model: model, detail: d)
             } else {
@@ -123,19 +127,21 @@ struct ContentView: View {
         }
         ToolbarItem(placement: .principal) {
             Picker("Screen", selection: $model.tab) {
-                ForEach(Tab.allCases) { t in Label(t.rawValue, systemImage: t.symbol).tag(t) }
+                ForEach(Tab.allCases) { t in
+                    let n = t == .inbox ? model.inbox.filter { $0.kind != .define }.count : 0
+                    Text(n > 0 ? "\(t.rawValue) \(n)" : t.rawValue).tag(t)
+                }
             }
             .pickerStyle(.segmented)
-            .labelStyle(.titleAndIcon)
             .disabled(model.project == nil)
-            .help("Issues ⌘1 · Knowledge ⌘2 · Agents ⌘3")
+            .help("Inbox ⌘1 · Issues ⌘2 · Knowledge ⌘3 · Agents ⌘4")
         }
         ToolbarItemGroup(placement: .primaryAction) {
             Button { model.newIssue(parent: nil) } label: { Label("New Issue", systemImage: "square.and.pencil") }
                 .disabled(model.project == nil)
                 .help("New Issue (⇧⌘N)")
             Button { model.showInspector.toggle() } label: { Label("Inspector", systemImage: "sidebar.right") }
-                .disabled(model.tab != .issues || model.detail == nil)
+                .disabled(!(model.tab == .issues || model.tab == .inbox) || model.detail == nil)
                 .help("Show or hide the inspector (⌥⌘I)")
         }
     }

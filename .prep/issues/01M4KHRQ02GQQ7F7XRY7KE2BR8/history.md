@@ -1,0 +1,1 @@
+- 2026-10-10T18:43:31Z claude-code/opus-5.5: Notifications are wired but untested here: they need the bundled app in the background and macOS permission on first use.

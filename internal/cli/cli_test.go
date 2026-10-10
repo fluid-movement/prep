@@ -1336,3 +1336,32 @@ func TestFixConvertsAPrep010Project(t *testing.T) {
 		t.Fatalf("second fix changed files:\n%s", out)
 	}
 }
+
+func TestListSummaryCarriesOpenQuestionsAndResolution(t *testing.T) {
+	h := newHarness(t)
+	a := h.newIssue("--title", "Ask", "--kind", "code", "--body", "Do it.")
+	b := h.newIssue("--title", "Drop me", "--kind", "code", "--body", "Not needed.")
+	h.replace(a, "issue.md", "## Open questions", "## Open questions\n\n- which one?")
+	h.ok("drop", b, "--reason", "not needed")
+	var got struct {
+		Issues []struct {
+			ID            string     `json:"id"`
+			OpenQuestions bool       `json:"open_questions"`
+			ResolvedAt    *time.Time `json:"resolved_at"`
+			ResolvedBy    string     `json:"resolved_by"`
+		} `json:"issues"`
+	}
+	h.jsonOf(&got, "list", "--json")
+	for _, s := range got.Issues {
+		switch s.ID {
+		case a:
+			if !s.OpenQuestions || s.ResolvedAt != nil {
+				t.Fatalf("open issue: %+v", s)
+			}
+		case b:
+			if s.OpenQuestions || s.ResolvedAt == nil || s.ResolvedBy == "" {
+				t.Fatalf("dropped issue: %+v", s)
+			}
+		}
+	}
+}
