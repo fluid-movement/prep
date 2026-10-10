@@ -1,6 +1,7 @@
 ---
 title: Desktop app (macOS)
 kind: manual
+parent: 01M498VPZAAQJKHXGZZ3PWJH2F
 tags:
   - desktop
 ---
