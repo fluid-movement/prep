@@ -1,7 +1,6 @@
 ---
 title: 'Knowledge screen views: what tier-two tabs fit the OKF bundle'
 kind: research
-parent: 01M498VPZAAQJKHXGZZ3PWJH2F
 tags:
   - tui
   - knowledge
