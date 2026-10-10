@@ -10,6 +10,8 @@
 	<string>dev.prep.desktop</string>
 	<key>CFBundleExecutable</key>
 	<string>PrepDesktop</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

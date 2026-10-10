@@ -50,6 +50,38 @@ import Testing
         ])
     }
 
+    @Test func filterArguments() {
+        var f = IssueFilter(view: "Unresolved")
+        #expect(f.arguments == ["--view", "Unresolved"])
+        f.states = ["ready", "open"]
+        f.priorities = ["low", "high"]
+        f.tags = ["ui"]
+        f.blocked = true
+        f.text = " release "
+        #expect(f.arguments == ["--view", "Unresolved", "--state", "open,ready", "--priority", "high,low",
+                                "--tag", "ui", "--blocked", "--text", "release"])
+        #expect(f.activeCount == 4)
+    }
+
+    @Test func workLogEntries() {
+        let log = WorkLog.parse("""
+        - 2026-10-08T08:33:13Z claude-code/opus-5.5: Did a thing: well.
+        - 2026-10-09T10:00:00Z human:ana: Second
+          continued
+        """)
+        #expect(log.count == 2)
+        #expect(log[0].actor == "claude-code/opus-5.5")
+        #expect(log[0].text == "Did a thing: well.")
+        #expect(log[1].text == "Second\ncontinued")
+    }
+
+    @Test func ulidTime() {
+        let d = ULID.date("01M4JY2S98AKAQ109YACKV5VNV")
+        #expect(d != nil)
+        #expect(d! > PrepDate.parse("2026-01-01T00:00:00Z")!)
+        #expect(d! < PrepDate.parse("2027-01-01T00:00:00Z")!)
+    }
+
     @Test func shellSplit() {
         #expect(Shell.split(#"--reason "not needed" --docs /a.md"#) == ["--reason", "not needed", "--docs", "/a.md"])
         #expect(Shell.split("--note ''") == ["--note", ""])
@@ -92,9 +124,11 @@ import Testing
         try await cli.write(["init", "--no-bootstrap"])
         try await cli.write(["knowledge", "new", "/overview.md", "--type", "overview", "--title", "Overview",
                              "--description", "The test project.", "--body", "# Overview\n\nTest."])
-        try await cli.write(["new", "--title", "Parent", "--kind", "manual"])
+        let parentID = try await cli.create(title: "Parent", kind: "manual", tags: ["x"], body: "The parent.")
         let parent = try #require(try await cli.list().first)
-        try await cli.write(["new", "--title", "Child", "--kind", "code", "--parent", parent.id, "--body", "Do it."])
+        #expect(parent.id == parentID)
+        _ = try await cli.create(title: "Child", kind: "code", parent: parent.id, priority: "high", body: "Do it.")
+        #expect(try await cli.flags().contains { $0.name == "state" })
         let issues = try await cli.list()
         #expect(issues.count == 2)
         let child = try #require(issues.first { $0.title == "Child" })

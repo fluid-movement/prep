@@ -27,7 +27,7 @@ enum Snapshot {
                               styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
                               backing: .buffered, defer: false)
         window.appearance = appearance
-        let host = NSHostingView(rootView: ContentView(model: model))
+        let host = NSHostingView(rootView: AnyView(ContentView(model: model)))
         window.contentView = host
         window.setContentSize(o.size)
         // On the window server but off every screen: lists tile their rows
@@ -47,6 +47,23 @@ enum Snapshot {
             if let e = o.entry {
                 model.entrySelection = e
                 await model.loadEntry()
+            }
+            // --sheet renders a sheet's view on its own, at its own size.
+            if let name = o.sheet {
+                let sheet: AnyView
+                switch name {
+                case "new": sheet = AnyView(NewIssueSheet(model: model, draft: NewIssueDraft(parent: model.current)))
+                case "drop", "complete", "release":
+                    let t = model.guide?.transitions?.first { $0.op == name }
+                        ?? PrepKit.Transition(op: name, command: "prep \(name) <id>", allowed: true)
+                    sheet = AnyView(TransitionSheet(transition: t, issueTitle: model.detail?.issue.title ?? "", entries: model.entries) { _ in })
+                default:
+                    guard let target = EditTarget(rawValue: name) else { fail("unknown sheet \(name)") }
+                    sheet = AnyView(EditorSheet(model: model, target: target))
+                }
+                host.rootView = AnyView(sheet.background(.background))
+                let size = host.fittingSize
+                window.setContentSize(NSSize(width: max(size.width, 300), height: max(size.height, 200)))
             }
             // Let SwiftUI lay out the loaded state.
             for _ in 0..<5 {
@@ -86,13 +103,21 @@ enum Snapshot {
             // visible rows one by one. Lists outside glass go first, since
             // they extend under the floating panels.
             @MainActor func lists(inside: Bool) {
-                for clip in all where clip is NSClipView && inGlass.contains(ObjectIdentifier(clip)) == inside
-                    && descendants(of: clip).contains(where: isRow) {
-                    NSColor.controlBackgroundColor.setFill()
-                    clip.convert(clip.bounds, to: frame).fill()
-                    for row in descendants(of: clip) where isRow(row) {
-                        draw(row, into: frame, rect: row.visibleRect)
+                for case let clip as NSClipView in all where inGlass.contains(ObjectIdentifier(clip)) == inside {
+                    guard let doc = clip.documentView else { continue }
+                    let rows = descendants(of: doc).filter(isRow)
+                    let rect = clip.convert(clip.bounds, to: frame)
+                    // Lists sit on the control background, documents on the window's.
+                    (rows.isEmpty ? NSColor.windowBackgroundColor : NSColor.controlBackgroundColor).setFill()
+                    rect.fill()
+                    NSGraphicsContext.saveGraphicsState()
+                    NSBezierPath(rect: rect).addClip()
+                    if rows.isEmpty {
+                        draw(doc, into: frame, rect: doc.visibleRect)
+                    } else {
+                        for row in rows { draw(row, into: frame, rect: row.visibleRect) }
                     }
+                    NSGraphicsContext.restoreGraphicsState()
                 }
             }
             lists(inside: false)

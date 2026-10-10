@@ -87,6 +87,9 @@ desktop:
     cp "$(swift build -c release --show-bin-path)/PrepDesktop" "$app/Contents/MacOS/"
     v='{{version}}'; v="${v#v}"; case "$v" in [0-9]*) ;; *) v=0.0.0 ;; esac
     sed "s/VERSION/${v%%-*}/g" Resources/Info.plist > "$app/Contents/Info.plist"
+    rm -rf build/AppIcon.iconset
+    "$app/Contents/MacOS/PrepDesktop" --render-icon build/AppIcon.iconset >/dev/null
+    iconutil -c icns build/AppIcon.iconset -o "$app/Contents/Resources/AppIcon.icns"
     codesign --force --sign - "$app"
     echo "built desktop/$app; open it with: open desktop/$app --args <project dir>"
 

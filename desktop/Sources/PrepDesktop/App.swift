@@ -12,6 +12,7 @@ struct LaunchOptions {
     var entry: String?
     var size = CGSize(width: 1280, height: 820)
     var appearance: String?
+    var sheet: String?
 
     static func parse(_ args: [String]) -> LaunchOptions {
         var o = LaunchOptions()
@@ -25,8 +26,10 @@ struct LaunchOptions {
             case "--snapshot": o.snapshot = value()
             case "--select": o.select = value()
             case "--entry": o.entry = value()
-            case "--tab": o.tab = value().flatMap { v in Tab.allCases.first { $0.rawValue.lowercased() == v.lowercased() } } ?? .issues
+            case "--tab": o.tab = value().flatMap { v in Tab.allCases.first { $0.rawValue.lowercased().hasPrefix(v.lowercased()) } } ?? .issues
             case "--appearance": o.appearance = value()
+            case "--sheet": o.sheet = value()
+            case "--render-icon": _ = value()
             case "--size":
                 let parts = (value() ?? "").split(separator: "x").compactMap { Double($0) }
                 if parts.count == 2 { o.size = CGSize(width: parts[0], height: parts[1]) }
@@ -51,15 +54,25 @@ struct PrepApp: App {
     var body: some Scene {
         WindowGroup {
             WindowRoot()
+                .frame(minWidth: 960, minHeight: 600)
         }
         .defaultSize(width: 1280, height: 820)
         .commands {
             CommandGroup(after: .newItem) {
                 OpenProjectCommand()
             }
-            CommandMenu("Go") {
-                TabCommands()
+            CommandGroup(before: .sidebar) {
+                ViewCommands()
             }
+            CommandMenu("Go") {
+                GoCommands()
+            }
+            CommandMenu("Issue") {
+                IssueCommands()
+            }
+        }
+        Settings {
+            SettingsView()
         }
     }
 }
@@ -99,6 +112,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
+        // The bundle carries AppIcon.icns; a bare build draws it here.
+        if Bundle.main.object(forInfoDictionaryKey: "CFBundleIconFile") == nil {
+            let r = ImageRenderer(content: AppIconView().frame(width: 512, height: 512))
+            if let image = r.nsImage { NSApp.applicationIconImage = image }
+        }
         NSApp.activate(ignoringOtherApps: true)
     }
 
@@ -139,7 +157,7 @@ struct OpenProjectCommand: View {
     }
 }
 
-struct TabCommands: View {
+struct ViewCommands: View {
     @FocusedValue(\.projectModel) var model
     var body: some View {
         ForEach(Array(Tab.allCases.enumerated()), id: \.offset) { k, t in
@@ -147,7 +165,59 @@ struct TabCommands: View {
                 .keyboardShortcut(KeyEquivalent(Character(String(k + 1))))
         }
         Divider()
+        Button(model?.showInspector == true ? "Hide Inspector" : "Show Inspector") { model?.showInspector.toggle() }
+            .keyboardShortcut("i", modifiers: [.command, .option])
         Button("Reload") { Task { await model?.reload() } }
             .keyboardShortcut("r")
+        Divider()
+    }
+}
+
+struct GoCommands: View {
+    @FocusedValue(\.projectModel) var model
+    var body: some View {
+        Button("Back") { model?.goBack() }
+            .keyboardShortcut("[")
+            .disabled(model?.canGoBack != true)
+        Button("Forward") { model?.goForward() }
+            .keyboardShortcut("]")
+            .disabled(model?.canGoForward != true)
+        Divider()
+        Button("Parent") {
+            if let m = model, let id = m.current, let p = m.summary(id)?.parent { m.go(to: p) }
+        }
+        .keyboardShortcut(.upArrow, modifiers: [.command])
+        .disabled(model?.current.flatMap { model?.summary($0)?.parent } == nil)
+    }
+}
+
+struct IssueCommands: View {
+    @FocusedValue(\.projectModel) var model
+    var body: some View {
+        Button("New Issue…") { model?.newIssue() }
+            .keyboardShortcut("n", modifiers: [.command, .shift])
+            .disabled(model?.project == nil)
+        Button("New Child Issue…") { model?.newIssue(parent: model?.current) }
+            .keyboardShortcut("n", modifiers: [.command, .option])
+            .disabled(model?.current == nil)
+        Divider()
+        Button("Rename…") { model?.editing = .title }
+            .keyboardShortcut("r", modifiers: [.command, .shift])
+            .disabled(model?.detail == nil || model?.detail?.issue.resolution != nil)
+        Button("Edit Requirement…") { model?.editing = .requirement }
+            .keyboardShortcut("e")
+            .disabled(model?.detail == nil || model?.detail?.issue.resolution != nil)
+        Button("Edit Context…") { model?.editing = .context }
+            .disabled(model?.detail == nil || model?.detail?.issue.resolution != nil)
+        Button("Add Criterion…") { model?.editing = .criterion }
+            .disabled(model?.detail == nil || model?.detail?.issue.resolution != nil)
+        Button("Record Decision…") { model?.editing = .decision }
+            .disabled(model?.detail == nil || model?.detail?.issue.resolution != nil)
+        Divider()
+        Button("Copy ID") { if let id = model?.current { model?.copy(id) } }
+            .keyboardShortcut("c", modifiers: [.command, .shift])
+            .disabled(model?.current == nil)
+        Button("Reveal in Finder") { if let id = model?.current { model?.revealInFinder(id) } }
+            .disabled(model?.current == nil)
     }
 }

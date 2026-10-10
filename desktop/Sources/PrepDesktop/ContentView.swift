@@ -1,8 +1,8 @@
 import SwiftUI
 import PrepKit
 
-/// One window: a project's issues, knowledge and agent activity, with the
-/// project switcher in the toolbar.
+/// One window: a project's issues, knowledge and agents, with history,
+/// the project switcher and the inspector in the toolbar.
 struct ContentView: View {
     @Bindable var model: ProjectModel
     @State private var opening = false
@@ -13,43 +13,71 @@ struct ContentView: View {
                 WelcomeView(model: model, opening: $opening)
             } else {
                 NavigationSplitView {
-                    Sidebar(model: model)
-                        .navigationSplitViewColumnWidth(min: 300, ideal: 420, max: 640)
+                    sidebar
+                        .navigationSplitViewColumnWidth(min: 280, ideal: 380, max: 560)
                 } detail: {
                     detailPane
+                        .inspector(isPresented: inspectorShown) {
+                            if let d = model.detail {
+                                IssueInspector(model: model, detail: d)
+                                    .inspectorColumnWidth(min: 240, ideal: 280, max: 360)
+                            }
+                        }
                 }
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                ProjectSwitcher(model: model, opening: $opening)
-            }
-            ToolbarItem(placement: .principal) {
-                Picker("Screen", selection: $model.tab) {
-                    ForEach(Tab.allCases) { t in Label(t.rawValue, systemImage: t.symbol).tag(t) }
-                }
-                .pickerStyle(.segmented)
-                .disabled(model.project == nil)
-            }
-            ToolbarItem {
-                Button { Task { await model.reload() } } label: { Label("Reload", systemImage: "arrow.clockwise") }
-                    .disabled(model.project == nil)
-            }
-        }
+        .toolbar { toolbar }
         .navigationTitle(model.project?.name ?? "prep")
-        .navigationSubtitle(model.project?.root ?? "")
+        .navigationSubtitle(subtitle)
         .fileImporter(isPresented: $opening, allowedContentTypes: [.folder]) { result in
             if case let .success(url) = result {
                 Task { await model.open(path: url.path) }
             }
         }
+        .sheet(item: $model.creating) { draft in
+            NewIssueSheet(model: model, draft: draft)
+        }
+        .sheet(item: $model.editing) { target in
+            EditorSheet(model: model, target: target)
+        }
         .overlay(alignment: .bottom) {
             if let e = model.error {
                 ErrorBanner(message: e) { model.error = nil }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .animation(.easeOut(duration: 0.2), value: model.error)
         .focusedSceneValue(\.projectModel, model)
         .task { await model.refreshProjects() }
+    }
+
+    /// The inspector belongs to an issue; it hides on the other screens.
+    var inspectorShown: Binding<Bool> {
+        Binding(
+            get: { model.showInspector && model.tab == .issues && model.detail != nil },
+            set: { model.showInspector = $0 }
+        )
+    }
+
+    var subtitle: String {
+        switch model.tab {
+        case .issues:
+            let open = model.all.values.filter { !$0.isResolved }.count
+            return "\(open) unresolved of \(model.all.count)"
+        case .knowledge: return "\(model.entries.count) knowledge entries"
+        case .agent:
+            let live = model.sessions.filter(\.isLive).count
+            return live > 0 ? "\(live) agent\(live == 1 ? "" : "s") active" : "No agent active"
+        }
+    }
+
+    @ViewBuilder
+    var sidebar: some View {
+        switch model.tab {
+        case .issues: IssueSidebar(model: model)
+        case .knowledge: KnowledgeSidebar(model: model)
+        case .agent: AgentSidebar(model: model)
+        }
     }
 
     @ViewBuilder
@@ -57,231 +85,88 @@ struct ContentView: View {
         switch model.tab {
         case .issues:
             if let d = model.detail {
-                IssueDetailView(model: model, detail: d).id(d.issue.id)
+                IssueDetailView(model: model, detail: d)
             } else {
-                Placeholder(text: "Select an issue", symbol: "checklist")
+                ContentUnavailableView {
+                    Label("No Issue Selected", systemImage: "checklist")
+                } description: {
+                    Text("Pick an issue from the list, or create one.")
+                } actions: {
+                    Button("New Issue") { model.newIssue() }
+                }
             }
         case .knowledge:
             if let e = model.entry {
                 KnowledgeEntryView(model: model, entry: e)
             } else {
-                Placeholder(text: "Select a knowledge entry", symbol: "books.vertical")
+                ContentUnavailableView("No Entry Selected", systemImage: "books.vertical",
+                                       description: Text("The knowledge base is what agents read before they work."))
             }
         case .agent:
             AgentFeedView(model: model)
         }
     }
-}
 
-struct Sidebar: View {
-    @Bindable var model: ProjectModel
-
-    var body: some View {
-        switch model.tab {
-        case .issues: IssueSidebar(model: model)
-        case .knowledge: KnowledgeSidebar(model: model)
-        case .agent: AgentSidebar(model: model)
+    @ToolbarContentBuilder
+    var toolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .navigation) {
+            ControlGroup {
+                Button { model.goBack() } label: { Label("Back", systemImage: "chevron.left") }
+                    .disabled(!model.canGoBack)
+                    .help("Back (⌘[)")
+                Button { model.goForward() } label: { Label("Forward", systemImage: "chevron.right") }
+                    .disabled(!model.canGoForward)
+                    .help("Forward (⌘])")
+            }
+            .controlGroupStyle(.navigation)
+            ProjectSwitcher(model: model, opening: $opening)
+        }
+        ToolbarItem(placement: .principal) {
+            Picker("Screen", selection: $model.tab) {
+                ForEach(Tab.allCases) { t in Label(t.rawValue, systemImage: t.symbol).tag(t) }
+            }
+            .pickerStyle(.segmented)
+            .labelStyle(.titleAndIcon)
+            .disabled(model.project == nil)
+            .help("Issues ⌘1 · Knowledge ⌘2 · Agents ⌘3")
+        }
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button { model.newIssue(parent: nil) } label: { Label("New Issue", systemImage: "square.and.pencil") }
+                .disabled(model.project == nil)
+                .help("New Issue (⇧⌘N)")
+            Button { model.showInspector.toggle() } label: { Label("Inspector", systemImage: "sidebar.right") }
+                .disabled(model.tab != .issues || model.detail == nil)
+                .help("Show or hide the inspector (⌥⌘I)")
         }
     }
 }
 
-struct IssueSidebar: View {
-    @Bindable var model: ProjectModel
-    @FocusState private var filterFocused: Bool
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Menu {
-                    ForEach(model.viewNames, id: \.self) { name in
-                        Button {
-                            model.view = name
-                            model.query = ""
-                            Task { await model.reload() }
-                        } label: {
-                            if name == model.view { Label(name, systemImage: "checkmark") } else { Text(name) }
-                        }
-                    }
-                } label: {
-                    Label(model.view, systemImage: "line.3.horizontal.decrease.circle")
-                }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
-                .help("Saved views from .prep/config.yaml")
-                TextField("Filter: words or --state ready --tag ui", text: $model.query)
-                    .textFieldStyle(.roundedBorder)
-                    .focused($filterFocused)
-                    .onSubmit { Task { await model.reload() } }
-            }
-            .padding(8)
-            Divider()
-            List(selection: $model.selection) {
-                ForEach(model.tree) { node in IssueOutlineRow(model: model, node: node) }
-            }
-            .listStyle(.sidebar)
-            HStack {
-                Text("\(model.count) issues").font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                if model.loading { ProgressView().controlSize(.small) }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-        }
-        .background {
-            // / focuses the filter, as in the TUI.
-            Button("") { filterFocused = true }
-                .keyboardShortcut("/", modifiers: [])
-                .hidden()
-        }
-    }
-}
-
-/// A tree row: parents start expanded, and remember being collapsed.
-struct IssueOutlineRow: View {
-    var model: ProjectModel
-    var node: IssueNode
-
-    var body: some View {
-        if let kids = node.children, !kids.isEmpty {
-            DisclosureGroup(isExpanded: Binding(
-                get: { !model.collapsed.contains(node.id) },
-                set: { open in
-                    if open { model.collapsed.remove(node.id) } else { model.collapsed.insert(node.id) }
-                }
-            )) {
-                ForEach(kids) { IssueOutlineRow(model: model, node: $0) }
-            } label: {
-                IssueRow(issue: node.issue)
-            }
-            .tag(node.id)
-        } else {
-            IssueRow(issue: node.issue).tag(node.id)
-        }
-    }
-}
-
-struct KnowledgeSidebar: View {
-    @Bindable var model: ProjectModel
-
-    var body: some View {
-        let groups = Dictionary(grouping: model.entries, by: \.type)
-        List(selection: $model.entrySelection) {
-            ForEach(groups.keys.sorted(), id: \.self) { type in
-                SwiftUI.Section(type) {
-                    ForEach(groups[type] ?? []) { e in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(e.title).lineLimit(1)
-                            Text(e.path).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1)
-                        }
-                        .tag(e.path)
-                    }
-                }
-            }
-        }
-        .listStyle(.sidebar)
-    }
-}
-
-struct KnowledgeEntryView: View {
-    var model: ProjectModel
-    var entry: KnowledgeEntry
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Text(entry.path).font(.callout.monospaced()).foregroundStyle(.secondary)
-                    Pill(text: entry.type)
-                    if let s = entry.status { Pill(text: s) }
-                    if let size = entry.size { Text("~\(size / 4) tok").font(.caption).foregroundStyle(.secondary) }
-                }
-                if let d = entry.description { Text(d).foregroundStyle(.secondary) }
-                Divider()
-                MarkdownView(source: entry.text ?? "", onLink: model.openLink)
-            }
-            .padding(24)
-            .frame(maxWidth: 820, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-}
-
-struct AgentSidebar: View {
-    var model: ProjectModel
-
-    var body: some View {
-        List {
-            SwiftUI.Section("Agents and their current issue") {
-                ForEach(model.activity.focus ?? [], id: \.agent) { f in
-                    Button {
-                        if let id = f.issue { model.go(to: id) }
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(f.actor ?? f.agent).font(.callout.weight(.medium))
-                            if let id = f.issue {
-                                if let s = model.summary(id) { IssueRow(issue: s) } else { Text(id).font(.caption) }
-                            }
-                            if let at = f.at { Text(at, style: .relative).font(.caption).foregroundStyle(.secondary) }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-        .listStyle(.sidebar)
-    }
-}
-
-struct AgentFeedView: View {
-    var model: ProjectModel
-
-    var body: some View {
-        let events = Array((model.activity.events ?? []).reversed())
-        if events.isEmpty {
-            Placeholder(text: "No agent activity yet", symbol: "sparkles")
-        } else {
-            List(Array(events.enumerated()), id: \.offset) { _, e in
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(e.at, format: .dateTime.hour().minute().second())
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .frame(width: 70, alignment: .leading)
-                    Text(e.actor ?? "").font(.caption).foregroundStyle(.secondary).frame(width: 150, alignment: .leading).lineLimit(1)
-                    Text(e.verb ?? e.kind ?? e.op ?? "").foregroundStyle(e.verb == nil ? .secondary : .primary)
-                    if let target = e.target {
-                        if let id = e.issue {
-                            Button(target) { model.go(to: id) }.buttonStyle(.link).lineLimit(1)
-                        } else {
-                            Text(target).foregroundStyle(.secondary).lineLimit(1)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// The toolbar's project dropdown: recent projects from `prep projects`.
+/// The toolbar's project menu: recent projects, then opening another.
 struct ProjectSwitcher: View {
     var model: ProjectModel
     @Binding var opening: Bool
 
     var body: some View {
         Menu {
-            ForEach(model.projects) { p in
-                Button {
-                    Task { await model.open(path: p.root) }
-                } label: {
-                    if p.root == model.project?.root {
-                        Label(p.name, systemImage: "checkmark")
-                    } else {
-                        Text(p.name)
+            Section("Recent Projects") {
+                ForEach(model.projects) { p in
+                    Button {
+                        Task { await model.open(path: p.root) }
+                    } label: {
+                        if p.root == model.project?.root {
+                            Label(p.name, systemImage: "checkmark")
+                        } else {
+                            Text(p.name)
+                        }
+                        Text(p.root.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
                     }
                 }
-                .help(p.root)
             }
-            if !model.projects.isEmpty { Divider() }
+            Divider()
             Button("Open Project…") { opening = true }
+            if let root = model.project?.root {
+                Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: root)]) }
+            }
         } label: {
             Label(model.project?.name ?? "Open Project", systemImage: "folder")
                 .labelStyle(.titleAndIcon)
@@ -296,41 +181,52 @@ struct WelcomeView: View {
     @Binding var opening: Bool
 
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checklist").font(.system(size: 48)).foregroundStyle(.secondary)
-            Text("Open a prep project").font(.title2)
-            Button("Open Project…") { opening = true }.keyboardShortcut("o")
+        VStack(spacing: 24) {
+            VStack(spacing: 10) {
+                Image(systemName: "checklist")
+                    .font(.system(size: 44, weight: .medium))
+                    .foregroundStyle(Color.accentColor.gradient)
+                    .frame(width: 84, height: 84)
+                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 20))
+                Text("Welcome to prep").font(.largeTitle.bold())
+                Text("Open a project to see its issues, knowledge and agents.")
+                    .foregroundStyle(.secondary)
+            }
+            Button {
+                opening = true
+            } label: {
+                Label("Open Project…", systemImage: "folder").frame(minWidth: 180)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .keyboardShortcut("o")
             if !model.projects.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Recent").font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("RECENT").font(.caption2.weight(.semibold)).foregroundStyle(.tertiary).padding(.leading, 10)
                     ForEach(model.projects.prefix(8)) { p in
                         Button {
                             Task { await model.open(path: p.root) }
                         } label: {
-                            HStack {
-                                Text(p.name)
-                                Text(p.root).font(.caption).foregroundStyle(.secondary)
+                            HStack(spacing: 10) {
+                                Image(systemName: "folder.fill").foregroundStyle(Color.accentColor)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(p.name).font(.callout.weight(.medium))
+                                    Text(p.root.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
+                                        .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                                }
+                                Spacer()
+                                if let d = p.lastUsed { Text(d.relative).font(.caption).foregroundStyle(.tertiary) }
                             }
+                            .padding(.horizontal, 10).padding(.vertical, 7)
                         }
-                        .buttonStyle(.link)
+                        .buttonStyle(HoverButtonStyle())
                     }
                 }
-                .padding(.top, 8)
+                .frame(width: 420)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-struct Placeholder: View {
-    var text: String
-    var symbol: String
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: symbol).font(.largeTitle).foregroundStyle(.tertiary)
-            Text(text).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.background)
     }
 }
 
@@ -338,14 +234,20 @@ struct ErrorBanner: View {
     var message: String
     var dismiss: () -> Void
     var body: some View {
-        HStack(alignment: .top) {
-            Image(systemName: "exclamationmark.octagon.fill").foregroundStyle(.red)
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
             Text(message).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-            Spacer()
-            Button(action: dismiss) { Image(systemName: "xmark") }.buttonStyle(.borderless)
+            Spacer(minLength: 8)
+            Button(action: dismiss) { Image(systemName: "xmark") }
+                .buttonStyle(.borderless)
+                .keyboardShortcut(.cancelAction)
         }
-        .padding(10)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .font(.callout)
+        .padding(12)
+        .frame(maxWidth: 640)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.separator))
+        .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
         .padding()
     }
 }

@@ -92,6 +92,10 @@ public struct PrepCLI: Sendable {
         try await decode(Views.self, ["views"]).views
     }
 
+    public func flags() async throws -> [FlagInfo] {
+        try await decode(FlagList.self, ["flags"]).flags
+    }
+
     public func projects() async throws -> [ProjectRef] {
         try await decode(ProjectList.self, ["projects"]).projects
     }
@@ -102,6 +106,19 @@ public struct PrepCLI: Sendable {
     @discardableResult
     public func write(_ args: [String], stdin: String? = nil) async throws -> Data {
         try await run(["--by", actor] + args, stdin: stdin)
+    }
+
+    /// Creates an issue and returns its ID.
+    public func create(title: String, kind: String, parent: String? = nil, priority: String? = nil,
+                       tags: [String] = [], body: String = "") async throws -> String {
+        var args = ["new", "--title", title, "--kind", kind]
+        if let parent { args += ["--parent", parent] }
+        if let priority, priority != "medium" { args += ["--priority", priority] }
+        for t in tags { args += ["--tag", t] }
+        args += ["--body-file", "-"]
+        let data = try await write(args, stdin: body)
+        struct Created: Decodable { var id: String }
+        return try JSONDecoder.prep.decode(Created.self, from: data).id
     }
 
     // MARK: Plumbing

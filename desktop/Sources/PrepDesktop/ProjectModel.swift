@@ -1,10 +1,10 @@
-import Foundation
 import AppKit
+import Foundation
 import Observation
 import PrepKit
 
 enum Tab: String, CaseIterable, Identifiable {
-    case issues = "Issues", knowledge = "Knowledge", agent = "Agent"
+    case issues = "Issues", knowledge = "Knowledge", agent = "Agents"
     var id: String { rawValue }
     var symbol: String {
         switch self {
@@ -13,6 +13,10 @@ enum Tab: String, CaseIterable, Identifiable {
         case .agent: "sparkles"
         }
     }
+}
+
+enum ListMode: String, CaseIterable {
+    case tree, flat
 }
 
 /// One window's project: what it shows, loaded through the prep CLI and
@@ -29,32 +33,42 @@ final class ProjectModel {
     var projects: [ProjectRef] = []
 
     // Issues
-    var query = ""
-    var view = "Unresolved"
-    var views: [String: String] = [:]
-    private(set) var all: [String: IssueSummary] = [:]
-    private(set) var tree: [IssueNode] = []
-    private(set) var count = 0
-    var collapsed: Set<String> = []
-    var selection: String? {
-        didSet { if selection != oldValue { Task { await loadDetail() } } }
+    var filter = IssueFilter(view: "Unresolved") {
+        didSet { if filter != oldValue { Task { await reloadList() } } }
     }
+    var listMode: ListMode = .tree
+    private(set) var views: [String: String] = [:]
+    private(set) var flags: [String: FlagInfo] = [:]
+    private(set) var all: [String: IssueSummary] = [:]
+    private(set) var listed: [IssueSummary] = []
+    private(set) var tree: [IssueNode] = []
+    var collapsed: Set<String> = []
+
+    /// The issue the detail shows. It may be outside the filtered list.
+    private(set) var current: String?
     private(set) var detail: IssueDetail?
     private(set) var guide: Guide?
+    private var back: [String] = []
+    private var forward: [String] = []
 
     // Knowledge
     private(set) var entries: [KnowledgeEntry] = []
+    var knowledgeQuery = ""
     var entrySelection: String? {
         didSet { if entrySelection != oldValue { Task { await loadEntry() } } }
     }
     private(set) var entry: KnowledgeEntry?
 
-    // Agent
+    // Agents
     private(set) var activity = ActivityFeed(events: [], focus: [])
+    var agentSelection: String?
 
     var error: String?
     private(set) var loading = false
-    private(set) var loaded = false
+    private(set) var busy = false
+    var showInspector = true
+    var creating: NewIssueDraft?
+    var editing: EditTarget?
 
     init(binary: URL? = PrepCLI.locate()) {
         self.binary = binary
@@ -96,32 +110,33 @@ final class ProjectModel {
     /// Opens the project at path (any directory inside it) in this window.
     func open(path: String) async {
         guard let binary else { return }
-        let cli = PrepCLI(binary: binary, root: path)
+        let root = PrepCLI.projectRoot(from: path) ?? path
+        let cli = PrepCLI(binary: binary, root: root)
         do {
             // prep records the project in its registry on any successful command.
-            _ = try await cli.views()
+            views = try await cli.views()
         } catch {
             self.error = "\(path) is not a prep project: \(error.localizedDescription)"
             return
         }
-        await refreshProjects()
-        // The project root: prep finds it from any directory inside.
-        let root = PrepCLI.projectRoot(from: path) ?? path
-        let ref = projects.first { $0.root == root }
-            ?? ProjectRef(root: root, name: URL(fileURLWithPath: root).lastPathComponent)
         watcher?.stop()
-        project = ref
-        self.cli = PrepCLI(binary: binary, root: ref.root)
-        remember(ref.root)
+        self.cli = cli
+        remember(root)
         await refreshProjects()
-        selection = nil
+        project = projects.first { $0.root == root }
+            ?? ProjectRef(root: root, name: URL(fileURLWithPath: root).lastPathComponent)
+        current = nil
+        back = []
+        forward = []
         detail = nil
         guide = nil
         entrySelection = nil
         entry = nil
         error = nil
+        let view = views["Unresolved"] != nil ? "Unresolved" : nil
+        if filter != IssueFilter(view: view) { filter = IssueFilter(view: view) }
         await reload()
-        watcher = try? Watcher(binary: binary, root: ref.root) { [weak self] in
+        watcher = try? Watcher(binary: binary, root: root) { [weak self] in
             Task { @MainActor in await self?.reload() }
         }
     }
@@ -131,38 +146,40 @@ final class ProjectModel {
     func reload() async {
         guard let cli else { return }
         loading = true
-        defer { loading = false; loaded = true }
+        defer { loading = false }
         do {
             async let everything = cli.list()
             async let v = cli.views()
+            async let f = cli.flags()
             async let k = cli.knowledge()
-            async let a = cli.activity()
+            async let a = cli.activity(max: 400)
             let list = try await everything
-            views = try await v
             all = Dictionary(list.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-            let filtered = try await cli.list(currentQuery)
-            tree = IssueTree.build(filtered)
-            count = filtered.count
+            views = try await v
+            flags = Dictionary(((try? await f) ?? []).map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
             entries = try await k
             activity = (try? await a) ?? activity
             error = nil
         } catch {
             self.error = error.localizedDescription
         }
+        await reloadList()
         await loadDetail()
         await loadEntry()
     }
 
-    var currentQuery: [String] {
-        var args = Query.arguments(query)
-        if let q = views[view], !q.isEmpty, query.isEmpty {
-            args = Query.arguments(q)
+    func reloadList() async {
+        guard let cli else { return }
+        do {
+            listed = try await cli.list(filter.arguments)
+            tree = IssueTree.build(listed)
+        } catch {
+            self.error = error.localizedDescription
         }
-        return args
     }
 
     func loadDetail() async {
-        guard let cli, let id = selection else {
+        guard let cli, let id = current else {
             detail = nil
             guide = nil
             return
@@ -170,8 +187,11 @@ final class ProjectModel {
         do {
             async let d = cli.show(id)
             async let g = cli.guide(id)
-            detail = try await d
-            guide = try? await g
+            let shown = try await d
+            let guided = try? await g
+            guard current == id else { return }
+            detail = shown
+            guide = guided
         } catch {
             self.error = error.localizedDescription
         }
@@ -187,40 +207,153 @@ final class ProjectModel {
 
     func title(_ id: String) -> String { all[id]?.title ?? id }
     func summary(_ id: String) -> IssueSummary? { all[id] }
+    func isListed(_ id: String) -> Bool { listed.contains { $0.id == id } }
 
+    /// The chain of parents above an issue, outermost first.
+    func ancestors(of id: String) -> [IssueSummary] {
+        var chain: [IssueSummary] = []
+        var seen: Set<String> = [id]
+        var next = all[id]?.parent
+        while let p = next, !seen.contains(p), let s = all[p] {
+            chain.insert(s, at: 0)
+            seen.insert(p)
+            next = s.parent
+        }
+        return chain
+    }
+
+    func children(of id: String) -> [IssueSummary] {
+        all.values.filter { $0.parent == id }.sorted { a, b in
+            let ra = Lifecycle.states.firstIndex(of: a.state) ?? 0, rb = Lifecycle.states.firstIndex(of: b.state) ?? 0
+            if a.isResolved != b.isResolved { return !a.isResolved }
+            if ra != rb { return ra > rb }
+            return a.id < b.id
+        }
+    }
+
+    // MARK: Navigation
+
+    /// The list selection: picking a row shows it and records history.
+    var selection: String? {
+        get { current }
+        set { if let id = newValue { show(id) } }
+    }
+
+    func show(_ id: String, recording: Bool = true) {
+        guard id != current else { return }
+        if recording, let c = current {
+            back.append(c)
+            forward.removeAll()
+        }
+        current = id
+        if let p = all[id]?.parent { collapsed.remove(p) }
+        Task { await loadDetail() }
+    }
+
+    /// Follows a link to an issue from anywhere in the window.
     func go(to id: String) {
         tab = .issues
-        if !tree.contains(where: { $0.contains(id) }) {
-            query = ""
-            view = "All"
-            Task { await reload() }
-        }
-        selection = id
+        show(id)
+    }
+
+    var canGoBack: Bool { !back.isEmpty }
+    var canGoForward: Bool { !forward.isEmpty }
+
+    func goBack() {
+        guard let id = back.popLast() else { return }
+        if let c = current { forward.append(c) }
+        tab = .issues
+        show(id, recording: false)
+    }
+
+    func goForward() {
+        guard let id = forward.popLast() else { return }
+        if let c = current { back.append(c) }
+        tab = .issues
+        show(id, recording: false)
+    }
+
+    /// Shows the current issue in the list by clearing the filter.
+    func revealInList() {
+        filter = IssueFilter(view: viewNames.contains("All") ? "All" : nil)
     }
 
     // MARK: Writes
 
     /// Runs a write; the watcher reloads after it lands, this reloads now.
-    func write(_ args: [String], stdin: String? = nil) async {
-        guard let cli else { return }
+    @discardableResult
+    func write(_ args: [String], stdin: String? = nil) async -> Bool {
+        guard let cli else { return false }
+        busy = true
+        defer { busy = false }
         do {
             try await cli.write(args, stdin: stdin)
             error = nil
+            await reload()
+            return true
         } catch {
             self.error = error.localizedDescription
+            return false
         }
-        await reload()
     }
 
     func toggle(criterion n: Int, checked: Bool) async {
-        guard let id = selection else { return }
+        guard let id = current else { return }
         await write(["criterion", id, checked ? "--check" : "--uncheck", String(n)])
     }
 
+    func addCriterion(_ text: String) async {
+        guard let id = current, !text.isEmpty else { return }
+        await write(["criterion", id, "--add", text])
+    }
+
     func log(_ text: String) async {
-        guard let id = selection, !text.isEmpty else { return }
+        guard let id = current, !text.isEmpty else { return }
         await write(["log", id, "--", text])
     }
+
+    func edit(_ flags: [String]) async {
+        guard let id = current else { return }
+        await write(["edit", id] + flags)
+    }
+
+    func setTags(_ tags: [String]) async {
+        guard let id = current else { return }
+        let args = tags.isEmpty ? ["--tag", ""] : tags.flatMap { ["--tag", $0] }
+        await write(["edit", id] + args)
+    }
+
+    func newIssue(parent: String? = nil) {
+        creating = NewIssueDraft(parent: parent)
+    }
+
+    func create(_ d: NewIssueDraft) async -> Bool {
+        guard let cli else { return false }
+        busy = true
+        defer { busy = false }
+        do {
+            let tags = d.tags.split(whereSeparator: { $0 == "," || $0 == " " }).map(String.init)
+            let id = try await cli.create(title: d.title, kind: d.kind, parent: d.parent, priority: d.priority,
+                                          tags: tags, body: d.body)
+            await reload()
+            go(to: id)
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            return false
+        }
+    }
+}
+
+/// The New Issue sheet's fields.
+struct NewIssueDraft: Identifiable {
+    let id = UUID()
+    var title = ""
+    var kind = "code"
+    var priority = "medium"
+    var parent: String?
+    var tags = ""
+    var body = ""
 }
 
 extension IssueNode {
@@ -242,5 +375,16 @@ extension ProjectModel {
         } else if let url = URL(string: link), url.scheme != nil {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    func revealInFinder(_ id: String) {
+        guard let root = project?.root else { return }
+        let url = URL(fileURLWithPath: root).appendingPathComponent(".prep/issues/\(id)")
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    func copy(_ s: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(s, forType: .string)
     }
 }
