@@ -13,6 +13,7 @@ import (
 	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/mdstore"
+	"github.com/fluid-movement/prep/internal/projects"
 )
 
 // note sets the activity event a successful command records; Main
@@ -58,6 +59,16 @@ func (a *app) recordEvent(printed int) {
 		e.Chars = printed
 	}
 	_ = activity.Append(dir, e)
+}
+
+// recordProject records the opened project in the machine's project
+// registry, for clients that switch between projects. Like activity, a
+// failure never fails the command.
+func (a *app) recordProject() {
+	if a.prepDir() == "" {
+		return
+	}
+	_ = projects.Touch(a.store.Root, a.now())
 }
 
 // counter counts what a command prints.

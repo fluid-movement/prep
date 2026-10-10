@@ -1,0 +1,3 @@
+- [x] Each TUI area (list/tree, detail, knowledge, agent, views, transitions, edits) is marked reachable through --json or names its gap
+- [x] prep watch is assessed as a refresh signal, with the cost of a full reload measured
+- [x] Gaps that block the desktop prototype are filed as follow-up issues

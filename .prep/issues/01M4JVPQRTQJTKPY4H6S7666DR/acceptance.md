@@ -1,0 +1,4 @@
+- [x] A successful prep command in a project records its root with the time; a failure to record never fails the command
+- [x] prep projects lists recorded projects newest first, text and --json, and works outside a project
+- [x] Projects whose directory or .prep no longer exists are dropped from the list and the file
+- [x] Tests never write to the real user state directory

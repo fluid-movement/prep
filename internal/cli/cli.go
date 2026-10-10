@@ -88,6 +88,7 @@ func init() {
 		{"flags", false, "flags                      every query flag with the values it accepts now and their issue counts", cmdFlags},
 		{"knowledge", false, "knowledge list|find|show   read the knowledge base: list [--type --status --scope words], find <query> [--max N] (best sections), show <entry>[#section]... [--outline]", cmdKnowledge},
 		{"views", false, "views                      saved views from config.yaml (else config.yaml.dist)", cmdViews},
+		{"projects", false, "projects                   prep projects on this machine, most recently used first (recorded by every command run in one)", cmdProjects},
 		{"new", true, "new --title T --kind K     create an issue [--parent id] [--depends-on id]... [--tag t]... [--priority p] [--body text | --body-file path|-]", cmdNew},
 		{"edit", true, "edit <id>                  change [--title T] [--kind K] [--parent id|''] [--depends-on id|'']... [--tag t|'']... [--priority p] [--body text | --body-file path|-]", cmdEdit},
 		{"context", true, "context <id>               replace the implementation context: --body text | --body-file path|-", recordCmd(domain.OpContext)},
@@ -149,6 +150,7 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 				return a.fail(err)
 			}
 			a.recordEvent(out.n)
+			a.recordProject()
 			return exitOK
 		}
 	}

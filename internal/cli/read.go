@@ -14,6 +14,7 @@ import (
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/gitx"
 	"github.com/fluid-movement/prep/internal/mdstore"
+	"github.com/fluid-movement/prep/internal/projects"
 	"github.com/fluid-movement/prep/internal/update"
 )
 
@@ -733,6 +734,24 @@ func cmdPrime(a *app, args []string) error {
 
 func cmdSkill(a *app, args []string) error {
 	a.printf("%s", skillText)
+	return nil
+}
+
+func cmdProjects(a *app, args []string) error {
+	if len(args) > 0 {
+		return usageErr("usage: prep projects")
+	}
+	ps, err := projects.List()
+	if err != nil {
+		return err
+	}
+	if a.json {
+		a.emit(map[string]any{"projects": ps})
+		return nil
+	}
+	for _, p := range ps {
+		a.printf("%-20s %s  %s\n", p.Name, p.LastUsed.Local().Format("2006-01-02 15:04"), p.Root)
+	}
 	return nil
 }
 
