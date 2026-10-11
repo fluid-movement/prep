@@ -499,6 +499,15 @@ func cmdFix(a *app, args []string) error {
 		return err
 	}
 	files = append(files, ident...)
+	hints, err := a.fixLinkRemotes()
+	if err != nil {
+		return err
+	}
+	for _, f := range hints {
+		if !slices.Contains(files, f) {
+			files = append(files, f)
+		}
+	}
 	// The personal config is ignored now; a 0.1.0 project still has it in
 	// git's index, and committing the fix removes it there (config.yaml.dist
 	// takes its place).

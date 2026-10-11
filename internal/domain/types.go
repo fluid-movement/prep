@@ -130,7 +130,10 @@ type Project struct {
 	ID string
 	// Name is the project's short handle; empty means derived (see
 	// internal/projects.DefaultName).
-	Name   string
+	Name string
+	// Links are the other projects this one refers to, by local name
+	// (sorted).
+	Links  []ProjectLink
 	DoD    []string
 	Config Config
 }

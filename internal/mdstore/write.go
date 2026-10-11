@@ -134,6 +134,45 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 		touched = append(touched, rel)
 		contents = append(contents, &out)
 	}
+	if c.Links != nil {
+		rel := Dir + "/project.md"
+		raw, ok, err := s.read(rel)
+		if err == nil && !ok {
+			err = &domain.Error{Code: domain.ErrNoProject, Message: "project.md is missing"}
+		}
+		if err != nil {
+			return nil, nil, err
+		}
+		fm, body, _, err := splitFrontmatter(raw)
+		if err != nil {
+			return nil, nil, err
+		}
+		var f projectFM
+		if err := decodeStrict(fm, &f); err != nil {
+			return nil, nil, fmt.Errorf("%s: %w", rel, err)
+		}
+		p := f.project()
+		p.Links = *c.Links
+		out := renderProject(p, body)
+		touched = append(touched, rel)
+		contents = append(contents, &out)
+	}
+	if r := c.LinkRename; r != nil {
+		rels, err := s.linkRefFiles()
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, rel := range rels {
+			raw, _, err := s.read(rel)
+			if err != nil {
+				return nil, nil, err
+			}
+			if out := domain.RenameLinkInText(raw, r[0], r[1]); out != raw {
+				touched = append(touched, rel)
+				contents = append(contents, &out)
+			}
+		}
+	}
 	if c.NewIssue != nil {
 		if _, err := os.Stat(s.abs(dir)); err == nil {
 			return nil, nil, &domain.Error{Code: domain.ErrConflict, Message: fmt.Sprintf("issue directory %s already exists", dir)}
@@ -482,6 +521,39 @@ func (s *Store) Fix() ([]string, error) {
 	return changed, nil
 }
 
+// linkRefFiles lists the files that can refer to a link: every issue's
+// requirement and text records, and every knowledge entry.
+func (s *Store) linkRefFiles() ([]string, error) {
+	ids, err := s.issueIDs()
+	if err != nil {
+		return nil, err
+	}
+	var rels []string
+	for _, id := range ids {
+		for _, n := range []string{"issue.md", "context.md", "findings.md", "decisions.md", "acceptance.md", "history.md"} {
+			rel := IssueDir(id) + "/" + n
+			if _, err := os.Stat(s.abs(rel)); err == nil {
+				rels = append(rels, rel)
+			}
+		}
+	}
+	root := s.abs(Dir + "/knowledge")
+	err = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".md") {
+			return err
+		}
+		rel, err := filepath.Rel(s.Root, p)
+		if err == nil {
+			rels = append(rels, filepath.ToSlash(rel))
+		}
+		return err
+	})
+	if errors.Is(err, fs.ErrNotExist) {
+		err = nil
+	}
+	return rels, err
+}
+
 func (s *Store) issueIDs() ([]string, error) {
 	dirs, err := os.ReadDir(s.abs(Dir + "/issues"))
 	if errors.Is(err, fs.ErrNotExist) {
@@ -537,7 +609,7 @@ func (s *Store) editProject(edit func(*domain.Project)) error {
 	var f projectFM
 	fm, _, _, _ := splitFrontmatter(raw)
 	_ = decodeStrict(fm, &f)
-	p := domain.Project{Schema: f.Schema, ID: f.ID, Name: f.Name}
+	p := f.project()
 	edit(&p)
 	return s.write(rel, renderProject(p, body))
 }

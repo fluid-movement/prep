@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -63,9 +64,37 @@ type resolutionFM struct {
 }
 
 type projectFM struct {
-	Schema int    `yaml:"schema"`
-	ID     string `yaml:"id,omitempty"`
-	Name   string `yaml:"name,omitempty"`
+	Schema int               `yaml:"schema"`
+	ID     string            `yaml:"id,omitempty"`
+	Name   string            `yaml:"name,omitempty"`
+	Links  map[string]linkFM `yaml:"links,omitempty"`
+}
+
+// linkFM is one link under its local name; yaml writes the names sorted.
+type linkFM struct {
+	ID     string `yaml:"id"`
+	Remote string `yaml:"remote,omitempty"`
+}
+
+// project returns the frontmatter's facts.
+func (f projectFM) project() domain.Project {
+	p := domain.Project{Schema: f.Schema, ID: f.ID, Name: f.Name}
+	for name, l := range f.Links {
+		p.Links = append(p.Links, domain.ProjectLink{Name: name, ID: l.ID, Remote: l.Remote})
+	}
+	sort.Slice(p.Links, func(a, b int) bool { return p.Links[a].Name < p.Links[b].Name })
+	return p
+}
+
+func projectFMOf(p domain.Project) projectFM {
+	f := projectFM{Schema: p.Schema, ID: p.ID, Name: p.Name}
+	if len(p.Links) > 0 {
+		f.Links = map[string]linkFM{}
+		for _, l := range p.Links {
+			f.Links[l.Name] = linkFM{ID: l.ID, Remote: l.Remote}
+		}
+	}
+	return f
 }
 
 func fmtTime(t time.Time) time.Time { return t.UTC().Truncate(time.Second) }
@@ -592,7 +621,7 @@ func parseProject(raw string) (domain.Project, error) {
 	if f.Schema == 0 {
 		return p, fmt.Errorf("schema is missing")
 	}
-	p.Schema, p.ID, p.Name = f.Schema, f.ID, f.Name
+	p = f.project()
 	inDoD := false
 	for _, l := range strings.Split(normalize(body), "\n") {
 		if h2Re.MatchString(l) {
@@ -610,7 +639,7 @@ func parseProject(raw string) (domain.Project, error) {
 
 // renderProject writes p's frontmatter facts over body.
 func renderProject(p domain.Project, body string) string {
-	return withFrontmatter(encodeYAML(projectFM{Schema: p.Schema, ID: p.ID, Name: p.Name}), normalize(body))
+	return withFrontmatter(encodeYAML(projectFMOf(p)), normalize(body))
 }
 
 // ReadProject reads the project facts in root's project.md (not the config),

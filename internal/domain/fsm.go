@@ -89,8 +89,12 @@ type Change struct {
 	Knowledge      *KnowledgeEdit `json:"-"`
 	KnowledgeEntry *Entry         `json:"-"`
 	// Config is a new project configuration (settings).
-	Config  *Config `json:"-"`
-	History string  `json:"-"`
+	Config *Config `json:"-"`
+	// Links is project.md's new link list; LinkRename (old, new) also
+	// rewrites every reference to old.
+	Links      *[]ProjectLink `json:"-"`
+	LinkRename *[2]string     `json:"-"`
+	History    string         `json:"-"`
 }
 
 // IssueEdit is the new content of an issue's requirement record after
@@ -582,6 +586,9 @@ func (t *Tree) Apply(c *Change) *Tree {
 			}
 			i = &cp
 		}
+		if r := c.LinkRename; r != nil {
+			i = applyLinkRename(i, r[0], r[1])
+		}
 		issues = append(issues, i)
 	}
 	if c.NewIssue != nil {
@@ -592,6 +599,11 @@ func (t *Tree) Apply(c *Change) *Tree {
 		if c.KnowledgeEntry != nil && p == c.KnowledgeEntry.Path {
 			continue
 		}
+		if r := c.LinkRename; r != nil {
+			cp := *e
+			cp.Body = RenameLinkInText(e.Body, r[0], r[1])
+			e = &cp
+		}
 		entries = append(entries, e)
 	}
 	if c.KnowledgeEntry != nil {
@@ -600,6 +612,9 @@ func (t *Tree) Apply(c *Change) *Tree {
 	p := t.Project
 	if c.Config != nil {
 		p.Config = *c.Config
+	}
+	if c.Links != nil {
+		p.Links = *c.Links
 	}
 	return NewTree(p, issues, entries, nil)
 }

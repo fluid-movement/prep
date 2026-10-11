@@ -35,6 +35,8 @@ func Validate(t *Tree) []Diagnostic {
 		}
 	}
 
+	validateLinks(t, add)
+
 	for _, id := range t.IDs() {
 		i := t.Issues[id]
 		e := func(code string, class Class, file, fix, format string, a ...any) {

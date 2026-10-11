@@ -91,7 +91,7 @@ func cmdTUI(a *app, args []string) error {
 			if err != nil {
 				return nil, err
 			}
-			return domain.Validate(t), nil
+			return validate(t), nil
 		},
 	}, os.Stdin, os.Stdout)
 }

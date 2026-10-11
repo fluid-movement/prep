@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -199,5 +200,58 @@ func TestProjectFlagRunsCommandsInAnotherProject(t *testing.T) {
 	home.jsonOf(&b, "prime")
 	if len(b.Projects) != 1 {
 		t.Fatalf("prime projects: %v", b.Projects)
+	}
+}
+
+func TestLinkAddRenameRemoveAndHints(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	home := newHarness(t)
+	api := newHarness(t)
+	for _, args := range [][]string{{"init", "-q"}, {"remote", "add", "origin", "git@github.com:acme/api.git"}} {
+		if out, err := exec.Command("git", append([]string{"-C", api.dir}, args...)...).CombinedOutput(); err != nil {
+			t.Fatalf("git: %v %s", err, out)
+		}
+	}
+	home.ok("link", "add", api.dir, "--as", "api")
+	pm := func() string { b, _ := os.ReadFile(filepath.Join(home.dir, ".prep", "project.md")); return string(b) }
+	if p := pm(); !strings.Contains(p, "links:\n  api:\n    id: 01") || !strings.Contains(p, "remote: github.com/acme/api") {
+		t.Fatalf("project.md:\n%s", p)
+	}
+	if out := home.ok("links"); !strings.Contains(out, api.dir) && !strings.Contains(out, filepath.Base(api.dir)) {
+		t.Fatalf("links: %s", out)
+	}
+	home.fails("linked already", "link", "add", api.dir, "--as", "other")
+
+	id := home.newIssue("--title", "Use the API", "--kind", "code")
+	home.ok("context", id, "--body", "Auth is in [API auth](api:/overview.md#auth).")
+	home.fails("still referred to", "link", "remove", "api")
+
+	home.ok("link", "rename", "api", "backend")
+	if c := home.read(id, "context.md"); !strings.Contains(c, "](backend:/overview.md#auth)") {
+		t.Fatalf("context: %s", c)
+	}
+	if p := pm(); !strings.Contains(p, "backend:") || strings.Contains(p, "  api:") {
+		t.Fatalf("project.md:\n%s", p)
+	}
+	// An undefined link name is an error.
+	home.write(id, "context.md", "See [x](nope:/overview.md).\n")
+	if code, out := home.run("check"); code == 0 || !strings.Contains(out, "X001") {
+		t.Fatalf("check: %s", out)
+	}
+	home.write(id, "context.md", "No links.\n")
+	home.ok("link", "remove", "backend")
+	if strings.Contains(pm(), "links:") {
+		t.Fatal("link not removed")
+	}
+
+	// A clone hint that differs from the checkout's remote: X004, fixed by prep fix.
+	home.ok("link", "add", api.dir)
+	exec.Command("git", "-C", api.dir, "remote", "set-url", "origin", "https://github.com/acme/api-v2.git").Run()
+	if out := home.ok("check"); !strings.Contains(out, "X004") {
+		t.Fatalf("check: %s", out)
+	}
+	home.ok("fix")
+	if p := pm(); !strings.Contains(p, "remote: github.com/acme/api-v2") {
+		t.Fatalf("fix:\n%s", p)
 	}
 }

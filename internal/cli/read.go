@@ -576,7 +576,7 @@ func cmdCheck(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	ds := domain.Validate(t)
+	ds := validate(t)
 	errs, warns := 0, 0
 	for _, d := range ds {
 		if d.Severity == domain.SevError {
@@ -682,7 +682,7 @@ func cmdPrime(a *app, args []string) error {
 	if len(b.Claims) > *max {
 		b.Claims = b.Claims[:*max]
 	}
-	for _, d := range domain.Validate(t) {
+	for _, d := range validate(t) {
 		if d.Severity == domain.SevError {
 			b.Check.Errors++
 		} else {

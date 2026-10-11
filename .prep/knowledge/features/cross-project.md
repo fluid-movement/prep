@@ -7,6 +7,9 @@ generated:
   at: 2026-10-11T10:15:38Z
 scope:
   - internal/cli/cli.go
+  - internal/cli/links.go
+  - internal/projects/links.go
+  - internal/domain/links.go
 ---
 
 # Cross-project work
@@ -17,3 +20,4 @@ Applies when changing how prep works with projects other than the one a command 
 - **Every command works there**, reads and writes alike; writes stage in the target's repository (staging follows `a.store.Root`) and never commit. `reportWrite` names the target: a first line `in project <name> (<root>)`, JSON `project: {name, id, root}`.
 - **Activity**: the event goes to the target's stream as usual (so an agent's focus there follows its writes), and a copy to the home stream with `Event.Project` set and the target prefixed `<name> › `. Events with `Project` never move focus ([Agent activity](/features/agent-activity.md)), so a write elsewhere leaves the home project's current issue alone.
 - **Discovery**: `prep prime` lists the other registered projects (JSON `projects`, at most `--max`, the project's own clones left out) with how to reach them; the skill's rule 11 teaches `prep projects` and `--project`, and never to edit `id:`.
+- **Links**: project.md `links` maps each local name to the target's permanent ID and its last known remote (the clone hint). Records refer to `<name>:<full issue ID>` (dependencies) and `[text](<name>:/path.md#section)` (knowledge links); `Tree.LinkRefs` finds them in requirements, context, findings, decisions, criteria, work logs and knowledge entries. Commands (`internal/cli/links.go`): `prep links` (each link's checkout here, else its clone hint), `prep link add <project> [--as name]` (a registered project with an ID; the name defaults to its own), `prep link rename <old> <new>` (project.md and every reference in one change), `prep link remove <name>` (refused while referenced, listing where). Checks: X001 a reference to an undefined name, X002 an invalid link (name, ID, or the project itself), X003 two links to one project, X004 a stale clone hint (`prep fix` updates it).

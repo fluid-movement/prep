@@ -1,0 +1,4 @@
+- [x] project.md links: name -> {id, remote}; prep links shows each link's checkout here or its clone hint
+- [x] prep link add takes a registered project and refuses one without an ID, an existing name, or a project linked already
+- [x] prep link rename rewrites project.md and every reference in records and knowledge entries in one change; prep link remove is refused while referenced
+- [x] prep check: undefined link names (X001) and invalid links (X002) are errors; two links to one project (X003) and a stale clone hint (X004) are warnings; prep fix updates hints
