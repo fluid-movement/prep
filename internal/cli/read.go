@@ -21,19 +21,22 @@ import (
 
 // summary is the list view of one issue.
 type summary struct {
-	ID         string           `json:"id"`
-	Title      string           `json:"title"`
-	Kind       domain.Kind      `json:"kind"`
-	State      domain.State     `json:"state"`
-	Stale      bool             `json:"stale"`
-	Blocked    bool             `json:"blocked"`
-	Actionable bool             `json:"actionable"`
-	Parent     string           `json:"parent,omitempty"`
-	DependsOn  []string         `json:"depends_on,omitempty"`
-	Tags       []string         `json:"tags,omitempty"`
-	Priority   domain.Priority  `json:"priority"`
-	Children   int              `json:"children"`
-	Progress   *domain.Progress `json:"progress,omitempty"`
+	ID         string       `json:"id"`
+	Title      string       `json:"title"`
+	Kind       domain.Kind  `json:"kind"`
+	State      domain.State `json:"state"`
+	Stale      bool         `json:"stale"`
+	Blocked    bool         `json:"blocked"`
+	Actionable bool         `json:"actionable"`
+	Parent     string       `json:"parent,omitempty"`
+	DependsOn  []string     `json:"depends_on,omitempty"`
+	// CrossDeps are the dependencies on other projects' issues, as found
+	// on this machine.
+	CrossDeps []domain.XIssue  `json:"cross_deps,omitempty"`
+	Tags      []string         `json:"tags,omitempty"`
+	Priority  domain.Priority  `json:"priority"`
+	Children  int              `json:"children"`
+	Progress  *domain.Progress `json:"progress,omitempty"`
 	// OpenQuestions is set while the requirement's Open questions section
 	// has content: the issue waits on the person who owns the requirement.
 	OpenQuestions bool       `json:"open_questions,omitempty"`
@@ -49,6 +52,11 @@ func summarize(t *domain.Tree, id string) summary {
 	if s.Children > 0 {
 		p := t.ChildProgress(id)
 		s.Progress = &p
+	}
+	for _, d := range i.DependsOn {
+		if _, _, ok := domain.SplitRef(d); ok {
+			s.CrossDeps = append(s.CrossDeps, t.XIssueOf(d))
+		}
 	}
 	s.OpenQuestions = strings.TrimSpace(i.OpenQuestions) != ""
 	if r := i.Resolution; r != nil {
@@ -306,6 +314,7 @@ func cmdFlags(a *app, args []string) error {
 
 func cmdShow(a *app, args []string) error {
 	fs := flag.NewFlagSet("show", flag.ContinueOnError)
+	dependents := fs.Bool("dependents", false, "also list issues in other projects on this machine that depend on this one")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -327,8 +336,18 @@ func cmdShow(a *app, args []string) error {
 	pending := a.resolveEvidence(t, id)
 	dod, opt := t.EffectiveDoD(id)
 	s := summarize(t, id)
+	var deps []projects.Dependent
+	if *dependents {
+		if t.Project.ID == "" {
+			return usageErr("this project has no ID, so no other project can depend on it; run prep fix")
+		}
+		if deps, err = projects.Dependents(t.Project.ID, id); err != nil {
+			return err
+		}
+	}
 	if a.json {
 		a.emit(map[string]any{
+			"cross_deps": s.CrossDeps, "dependents": deps,
 			"issue": i, "dir": mdstore.IssueDir(id), "priority": i.Priority.Effective(), "state": s.State, "stale": s.Stale, "blocked": s.Blocked,
 			"actionable": s.Actionable, "children": nonNil(t.Children(id)), "blocks": nonNil(t.Blocks(id)),
 			"progress": s.Progress, "definition_of_done": nonNil(dod), "dod_opt_outs": opt,
@@ -355,10 +374,20 @@ func cmdShow(a *app, args []string) error {
 		a.printf("priority: %s\n", i.Priority)
 	}
 	for _, d := range i.DependsOn {
+		if _, _, ok := domain.SplitRef(d); ok {
+			a.printf("depends on: %s\n", xDepLine(t.XIssueOf(d)))
+			continue
+		}
 		a.printf("depends on: %s [%s] %s\n", d, t.State(d), titleOf(t, d))
 	}
 	for _, b := range t.Blocks(id) {
 		a.printf("blocks: %s [%s] %s\n", b, t.State(b), titleOf(t, b))
+	}
+	for _, d := range deps {
+		a.printf("blocks in %s: %s [%s] %s\n", d.Project, d.ID, d.State, d.Title)
+	}
+	if *dependents && len(deps) == 0 {
+		a.printf("no issue in another project here depends on this one\n")
 	}
 	a.printf("\n## Requirement\n\n%s\n", orNone(i.Prose))
 	if strings.TrimSpace(i.OpenQuestions) != "" {
@@ -769,6 +798,21 @@ func otherProjects(root, id string, max int) []string {
 		out = append(out, p.Name)
 	}
 	return out
+}
+
+// xDepLine describes a cross-project dependency for text output.
+func xDepLine(x domain.XIssue) string {
+	switch x.Status {
+	case domain.XFound:
+		return fmt.Sprintf("%s [%s] %s (in %s; prep show %s --project %s)", x.Ref, x.State, x.Title, x.Project, x.ID, x.Project)
+	case domain.XMissing:
+		return fmt.Sprintf("%s [missing: no such issue in %s at %s]", x.Ref, x.Project, x.Root)
+	}
+	hint := ""
+	if x.Remote != "" {
+		hint = "; clone " + x.Remote
+	}
+	return fmt.Sprintf("%s [unknown: not checked out here%s]", x.Ref, hint)
 }
 
 func cmdSkill(a *app, args []string) error {

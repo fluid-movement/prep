@@ -6,8 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/fluid-movement/prep/internal/domain"
 )
 
 // TestMain points the project registry at a temporary state directory, so
@@ -253,5 +256,86 @@ func TestLinkAddRenameRemoveAndHints(t *testing.T) {
 	home.ok("fix")
 	if p := pm(); !strings.Contains(p, "remote: github.com/acme/api-v2") {
 		t.Fatalf("fix:\n%s", p)
+	}
+}
+
+func TestCrossProjectDependencies(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	home := newHarness(t)
+	api := newHarness(t)
+	api.rename("api")
+	target := api.newIssue("--title", "Rate limits", "--kind", "manual", "--body", "Limit requests.")
+	other := api.newIssue("--title", "Dropped work", "--kind", "code")
+	api.ok("drop", other, "--reason", "not needed")
+
+	// Depending on a registered project's issue by suffix links the project.
+	id := home.newIssue("--title", "Client", "--kind", "code", "--body", "Call the API.", "--depends-on", "api:"+target[20:])
+	if out := home.ok("links"); !strings.Contains(out, "api ") {
+		t.Fatalf("links: %s", out)
+	}
+	var shown struct {
+		Blocked   bool
+		CrossDeps []domain.XIssue `json:"cross_deps"`
+		Issue     struct {
+			DependsOn []string `json:"depends_on"`
+		}
+	}
+	home.jsonOf(&shown, "show", id)
+	if len(shown.Issue.DependsOn) != 1 || shown.Issue.DependsOn[0] != "api:"+target || len(shown.CrossDeps) != 1 || shown.CrossDeps[0].Status != domain.XFound || shown.CrossDeps[0].Title != "Rate limits" {
+		t.Fatalf("show: %+v", shown)
+	}
+	home.fails("dropped", "edit", id, "--depends-on", "api:"+other)
+	home.fails("in project api", "edit", id, "--depends-on", "api:NOPE99")
+
+	// The open dependency blocks; done, it no longer does.
+	home.write(id, "acceptance.md", "- [ ] works\n")
+	home.write(id, "context.md", "Change `x.go`.\n")
+	home.ok("define", id)
+	home.ok("ready", id)
+	home.fails("dependencies not done: api:"+target, "claim", id)
+	if out := home.ok("list", "--blocked"); !strings.Contains(out, id) {
+		t.Fatalf("blocked: %s", out)
+	}
+	if out := api.ok("show", target, "--dependents"); !strings.Contains(out, "blocks in ") || !strings.Contains(out, id) {
+		t.Fatalf("dependents: %s", out)
+	}
+	api.write(target, "acceptance.md", "- [x] done\n")
+	api.write(target, "context.md", "Change `x.go`.\n")
+	api.ok("define", target)
+	api.ok("ready", target)
+	api.ok("claim", target)
+	api.ok("complete", target, "--no-impact", "test")
+	home.ok("claim", id)
+
+	// A dependency dropped in the other project afterwards: X006.
+	later := api.newIssue("--title", "Later", "--kind", "code")
+	home.newIssue("--title", "Waits", "--kind", "code", "--depends-on", "api:"+later)
+	api.ok("drop", later, "--reason", "changed plans")
+	if out := home.ok("check"); !strings.Contains(out, "X006") {
+		t.Fatalf("check: %s", out)
+	}
+
+	// Not checked out here: unknown, never blocking, never an error.
+	os.RemoveAll(filepath.Join(api.dir, ".prep"))
+	if out := home.ok("show", id); !strings.Contains(out, "unknown: not checked out here") {
+		t.Fatalf("unknown: %s", out)
+	}
+	if code, out := home.run("check"); code != 0 || strings.Contains(out, "X00") {
+		t.Fatalf("check: %s", out)
+	}
+	home.fails("not checked out here", "new", "--title", "Y", "--kind", "code", "--depends-on", "api:"+target[20:])
+}
+
+// rename sets the project's name in project.md.
+func (h *harness) rename(name string) {
+	h.t.Helper()
+	pm := filepath.Join(h.dir, ".prep", "project.md")
+	b, err := os.ReadFile(pm)
+	if err != nil {
+		h.t.Fatal(err)
+	}
+	out := regexp.MustCompile(`(?m)^name: .*$`).ReplaceAllString(string(b), "name: "+name)
+	if err := os.WriteFile(pm, []byte(out), 0o644); err != nil {
+		h.t.Fatal(err)
 	}
 }

@@ -1,0 +1,4 @@
+- [x] prep new|edit --depends-on <project>:<ID or suffix> stores <link>:<full ID>, adding the link when the project is registered but not linked
+- [x] an unresolved cross-project dependency blocks claim, --blocked, actionable and prep next; one whose project is not checked out is unknown and never blocks
+- [x] show and guide display cross-project dependencies with their project and state (JSON cross_deps); show --dependents lists dependents in other projects
+- [x] prep check reports a missing (X005) or dropped (X006) cross-project dependency of a checked-out project, and nothing for one not checked out

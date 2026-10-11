@@ -148,3 +148,52 @@ func (a *app) fixLinkRemotes() ([]string, error) {
 	}
 	return a.store.Apply(c)
 }
+
+// resolveDeps resolves --depends-on values: local IDs or suffixes, and
+// cross-project ones (<project>:<ID or suffix>) through the registry. It
+// records what it found in t.External and returns the links the
+// dependencies need that the project does not have yet.
+func (a *app) resolveDeps(t *domain.Tree, deps []string) ([]string, []domain.ProjectLink, error) {
+	var ids []string
+	var add []domain.ProjectLink
+	for _, d := range deps {
+		name, rest, ok := domain.SplitRef(d)
+		if !ok {
+			id, err := t.Resolve(d)
+			if err != nil {
+				return nil, nil, err
+			}
+			ids = append(ids, id)
+			continue
+		}
+		view := *t
+		view.Project.Links = append(append([]domain.ProjectLink{}, t.Project.Links...), add...)
+		ref, l, x, err := projects.ResolveDep(&view, name, rest)
+		if err != nil {
+			return nil, nil, err
+		}
+		if l != nil {
+			add = append(add, *l)
+		}
+		if t.External == nil {
+			t.External = map[string]domain.XIssue{}
+		}
+		t.External[ref] = x
+		ids = append(ids, ref)
+	}
+	return ids, add, nil
+}
+
+// withLinks plans adding links the dependencies need: the change to apply
+// first and the tree to plan the rest against. Without new links it
+// returns nil and t.
+func withLinks(t *domain.Tree, add []domain.ProjectLink) (*domain.Change, *domain.Tree, error) {
+	if len(add) == 0 {
+		return nil, t, nil
+	}
+	c, err := t.PlanLinks(append(append([]domain.ProjectLink{}, t.Project.Links...), add...))
+	if err != nil {
+		return nil, nil, err
+	}
+	return c, t.Apply(c), nil
+}

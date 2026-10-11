@@ -15,6 +15,7 @@ import (
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/mdstore"
 	"github.com/fluid-movement/prep/internal/okf"
+	"github.com/fluid-movement/prep/internal/projects"
 	"github.com/fluid-movement/prep/internal/tui"
 	"github.com/fluid-movement/prep/internal/userconfig"
 )
@@ -45,7 +46,11 @@ func cmdTUI(a *app, args []string) error {
 	// check), so each builds its own stores instead of sharing the app's.
 	root := a.store.Root
 	load := func(drift bool) (*domain.Tree, error) {
-		return domain.Load(mdstore.Open(root), &okf.Store{Root: root}, drift)
+		t, err := domain.Load(mdstore.Open(root), &okf.Store{Root: root}, drift)
+		if err == nil {
+			projects.ResolveExternal(t)
+		}
+		return t, err
 	}
 	var mu sync.Mutex
 	write := func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {

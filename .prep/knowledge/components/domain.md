@@ -36,4 +36,4 @@ Applies when changing lifecycle rules, gates, diagnostics or queries.
 - `errors.go`: `E_*` error codes for commands.
 
 Rules worth knowing: see [Issue lifecycle](/features/lifecycle.md).
-- `links.go`: links to other projects ([Cross-project work](/features/cross-project.md)): `ProjectLink`, `SplitRef`, `XKnowledgeLinks`, `Tree.LinkRefs`, `PlanLinks`, `PlanLinkRename` (`Change.LinkRename`; `Apply` renames references in memory with `RenameLinkInText` so `CheckWrite` sees the result), `PlanLinkRemove`.
+- `links.go`: links to other projects and cross-project dependencies (`ProjectLink`, `LinkRefs`, `PlanLinks`/`PlanLinkRename`/`PlanLinkRemove`, `XIssue`, `Tree.External`, `DepState`); see [Cross-project work](/features/cross-project.md). Local dependency checks in `Validate` skip references with a link.

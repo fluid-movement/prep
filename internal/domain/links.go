@@ -291,3 +291,71 @@ func applyLinkRename(i *Issue, old, new string) *Issue {
 	}
 	return &cp
 }
+
+// XIssue is another project's issue a dependency names, as the caller
+// found it through the project registry (Tree.External).
+type XIssue struct {
+	Ref    string  `json:"ref"` // <link>:<issue ID>
+	Link   string  `json:"link"`
+	ID     string  `json:"id"`
+	Status XStatus `json:"status"`
+	State  State   `json:"state,omitempty"`
+	Title  string  `json:"title,omitempty"`
+	// Project is the project's own name there; Root its checkout.
+	Project string `json:"project,omitempty"`
+	Root    string `json:"root,omitempty"`
+	// Remote is the link's clone hint, for a project not checked out.
+	Remote string `json:"remote,omitempty"`
+}
+
+// XStatus says what became of a cross-project reference on this machine.
+type XStatus string
+
+const (
+	XFound   XStatus = "found"   // the issue exists in the checked-out project
+	XMissing XStatus = "missing" // the project is checked out, the issue is not there
+	XUnknown XStatus = "unknown" // the project is not checked out here (or the link is undefined)
+)
+
+// XRefs lists the cross-project dependencies in the tree, once each, in
+// issue order.
+func (t *Tree) XRefs() []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, id := range t.IDs() {
+		for _, d := range t.Issues[id].DependsOn {
+			if _, _, ok := SplitRef(d); ok && !seen[d] {
+				seen[d] = true
+				out = append(out, d)
+			}
+		}
+	}
+	return out
+}
+
+// XIssueOf returns what is known about a cross-project dependency; a
+// reference nobody resolved is unknown.
+func (t *Tree) XIssueOf(ref string) XIssue {
+	if x, ok := t.External[ref]; ok {
+		return x
+	}
+	name, id, _ := SplitRef(ref)
+	x := XIssue{Ref: ref, Link: name, ID: id, Status: XUnknown}
+	if l, ok := t.Project.Link(name); ok {
+		x.Remote = l.Remote
+	}
+	return x
+}
+
+// DepState returns a dependency's state: a local issue's, or a found
+// cross-project issue's. known is false for a cross-project issue that
+// is missing or not checked out: it never blocks.
+func (t *Tree) DepState(d string) (s State, known bool) {
+	if _, _, ok := SplitRef(d); !ok {
+		return t.State(d), true
+	}
+	if x := t.XIssueOf(d); x.Status == XFound {
+		return x.State, true
+	}
+	return "", false
+}

@@ -322,7 +322,11 @@ func (a *app) load(drift bool) (*domain.Tree, error) {
 	if err := a.open(); err != nil {
 		return nil, err
 	}
-	return domain.Load(a.store, a.kstore, drift)
+	t, err := domain.Load(a.store, a.kstore, drift)
+	if err == nil {
+		projects.ResolveExternal(t)
+	}
+	return t, err
 }
 
 // parse runs a flag set allowing flags and positionals in any order.

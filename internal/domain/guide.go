@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"fmt"
 	"path"
 	"regexp"
 	"sort"
@@ -190,6 +191,10 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 		}
 	}
 	for _, d := range i.DependsOn {
+		if x := t.XIssueOf(d); x.Status == XFound && x.Root != "" {
+			g.Inputs = append(g.Inputs, Pointer{path.Join(x.Root, issueDir(x.ID)), fmt.Sprintf("dependency in project %s [%s]: %s (prep show %s --project %s)", x.Project, x.State, x.Title, x.ID, x.Project), ""})
+			continue
+		}
 		di := t.Issues[d]
 		if di == nil {
 			continue

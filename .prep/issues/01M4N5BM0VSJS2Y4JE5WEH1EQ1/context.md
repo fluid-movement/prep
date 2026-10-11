@@ -1,0 +1,6 @@
+Code paths:
+- `internal/domain/links.go`: `XIssue` (found, missing, unknown), `Tree.External`, `XRefs`, `XIssueOf`, `DepState`. `UnresolvedDeps` (and so `Blocked`, `Actionable`, the claim gate, `prep next`) counts a found cross-project dependency that is not done and skips unknown ones. `PlanNew`/`PlanEdit` refuse dropped targets through `DepState`; `Validate`'s local dependency checks skip cross-project references; `Apply` carries `External`. `guide.go` points at found cross-project dependencies.
+- `internal/projects/links.go`: `ResolveExternal` (fills `External`, loading each other project's issues once, without knowledge, and nothing without cross-project dependencies), `ResolveDep` (stored form `<link>:<full ID>`; suffixes resolve in the checkout; a project not checked out needs the full ID; adds a link for a registered project not linked yet), `Dependents`, `Check` (X005, X006).
+- `internal/cli`: `a.load` and the TUI loader call `ResolveExternal`; `resolveDeps` and `withLinks` in `new`/`edit` (the link change is applied first, in the same command); `show` prints cross-project dependencies (`cross_deps` in JSON, also on list summaries) and `--dependents`.
+
+Knowledge: [Cross-project work](/features/cross-project.md), [Issue lifecycle](/features/lifecycle.md), [Domain package](/components/domain.md), [Project registry](/components/projects.md).

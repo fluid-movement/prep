@@ -436,7 +436,7 @@ func (t *Tree) PlanNew(in NewIssueInput, now time.Time) (*Change, error) {
 		if contains(deps, d) {
 			continue
 		}
-		if t.State(d) == StateDropped {
+		if s, _ := t.DepState(d); s == StateDropped {
 			return nil, &Error{Code: ErrUsage, Message: "cannot create issue", Unmet: []Unmet{{GateDeps, fmt.Sprintf("cannot depend on dropped issue %s", d)}}}
 		}
 		deps = append(deps, d)
@@ -495,7 +495,7 @@ func (t *Tree) PlanEdit(id string, in EditInput) (*Change, error) {
 			if contains(e.DependsOn, d) {
 				continue
 			}
-			if t.State(d) == StateDropped {
+			if s, _ := t.DepState(d); s == StateDropped {
 				unmet = append(unmet, Unmet{GateDeps, fmt.Sprintf("cannot depend on dropped issue %s", d)})
 			}
 			e.DependsOn = append(e.DependsOn, d)
@@ -616,7 +616,9 @@ func (t *Tree) Apply(c *Change) *Tree {
 	if c.Links != nil {
 		p.Links = *c.Links
 	}
-	return NewTree(p, issues, entries, nil)
+	nt := NewTree(p, issues, entries, nil)
+	nt.External = t.External
+	return nt
 }
 
 // CheckWrite validates the tree after a change and rejects the write when it

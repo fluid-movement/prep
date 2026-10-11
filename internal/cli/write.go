@@ -248,28 +248,37 @@ func cmdNew(a *app, args []string) error {
 			return err
 		}
 	}
-	for _, d := range deps {
-		id, err := t.Resolve(d)
-		if err != nil {
-			return err
-		}
-		in.DependsOn = append(in.DependsOn, id)
-	}
-	c, err := t.PlanNew(in, a.now())
+	ids, add, err := a.resolveDeps(t, deps)
 	if err != nil {
 		return err
 	}
-	if err := t.CheckWrite(c); err != nil {
-		return err
-	}
-	files, err := a.store.Apply(c)
+	in.DependsOn = ids
+	lc, planOn, err := withLinks(t, add)
 	if err != nil {
 		return err
 	}
-	a.afterWrite(files)
+	c, err := planOn.PlanNew(in, a.now())
+	if err != nil {
+		return err
+	}
+	files, err := a.applyAll(t, nonNilChanges(lc, c))
+	if err != nil {
+		return err
+	}
 	a.note(activity.Event{Op: "new", Issue: c.IssueID, Verb: "created a " + string(in.Kind) + " issue", Target: in.Title, Area: activity.AreaIssue})
 	a.reportWrite(writeResult{OK: true, Op: "new", ID: c.IssueID, State: domain.StateOpen, Files: files})
 	return nil
+}
+
+// nonNilChanges drops nil changes, keeping the order.
+func nonNilChanges(cs ...*domain.Change) []*domain.Change {
+	var out []*domain.Change
+	for _, c := range cs {
+		if c != nil {
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 // readBody returns the requirement from --body-file (- for stdin) or --body.
@@ -337,6 +346,7 @@ func cmdEdit(a *app, args []string) error {
 		}
 		in.Parent = &p
 	}
+	var add []domain.ProjectLink
 	if set["depends-on"] {
 		list := []string{}
 		if !(len(deps) == 1 && deps[0] == "") {
@@ -344,12 +354,12 @@ func cmdEdit(a *app, args []string) error {
 				if d == "" {
 					return usageErr("--depends-on '' clears the list and cannot be combined with IDs")
 				}
-				did, err := t.Resolve(d)
-				if err != nil {
-					return err
-				}
-				list = append(list, did)
 			}
+			ids, more, err := a.resolveDeps(t, deps)
+			if err != nil {
+				return err
+			}
+			list, add = ids, more
 		}
 		in.DependsOn = &list
 	}
@@ -370,18 +380,18 @@ func cmdEdit(a *app, args []string) error {
 		}
 		in.Body = &text
 	}
-	c, err := t.PlanEdit(id, in)
+	lc, planOn, err := withLinks(t, add)
 	if err != nil {
 		return err
 	}
-	if err := t.CheckWrite(c); err != nil {
-		return err
-	}
-	files, err := a.store.Apply(c)
+	c, err := planOn.PlanEdit(id, in)
 	if err != nil {
 		return err
 	}
-	a.afterWrite(files)
+	files, err := a.applyAll(t, nonNilChanges(lc, c))
+	if err != nil {
+		return err
+	}
 	after, err := a.load(false)
 	if err != nil {
 		return err
