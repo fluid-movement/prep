@@ -19,6 +19,7 @@ struct IssueDetailView: View {
                 Breadcrumbs(model: model, issue: issue)
                 header
                 if let r = issue.resolution { ResolutionBanner(model: model, resolution: r) }
+                if issue.resolution?.outcome == "done", issue.kind != "manual" { ChangesCard(model: model, detail: detail) }
                 if issue.resolution == nil {
                     LifecycleCard(model: model, detail: detail) { pending = $0 }
                 }
@@ -264,6 +265,11 @@ struct LifecycleCard: View {
                 }
                 Spacer(minLength: 8)
                 HStack(spacing: 8) {
+                    Button { model.startAgent(detail.issue.id) } label: {
+                        Label("Start Agent", systemImage: "sparkles")
+                    }
+                    .controlSize(.large)
+                    .help("Open \(TerminalApp.preferred.rawValue) in the project with the agent on this issue (⌥⌘A)")
                     if !others.isEmpty {
                         Menu {
                             ForEach(others) { t in

@@ -53,6 +53,7 @@ enum Snapshot {
                 let sheet: AnyView
                 switch name {
                 case "new": sheet = AnyView(NewIssueSheet(model: model, draft: NewIssueDraft(parent: model.current)))
+                case "capture": sheet = AnyView(QuickCaptureView {})
                 case "drop", "complete", "release":
                     let t = model.guide?.transitions?.first { $0.op == name }
                         ?? PrepKit.Transition(op: name, command: "prep \(name) <id>", allowed: true)
@@ -65,6 +66,8 @@ enum Snapshot {
                 let size = host.fittingSize
                 window.setContentSize(NSSize(width: max(size.width, 300), height: max(size.height, 200)))
             }
+            // --wait gives views that load on their own (diffs) time.
+            if o.wait > 0 { try? await Task.sleep(for: .milliseconds(o.wait)) }
             // Let SwiftUI lay out the loaded state.
             for _ in 0..<5 {
                 try? await Task.sleep(for: .milliseconds(150))

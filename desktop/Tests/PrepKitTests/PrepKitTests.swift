@@ -103,6 +103,46 @@ import Testing
         ])
     }
 
+    @Test func diffParsesFilesHunksAndAreas() {
+        let patch = """
+        diff --git a/internal/x.go b/internal/x.go
+        index 1..2 100644
+        --- a/internal/x.go
+        +++ b/internal/x.go
+        @@ -1,3 +1,4 @@ func main
+         keep
+        -old
+        +new
+        +++plus
+         tail
+        diff --git a/.prep/knowledge/a.md b/.prep/knowledge/a.md
+        new file mode 100644
+        --- /dev/null
+        +++ b/.prep/knowledge/a.md
+        @@ -0,0 +1 @@
+        +# A
+        diff --git a/img.png b/img.png
+        Binary files a/img.png and b/img.png differ
+        """
+        let files = Diff.parse(patch)
+        #expect(files.map(\.path) == ["internal/x.go", ".prep/knowledge/a.md", "img.png"])
+        #expect(files[0].additions == 2 && files[0].deletions == 1)
+        #expect(files[0].hunks[0].lines.map(\.new) == [1, nil, 2, 3, 4])
+        #expect(files[0].hunks[0].lines[3].text == "++plus")
+        #expect(files[1].status == .added && files[1].area == .knowledge)
+        #expect(files[2].binary && files[2].area == .code)
+    }
+
+    @Test func agentLaunchScriptQuotes() throws {
+        let l = AgentLaunch(root: "/tmp/it's here", issue: "01ABC", title: "Don't break")
+        #expect(l.prompt == "Work on prep issue 01ABC (Don't break). Run `prep guide 01ABC` and follow it.")
+        #expect(l.script.contains("cd '/tmp/it'\\''s here' || exit 1"))
+        #expect(l.script.contains("exec claude 'Work on prep issue 01ABC (Don'\\''t break)."))
+        // The quoting survives a real shell.
+        let r = try PrepCLI.runSync(URL(fileURLWithPath: "/bin/sh"), ["-c", "printf %s " + AgentLaunch.quote(l.prompt)], stdin: nil)
+        #expect(String(data: r.out, encoding: .utf8) == l.prompt)
+    }
+
     @Test func shellSplit() {
         #expect(Shell.split(#"--reason "not needed" --docs /a.md"#) == ["--reason", "not needed", "--docs", "/a.md"])
         #expect(Shell.split("--note ''") == ["--note", ""])

@@ -1,0 +1,1 @@
+- 2026-10-11T07:09:21Z claude-code/opus-5.5: Not launched for real during development (it would open a terminal and start an agent on the user's screen); the script was run with echo as the agent.

@@ -1,0 +1,3 @@
+- [x] A done issue shows its completion commit with code, knowledge and record diffs
+- [x] Without --commit evidence, the commit that added resolution.md is used
+- [x] The diff parser is unit-tested

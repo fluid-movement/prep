@@ -1,0 +1,3 @@
+- [x] Start Agent on an unresolved issue opens the chosen terminal in the project running the agent with the guide prompt
+- [x] Terminal, iTerm and Ghostty are supported and configurable with the command and prompt
+- [x] Script quoting is tested through a real shell

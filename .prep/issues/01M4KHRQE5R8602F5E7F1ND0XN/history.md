@@ -1,0 +1,1 @@
+- 2026-10-11T07:09:23Z claude-code/opus-5.5: The global hotkey could not be pressed from the agent's session; the panel and creation path were checked by snapshot and PrepKit tests.

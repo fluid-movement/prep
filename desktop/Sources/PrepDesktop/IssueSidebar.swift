@@ -105,6 +105,7 @@ extension View {
     func issueContextMenu(model: ProjectModel, issue: IssueSummary) -> some View {
         contextMenu {
             Button("Open") { model.go(to: issue.id) }
+            if !issue.isResolved { Button("Start Agent") { model.startAgent(issue.id) } }
             Button("New Child Issue…") { model.newIssue(parent: issue.id) }
             Divider()
             Button("Copy ID") { model.copy(issue.id) }

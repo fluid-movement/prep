@@ -1,0 +1,2 @@
+- [x] ⌃⌥N opens a floating capture panel from any app while Prep runs
+- [x] Enter creates the issue in the chosen project, with optional parent and kind; ⌘↩ also opens it

@@ -14,6 +14,7 @@ struct LaunchOptions {
     var size = CGSize(width: 1280, height: 820)
     var appearance: String?
     var sheet: String?
+    var wait = 0
 
     static func parse(_ args: [String]) -> LaunchOptions {
         var o = LaunchOptions()
@@ -30,6 +31,7 @@ struct LaunchOptions {
             case "--tab": o.tab = value().flatMap { v in Tab.allCases.first { $0.rawValue.lowercased().hasPrefix(v.lowercased()) } } ?? .issues
             case "--appearance": o.appearance = value()
             case "--sheet": o.sheet = value()
+            case "--wait": o.wait = Int(value() ?? "") ?? 0
             case "--render-icon": _ = value()
             case "--size":
                 let parts = (value() ?? "").split(separator: "x").compactMap { Double($0) }
@@ -87,7 +89,15 @@ struct WindowRoot: View {
     var body: some View {
         ContentView(model: model)
             .onReceive(NotificationCenter.default.publisher(for: .openIssue)) { n in
-                if let id = n.userInfo?["issue"] as? String, model.all[id] != nil { model.go(to: id) }
+                guard let id = n.userInfo?["issue"] as? String else { return }
+                if let root = n.userInfo?["root"] as? String, root != model.project?.root { return }
+                Task {
+                    if model.all[id] == nil { await model.reload() }
+                    if model.all[id] != nil {
+                        NSApp.activate(ignoringOtherApps: true)
+                        model.go(to: id)
+                    }
+                }
             }
             .task {
                 guard !started else { return }
@@ -131,6 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         if Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
+        MainActor.assumeIsolated { QuickCapture.shared.registerHotKey() }
         // The bundle carries AppIcon.icns; a bare build draws it here.
         if Bundle.main.object(forInfoDictionaryKey: "CFBundleIconFile") == nil {
             let r = ImageRenderer(content: AppIconView().frame(width: 512, height: 512))
@@ -163,6 +174,9 @@ extension FocusedValues {
 struct OpenProjectCommand: View {
     @FocusedValue(\.projectModel) var model
     var body: some View {
+        Button("Quick Capture…") { QuickCapture.shared.show() }
+            .keyboardShortcut("n", modifiers: [.control, .option])
+
         Button("Open Project…") {
             let panel = NSOpenPanel()
             panel.canChooseDirectories = true
@@ -219,6 +233,9 @@ struct IssueCommands: View {
         Button("New Child Issue…") { model?.newIssue(parent: model?.current) }
             .keyboardShortcut("n", modifiers: [.command, .option])
             .disabled(model?.current == nil)
+        Button("Start Agent") { if let id = model?.current { model?.startAgent(id) } }
+            .keyboardShortcut("a", modifiers: [.command, .option])
+            .disabled(model?.detail == nil || model?.detail?.issue.resolution != nil)
         Divider()
         Button("Rename…") { model?.editing = .title }
             .keyboardShortcut("r", modifiers: [.command, .shift])
