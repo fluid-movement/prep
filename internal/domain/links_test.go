@@ -89,3 +89,10 @@ func TestPlanLinks(t *testing.T) {
 		t.Fatal("renamed onto an existing name")
 	}
 }
+
+func TestXKnowledgeLinksSkipCode(t *testing.T) {
+	got := XKnowledgeLinks("Real [a](api:/a.md#x). Example `[b](api:/b.md)`.\n\n```\n[c](api:/c.md)\n```\n")
+	if len(got) != 1 || got[0] != [2]string{"api", "/a.md"} {
+		t.Fatalf("%v", got)
+	}
+}

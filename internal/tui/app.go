@@ -18,6 +18,7 @@ import (
 	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/palette"
+	"github.com/fluid-movement/prep/internal/projects"
 	"github.com/fluid-movement/prep/internal/tui/theme"
 	"github.com/fluid-movement/prep/internal/tui/ui"
 	"github.com/fluid-movement/prep/internal/watch"
@@ -55,10 +56,22 @@ type Options struct {
 	StartAgent bool
 	// Now is the clock for relative times; nil is time.Now.
 	Now func() time.Time
+	// Project is the project's name for the header; empty shows "prep".
+	// Root is its checkout, marked current in the switcher.
+	Project, Root string
+	// Projects lists the projects to switch to (the registry); nil turns
+	// the switcher off.
+	Projects func() ([]projects.Project, error)
+	// Previous is the project backspace returns to once nothing else is
+	// back (the one switched from).
+	Previous string
+	// Select opens on this issue.
+	Select string
 }
 
-// Run starts the issue views.
-func Run(opts Options, in io.Reader, out io.Writer) error {
+// Run starts the issue views. It returns where to go when the person
+// switched projects, else nil.
+func Run(opts Options, in io.Reader, out io.Writer) (*Switch, error) {
 	m := NewModel(theme.New(true, colorprofile.Detect(out, os.Environ())), opts)
 	if opts.Watch != "" {
 		ch, stop, err := watch.Dir(opts.Watch)
@@ -70,7 +83,7 @@ func Run(opts Options, in io.Reader, out io.Writer) error {
 		}
 	}
 	_, err := tea.NewProgram(m, tea.WithInput(in), tea.WithOutput(out)).Run()
-	return err
+	return m.switchTo, err
 }
 
 // Layout constants, in cells.
@@ -126,6 +139,8 @@ type relation struct {
 
 // Model is the issue views screen. It owns all state; looks come from ui.
 type Model struct {
+	// switchTo is set when the person chose another project.
+	switchTo *Switch
 	th       *theme.Theme
 	opts     Options
 	tree     *domain.Tree
@@ -204,6 +219,9 @@ func NewModel(th *theme.Theme, opts Options) *Model {
 		m.screen = screenAgent
 	}
 	m.apply(opts.Load())
+	if opts.Select != "" && m.tree != nil && m.tree.Issues[opts.Select] != nil {
+		m.jump(opts.Select, false)
+	}
 	return m
 }
 
@@ -685,6 +703,8 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		return m.flash("flat view")
 	case "b":
 		return m.toggleScreen(screenKnowledge)
+	case "P":
+		return m.openProjects()
 	case "z":
 		return m.toggleLayout()
 	case "w":
@@ -1258,6 +1278,7 @@ var (
 	screenBindings = []binding{
 		bind("Screens", "w", "agent (what it is doing, live)", true),
 		bind("Screens", "b", "knowledge", true),
+		bind("Screens", "P", "switch project (or click its name, top left)", false),
 		bind("Screens", "⌫", "back to where you were, across screens (the mouse's back button too)", false),
 		bind("Screens", "c", "check (or click ✕ ▲)", false),
 		bind("Screens", "s", "settings (or click ⚙)", false),

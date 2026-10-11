@@ -14,6 +14,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/fluid-movement/prep/internal/domain"
+	"github.com/fluid-movement/prep/internal/projects"
 	"github.com/fluid-movement/prep/internal/tui/theme"
 	"github.com/fluid-movement/prep/internal/tui/ui"
 )
@@ -35,6 +36,7 @@ const (
 	modalText     // requirement or context, inline
 	modalViewEdit // a saved view's name and query
 	modalHelp     // the keymap of the current screen
+	modalProjects // the project switcher
 )
 
 // action is one entry of the action menu.
@@ -67,6 +69,8 @@ type modal struct {
 	// it no longer follows the cursor until a key.
 	scroll   int
 	scrolled bool
+	// projects are the switcher's projects; picks holds their roots.
+	projects []projects.Project
 }
 
 // entryMark is a clickable entry in a dialog's body: its ID, the body line
@@ -449,6 +453,8 @@ func (m *Model) modalKey(k tea.KeyPressMsg) tea.Cmd {
 	case modalHelp:
 		m.modal = nil // any key closes it
 		return nil
+	case modalProjects:
+		return m.projectKey(k)
 	case modalMenu:
 		// Letters run actions; arrows and j/k move (no menu uses j or k).
 		switch s {
@@ -721,6 +727,7 @@ func (m *Model) handleEdited(msg editedMsg) tea.Cmd {
 var (
 	menuKeys     = []ui.Key{{Keys: "↑↓ j k", Desc: "move"}, {Keys: "enter or key", Desc: "run"}, {Keys: "esc", Desc: "close"}}
 	formKeys     = []ui.Key{{Keys: "enter", Desc: "save"}, {Keys: "tab", Desc: "next field"}, {Keys: "esc", Desc: "cancel"}}
+	switchKeys   = []ui.Key{{Keys: "type", Desc: "filter"}, {Keys: "↑↓", Desc: "move"}, {Keys: "enter", Desc: "switch"}, {Keys: "esc", Desc: "cancel"}}
 	pickKeys     = []ui.Key{{Keys: "type", Desc: "filter"}, {Keys: "↑↓", Desc: "move"}, {Keys: "enter", Desc: "move here"}, {Keys: "esc", Desc: "cancel"}}
 	criteriaKeys = []ui.Key{{Keys: "↑↓ j k", Desc: "move"}, {Keys: "space", Desc: "toggle"}, {Keys: "enter", Desc: "save"}, {Keys: "esc", Desc: "cancel"}}
 	textKeys     = []ui.Key{{Keys: "ctrl+s", Desc: "save"}, {Keys: "ctrl+e", Desc: "$EDITOR"}, {Keys: "esc", Desc: "cancel"}}
@@ -734,6 +741,8 @@ func (m *Model) modalKeys() []ui.Key {
 		return menuKeys
 	case modalReparent:
 		return pickKeys
+	case modalProjects:
+		return switchKeys
 	case modalCriteria:
 		return criteriaKeys
 	case modalText:
@@ -895,6 +904,15 @@ func (m *Model) modalView(width, height int) string {
 				line = "  " + m.th.S.Body.Render(line)
 			}
 			body = append(body, line)
+		}
+	case modalProjects:
+		title = "Switch project"
+		body = append(body, d.inputs[0].View(), "")
+		for _, r := range m.projectRows(inner, max(3, height-10)) {
+			if r.id != "" {
+				mark(r.id, next(), 0, inner, 1)
+			}
+			body = append(body, r.line)
 		}
 	case modalReparent:
 		title = "Move · " + title

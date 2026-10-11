@@ -86,6 +86,9 @@ func (m *Model) pushBack() {
 // goBack returns to the last remembered place: its screen and selection.
 func (m *Model) goBack() tea.Cmd {
 	n := len(m.back)
+	if n == 0 && m.opts.Previous != "" {
+		return m.switchProject(Switch{Root: m.opts.Previous})
+	}
 	if n == 0 || m.tree == nil {
 		return m.flash("nowhere to go back to")
 	}
@@ -197,9 +200,12 @@ func (m *Model) setView(n int) tea.Cmd {
 // header draws both tiers and marks what can be clicked: the screens, the
 // check counts, the settings gear and the views.
 func (m *Model) header() string {
-	// prep is the app's name, not a place: plain text, white on dark
-	// themes, never the accent and bold the current screen gets.
-	left := gutter + m.th.S.Body.Render("prep") + space(theme.SpaceL)
+	// The project's name is not a place: plain text, white on dark themes,
+	// never the accent and bold the current screen gets. A click opens the
+	// project switcher.
+	name := m.projectName()
+	m.markAt("project", lipgloss.Width(gutter), 0, lipgloss.Width(name), 1, zRow)
+	left := gutter + m.th.S.Body.Render(name) + space(theme.SpaceL)
 	var items []ui.NavItem
 	active := -1
 	for k, sc := range navScreens {

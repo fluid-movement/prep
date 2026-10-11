@@ -59,12 +59,23 @@ func SplitRef(s string) (name, rest string, ok bool) {
 // xLinkRe finds cross-project knowledge links in markdown: [text](name:/path.md#section).
 var xLinkRe = regexp.MustCompile(`\]\(([a-z0-9][a-z0-9._-]*):(/[^)\s]*)\)`)
 
+var (
+	fencedRe   = regexp.MustCompile("(?ms)^\\s*(```|~~~).*?^\\s*(```|~~~)\\s*$")
+	codeSpanRe = regexp.MustCompile("`[^`\n]*`")
+)
+
+// StripCode removes fenced blocks and inline code so examples are not
+// mistaken for links.
+func StripCode(s string) string {
+	return codeSpanRe.ReplaceAllString(fencedRe.ReplaceAllString(s, ""), "")
+}
+
 // XKnowledgeLinks returns the cross-project knowledge links in text as
 // name and target (/path.md, without a #section), in order, once each.
 func XKnowledgeLinks(text string) [][2]string {
 	var out [][2]string
 	seen := map[string]bool{}
-	for _, m := range xLinkRe.FindAllStringSubmatch(text, -1) {
+	for _, m := range xLinkRe.FindAllStringSubmatch(StripCode(text), -1) {
 		target := m[2]
 		if k := strings.IndexByte(target, '#'); k >= 0 {
 			target = target[:k]

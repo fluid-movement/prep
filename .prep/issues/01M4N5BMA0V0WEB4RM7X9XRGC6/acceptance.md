@@ -1,0 +1,4 @@
+- [x] the header shows the project's name where it said prep
+- [x] P or a click on the name opens a filterable switcher of the registry's projects with the current one marked; enter switches in place
+- [x] after a switch, backspace with nothing else to go back to returns to the previous project
+- [x] prep tui --project <name> opens on that project

@@ -100,6 +100,8 @@ func (m *Model) click(x, y int) tea.Cmd {
 		return nil
 	}
 	switch kind {
+	case "project":
+		return m.openProjects()
 	case "screen":
 		return m.goScreen(navScreens[n])
 	case "check":
@@ -202,7 +204,7 @@ const wheelRows = 3
 func (m *Model) wheel(msg tea.MouseWheelMsg) tea.Cmd {
 	step := map[tea.MouseButton]int{tea.MouseWheelDown: wheelRows, tea.MouseWheelUp: -wheelRows}[msg.Button]
 	if d := m.modal; d != nil {
-		if d.kind == modalReparent && step != 0 {
+		if (d.kind == modalReparent || d.kind == modalProjects) && step != 0 {
 			d.scroll, d.scrolled = max(0, d.scroll+step), true
 		}
 		return nil

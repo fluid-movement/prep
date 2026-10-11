@@ -42,9 +42,25 @@ func cmdTUI(a *app, args []string) error {
 	if err := a.open(); err != nil {
 		return err
 	}
+	// Switching projects ends the program with where to go; it starts
+	// over there, remembering the project it came from for backspace.
+	root, _ := filepath.Abs(a.store.Root)
+	previous, sel := "", ""
+	for {
+		to, err := runTUI(root, *agent, previous, sel)
+		if err != nil || to == nil {
+			return err
+		}
+		_ = projects.Touch(to.Root, a.now())
+		previous, root, sel = root, to.Root, to.Issue
+		*agent = false
+	}
+}
+
+// runTUI runs the TUI on the project at root until it quits or switches.
+func runTUI(root string, agent bool, previous, sel string) (*tui.Switch, error) {
 	// Loads run in background goroutines, sometimes two at once (reload and
 	// check), so each builds its own stores instead of sharing the app's.
-	root := a.store.Root
 	load := func(drift bool) (*domain.Tree, error) {
 		t, err := domain.Load(mdstore.Open(root), &okf.Store{Root: root}, drift)
 		if err == nil {
@@ -80,6 +96,11 @@ func cmdTUI(a *app, args []string) error {
 	// A broken user configuration leaves the mouse on; prep setup reports it.
 	ucfg, _ := userconfig.Load()
 	return tui.Run(tui.Options{
+		Project:    projects.Describe(root).Name,
+		Root:       root,
+		Projects:   projects.List,
+		Previous:   previous,
+		Select:     sel,
 		NoMouse:    ucfg.TUI.Mouse != nil && !*ucfg.TUI.Mouse,
 		SaveMouse:  saveMouse,
 		Single:     ucfg.TUI.Layout == "single",
@@ -90,7 +111,7 @@ func cmdTUI(a *app, args []string) error {
 		Watch:      filepath.Join(root, mdstore.Dir),
 		// The last 2,000 events at most: the stream prunes itself near that.
 		Activity:   func() ([]activity.Event, error) { return activity.Read(filepath.Join(root, mdstore.Dir), 2000) },
-		StartAgent: *agent,
+		StartAgent: agent,
 		Check: func() ([]domain.Diagnostic, error) {
 			t, err := load(true)
 			if err != nil {

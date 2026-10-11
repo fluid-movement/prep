@@ -102,14 +102,9 @@ func (s *Store) Load(drift bool) ([]*domain.Entry, []domain.Diagnostic, error) {
 
 var linkRe = regexp.MustCompile(`\]\(([^)\s]+)\)`)
 
-var fencedRe = regexp.MustCompile("(?ms)^\\s*(```|~~~).*?^\\s*(```|~~~)\\s*$")
-var codeSpanRe = regexp.MustCompile("`[^`\n]*`")
-
 // StripCode removes fenced blocks and inline code so examples are not
 // mistaken for links.
-func StripCode(s string) string {
-	return codeSpanRe.ReplaceAllString(fencedRe.ReplaceAllString(s, ""), "")
-}
+func StripCode(s string) string { return domain.StripCode(s) }
 
 var fmClose = regexp.MustCompile(`(?m)^---[ \t]*$`)
 
