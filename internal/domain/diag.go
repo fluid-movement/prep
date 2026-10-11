@@ -40,6 +40,8 @@ const (
 	CodeDoDOptOutUnused = "P005"
 	CodeConfigLegacy    = "P006" // config in the prep 0.1.0 layout; prep fix converts it
 	CodeLocalTracked    = "P007" // .prep/.gitignore does not ignore local/; prep fix adds it
+	CodeProjectNoID     = "P008" // project.md has no id; prep fix writes one
+	CodeProjectInvalid  = "P009" // project.md has an invalid id or name
 
 	// Issue structure.
 	CodeBadID              = "I001" // directory name is not a valid ID

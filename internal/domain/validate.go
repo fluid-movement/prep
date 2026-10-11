@@ -19,6 +19,21 @@ func Validate(t *Tree) []Diagnostic {
 			Message: fmt.Sprintf("schema %d, this binary uses %d", t.Project.Schema, SchemaVersion),
 			Fix:     "run prep migrate, or update prep if the project is newer"})
 	}
+	if t.Project.Schema != 0 {
+		p := t.Project
+		switch {
+		case p.ID == "":
+			add(Diagnostic{Code: CodeProjectNoID, Severity: SevWarning, Class: ClassFixable, File: "project.md",
+				Message: "project.md has no id; other projects cannot link to this one", Fix: "run prep fix"})
+		case !ValidID(p.ID):
+			add(Diagnostic{Code: CodeProjectInvalid, Severity: SevError, Class: ClassManual, File: "project.md",
+				Message: fmt.Sprintf("id %q is not a ULID", p.ID), Fix: "restore the id from git history; never edit it"})
+		}
+		if p.Name != "" && !ValidProjectName(p.Name) {
+			add(Diagnostic{Code: CodeProjectInvalid, Severity: SevError, Class: ClassManual, File: "project.md",
+				Message: fmt.Sprintf("name %q is invalid", p.Name), Fix: "use " + ProjectNameRule})
+		}
+	}
 
 	for _, id := range t.IDs() {
 		i := t.Issues[id]

@@ -1,0 +1,7 @@
+- [x] prep init writes id (a ULID) and name (from origin's repository name, else the directory) into project.md
+- [x] a project without id: gets P008 from prep check; prep fix writes id and name; an invalid id or name is P009
+- [x] prep init --new-id replaces only the ID of an initialized project
+- [x] prep projects shows id, name and remote (JSON fields id, name, remote), marks names shared by several IDs, and lists clones of one ID separately
+- [x] prep projects add <dir> and remove <dir|name> change only the registry
+- [x] remotes in SSH, HTTPS and ssh:// forms normalize to the same host/owner/repo
+- [x] this repository has an id and name

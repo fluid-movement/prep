@@ -14,6 +14,7 @@ import (
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/gitx"
 	"github.com/fluid-movement/prep/internal/mdstore"
+	"github.com/fluid-movement/prep/internal/projects"
 )
 
 // writeResult is the JSON answer of every write command.
@@ -59,6 +60,7 @@ func (a *app) reportWrite(r writeResult) {
 func cmdInit(a *app, args []string) error {
 	fs := flag.NewFlagSet("init", flag.ContinueOnError)
 	noBootstrap := fs.Bool("no-bootstrap", false, "do not create the knowledge base bootstrap issues")
+	newID := fs.Bool("new-id", false, "give an initialized project a new permanent ID (a fork that becomes its own project)")
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
@@ -66,10 +68,18 @@ func cmdInit(a *app, args []string) error {
 	if dir == "" {
 		dir = "."
 	}
+	if *newID {
+		return a.renewID()
+	}
 	a.root = dir
 	a.store = nil
 	st := openAt(dir)
-	files, err := st.Init()
+	id, err := domain.NewULID(a.now(), a.entropy)
+	if err != nil {
+		return err
+	}
+	abs, _ := filepath.Abs(dir)
+	files, err := st.Init(id, projects.DefaultName(abs))
 	if err != nil {
 		return err
 	}
@@ -84,6 +94,48 @@ func cmdInit(a *app, args []string) error {
 	}
 	a.reportWrite(writeResult{OK: true, Op: "init", Files: files})
 	return nil
+}
+
+// renewID gives the project a new permanent ID: links other projects hold to
+// the old one keep pointing at the project it was copied from.
+func (a *app) renewID() error {
+	if err := a.open(); err != nil {
+		return err
+	}
+	id, err := domain.NewULID(a.now(), a.entropy)
+	if err != nil {
+		return err
+	}
+	if err := a.store.SetIdentity(id, ""); err != nil {
+		return err
+	}
+	files := []string{mdstore.Dir + "/project.md"}
+	a.afterWrite(files)
+	a.reportWrite(writeResult{OK: true, Op: "init", ID: id, Files: files})
+	return nil
+}
+
+// fixIdentity writes a permanent ID and the derived name into a project.md
+// that lacks them, and returns the file when it changed it.
+func (a *app) fixIdentity() ([]string, error) {
+	p, err := mdstore.ReadProject(a.store.Root)
+	if err != nil || (p.ID != "" && p.Name != "") {
+		// An unreadable project.md is check's to report.
+		return nil, nil
+	}
+	id, name := "", ""
+	if p.ID == "" {
+		if id, err = domain.NewULID(a.now(), a.entropy); err != nil {
+			return nil, err
+		}
+	}
+	if p.Name == "" {
+		name = projects.DefaultName(a.store.Root)
+	}
+	if err := a.store.SetIdentity(id, name); err != nil {
+		return nil, err
+	}
+	return []string{mdstore.Dir + "/project.md"}, nil
 }
 
 // bootstrap creates the knowledge base bootstrap issues.
@@ -427,6 +479,11 @@ func cmdFix(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	ident, err := a.fixIdentity()
+	if err != nil {
+		return err
+	}
+	files = append(files, ident...)
 	// The personal config is ignored now; a 0.1.0 project still has it in
 	// git's index, and committing the fix removes it there (config.yaml.dist
 	// takes its place).

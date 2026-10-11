@@ -168,3 +168,12 @@ func Head(dir string) (string, error) {
 	out, err := Run(dir, "rev-parse", "HEAD")
 	return strings.TrimSpace(out), err
 }
+
+// Remote returns the URL of dir's origin remote, or "" when it has none.
+func Remote(dir string) string {
+	out, err := Run(dir, "config", "--get", "remote.origin.url")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}

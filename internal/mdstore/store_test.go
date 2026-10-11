@@ -14,7 +14,7 @@ import (
 func TestCompareAndSwapRejectsConcurrentEdit(t *testing.T) {
 	root := t.TempDir()
 	s := Open(root)
-	if _, err := s.Init(); err != nil {
+	if _, err := s.Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
@@ -88,7 +88,7 @@ func TestDecisionsTolerateBlankLines(t *testing.T) {
 func TestConfigRoundTrip(t *testing.T) {
 	root := t.TempDir()
 	s := Open(root)
-	if _, err := s.Init(); err != nil {
+	if _, err := s.Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := s.LoadConfig()
@@ -139,7 +139,7 @@ func TestConfigRoundTrip(t *testing.T) {
 func TestConfigFallsBackToDist(t *testing.T) {
 	root := t.TempDir()
 	s := Open(root)
-	written, err := s.Init()
+	written, err := s.Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +210,7 @@ func TestConfigFallsBackToDist(t *testing.T) {
 
 func TestConfigKeepsThemes(t *testing.T) {
 	root := t.TempDir()
-	if _, err := Open(root).Init(); err != nil {
+	if _, err := Open(root).Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 		t.Fatal(err)
 	}
 	own := filepath.Join(root, Dir, "config.yaml")
@@ -267,7 +267,7 @@ func TestConfigKeepsThemes(t *testing.T) {
 func TestLocalDirMustBeIgnored(t *testing.T) {
 	root := t.TempDir()
 	s := Open(root)
-	if _, err := s.Init(); err != nil {
+	if _, err := s.Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 		t.Fatal(err)
 	}
 	ign := filepath.Join(root, Dir, ".gitignore")
@@ -320,7 +320,7 @@ func TestLegacyConfigConvertsOnlyStateValues(t *testing.T) {
 func TestLoadSkipsTempFiles(t *testing.T) {
 	root := t.TempDir()
 	s := Open(root)
-	if _, err := s.Init(); err != nil {
+	if _, err := s.Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 		t.Fatal(err)
 	}
 	tree := domain.NewTree(domain.Project{}, nil, nil, nil)
@@ -353,7 +353,7 @@ func TestLoadSkipsTempFiles(t *testing.T) {
 func TestApplyWritesNothingOnConflict(t *testing.T) {
 	root := t.TempDir()
 	s := Open(root)
-	if _, err := s.Init(); err != nil {
+	if _, err := s.Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 		t.Fatal(err)
 	}
 	tree := domain.NewTree(domain.Project{}, nil, nil, nil)

@@ -1,0 +1,17 @@
+---
+title: 'Project identity: a permanent ID and a name in project.md'
+kind: code
+parent: 01M4N5ARVE6J5APZYJ7VA0N464
+tags:
+  - projects
+---
+
+Every project has a permanent ID and a name, and the registry knows both.
+
+- `.prep/project.md` frontmatter gains `id:` (a ULID) and `name:`. `prep init` writes both: the ID new, the name from the repository name (the last path segment of origin, else the directory name). `prep init --new-id` gives an existing checkout a new ID, for a fork that becomes its own project.
+- A project without `id:` is reported by `prep check` (P-check, fixable); `prep fix` writes one. Until then it works as today but cannot be linked or found by ID. This repository is converted once. A missing `name:` is derived as `prep init` would; `prep fix` writes it in.
+- The ID never changes: no command rewrites it, and `prep check` cannot detect a hand edit inside one checkout, so the skill says never to edit it. Names are short handles (lowercase letters, digits, `-`, `_`, `.`); an invalid name is a P-check error. Renaming is just editing `name:`; nothing refers to it.
+- The registry records, per root, the ID, name and normalized remote (origin as `host/owner/repo`: SSH, HTTPS, `.git` suffix and host case are equal), read fresh from the checkout when listing. Several roots with one ID are clones of one project (a fork that kept the ID counts as one). `prep projects` shows ID suffix, name, remote and last use (`--json` adds `id`, `name`, `remote`); two IDs sharing a name are marked as a collision.
+- `prep projects add <dir>` registers a checkout prep has not run in yet; `prep projects remove <dir|name>` forgets one. Neither touches the project.
+
+## Open questions

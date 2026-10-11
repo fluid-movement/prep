@@ -1,0 +1,23 @@
+---
+title: 'Cross-project prep: projects know each other'
+kind: manual
+parent: 01M498VPZAAQJKHXGZZ3PWJH2F
+tags:
+  - projects
+priority: high
+---
+
+prep knows which projects on the machine use it and where they live, and uses that so agents and people can work across projects: read another project's issues and knowledge, create issues in it, and record that an issue depends on an issue in another project. The TUI switches between projects the way the desktop app does.
+
+Links between projects must be as solid as possible: no rename, move or hand edit may silently break one.
+
+- **Identity**: every project has a permanent ID, a ULID in `.prep/project.md` (`id:`), written once by `prep init` and committed, so every clone and machine shares it. Nothing renames it. The git remote is only where to clone the project from; the `name:` is only a readable handle.
+- **Links**: a project lists the projects it refers to in `project.md` `links:`, each under its own local name with the target's ID and its last known remote as a clone hint. Records refer to `<local name>:<full issue ID>`. Since issue IDs are ULIDs, the issue part is globally unique on its own; the local name says where to look.
+- **Resolution**: local name → project ID → local checkout, through the [project registry](/components/projects.md), which reads each checkout's ID from its `project.md`. A target that renamed itself, changed its remote or moved directory still resolves. A target not checked out on this machine resolves to "unknown": shown with its clone hint, never blocking and never an error.
+- **Changing links** goes through commands that rewrite every reference in one change, and `prep check` catches what a hand edit breaks.
+
+Projects without a remote can be linked too (the link has no clone hint).
+
+The children are the work, in dependency order. The desktop app gains the same cross-project links afterwards.
+
+## Open questions

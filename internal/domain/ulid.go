@@ -129,3 +129,23 @@ func decodeULID(id string) [16]byte {
 	}
 	return b
 }
+
+// ProjectNameRule describes valid project names and link names.
+const ProjectNameRule = "lowercase letters, digits, '-', '_' and '.', starting with a letter or digit, at most 64 characters"
+
+// ValidProjectName reports whether s is a valid project or link name.
+func ValidProjectName(s string) bool {
+	if s == "" || len(s) > 64 {
+		return false
+	}
+	for k := 0; k < len(s); k++ {
+		c := s[k]
+		switch {
+		case c >= 'a' && c <= 'z', c >= '0' && c <= '9':
+		case (c == '-' || c == '_' || c == '.') && k > 0:
+		default:
+			return false
+		}
+	}
+	return true
+}

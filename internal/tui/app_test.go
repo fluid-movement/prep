@@ -38,7 +38,7 @@ type project struct {
 
 func newProject(t *testing.T) *project {
 	p := &project{t: t, dir: t.TempDir(), now: time.Date(2026, 1, 2, 9, 0, 0, 0, time.UTC), rand: rand.NewChaCha8([32]byte{})}
-	if _, err := mdstore.Open(p.dir).Init(); err != nil {
+	if _, err := mdstore.Open(p.dir).Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 		t.Fatal(err)
 	}
 	return p

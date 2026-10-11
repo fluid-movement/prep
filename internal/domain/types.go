@@ -125,6 +125,12 @@ func (s State) Terminal() bool { return s == StateDone || s == StateDropped }
 // effect (config.yaml, else config.yaml.dist).
 type Project struct {
 	Schema int
+	// ID is the project's permanent identity, a ULID written once by prep
+	// init and shared by every clone; empty in projects from before it.
+	ID string
+	// Name is the project's short handle; empty means derived (see
+	// internal/projects.DefaultName).
+	Name   string
 	DoD    []string
 	Config Config
 }

@@ -12,7 +12,7 @@
 * [Markdown store](/components/markdown-store.md) - internal/mdstore — parses and renders .prep files canonically, atomic writes with compare-and-swap, fmt and fix.
 * [OKF store](/components/okf-store.md) - internal/okf — reads the knowledge bundle (links, drift) and writes entries for prep knowledge new, update and confirm.
 * [Palette and themes](/components/palette.md) - internal/palette — TUI color token names, the built-in themes, custom theme resolution and validation; how a theme reaches the screen.
-* [Project registry](/components/projects.md) - internal/projects: the machine-local list of prep projects (root, name, last used) that commands record and prep projects and the desktop app read.
+* [Project registry](/components/projects.md) - The machine-local registry of prep projects: where it lives, how commands record into it, project identity (ID, name, remote) and how a project is resolved.
 * [Release, install and update](/components/release.md) - How prep is released (GoReleaser on v* tags), installed (install.sh, go install, just install) and updated (prep update with checksum verification).
 * [Harness setup and user configuration](/components/setup.md) - prep setup installs, refreshes and removes harness integrations through the setup.Harness interface; ~/.config/prep/config.yaml records which harnesses the user chose.
 * [TUI Agent screen](/components/tui-agent.md) - prep tui's Agent screen: the followed agent's current issue, its activity feed by issue, its usage; keys, layout, liveliness and data from the activity stream.

@@ -499,8 +499,27 @@ func (s *Store) issueIDs() ([]string, error) {
 	return ids, nil
 }
 
-// SetSchema rewrites the schema version in project.md, keeping its body.
+// SetSchema rewrites the schema version in project.md, keeping the rest.
 func (s *Store) SetSchema(v int) error {
+	return s.editProject(func(p *domain.Project) { p.Schema = v })
+}
+
+// SetIdentity writes the project's ID and name into project.md, keeping the
+// rest; an empty value leaves that field as it is.
+func (s *Store) SetIdentity(id, name string) error {
+	return s.editProject(func(p *domain.Project) {
+		if id != "" {
+			p.ID = id
+		}
+		if name != "" {
+			p.Name = name
+		}
+	})
+}
+
+// editProject rewrites project.md's frontmatter through edit, keeping its
+// body.
+func (s *Store) editProject(edit func(*domain.Project)) error {
 	rel := Dir + "/project.md"
 	raw, ok, err := s.read(rel)
 	if err != nil {
@@ -513,5 +532,12 @@ func (s *Store) SetSchema(v int) error {
 	if err != nil {
 		return err
 	}
-	return s.write(rel, renderProject(v, body))
+	// A frontmatter from an older schema may hold other keys; what decodes
+	// is kept and the rest is dropped, as SetSchema always did.
+	var f projectFM
+	fm, _, _, _ := splitFrontmatter(raw)
+	_ = decodeStrict(fm, &f)
+	p := domain.Project{Schema: f.Schema, ID: f.ID, Name: f.Name}
+	edit(&p)
+	return s.write(rel, renderProject(p, body))
 }

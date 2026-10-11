@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -749,7 +750,39 @@ func cmdSkill(a *app, args []string) error {
 
 func cmdProjects(a *app, args []string) error {
 	if len(args) > 0 {
-		return usageErr("usage: prep projects")
+		switch args[0] {
+		case "add":
+			if len(args) != 2 {
+				return usageErr("usage: prep projects add <dir>")
+			}
+			p, err := projects.Add(args[1], a.now())
+			if err != nil {
+				return err
+			}
+			if a.json {
+				a.emit(map[string]any{"ok": true, "op": "projects add", "project": p})
+				return nil
+			}
+			a.printf("registered %s at %s\n", p.Name, p.Root)
+			return nil
+		case "remove":
+			if len(args) != 2 {
+				return usageErr("usage: prep projects remove <dir|name|id>")
+			}
+			roots, err := projects.Remove(args[1])
+			if err != nil {
+				return err
+			}
+			if a.json {
+				a.emit(map[string]any{"ok": true, "op": "projects remove", "roots": roots})
+				return nil
+			}
+			for _, r := range roots {
+				a.printf("forgot %s\n", r)
+			}
+			return nil
+		}
+		return usageErr("usage: prep projects [add <dir> | remove <dir|name|id>]")
 	}
 	ps, err := projects.List()
 	if err != nil {
@@ -760,7 +793,22 @@ func cmdProjects(a *app, args []string) error {
 		return nil
 	}
 	for _, p := range ps {
-		a.printf("%-20s %s  %s\n", p.Name, p.LastUsed.Local().Format("2006-01-02 15:04"), p.Root)
+		id := "(no id)"
+		if p.ID != "" {
+			id = p.ID[len(p.ID)-6:]
+		}
+		name := p.Name
+		if p.Collision {
+			name += " (!)"
+		}
+		remote := p.Remote
+		if remote == "" {
+			remote = "-"
+		}
+		a.printf("%-20s %-7s %s  %s  %s\n", name, id, p.LastUsed.Local().Format("2006-01-02 15:04"), p.Root, remote)
+	}
+	if slices.ContainsFunc(ps, func(p projects.Project) bool { return p.Collision }) {
+		a.printf("\n(!) several projects share this name; refer to them by ID or path\n")
 	}
 	return nil
 }

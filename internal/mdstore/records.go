@@ -2,6 +2,8 @@ package mdstore
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -61,7 +63,9 @@ type resolutionFM struct {
 }
 
 type projectFM struct {
-	Schema int `yaml:"schema"`
+	Schema int    `yaml:"schema"`
+	ID     string `yaml:"id,omitempty"`
+	Name   string `yaml:"name,omitempty"`
 }
 
 func fmtTime(t time.Time) time.Time { return t.UTC().Truncate(time.Second) }
@@ -588,7 +592,7 @@ func parseProject(raw string) (domain.Project, error) {
 	if f.Schema == 0 {
 		return p, fmt.Errorf("schema is missing")
 	}
-	p.Schema = f.Schema
+	p.Schema, p.ID, p.Name = f.Schema, f.ID, f.Name
 	inDoD := false
 	for _, l := range strings.Split(normalize(body), "\n") {
 		if h2Re.MatchString(l) {
@@ -604,6 +608,17 @@ func parseProject(raw string) (domain.Project, error) {
 	return p, nil
 }
 
-func renderProject(schema int, body string) string {
-	return withFrontmatter(encodeYAML(projectFM{Schema: schema}), normalize(body))
+// renderProject writes p's frontmatter facts over body.
+func renderProject(p domain.Project, body string) string {
+	return withFrontmatter(encodeYAML(projectFM{Schema: p.Schema, ID: p.ID, Name: p.Name}), normalize(body))
+}
+
+// ReadProject reads the project facts in root's project.md (not the config),
+// for callers that only need a project's identity, such as the registry.
+func ReadProject(root string) (domain.Project, error) {
+	b, err := os.ReadFile(filepath.Join(root, Dir, "project.md"))
+	if err != nil {
+		return domain.Project{}, err
+	}
+	return parseProject(string(b))
 }

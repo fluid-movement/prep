@@ -62,7 +62,7 @@ func TestMergeDuplicateSections(t *testing.T) {
 func TestFixMergesDuplicateSections(t *testing.T) {
 	root := t.TempDir()
 	s := Open(root)
-	if _, err := s.Init(); err != nil {
+	if _, err := s.Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 		t.Fatal(err)
 	}
 	tree := domain.NewTree(domain.Project{}, nil, nil, nil)

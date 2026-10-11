@@ -29,7 +29,7 @@ internal/palette    TUI color tokens, built-in themes, custom theme resolution, 
 internal/tui        human interface: screens (Bubble Tea) loading through an injected loader; theme and ui hold the design system
 internal/setup      harness integrations installed, refreshed and removed by prep setup
 internal/userconfig the user's choices in ~/.config/prep/config.yaml (harnesses, TUI mouse)
-internal/projects   the machine-local registry of project roots prep ran in ($XDG_STATE_HOME/prep/projects.json)
+internal/projects   the machine-local registry of project roots ($XDG_STATE_HOME/prep/projects.json), project identity and resolution
 internal/update     prep update: download, checksum check and replacement of the binary
 desktop/            the macOS app (Swift), a client of the CLI's JSON and prep watch
 ```

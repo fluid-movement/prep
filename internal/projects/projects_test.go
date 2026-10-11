@@ -3,6 +3,7 @@ package projects
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -73,5 +74,116 @@ func TestDamagedRegistryIsRebuilt(t *testing.T) {
 	}
 	if ps, err := List(); err != nil || len(ps) != 1 {
 		t.Fatalf("%+v %v", ps, err)
+	}
+}
+
+// identified makes a project whose project.md declares id and name.
+func identified(t *testing.T, id, name string) string {
+	t.Helper()
+	dir := project(t)
+	fm := "---\nschema: 1\nid: " + id + "\nname: " + name + "\n---\n\n# P\n"
+	if err := os.WriteFile(filepath.Join(dir, ".prep", "project.md"), []byte(fm), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func TestNormalizeRemote(t *testing.T) {
+	for _, u := range []string{
+		"git@github.com:acme/api.git",
+		"https://github.com/acme/api.git",
+		"https://user@GitHub.com/acme/api",
+		"ssh://git@github.com:22/acme/api.git",
+		"git+ssh://git@github.com/acme/api/",
+	} {
+		if got := NormalizeRemote(u); got != "github.com/acme/api" {
+			t.Errorf("%s: %q", u, got)
+		}
+	}
+	if got := NormalizeRemote("/srv/git/api.git"); got != "/srv/git/api" {
+		t.Errorf("path: %q", got)
+	}
+	if NormalizeRemote(" ") != "" {
+		t.Error("empty")
+	}
+}
+
+func TestSanitizeName(t *testing.T) {
+	for in, want := range map[string]string{"Prep": "prep", "my app": "my-app", "-x": "x", "": "project", "a.b_c-d": "a.b_c-d"} {
+		if got := SanitizeName(in); got != want {
+			t.Errorf("%q: %q", in, got)
+		}
+	}
+}
+
+func TestResolve(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	t0 := time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)
+	api := identified(t, "01M4AAAAAAAAAAAAAAAAAAAP11", "api")
+	apiClone := identified(t, "01M4AAAAAAAAAAAAAAAAAAAP11", "api")
+	web := identified(t, "01M4BBBBBBBBBBBBBBBBBBBWEB", "web")
+	webFork := identified(t, "01M4CCCCCCCCCCCCCCCCCCCWEB", "web")
+	Touch(api, t0)
+	Touch(apiClone, t0.Add(time.Hour))
+	Touch(web, t0)
+	Touch(webFork, t0)
+
+	// Clones of one project resolve to the most recently used.
+	if p, err := Resolve("api"); err != nil || p.Root != apiClone {
+		t.Fatalf("api: %+v %v", p, err)
+	}
+	// A shared name is ambiguous; the ID or a suffix of it is not.
+	if _, err := Resolve("web"); err == nil || !strings.Contains(err.Error(), "several projects") {
+		t.Fatalf("web: %v", err)
+	}
+	if p, err := Resolve("cccweb"); err != nil || p.Root != webFork {
+		t.Fatalf("suffix: %+v %v", p, err)
+	}
+	if _, err := Resolve("WEB"); err == nil {
+		t.Fatal("a suffix of two IDs resolved")
+	}
+	if p, err := Resolve(web); err != nil || p.Root != web {
+		t.Fatalf("path: %+v %v", p, err)
+	}
+	if _, err := Resolve("nope"); err == nil || !strings.Contains(err.Error(), "registered: api, web") {
+		t.Fatalf("unknown: %v", err)
+	}
+	ps, _ := List()
+	for _, p := range ps {
+		if p.Collision != (p.Name == "web") {
+			t.Errorf("collision: %+v", p)
+		}
+	}
+	if p, ok, _ := ByID("01M4AAAAAAAAAAAAAAAAAAAP11"); !ok || p.Root != apiClone {
+		t.Fatalf("by id: %+v", p)
+	}
+}
+
+func TestAddAndRemove(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	t0 := time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)
+	api := identified(t, "01M4AAAAAAAAAAAAAAAAAAAP11", "api")
+	clone := identified(t, "01M4AAAAAAAAAAAAAAAAAAAP11", "api")
+	if _, err := Add(t.TempDir(), t0); err == nil {
+		t.Fatal("added a directory without .prep")
+	}
+	if p, err := Add(api, t0); err != nil || p.Name != "api" || p.ID == "" {
+		t.Fatalf("add: %+v %v", p, err)
+	}
+	Add(clone, t0)
+	// Removing by path forgets that clone only; by name, every clone.
+	if roots, err := Remove(api); err != nil || len(roots) != 1 {
+		t.Fatalf("remove path: %v %v", roots, err)
+	}
+	Add(api, t0)
+	if roots, err := Remove("api"); err != nil || len(roots) != 2 {
+		t.Fatalf("remove name: %v %v", roots, err)
+	}
+	if ps, _ := List(); len(ps) != 0 {
+		t.Fatalf("left: %+v", ps)
+	}
+	b, _ := os.ReadFile(filepath.Join(api, ".prep", "project.md"))
+	if !strings.Contains(string(b), "name: api") {
+		t.Fatal("the project changed")
 	}
 }

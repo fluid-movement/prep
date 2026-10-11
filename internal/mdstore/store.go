@@ -327,7 +327,7 @@ func canonicalProject(raw string) string {
 		return ""
 	}
 	_, body, _, _ := splitFrontmatter(raw)
-	return renderProject(p.Schema, body)
+	return renderProject(p, body)
 }
 
 // --- config ---
@@ -564,19 +564,20 @@ views:
   All: ""
 `
 
-// DefaultProject is written by prep init.
-func DefaultProject() string {
-	return renderProject(domain.SchemaVersion, "# Project\n\n## Definition of Done\n\n- prep check passes")
+// DefaultProject is written by prep init: a new project with the given ID
+// and name.
+func DefaultProject(id, name string) string {
+	return renderProject(domain.Project{Schema: domain.SchemaVersion, ID: id, Name: name}, "# Project\n\n## Definition of Done\n\n- prep check passes")
 }
 
-// Init creates the .prep skeleton.
-func (s *Store) Init() ([]string, error) {
+// Init creates the .prep skeleton for a project with the given ID and name.
+func (s *Store) Init(id, name string) ([]string, error) {
 	if _, err := os.Stat(s.abs(Dir + "/project.md")); err == nil {
 		return nil, &domain.Error{Code: domain.ErrUsage, Message: "already initialized: .prep/project.md exists"}
 	}
 	var written []string
 	files := []struct{ rel, content string }{
-		{Dir + "/project.md", DefaultProject()},
+		{Dir + "/project.md", DefaultProject(id, name)},
 		{Dir + "/" + ConfigDist, DefaultConfig},
 		{Dir + "/.gitignore", ConfigOwn + "\n" + localIgnore + "\n"},
 		{Dir + "/issues/.gitkeep", ""},
