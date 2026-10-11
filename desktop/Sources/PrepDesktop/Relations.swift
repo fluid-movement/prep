@@ -12,8 +12,18 @@ struct DependencyMap: View {
     var upstream: [String] { detail.issue.dependsOn ?? [] }
     var downstream: [String] { detail.blocks ?? [] }
 
+    /// The cross-project dependency a reference names, if it is one.
+    func cross(_ ref: String) -> CrossDep? { detail.crossDeps?.first { $0.ref == ref } }
+
+    /// Whether a dependency still blocks: an open local issue, or a found
+    /// cross-project one that is not done (unknown ones never block).
+    func blocking(_ id: String) -> Bool {
+        if let x = cross(id) { return x.blocks }
+        return !(model.summary(id)?.isResolved ?? false)
+    }
+
     var body: some View {
-        let waiting = upstream.filter { !(model.summary($0)?.isResolved ?? false) }.count
+        let waiting = upstream.filter(blocking).count
         Card("Dependencies", symbol: "point.3.connected.trianglepath.dotted", accessory: {
             if waiting > 0 {
                 Chip(text: "Waiting on \(waiting)", symbol: "lock.fill", color: .orange)
@@ -73,8 +83,14 @@ struct DependencyMap: View {
                     .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3])).foregroundStyle(.quaternary))
             }
             ForEach(ids, id: \.self) { id in
-                IssueCard(model: model, id: id)
-                    .anchorPreference(key: NodeAnchors.self, value: .bounds) { ["\(side)-\(id)": $0] }
+                Group {
+                    if let x = cross(id) {
+                        CrossIssueCard(model: model, dep: x)
+                    } else {
+                        IssueCard(model: model, id: id)
+                    }
+                }
+                .anchorPreference(key: NodeAnchors.self, value: .bounds) { ["\(side)-\(id)": $0] }
             }
         }
     }
@@ -84,7 +100,7 @@ struct DependencyMap: View {
         return AnyView(ZStack {
             ForEach(upstream, id: \.self) { id in
                 if let r = anchors["L-\(id)"].map({ g[$0] }) {
-                    let done = model.summary(id)?.isResolved ?? false
+                    let done = !blocking(id)
                     Arrow(from: CGPoint(x: r.maxX, y: r.midY), to: CGPoint(x: c.minX, y: c.midY))
                         .stroke(done ? Color.green.opacity(0.7) : Color.orange, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, dash: done ? [] : [5, 3]))
                 }
@@ -120,6 +136,56 @@ struct Arrow: Shape {
         p.addLine(to: to)
         p.addLine(to: CGPoint(x: to.x - 6, y: to.y + 4))
         return p
+    }
+}
+
+/// A card for another project's issue: the link's name over the ID, its
+/// state and title from that project; when the project is not checked out
+/// here, where to clone it. Clicking a found one opens it there.
+struct CrossIssueCard: View {
+    var model: ProjectModel
+    var dep: CrossDep
+
+    var body: some View {
+        Button {
+            if dep.isFound, let root = dep.root { Task { await model.go(to: dep.id, inProject: root) } }
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 5) {
+                    if dep.isFound {
+                        StateIcon(state: dep.state ?? "open", size: 11)
+                        Text(Lifecycle.title(dep.state ?? "")).font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Image(systemName: "questionmark.circle").imageScale(.small).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 2)
+                    Label(dep.link, systemImage: "shippingbox").font(.caption).foregroundStyle(.secondary).labelStyle(.titleAndIcon)
+                    ShortID(id: dep.id)
+                }
+                Text(caption)
+                    .font(.callout)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .foregroundStyle(dep.isFound && dep.state != "done" && dep.state != "dropped" ? .primary : .secondary)
+            }
+            .padding(9)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(nsColor: .windowBackgroundColor).opacity(0.6), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(style: StrokeStyle(lineWidth: 1, dash: dep.isFound ? [] : [4, 3])).foregroundStyle(.separator))
+        }
+        .buttonStyle(HoverButtonStyle(radius: 8))
+        .disabled(!dep.isFound)
+        .help(dep.isFound ? "Open in \(dep.project ?? dep.link)" : caption)
+    }
+
+    var caption: String {
+        switch dep.status {
+        case "found": return dep.title ?? dep.id
+        case "missing": return "No such issue in \(dep.project ?? dep.link)"
+        default:
+            if let remote = dep.remote { return "Not checked out here · clone \(remote)" }
+            return "Not checked out here"
+        }
     }
 }
 

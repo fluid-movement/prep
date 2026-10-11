@@ -1,0 +1,3 @@
+- [x] the dependency map shows cross-project dependencies as cards with the project's link name, state and title, unknown ones with the clone hint
+- [x] clicking a found one opens its project on that issue
+- [x] the switcher names projects by their project.md name, with the remote when names collide

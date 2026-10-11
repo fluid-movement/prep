@@ -160,9 +160,9 @@ struct ProjectSwitcher: View {
                         Task { await model.open(path: p.root) }
                     } label: {
                         if p.root == model.project?.root {
-                            Label(p.name, systemImage: "checkmark")
+                            Label(p.displayName, systemImage: "checkmark")
                         } else {
-                            Text(p.name)
+                            Text(p.displayName)
                         }
                         Text(p.root.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
                     }

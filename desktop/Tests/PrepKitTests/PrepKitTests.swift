@@ -246,3 +246,22 @@ import Testing
         #expect(got, "no change reported within 5 s")
     }
 }
+
+@Suite struct CrossProjectTests {
+    @Test func decodesProjectIdentity() throws {
+        let json = #"{"projects": [{"root": "/code/api", "id": "01M4BBBBBBBBBBBBBBBBBBBBBB", "name": "api", "remote": "github.com/acme/api", "last_used": "2026-10-11T12:00:00Z", "collision": true}]}"#
+        let p = try JSONDecoder.prep.decode(ProjectList.self, from: Data(json.utf8)).projects[0]
+        #expect(p.id == "/code/api")
+        #expect(p.projectID == "01M4BBBBBBBBBBBBBBBBBBBBBB")
+        #expect(p.displayName == "api (github.com/acme/api)")
+    }
+
+    @Test func crossDependenciesBlockOnlyWhenFoundAndOpen() {
+        let open = CrossDep(ref: "api:X", link: "api", id: "X", status: "found", state: "in-progress")
+        let done = CrossDep(ref: "api:Y", link: "api", id: "Y", status: "found", state: "done")
+        let unknown = CrossDep(ref: "api:Z", link: "api", id: "Z", status: "unknown", remote: "github.com/acme/api")
+        #expect(open.blocks)
+        #expect(!done.blocks)
+        #expect(!unknown.blocks)
+    }
+}

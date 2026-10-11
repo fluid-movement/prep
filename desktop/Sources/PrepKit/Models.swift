@@ -71,10 +71,40 @@ public struct IssueDetail: Codable, Sendable {
     public var progress: Progress?
     public var stale: Bool
     public var state: String
+    /// Dependencies on other projects' issues, as found on this machine.
+    public var crossDeps: [CrossDep]?
 
     enum CodingKeys: String, CodingKey {
         case actionable, blocked, blocks, children, context, findings, history, issue, priority, progress, stale, state
         case definitionOfDone = "definition_of_done"
+        case crossDeps = "cross_deps"
+    }
+}
+
+/// A dependency on another project's issue (`cross_deps` in `prep show
+/// --json`): found there, missing there, or unknown when that project is not
+/// checked out on this machine.
+public struct CrossDep: Codable, Hashable, Sendable {
+    public var ref: String
+    public var link: String
+    public var id: String
+    public var status: String
+    public var state: String?
+    public var title: String?
+    /// The project's own name and its checkout, when found.
+    public var project: String?
+    public var root: String?
+    /// Where to clone the project, when it is not checked out.
+    public var remote: String?
+
+    public var isFound: Bool { status == "found" }
+    /// Whether it blocks: found and not done (unknown ones never block).
+    public var blocks: Bool { isFound && state != "done" }
+
+    public init(ref: String, link: String, id: String, status: String, state: String? = nil, title: String? = nil,
+                project: String? = nil, root: String? = nil, remote: String? = nil) {
+        self.ref = ref; self.link = link; self.id = id; self.status = status; self.state = state
+        self.title = title; self.project = project; self.root = root; self.remote = remote
     }
 }
 
@@ -245,17 +275,33 @@ public struct ProjectList: Codable, Sendable {
 
 public struct ProjectRef: Codable, Hashable, Identifiable, Sendable {
     public var root: String
+    /// The name in the project's project.md (prep 0.3 and later), else its
+    /// directory name.
     public var name: String
     public var lastUsed: Date?
+    /// The permanent project ID; clones share it. Nil before prep fix.
+    public var projectID: String?
+    /// origin as host/owner/repo.
+    public var remote: String?
+    /// Several projects share this name.
+    public var collision: Bool?
     public var id: String { root }
 
-    public init(root: String, name: String, lastUsed: Date? = nil) {
+    public init(root: String, name: String, lastUsed: Date? = nil, projectID: String? = nil, remote: String? = nil, collision: Bool? = nil) {
         self.root = root; self.name = name; self.lastUsed = lastUsed
+        self.projectID = projectID; self.remote = remote; self.collision = collision
+    }
+
+    /// The name to show: with the remote when several projects share it.
+    public var displayName: String {
+        if collision == true, let remote { return "\(name) (\(remote))" }
+        return name
     }
 
     enum CodingKeys: String, CodingKey {
-        case root, name
+        case root, name, remote, collision
         case lastUsed = "last_used"
+        case projectID = "id"
     }
 }
 

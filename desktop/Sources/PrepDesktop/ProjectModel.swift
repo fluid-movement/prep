@@ -312,6 +312,13 @@ final class ProjectModel {
         Task { await loadDetail() }
     }
 
+    /// Opens another project in this window on one of its issues (a
+    /// cross-project dependency), as prep tui does.
+    func go(to id: String, inProject root: String) async {
+        await open(path: root)
+        if cli?.root == root { go(to: id) }
+    }
+
     /// Follows a link to an issue from anywhere in the window.
     func go(to id: String) {
         if tab != .inbox || !inbox.contains(where: { $0.issue.id == id }) { tab = .issues }
