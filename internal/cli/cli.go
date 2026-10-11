@@ -186,21 +186,47 @@ func (a *app) resolveProject() error {
 	case a.rootFlag:
 		return nil
 	}
-	p, err := projects.Resolve(a.project)
-	if err != nil {
-		return err
-	}
 	start := a.root
 	if start == "" {
 		start = "."
 	}
-	if home, err := mdstore.Find(start); err == nil {
-		if abs, _ := filepath.Abs(home); abs != p.Root {
-			a.home = abs
-		}
+	home := ""
+	if h, err := mdstore.Find(start); err == nil {
+		home, _ = filepath.Abs(h)
+	}
+	p, err := a.projectNamed(home, a.project)
+	if err != nil {
+		return err
+	}
+	if home != p.Root {
+		a.home = home
 	}
 	a.root, a.target = p.Root, &p
 	return nil
+}
+
+// projectNamed resolves --project: a link name of the home project first
+// (so a reference's name works as written), else the registry's rules.
+func (a *app) projectNamed(home, query string) (projects.Project, error) {
+	if home != "" {
+		if hp, err := mdstore.ReadProject(home); err == nil {
+			if l, ok := hp.Link(query); ok {
+				p, found, err := projects.ByID(l.ID)
+				if err != nil {
+					return p, err
+				}
+				if !found {
+					hint := ""
+					if l.Remote != "" {
+						hint = "; clone " + l.Remote + " and run prep there once (or prep projects add <dir>)"
+					}
+					return p, &domain.Error{Code: domain.ErrNotFound, Message: fmt.Sprintf("linked project %s is not checked out here%s", query, hint)}
+				}
+				return p, nil
+			}
+		}
+	}
+	return projects.Resolve(query)
 }
 
 // globalFlags strips --json, --root, --project and --by from anywhere in args before

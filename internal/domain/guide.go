@@ -190,9 +190,12 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(a), "context.md"), "parent context: " + ai.Title, ""})
 		}
 	}
+	for _, l := range XKnowledgeLinks(i.Context) {
+		g.Inputs = append(g.Inputs, Pointer{l[0] + ":" + l[1], fmt.Sprintf("knowledge in linked project %s: prep knowledge show %s --project %s", l[0], l[1], l[0]), ""})
+	}
 	for _, d := range i.DependsOn {
 		if x := t.XIssueOf(d); x.Status == XFound && x.Root != "" {
-			g.Inputs = append(g.Inputs, Pointer{path.Join(x.Root, issueDir(x.ID)), fmt.Sprintf("dependency in project %s [%s]: %s (prep show %s --project %s)", x.Project, x.State, x.Title, x.ID, x.Project), ""})
+			g.Inputs = append(g.Inputs, Pointer{path.Join(x.Root, issueDir(x.ID)), fmt.Sprintf("dependency in project %s [%s]: %s (prep show %s --project %s)", x.Project, x.State, x.Title, x.ID, x.Link), ""})
 			continue
 		}
 		di := t.Issues[d]

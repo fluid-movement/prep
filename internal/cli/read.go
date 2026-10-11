@@ -345,9 +345,13 @@ func cmdShow(a *app, args []string) error {
 			return err
 		}
 	}
+	var xknow []map[string]string
+	for _, l := range domain.XKnowledgeLinks(i.Context) {
+		xknow = append(xknow, map[string]string{"link": l[0], "path": l[1], "command": "prep knowledge show " + l[1] + " --project " + l[0]})
+	}
 	if a.json {
 		a.emit(map[string]any{
-			"cross_deps": s.CrossDeps, "dependents": deps,
+			"cross_deps": s.CrossDeps, "dependents": deps, "cross_knowledge": xknow,
 			"issue": i, "dir": mdstore.IssueDir(id), "priority": i.Priority.Effective(), "state": s.State, "stale": s.Stale, "blocked": s.Blocked,
 			"actionable": s.Actionable, "children": nonNil(t.Children(id)), "blocks": nonNil(t.Blocks(id)),
 			"progress": s.Progress, "definition_of_done": nonNil(dod), "dod_opt_outs": opt,
@@ -385,6 +389,9 @@ func cmdShow(a *app, args []string) error {
 	}
 	for _, d := range deps {
 		a.printf("blocks in %s: %s [%s] %s\n", d.Project, d.ID, d.State, d.Title)
+	}
+	for _, k := range xknow {
+		a.printf("knows: %s:%s (%s)\n", k["link"], k["path"], k["command"])
 	}
 	if *dependents && len(deps) == 0 {
 		a.printf("no issue in another project here depends on this one\n")
@@ -804,7 +811,7 @@ func otherProjects(root, id string, max int) []string {
 func xDepLine(x domain.XIssue) string {
 	switch x.Status {
 	case domain.XFound:
-		return fmt.Sprintf("%s [%s] %s (in %s; prep show %s --project %s)", x.Ref, x.State, x.Title, x.Project, x.ID, x.Project)
+		return fmt.Sprintf("%s [%s] %s (in %s; prep show %s --project %s)", x.Ref, x.State, x.Title, x.Project, x.ID, x.Link)
 	case domain.XMissing:
 		return fmt.Sprintf("%s [missing: no such issue in %s at %s]", x.Ref, x.Project, x.Root)
 	}

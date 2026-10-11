@@ -339,3 +339,30 @@ func (h *harness) rename(name string) {
 		h.t.Fatal(err)
 	}
 }
+
+func TestCrossProjectKnowledgeLinks(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	home := newHarness(t)
+	api := newHarness(t)
+	api.rename("api")
+	home.ok("link", "add", "api", "--as", "backend")
+	id := home.newIssue("--title", "Client", "--kind", "code")
+	home.ok("context", id, "--body", "Auth works as [the API says](backend:/overview.md#auth).")
+	if out := home.ok("show", id); !strings.Contains(out, "knows: backend:/overview.md (prep knowledge show /overview.md --project backend)") {
+		t.Fatalf("show: %s", out)
+	}
+	if out := home.ok("guide", id); !strings.Contains(out, "backend:/overview.md") {
+		t.Fatalf("guide: %s", out)
+	}
+	// The link's name works with --project, though the project calls itself api.
+	if code, out := home.runIn("knowledge", "show", "/overview.md", "--project", "backend"); code != 0 || !strings.Contains(out, "The test project.") {
+		t.Fatalf("read: %d %s", code, out)
+	}
+	if out := home.ok("check"); strings.Contains(out, "X007") {
+		t.Fatalf("check: %s", out)
+	}
+	home.ok("context", id, "--body", "See [gone](backend:/nope.md).")
+	if out := home.ok("check"); !strings.Contains(out, "X007") {
+		t.Fatalf("check: %s", out)
+	}
+}

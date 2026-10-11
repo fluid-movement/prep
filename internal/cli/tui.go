@@ -45,20 +45,26 @@ func cmdTUI(a *app, args []string) error {
 	// Switching projects ends the program with where to go; it starts
 	// over there, remembering the project it came from for backspace.
 	root, _ := filepath.Abs(a.store.Root)
-	previous, sel := "", ""
+	previous := ""
+	var to *tui.Switch
 	for {
-		to, err := runTUI(root, *agent, previous, sel)
-		if err != nil || to == nil {
+		var err error
+		if to, err = runTUI(root, *agent, previous, to); err != nil || to == nil {
 			return err
 		}
 		_ = projects.Touch(to.Root, a.now())
-		previous, root, sel = root, to.Root, to.Issue
+		previous, root = root, to.Root
 		*agent = false
 	}
 }
 
 // runTUI runs the TUI on the project at root until it quits or switches.
-func runTUI(root string, agent bool, previous, sel string) (*tui.Switch, error) {
+// at is where the switch that led here asked to open, if any.
+func runTUI(root string, agent bool, previous string, at *tui.Switch) (*tui.Switch, error) {
+	sel, entry := "", ""
+	if at != nil {
+		sel, entry = at.Issue, at.Entry
+	}
 	// Loads run in background goroutines, sometimes two at once (reload and
 	// check), so each builds its own stores instead of sharing the app's.
 	load := func(drift bool) (*domain.Tree, error) {
@@ -101,6 +107,7 @@ func runTUI(root string, agent bool, previous, sel string) (*tui.Switch, error) 
 		Projects:   projects.List,
 		Previous:   previous,
 		Select:     sel,
+		Entry:      entry,
 		NoMouse:    ucfg.TUI.Mouse != nil && !*ucfg.TUI.Mouse,
 		SaveMouse:  saveMouse,
 		Single:     ucfg.TUI.Layout == "single",

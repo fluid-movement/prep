@@ -1,0 +1,3 @@
+- [x] the detail's needs links show cross-project dependencies with the link name, state and title; unknown ones with the clone hint
+- [x] opening a found one switches to that project on that issue; backspace returns
+- [x] the list's blocked marks count cross-project blockers

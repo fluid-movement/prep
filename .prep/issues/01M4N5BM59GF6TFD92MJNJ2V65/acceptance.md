@@ -1,0 +1,4 @@
+- [x] prep check reports a link to a missing entry of a checked-out project (X007) and nothing when it is not checked out
+- [x] prep guide and prep show list an issue's cross-project knowledge links with the command that reads them
+- [x] --project accepts the home project's link names
+- [x] the TUI detail shows cross-project knowledge links with the project prefix; opening one switches to that project's knowledge screen on the entry

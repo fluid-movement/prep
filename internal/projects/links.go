@@ -2,6 +2,8 @@ package projects
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/fluid-movement/prep/internal/domain"
@@ -68,6 +70,22 @@ func Check(t *domain.Tree) []domain.Diagnostic {
 					Fix:     "remove the dependency or replace it with the issue that supersedes it"})
 			}
 		}
+	}
+	checkouts := map[string]*Project{}
+	for _, r := range rs {
+		checkouts[r.Name] = r.Checkout
+	}
+	for _, ref := range t.LinkRefs() {
+		co := checkouts[ref.Link]
+		if ref.Dep || co == nil {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(co.Root, mdstore.Dir, "knowledge", filepath.FromSlash(strings.TrimPrefix(ref.Target, "/")))); err == nil {
+			continue
+		}
+		ds = append(ds, domain.Diagnostic{Code: domain.CodeXKnowledgeLink, Severity: domain.SevWarning, Class: domain.ClassManual, Issue: ref.Issue, File: ref.File,
+			Message: fmt.Sprintf("%s:%s: no such entry in %s (%s)", ref.Link, ref.Target, co.Name, co.Root),
+			Fix:     "pull that checkout if it is behind, else fix the link"})
 	}
 	for _, r := range rs {
 		if r.Checkout == nil || r.Checkout.Remote == "" || r.Checkout.Remote == r.Remote {

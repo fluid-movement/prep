@@ -6,6 +6,8 @@ import (
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/projects"
 	"github.com/fluid-movement/prep/internal/tui/ui"
 )
@@ -16,6 +18,7 @@ import (
 type Switch struct {
 	Root  string
 	Issue string
+	Entry string // a knowledge entry to open
 }
 
 // projectName is the header's name for the project: its own name, else
@@ -127,4 +130,62 @@ func (m *Model) projectRows(inner, rows int) []pickRow {
 		out = append(out, pickRow{fmt.Sprintf("pick:%d", k), ui.MenuRow(m.th, "", label, note, true, k == d.cursor, inner)})
 	}
 	return out
+}
+
+// xDepLine renders a dependency on another project's issue: the link's
+// name before the ID, the state from that project, and for one not
+// checked out here the clone hint in place of a title.
+func (m *Model) xDepLine(ref string, k int, selected bool, key string, inner int) string {
+	x := m.tree.XIssueOf(ref)
+	sub := m.th.S.Subtle
+	lead := sub.Render("← needs ")
+	if x.Status == domain.XFound && !x.State.Terminal() {
+		lead = lipgloss.NewStyle().Foreground(m.th.C.Warning).Render("← needs ")
+	}
+	l := ui.Link{Lead: lead + m.th.S.Muted.Render(x.Link+" › "), State: x.State, ID: shortID(x.ID), Title: x.Title, Key: key}
+	switch x.Status {
+	case domain.XMissing:
+		l.Title = sub.Render("no such issue in " + x.Project)
+	case domain.XUnknown:
+		l.Title = sub.Render("not checked out here")
+		if x.Remote != "" {
+			l.Title = sub.Render("not checked out here · clone " + x.Remote)
+		}
+	}
+	return ui.LinkLine(m.th, l, selected, inner)
+}
+
+// followElsewhere opens an issue or a knowledge entry of a linked project:
+// the TUI starts over there, and backspace comes back.
+func (m *Model) followElsewhere(label, link, rest string) tea.Cmd {
+	if label != "knowledge" {
+		x := m.tree.XIssueOf(link + ":" + rest)
+		if x.Status != domain.XFound {
+			return m.flash(link + " is not checked out here, or has no such issue")
+		}
+		return m.switchProject(Switch{Root: x.Root, Issue: x.ID})
+	}
+	root := m.linkRoot(link)
+	if root == "" {
+		return m.flash(link + " is not checked out here")
+	}
+	return m.switchProject(Switch{Root: root, Entry: rest})
+}
+
+// linkRoot is the newest checkout of the linked project, or "".
+func (m *Model) linkRoot(name string) string {
+	l, ok := m.tree.Project.Link(name)
+	if !ok || m.opts.Projects == nil {
+		return ""
+	}
+	ps, err := m.opts.Projects()
+	if err != nil {
+		return ""
+	}
+	for _, p := range ps {
+		if p.ID == l.ID {
+			return p.Root
+		}
+	}
+	return ""
 }

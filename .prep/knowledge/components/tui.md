@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/tui/*.go
   - internal/cli/tui.go
-confirmed_commit: 17cd07955a8e3fde64d43e58a6882738195b6aa3
+confirmed_commit: 7487215880ef11a44a3a81cd7a7ddc3a1614abaf
 ---
 
 # TUI
