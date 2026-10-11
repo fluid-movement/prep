@@ -619,6 +619,7 @@ type primeBrief struct {
 	Bootstrap  string         `json:"bootstrap,omitempty"` // alert while the knowledge base is not bootstrapped
 	Plugin     string         `json:"plugin,omitempty"`    // alert when the harness plugin and the binary differ
 	Focus      []focusSummary `json:"focus"`               // the newest current issues from the activity stream
+	Projects   []string       `json:"projects"`            // other prep projects on this machine, newest first
 	Hint       string         `json:"hint"`
 }
 
@@ -697,6 +698,7 @@ func cmdPrime(a *app, args []string) error {
 	if *plugin != "" {
 		b.Plugin = pluginAlert(*plugin)
 	}
+	b.Projects = otherProjects(a.store.Root, t.Project.ID, *max)
 	if a.json {
 		a.emit(b)
 		return nil
@@ -739,8 +741,34 @@ func cmdPrime(a *app, args []string) error {
 	if b.Check.Errors > 0 {
 		a.printf("\nprep check reports %d errors; run prep check.\n", b.Check.Errors)
 	}
+	if len(b.Projects) > 0 {
+		a.printf("\nOther prep projects here: %s (prep projects lists them; --project <name> reads or files work there)\n", strings.Join(b.Projects, ", "))
+	}
 	a.printf("\n%s\n", b.Hint)
 	return nil
+}
+
+// otherProjects names the registered projects other than the one at root
+// (and its clones), newest first, at most max.
+func otherProjects(root, id string, max int) []string {
+	out := []string{}
+	ps, err := projects.List()
+	if err != nil {
+		return out
+	}
+	abs, _ := filepath.Abs(root)
+	seen := map[string]bool{}
+	for _, p := range ps {
+		if p.Root == abs || id != "" && p.ID == id || seen[p.Name] {
+			continue
+		}
+		seen[p.Name] = true
+		if len(out) == max {
+			break
+		}
+		out = append(out, p.Name)
+	}
+	return out
 }
 
 func cmdSkill(a *app, args []string) error {

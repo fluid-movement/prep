@@ -27,15 +27,30 @@ type writeResult struct {
 	Entry string       `json:"entry,omitempty"` // knowledge entry path
 	Files []string     `json:"files"`
 	Next  string       `json:"next,omitempty"` // the command to run next
+	// Project names the project written when --project chose it.
+	Project *projectRef `json:"project,omitempty"`
+}
+
+// projectRef names another project in output.
+type projectRef struct {
+	Name string `json:"name"`
+	ID   string `json:"id,omitempty"`
+	Root string `json:"root"`
 }
 
 func (a *app) reportWrite(r writeResult) {
 	if r.Files == nil {
 		r.Files = []string{}
 	}
+	if a.target != nil {
+		r.Project = &projectRef{Name: a.target.Name, ID: a.target.ID, Root: a.target.Root}
+	}
 	if a.json {
 		a.emit(r)
 		return
+	}
+	if r.Project != nil {
+		a.printf("in project %s (%s)\n", r.Project.Name, r.Project.Root)
 	}
 	switch {
 	case r.ID != "" && r.State != "" && r.Stale:

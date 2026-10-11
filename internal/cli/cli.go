@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"github.com/fluid-movement/prep/internal/gitx"
 	"github.com/fluid-movement/prep/internal/mdstore"
 	"github.com/fluid-movement/prep/internal/okf"
+	"github.com/fluid-movement/prep/internal/projects"
 )
 
 // Version is set at build time; go install builds fall back to the module
@@ -51,9 +53,18 @@ type app struct {
 	stdin     io.Reader
 	json      bool
 	root      string
-	actor     string
-	now       func() time.Time
-	entropy   io.Reader // random bits of new issue IDs
+	// project is --project (or PREP_PROJECT): the registered project the
+	// command runs against instead of the one at root. target is what it
+	// resolved to; home is the project the command was started in, when
+	// that is another one, whose activity stream also notes the command.
+	project     string
+	rootFlag    bool
+	projectFlag bool
+	target      *projects.Project
+	home        string
+	actor       string
+	now         func() time.Time
+	entropy     io.Reader // random bits of new issue IDs
 
 	store  *mdstore.Store
 	kstore *okf.Store
@@ -131,8 +142,12 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	a := &app{out: out, errw: stderr, stdin: stdin, now: clock, entropy: entropy}
 	a.actor = os.Getenv("PREP_ACTOR")
 	a.root = os.Getenv("PREP_ROOT")
+	a.project = os.Getenv("PREP_PROJECT")
 	rest, err := a.globalFlags(args)
 	if err != nil {
+		return a.fail(err)
+	}
+	if err := a.resolveProject(); err != nil {
 		return a.fail(err)
 	}
 	if len(rest) == 0 || rest[0] == "help" || rest[0] == "-h" || rest[0] == "--help" {
@@ -157,7 +172,36 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	return a.fail(usageErr("unknown command %q; run prep help", name))
 }
 
-// globalFlags strips --json, --root and --by from anywhere in args before
+// resolveProject points the command at the project --project names. Flags
+// beat environment variables: --root overrides PREP_PROJECT and --project
+// overrides PREP_ROOT; both flags together are a usage error.
+func (a *app) resolveProject() error {
+	switch {
+	case a.project == "":
+		return nil
+	case a.rootFlag && a.projectFlag:
+		return usageErr("--project and --root both choose the project; give one")
+	case a.rootFlag:
+		return nil
+	}
+	p, err := projects.Resolve(a.project)
+	if err != nil {
+		return err
+	}
+	start := a.root
+	if start == "" {
+		start = "."
+	}
+	if home, err := mdstore.Find(start); err == nil {
+		if abs, _ := filepath.Abs(home); abs != p.Root {
+			a.home = abs
+		}
+	}
+	a.root, a.target = p.Root, &p
+	return nil
+}
+
+// globalFlags strips --json, --root, --project and --by from anywhere in args before
 // a "--"; from "--" on, args pass through as written (so "--" lets a text
 // argument be "--json"), and the command's own flag parsing stops there.
 func (a *app) globalFlags(args []string) ([]string, error) {
@@ -178,7 +222,7 @@ func (a *app) globalFlags(args []string) ([]string, error) {
 				}
 				a.json = on
 			}
-		case "--root", "--by":
+		case "--root", "--by", "--project":
 			if !has {
 				if k+1 >= len(args) {
 					return nil, usageErr("%s needs a value", name)
@@ -186,9 +230,12 @@ func (a *app) globalFlags(args []string) ([]string, error) {
 				k++
 				val = args[k]
 			}
-			if name == "--root" {
-				a.root = val
-			} else {
+			switch name {
+			case "--root":
+				a.root, a.rootFlag = val, true
+			case "--project":
+				a.project, a.projectFlag = val, true
+			default:
 				a.actor = val
 			}
 		default:
@@ -199,7 +246,7 @@ func (a *app) globalFlags(args []string) ([]string, error) {
 }
 
 func (a *app) help() {
-	fmt.Fprintf(a.out, "prep %s — workflow engine and memory for coding agents\n\nUsage: prep <command> [args] [--json] [--root dir] [--by actor]\n\nRead commands:\n", Version)
+	fmt.Fprintf(a.out, "prep %s — workflow engine and memory for coding agents\n\nUsage: prep <command> [args] [--json] [--root dir | --project name] [--by actor]\n\nRead commands:\n", Version)
 	for _, c := range commands {
 		if !c.write {
 			fmt.Fprintf(a.out, "  %s\n", c.usage)
@@ -211,6 +258,7 @@ func (a *app) help() {
 			fmt.Fprintf(a.out, "  %s\n", c.usage)
 		}
 	}
+	fmt.Fprintln(a.out, "\n--project (or PREP_PROJECT) runs a command in another prep project on this machine: a name, ID, remote or path from prep projects.")
 	fmt.Fprintln(a.out, "\nIDs accept any unique suffix. --by (or PREP_ACTOR) names the actor: <producer>/<version> for agents, human:<id> for people.")
 }
 

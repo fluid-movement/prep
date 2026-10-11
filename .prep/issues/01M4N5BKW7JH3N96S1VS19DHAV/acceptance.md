@@ -1,0 +1,5 @@
+- [x] prep <any command> --project <name|id|remote|path> runs against that project; reads and writes work, writes stage there
+- [x] an ambiguous or unknown --project fails with the candidates or the registered names; --project with --root is a usage error
+- [x] write output names the target project (text and JSON) when --project chose it
+- [x] the target stream gets the event; the home stream gets it marked with the project and it does not move the home focus
+- [x] prep prime lists other registered projects; the skill teaches --project

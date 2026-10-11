@@ -50,11 +50,15 @@ type Event struct {
 	Session string    `json:"session,omitempty"` // the harness session, when one reports it
 	// Op is the prep command (guide, criterion, knowledge find, ...) or the
 	// harness tool (Bash, Edit, read, ...).
-	Op      string   `json:"op,omitempty"`
-	Issue   string   `json:"issue,omitempty"`
-	Verb    string   `json:"verb,omitempty"` // what happened, in plain words
-	Target  string   `json:"target,omitempty"`
-	Area    string   `json:"area,omitempty"`
+	Op     string `json:"op,omitempty"`
+	Issue  string `json:"issue,omitempty"`
+	Verb   string `json:"verb,omitempty"` // what happened, in plain words
+	Target string `json:"target,omitempty"`
+	Area   string `json:"area,omitempty"`
+	// Project names the other project a prep command ran in (--project),
+	// on the copy of its event in the stream of the project it was started
+	// from; such events never move focus.
+	Project string   `json:"project,omitempty"`
 	Chars   int      `json:"chars,omitempty"` // output read back, in characters
 	Failed  bool     `json:"failed,omitempty"`
 	Tokens  *Tokens  `json:"tokens,omitempty"`
@@ -77,8 +81,12 @@ type Context struct {
 }
 
 // MovesFocus reports whether the event sets its actor's current issue:
-// prep focus, and every prep command naming an issue except plain reads.
+// prep focus, and every prep command naming an issue except plain reads,
+// unless it ran in another project.
 func (e Event) MovesFocus() bool {
+	if e.Project != "" {
+		return false
+	}
 	switch e.Kind {
 	case KindFocus:
 		return true
@@ -125,7 +133,7 @@ func Path(prepDir string) string { return filepath.Join(prepDir, Dir, File) }
 
 // Append adds one event to the stream, creating .prep/local when needed.
 func Append(prepDir string, e Event) error {
-	for _, f := range []*string{&e.Actor, &e.Kind, &e.Session, &e.Op, &e.Issue, &e.Verb, &e.Target, &e.Area} {
+	for _, f := range []*string{&e.Actor, &e.Kind, &e.Session, &e.Op, &e.Issue, &e.Verb, &e.Target, &e.Area, &e.Project} {
 		*f = clip(*f)
 	}
 	line, err := json.Marshal(e)

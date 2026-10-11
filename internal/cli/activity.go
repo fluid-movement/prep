@@ -59,6 +59,15 @@ func (a *app) recordEvent(printed int) {
 		e.Chars = printed
 	}
 	_ = activity.Append(dir, e)
+	if a.home != "" && a.target != nil {
+		e.Project = a.target.Name
+		if e.Target == "" {
+			e.Target = a.target.Name
+		} else {
+			e.Target = a.target.Name + " › " + e.Target
+		}
+		_ = activity.Append(filepath.Join(a.home, mdstore.Dir), e)
+	}
 }
 
 // recordProject records the opened project in the machine's project
