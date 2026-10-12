@@ -9,6 +9,17 @@ tags:
   - testing
 ---
 
-Deterministic checks of project state through prep itself: the issue exists with the right parent, links, state and criteria; the knowledge entry exists; prep check is clean; nothing unexpected changed.
+## Requirement
+
+Deterministic checks of what the agent left behind, made by querying the workspace with prep itself (`--json`). A case lists them under `expect.outcome`. Kinds:
+
+- `issue`: an issue matching (title text, alias, kind, tag) exists or not, with expected state, parent, dependencies (including cross-project), priority, tags, criteria count or text, and body text.
+- `unchanged`: named issues or the whole project did not change except as listed.
+- `knowledge`: an entry exists (path, type, status) and its text contains or lacks given text.
+- `check`: `prep check` reports no errors (or only the listed codes).
+- `focus` and `claimed`: who holds an issue, for work-claim flows.
+- `repo`: the git repo has a commit or staged files matching a pattern, when the case has a repo.
+
+The runner takes a snapshot of the workspace after the fixture is built and before the agent starts; a `Diff` between snapshot and final state (issues created, edited, transitioned; knowledge entries; files) is available to assertions and to the judge.
 
 ## Open questions

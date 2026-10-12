@@ -1,0 +1,5 @@
+- [ ] prep eval run selects cases by area, name and tag and runs them across variants, models and N, then prints the report
+- [ ] prep eval list and prep eval doctor exist; doctor runs the isolation leak check and a harness smoke run
+- [ ] Cases exist for every area listed, each with tool-use and outcome assertions, validated by go test without running an agent
+- [ ] A smoke subset tagged smoke exists and just eval-smoke runs it
+- [ ] A first stored baseline run on the current variant exists and its failures are filed as issues

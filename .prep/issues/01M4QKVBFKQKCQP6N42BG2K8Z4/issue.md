@@ -8,6 +8,12 @@ tags:
   - testing
 ---
 
-A run must not see the real user's hooks, skills, memory or projects registry. The fixture gets its own HOME and Claude config, the prep binary under test is pinned, and nothing touches the network or the real repo.
+## Requirement
+
+A test run must see only what the test puts in front of the agent. The isolated environment builds, for each run, a private home for the harness: its own Claude Code configuration directory, state directory and home, holding only the variant's plugin (skills and hooks) and the fixture workspace, with the pinned `prep` binary first on PATH. None of the real user's hooks, skills, memory, plugins, settings or project registry is visible.
+
+Auth is the one thing passed through, from `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` in the caller's environment, since a fresh configuration directory has no login. Without either, the runner refuses to start and says how to provide one.
+
+A leak check proves the isolation: a probe session reports what it can see, and the check fails if anything outside the variant shows up. A Claude Code update that changes discovery is caught that way.
 
 ## Open questions

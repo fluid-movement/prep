@@ -1,0 +1,5 @@
+- [ ] A run builds the workspace and environment, runs claude headless from the primary project and returns the transcript, raw stream, workspace and status
+- [ ] The model is a parameter of the run and is recorded in the record along with the harness version
+- [ ] Timeout, turn limit and budget limit end the run with the reason recorded
+- [ ] A harness failure (missing binary, missing auth, crash) is an error of the run, not a failed assertion
+- [ ] The workspace is removed after a passing run and kept, with its path reported, after a failing or errored one (or with Keep)

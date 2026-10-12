@@ -9,6 +9,10 @@ tags:
   - testing
 ---
 
-Per-run and per-suite budget caps, a cheap smoke subset for every change, and the full matrix on demand or on a schedule.
+## Requirement
+
+Running the suite must be affordable and scheduled without surprises. Every matrix has a spending limit: `prep eval run` prints an estimate before starting (cells × N × the mean cost of earlier runs of the same cell, or a default), refuses to start above `--max-usd` unless confirmed, and stops cleanly when the running total reaches it, keeping finished runs. The `smoke` subset is cheap enough to run on every change to the skill or hooks; the full matrix and the multi-model runs run on demand or on a schedule.
+
+A scheduled or CI run uses a documented path: a `just` recipe, a GitHub Actions workflow that runs the smoke subset when `plugins/claude-code/**` or `internal/cli/skill.md` changes and the full matrix weekly, with the auth secret, results uploaded as an artifact, and a failure when the smoke subset's pass rate falls below its stored baseline by more than the noise.
 
 ## Open questions

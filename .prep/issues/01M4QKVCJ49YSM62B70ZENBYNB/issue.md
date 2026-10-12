@@ -8,6 +8,10 @@ tags:
   - testing
 ---
 
-Agents are non-deterministic, so each case runs N times and reports a pass rate with tool-call, error and token counts. Flaky cases are flagged.
+## Requirement
+
+Agents are not deterministic, so a case is never run once. The matrix runner executes each cell (case × variant × model) N times, with bounded parallelism, and reduces the runs to a result per cell: the pass rate over runs with a confidence interval, which assertions failed and how often, and cost figures (tool calls, errors, tokens, dollars, duration) with their spread. A cell whose runs disagree is marked flaky. A run that errored in the harness is excluded from the pass rate and counted separately, so an outage cannot look like a regression.
+
+N, the parallelism and the stop rule are options: a fixed N, or stop early once the cell is clearly always passing or always failing. Every run's record is kept for the results store.
 
 ## Open questions

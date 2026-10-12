@@ -1,0 +1,5 @@
+- [ ] Kinds issue, unchanged, knowledge, check, claimed and repo are implemented
+- [ ] Assertions query through prep --json, never by reading .prep files
+- [ ] Snapshot taken after the build and before the agent; Diff reports created, changed and removed issues, entries and files
+- [ ] Issues the agent created are matched by title text; fixture issues by alias; ambiguity is an error
+- [ ] Failures say what was expected and what was found

@@ -10,6 +10,10 @@ tags:
   - testing
 ---
 
-The deterministic test runner. Knows the prompt, the fixture and its linked projects; sets up the isolated environment, runs the agent with a timeout and budget cap, and hands the transcript and project to the assertions.
+## Requirement
+
+The session runner is the deterministic test runner. Given a case, a variant and a model, it builds the fixture workspace, sets up the isolated environment, runs Claude Code headless on the case's prompt from the primary project, enforces the case's limits, and returns a run record: the normalized transcript, the raw stream, the workspace left behind for state assertions, the exit status and timing. It does not judge anything.
+
+A run ends cleanly on completion, and is cut off, with the reason recorded, on timeout, turn limit or budget limit. A harness failure (binary missing, auth missing, crash) is reported as an error of the run, never as a failed assertion. The model is a parameter of the run, so the same case runs unchanged on any model. Running stays on this machine and uses only the isolated environment.
 
 ## Open questions

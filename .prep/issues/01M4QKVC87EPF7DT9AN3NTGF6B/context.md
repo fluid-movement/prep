@@ -1,0 +1,6 @@
+New package `internal/eval/assert/outcome`, same registry as [tool-use assertions](01M4QKVC39NZBH95845QPC1D5Q); input is the run's `Workspace` ([Test fixtures](01M4QKVB5EW2N6Y9BDVCFJDC7Q), [linked projects](01M4QKVBAARQ1BSMG1X570F9HK)).
+
+- **Querying**: run the pinned `prep` binary in the workspace with `--json` (`list`, `show`, `knowledge list|show`, `check`), never read `.prep` files, so assertions use the same view the agent has and survive format changes ([CLI](/components/cli.md)). Assertion calls use `--by eval` and `PREP_TEST_NOW`; reads by a named actor are recorded in the activity stream, which is acceptable because the run is over.
+- **Snapshot and diff**: `Snapshot(ws)` captures a map of issue ID to its JSON from `prep list --json` plus `prep show` for each, knowledge entry list with hashes, and (when a repo) `git status --porcelain` and HEAD. `Diff(before, after)` returns created/changed/removed issues with changed fields, entries, files.
+- **Aliases**: issue references may be `{{alias}}` (fixture IDs) or a match on title text for issues the agent created; a created issue matches by title substring, case-insensitive, and ties are an error.
+- **Tests**: run against fixtures mutated by direct `prep` calls in the test (create an issue, claim another) and check each kind passes and fails with a clear reason.

@@ -1,0 +1,8 @@
+- [ ] A spec in YAML builds a project with issues in every state (open, defined, ready, claimed, done, dropped), parents, dependencies, tags, priority, criteria and context
+- [ ] Knowledge entries, config and views can be declared in the spec
+- [ ] Aliases expand as {{alias}} in strings and an unknown alias is an error
+- [ ] Building the same spec twice gives byte-identical trees (IDs, timestamps, records)
+- [ ] PREP_TEST_NOW and PREP_TEST_SEED are honored and do nothing when unset; documented as test-only
+- [ ] Setup calls carry --by fixture
+- [ ] The optional repo section creates a git repo with stub files and one commit; without it there is no git repo
+- [ ] prep check reports no errors on every built fixture

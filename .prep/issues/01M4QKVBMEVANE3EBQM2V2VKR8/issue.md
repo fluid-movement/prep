@@ -6,6 +6,10 @@ tags:
   - testing
 ---
 
-Capture a Claude Code session (stream-json or the transcript file) and normalize it: tool calls in order, prep commands parsed into command and args, errors, final message, token and call counts. Assertions are written against this format so other harnesses only need an adapter. Consider reusing the activity stream.
+## Requirement
+
+A Claude Code session is captured and turned into a harness-neutral transcript that every assertion and the judge read. The capture is the `stream-json` output of a headless run; the normalized form has: session metadata (model, harness version, plugins, skills and tools visible), the tool calls in order (name, input, result, error flag), prep commands parsed out of Bash calls into command, arguments and target project, the assistant's text, the final result, and counts (tool calls, errors, tokens in and out, cost, duration).
+
+Only the adapter knows Claude's format; the normalized type does not. The raw stream is kept beside the normalized transcript so a run can be re-analysed without running the agent again.
 
 ## Open questions

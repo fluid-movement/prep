@@ -1,0 +1,4 @@
+- [ ] A case file names prompt, fixture or workspace, primary project, optional models and variants, expectations and limits
+- [ ] Cases load from eval/cases/<area>/ and can be selected by area, name glob and tag
+- [ ] Fixtures can be shared by reference from eval/fixtures/
+- [ ] Loading rejects unknown keys, unknown aliases, missing fixtures and unknown assertion kinds with file and line

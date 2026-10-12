@@ -1,0 +1,7 @@
+New package `internal/eval/mutate`, building on [variants](01M4QKVCW6CMS3Z21PVCK9RA01), [results and compare](01M4QKVCQ4B5JC3ZF4RPME94AA) and the [initial suite](01M4QKVD1SBR79P1QYECT9KYQ9). The text mutated is `plugins/claude-code/skills/prep/SKILL.md` (kept equal to `internal/cli/skill.md`) and `hooks/hooks.json`; a promoted mutant goes through `just sync-skill`, never straight into either.
+
+- **Operators**: `type Operator interface { Name() string; Apply(Plugin) []Mutant }`; skill operators work on the rule list (the skill numbers its rules): `DropRule(n)`, `ShortenRule(n)` (an agent summarizes, flagged non-mechanical), `MoveRule(n, first|last)`, `Replace(table)`; hook operators: `DropHook(event)`, `DropBriefing`.
+- **Agent proposals**: `Propose(base, n)` calls `claude -p` with the skill, the failures from the latest report and a request for hypotheses plus full replacement text; output validated as a variant; limited to N and a budget.
+- **Run**: `Mutate(Options{Base, Operators, Propose, Cases, Models, N})` creates the variants, calls the matrix once with base plus mutants, and returns a ranking: per mutant, delta in pass rate by area, significant or not, cost delta.
+- **Guard**: mutants must stay valid plugins (a `claude plugin validate` run on each, skipped when unavailable).
+- **Tests**: operators on a sample skill produce distinct valid variants; proposal parsing with a fake `claude`; ranking from a fake matrix.

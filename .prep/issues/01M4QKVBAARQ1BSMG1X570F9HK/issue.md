@@ -8,6 +8,10 @@ tags:
   - testing
 ---
 
-Extends the builder to spin up N projects that link to each other (prep link, cross-project dependencies and knowledge links), so a case can name the other projects it needs.
+## Requirement
+
+A case can name several fixture projects that know each other. The fixture builder builds a workspace: N named projects in one temp directory, each from its own spec, registered in a workspace-local project registry and linked as the specs say, so cross-project dependencies, knowledge links, `--project` and `prep projects` work the way they do on a real machine.
+
+A workspace spec lists projects by name (`projects: {api: {...}, web: {...}}`). A project spec may add `links: [api]`; an issue may `depends_on: api/{{alias}}`, and a body may use `[text](api:/path.md)`. Aliases are workspace-wide when written `project/alias` and project-local otherwise. One project is the primary: the directory the agent starts in. Projects are built in link order so links and cross-project dependencies resolve. A workspace is as deterministic as a single fixture.
 
 ## Open questions

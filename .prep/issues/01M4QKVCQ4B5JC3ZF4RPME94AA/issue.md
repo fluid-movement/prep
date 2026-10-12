@@ -8,6 +8,10 @@ tags:
   - testing
 ---
 
-Keep results per run (case, variant, model, N) and compare two runs or variants side by side, with the difference judged against the noise.
+## Requirement
+
+Every matrix run is stored and can be reported and compared. The store keeps, per run id, the matrix definition (cases, variants, models, N, seed, prep and harness versions, git revision), every run's record (transcript, raw stream, assertion results, cost) and the cell results. It is local to the machine, in `eval/results/<run-id>/`, and ignored by git. `prep eval report <run-id>` prints a table per case with a column per variant and model: pass rate with interval, cost, flaky marks, and the failing assertions, with `--json` for tools.
+
+`prep eval compare <run-a> <run-b>` lines two runs up cell by cell and says, per cell, whether the difference is larger than the noise (non-overlapping intervals) or not, and what changed in cost. Cells present on one side only are listed.
 
 ## Open questions

@@ -1,0 +1,6 @@
+Extends `internal/eval/fixture` ([Test fixtures](01M4QKVB5EW2N6Y9BDVCFJDC7Q)). Behavior to reproduce is in [Cross-project work](/features/cross-project.md) and [Project registry](/components/projects.md).
+
+- **Workspace**: `BuildWorkspace(ws WorkspaceSpec, dir string, opts) (*Workspace, error)`; project `name` is built in `dir/<name>`, the directory name being the project's default name. `Workspace.Primary` is the root the runner starts in; `Workspace.Projects[name]` is each `*Project`.
+- **Registry isolation**: every call sets `XDG_STATE_HOME=<dir>/.state`, so `projects.json` is the workspace's; each project is registered by `prep projects add` after init.
+- **Links and dependencies**: build order follows the links between projects (a cycle is an error). `prep link add <name>` for each declared link, then issues with `--depends-on <name>:<ID>` from the IDs already known; knowledge links are written into bodies after alias expansion. `Expand` accepts `project/alias` as well as a plain `alias` within the project.
+- **Tests**: a two-project workspace where `web` depends on an `api` issue shows as blocked in `prep list`, `prep show` lists `cross_deps`, `prep projects` lists both, `prep check` is clean in both, and the tree is byte-identical across two builds.

@@ -1,0 +1,5 @@
+- [ ] prep eval run prints a cost estimate first and refuses to start above --max-usd without confirmation
+- [ ] A running total stops the matrix cleanly at the limit and keeps finished runs
+- [ ] prep eval check compares a run to a committed baseline and exits nonzero on a regression beyond the noise
+- [ ] just eval-smoke and just eval-full exist
+- [ ] A GitHub Actions workflow runs the smoke subset on plugin and skill changes and the full matrix weekly, uploading results

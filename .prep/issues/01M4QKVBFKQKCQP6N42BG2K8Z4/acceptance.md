@@ -1,0 +1,5 @@
+- [ ] Each run gets its own HOME, Claude config dir, state dir and PATH with the pinned prep binary first
+- [ ] The harness environment is built from scratch: only auth, TERM, LANG and TMPDIR come from the caller
+- [ ] Without ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN the runner refuses to start and says how to supply one
+- [ ] The variant's plugin loads through --plugin-dir; the real user's Claude installation is never modified
+- [ ] A leak check reports anything visible to the session that does not come from the variant

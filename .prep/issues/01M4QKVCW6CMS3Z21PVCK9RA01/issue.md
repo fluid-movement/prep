@@ -9,6 +9,10 @@ tags:
   - testing
 ---
 
-A variant is a directory of hooks, skills and prompt text laid over the fixture's isolated Claude config, so the same case runs under each. The matrix is case x variant x model x N.
+## Requirement
+
+A variant is the harness configuration under test: the plugin (skill text, hooks, hook modules) the agent runs with. Variants live in `eval/variants/<name>/` as a small `variant.yaml` plus any files it replaces. `current` is the plugin as shipped (`plugins/claude-code`), `none` is no prep integration at all (the baseline that shows what the integration adds), and others are derived from a base by replacing, removing or adding files, and optionally appending text to the system prompt.
+
+The runner materializes a variant into a plugin directory inside the isolated environment and loads it with `--plugin-dir`. Variants are recorded in results by name and a content hash, so a result always says exactly what ran.
 
 ## Open questions

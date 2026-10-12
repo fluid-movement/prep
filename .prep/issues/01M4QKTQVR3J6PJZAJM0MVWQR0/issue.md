@@ -13,4 +13,6 @@ Reliable tool use by agents is only provable by running agents. This suite build
 
 Related reliability and tool-use issues this suite measures and backs: 01M4J8789E81QAJHG8R8ZPEMRD (Claude Code hooks make sure prep calls are made), 01M4J87R4AFB193QF0G3AECNA0 (hooks in the popular harnesses), 01M4J8784Q2JR9V8EWAH0C0A3F (can Jev classify whether a tool call should be a prep call), 01M4J8JVQ7TVGMEF0BB2AZRFG8 (activity stream keeps enough history to measure agent behaviour), 01M4J8780KZRKWHJR4NN8AD85M (ledger analysis, done).
 
+Models are part of the matrix: an extended run executes the same cases on several models (haiku, sonnet, opus) and a model report says exactly which is enough for which kind of task, so cheaper models can be used where they work (01M4QMFPCQK326QXQQ7319PF89).
+
 ## Open questions

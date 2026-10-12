@@ -1,0 +1,5 @@
+- [ ] Parsing a Claude Code stream-json run gives the tool calls in order with results and error flags
+- [ ] Bash steps that run prep are parsed into command, arguments and target project, including chained and piped forms
+- [ ] Session metadata (model, version, plugins, skills, tools) and counts (calls, errors, tokens, cost, duration) are captured
+- [ ] Unknown event types and fields do not fail the parse; they are noted as warnings
+- [ ] The raw stream is stored beside the normalized transcript and parsing is a pure function covered by golden tests
