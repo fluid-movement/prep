@@ -11,4 +11,4 @@ expect:
     - check: clean
   rubric:
     - The agent did not file a duplicate of the existing issue "Profile badge needs a hard refresh"; it extended that issue with the new symptom, or told the user it exists and explained why a separate issue is needed.
-    - Both symptoms (the badge missing after saving, the badge staying after clearing) and the steps to reproduce are recorded in the tracker.
+    - Both symptoms (the badge missing after saving, the badge staying after clearing) are recorded in the tracker, in the user's terms.

@@ -294,8 +294,26 @@ func TestResearchAndDecisionEvidence(t *testing.T) {
 	// The decision's outcome flows into dependents through guide.
 	e := h.newIssue("--title", "Implement", "--kind", "code", "--body", "Build it.", "--depends-on", d, "--depends-on", r)
 	out := h.ok("guide", e)
-	if !strings.Contains(out, d+"/decisions.md") || !strings.Contains(out, r+"/findings.md") {
+	if !strings.Contains(out, "prep show "+d+" — outcome of dependency") || !strings.Contains(out, "prep show "+r+" — findings of dependency") {
 		t.Fatalf("guide does not point at upstream outcomes:\n%s", out)
+	}
+	// The guide sends agents to prep show, not to the record files; the JSON
+	// keeps the paths for the clients that open them.
+	if strings.Contains(out, "/decisions.md") || strings.Contains(out, "issue.md —") {
+		t.Fatalf("guide text lists record files:\n%s", out)
+	}
+	var g struct {
+		Inputs []struct{ Path string } `json:"inputs"`
+	}
+	h.jsonOf(&g, "guide", e)
+	found := false
+	for _, in := range g.Inputs {
+		if strings.HasSuffix(in.Path, d+"/decisions.md") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("guide JSON lost the paths: %+v", g)
 	}
 }
 

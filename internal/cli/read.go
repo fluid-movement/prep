@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -594,8 +595,8 @@ func cmdGuide(a *app, args []string) error {
 	}
 	if len(g.Inputs) > 0 {
 		a.printf("\nRead:\n")
-		for _, p := range g.Inputs {
-			a.printf("  %s — %s\n", p.Path, p.What)
+		for _, line := range readLines(g.Inputs) {
+			a.printf("  %s\n", line)
 		}
 	}
 	if len(g.Knowledge) > 0 {
@@ -958,4 +959,34 @@ func pluginAlert(dir string) string {
 		return fmt.Sprintf("The prep plugin (%s) is older than the prep binary (%s): run prep setup --refresh.", pv, bv)
 	}
 	return fmt.Sprintf("The prep binary (%s) is older than the prep plugin (%s): run prep update.", bv, pv)
+}
+
+var issueFile = regexp.MustCompile(`(?:^|/)issues/([0-9A-Z]{26})/[^/]+$`)
+
+// readLines renders the guide's inputs for a terminal. Records of an issue
+// are read with `prep show <id>`, not by opening their files: the skill tells
+// agents never to read .prep directly, and a list of file paths here teaches
+// the opposite (seen in real sessions: agents cat the files the guide named).
+// Other pointers stay as they are.
+func readLines(inputs []domain.Pointer) []string {
+	var lines []string
+	at := map[string]int{} // issue ID -> index in lines
+	whats := map[string][]string{}
+	for _, p := range inputs {
+		m := issueFile.FindStringSubmatch(p.Path)
+		if m == nil {
+			lines = append(lines, fmt.Sprintf("%s — %s", p.Path, p.What))
+			continue
+		}
+		id := m[1]
+		if _, ok := at[id]; !ok {
+			at[id] = len(lines)
+			lines = append(lines, "")
+		}
+		whats[id] = append(whats[id], p.What)
+	}
+	for id, i := range at {
+		lines[i] = fmt.Sprintf("prep show %s — %s", id, strings.Join(whats[id], "; "))
+	}
+	return lines
 }

@@ -15,4 +15,4 @@ expect:
     - repo: {untouched: ['src/**']}
     - check: clean
   rubric:
-    - The requirement keeps every detail the user gave (placement, component, page size, page in the url) and says why pagination is needed.
+    - The requirement keeps every detail the user gave (placement, component, page size, page in the url) and invents no requirements the user did not give.

@@ -169,6 +169,10 @@ func TestNoPrepFiles(t *testing.T) {
 		{[]string{"Read: /w/.prepare/x"}, true},
 		{[]string{"Bash: prep edit 01A --body 'see .prep/ docs'"}, true},
 		{[]string{"Bash: echo hi | tee x.prep"}, true},
+		{[]string{"Bash: grep -rniE headline . -l --exclude-dir=.git --exclude-dir=.prep | head"}, true},
+		{[]string{"Bash: rg headline --glob '!.prep'"}, true},
+		{[]string{"Bash: find . -path ./.prep -prune -o -type f -print"}, true},
+		{[]string{"Bash: grep -r headline --exclude-dir=.prep . .prep/knowledge"}, false},
 	} {
 		r := check(t, session(c.steps...), "no_prep_files: true")
 		if r.Pass != c.pass {

@@ -6,7 +6,7 @@ generate:
 issues:
   - alias: needle
     title: Rename the export button label
-    state: ready
+    state: done
     tags: [quick]
     body: The export button label says "Dump"; it should say "Export".
     context: The label is in the export component.

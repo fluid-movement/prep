@@ -391,13 +391,17 @@ func decodeNoPrepFiles(n *yaml.Node) (assert.Assertion, error) { return noPrepFi
 
 var prepDir = regexp.MustCompile(`(^|[/\s'"=])\.prep($|[/\s'"])`)
 
+// prepExcluded matches the ways a search says to leave .prep out, which is the
+// opposite of reading it.
+var prepExcluded = regexp.MustCompile(`--(?:exclude(?:-dir)?|ignore|glob)[= ]+['"]?!?\S*\.prep\S*|!\s*-path\s+\S*\.prep\S*|-not\s+-path\s+\S*\.prep\S*|-path\s+\S*\.prep\S*\s+-prune`)
+
 func (noPrepFiles) Kind() string     { return "no_prep_files" }
 func (noPrepFiles) Describe() string { return "never touched .prep files directly" }
 func (a noPrepFiles) Check(in *assert.Input) assert.Result {
 	for _, st := range in.Transcript.Steps {
 		switch {
 		case st.Tool == "Bash":
-			if len(st.Commands) == 0 && prepDir.MatchString(st.Shell) {
+			if len(st.Commands) == 0 && prepDir.MatchString(prepExcluded.ReplaceAllString(st.Shell, "")) {
 				return assert.Fail(a, fmt.Sprintf("step %d reached into .prep from the shell: %s", st.Index, clip(st.Shell)), st.Index)
 			}
 		case st.Path != "" && prepDir.MatchString(st.Path+"/"):

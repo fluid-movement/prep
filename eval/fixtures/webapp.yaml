@@ -5,7 +5,7 @@
 # issues, a knowledge gap).
 name: webapp
 repo:
-  executable: [test.sh]
+  executable: [test.sh, integration.sh]
   files:
     README.md: |
       # Players
@@ -20,6 +20,11 @@ repo:
       # The project's test suite: totals must round to the nearest cent.
       if grep -q "Math.round" src/lib/totals.ts; then echo "ok: totals"; exit 0; fi
       echo "FAIL: totals are rounded down, expected nearest cent"; exit 1
+    integration.sh: |
+      #!/bin/sh
+      # Integration check against the staging api; needs its address.
+      if [ -z "$STAGING_API_URL" ]; then echo "FAIL: STAGING_API_URL is not set, cannot reach the staging api"; exit 1; fi
+      echo "ok: staging reachable"
     db/schema.sql: |
       CREATE TABLE players (
         id TEXT PRIMARY KEY,
@@ -81,6 +86,13 @@ issues:
     body: Order totals are rounded down instead of to the nearest cent.
     context: The sum is in `src/lib/totals.ts`; `./test.sh` is the project's test.
     criteria: ["./test.sh passes"]
+  - alias: staging
+    title: Sync against the staging api
+    parent: golive
+    state: in-progress
+    body: Run the player sync against the staging api instead of the mock.
+    context: The check is `./integration.sh`; it needs the staging address.
+    criteria: ["./integration.sh passes"]
   - alias: headline
     title: Profile headline gets cut off
     parent: golive
