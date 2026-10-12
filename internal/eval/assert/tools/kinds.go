@@ -18,6 +18,7 @@ func init() {
 	assert.Register(assert.Tools, "no_errors", decodeNoErrors)
 	assert.Register(assert.Tools, "args", decodeArgs)
 	assert.Register(assert.Tools, "final_mentions", decodeFinal)
+	assert.Register(assert.Tools, "no_prep_files", decodeNoPrepFiles)
 }
 
 // ---- ran
@@ -375,4 +376,32 @@ func (f *finalMentions) Check(in *assert.Input) assert.Result {
 		return assert.Fail(f, fmt.Sprintf("expected the final message to mention %q; it said %q", f.text, clip(msg)), -1)
 	}
 	return assert.Pass(f, "mentioned", -1)
+}
+
+// ---- no_prep_files
+
+// noPrepFiles fails when the agent reached into .prep with anything but
+// prep: a file tool on a path under .prep, or a shell command that is not a
+// prep command and names .prep. prep guides agents to use its commands, so
+// this is the rule the skill and hooks exist to protect.
+type noPrepFiles struct{}
+
+func decodeNoPrepFiles(n *yaml.Node) (assert.Assertion, error) { return noPrepFiles{}, nil }
+
+var prepDir = regexp.MustCompile(`(^|[/\s'"=])\.prep($|[/\s'"])`)
+
+func (noPrepFiles) Kind() string     { return "no_prep_files" }
+func (noPrepFiles) Describe() string { return "never touched .prep files directly" }
+func (a noPrepFiles) Check(in *assert.Input) assert.Result {
+	for _, st := range in.Transcript.Steps {
+		switch {
+		case st.Tool == "Bash":
+			if len(st.Commands) == 0 && prepDir.MatchString(st.Shell) {
+				return assert.Fail(a, fmt.Sprintf("step %d reached into .prep from the shell: %s", st.Index, clip(st.Shell)), st.Index)
+			}
+		case st.Path != "" && prepDir.MatchString(st.Path+"/"):
+			return assert.Fail(a, fmt.Sprintf("step %d used %s on %s", st.Index, st.Tool, st.Path), st.Index)
+		}
+	}
+	return assert.Pass(a, "no direct access", -1)
 }

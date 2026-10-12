@@ -1,0 +1,13 @@
+name: knowledge-write-new-entry
+description: New knowledge goes in as an entry written through prep.
+prompt: |
+  Document how the cart totals cache works as a new knowledge entry at /components/cart-cache.md:
+  totals are cached per cart for 10 minutes and invalidated on any item change.
+fixture: shop
+expect:
+  tools:
+    - ran: {command: knowledge, args: new}
+    - no_prep_files: true
+  outcome:
+    - knowledge: {path: /components/cart-cache.md, type: component, contains: ['10 minutes'], created: true}
+    - check: clean

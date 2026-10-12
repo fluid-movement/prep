@@ -1,6 +1,7 @@
 package env
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -130,5 +131,43 @@ func TestPluginArgs(t *testing.T) {
 	}
 	if PluginArgs("") != nil {
 		t.Error("no plugin should give no arguments")
+	}
+}
+
+func TestProbeAndExpectedFromPlugin(t *testing.T) {
+	plugin := t.TempDir()
+	os.MkdirAll(filepath.Join(plugin, ".claude-plugin"), 0o755)
+	os.WriteFile(filepath.Join(plugin, ".claude-plugin", "plugin.json"), []byte(`{"name":"prep","version":"1"}`), 0o644)
+	os.MkdirAll(filepath.Join(plugin, "skills", "prep"), 0o755)
+	want := ExpectedFromPlugin(plugin)
+	if len(want.Plugins) != 1 || want.Plugins[0] != "prep" || len(want.Skills) != 1 || want.Skills[0] != "prep" {
+		t.Fatalf("expected: %+v", want)
+	}
+	if e := ExpectedFromPlugin(""); len(e.Plugins)+len(e.Skills) != 0 {
+		t.Errorf("no plugin: %+v", e)
+	}
+	claude := fakeClaude(t, `cat >/dev/null
+printf '{"type":"system","subtype":"init","cwd":"%s","session_id":"s","model":"m","skills":["prep","stray-skill"],"plugins":[{"name":"prep"},{"name":"intruder"}],"memory_paths":{"auto":"/real/home/.claude/memory"}}\n' "$PWD"
+`)
+	e, err := New(Config{Claude: claude, Auth: Auth{APIKey: "k"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Cleanup()
+	meta, err := e.Probe(context.Background(), "haiku", plugin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaks := strings.Join(e.Leaks(meta, want), "|")
+	for _, w := range []string{"plugin intruder", "skill stray-skill", "memory path /real/home"} {
+		if !strings.Contains(leaks, w) {
+			t.Errorf("leak %q not found in %q", w, leaks)
+		}
+	}
+	bad := fakeClaude(t, "echo 'not logged in' >&2; exit 1\n")
+	e2, _ := New(Config{Claude: bad, Auth: Auth{APIKey: "k"}})
+	defer e2.Cleanup()
+	if _, err := e2.Probe(context.Background(), "haiku", ""); err == nil || !strings.Contains(err.Error(), "not logged in") {
+		t.Errorf("failing harness: %v", err)
 	}
 }

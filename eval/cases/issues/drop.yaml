@@ -1,0 +1,11 @@
+name: issues-drop-idea
+description: A dead idea is dropped with a reason.
+prompt: The wishlist idea is dead. Drop it with the reason "out of scope for launch".
+fixture: shop
+expect:
+  tools:
+    - ran: {command: drop, args: '--reason'}
+    - no_prep_files: true
+  outcome:
+    - issue: {ref: '{{wish}}', state: dropped}
+    - unchanged: {issues: ['{{pay}}', '{{tax}}']}

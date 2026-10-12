@@ -21,11 +21,11 @@ type evalCommand struct {
 var evalCommands []evalCommand
 
 func init() {
-	evalCommands = []evalCommand{
-		{"report", evalReport},
-		{"compare", evalCompare},
-		{"prune", evalPrune},
-	}
+	evalCommands = append(evalCommands,
+		evalCommand{"report", evalReport},
+		evalCommand{"compare", evalCompare},
+		evalCommand{"prune", evalPrune},
+	)
 }
 
 // cmdEval dispatches prep eval <subcommand>. It needs no prep project: it

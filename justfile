@@ -52,6 +52,14 @@ check:
 # Everything CI runs
 ci: lint test check
 
+# Agent behavior tests, the cheap smoke subset (needs CLAUDE_CODE_OAUTH_TOKEN from `claude setup-token`, or ANTHROPIC_API_KEY)
+eval-smoke *args: build
+    ./prep eval run --smoke --models haiku --n 3 {{args}}
+
+# Agent behavior tests, every case on the default model; add --models haiku,sonnet,opus for a model comparison
+eval-full *args: build
+    ./prep eval run --models sonnet --n 5 {{args}}
+
 # Copy the embedded skill to the static copies: cloud sessions and the Claude Code plugin
 sync-skill:
     cp internal/cli/skill.md .claude/skills/prep/SKILL.md

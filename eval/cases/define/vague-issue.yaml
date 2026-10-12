@@ -1,0 +1,17 @@
+name: define-vague-issue
+description: A vague open issue gets a real requirement and is defined, after the step contract is read.
+prompt: |
+  The "Shipping options" issue is too vague. Write the requirement properly (what and why) and define it.
+  Assume customers can pick standard or express shipping at checkout.
+fixture: shop
+expect:
+  tools:
+    - before: {first: guide, then: edit}
+    - ran: {command: edit, args: '--body'}
+    - ran: define
+    - no_prep_files: true
+  outcome:
+    - issue: {ref: '{{ship}}', state: defined, requirement: express}
+    - check: clean
+  rubric:
+    - The requirement explains why customers need to choose a shipping speed, not only what to build.

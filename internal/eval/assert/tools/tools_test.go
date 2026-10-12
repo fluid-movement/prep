@@ -89,6 +89,7 @@ func TestKinds(t *testing.T) {
 		{"args: {command: edit, matches: '--parent \\w+'}", true, ""},
 		{"args: {command: edit, matches: '--tag'}", false, "the last with"},
 		{"args: {command: complete, matches: 'x'}", false, "never ran"},
+		{"no_prep_files: true", false, "step 2"},
 		{"final_mentions: cart page", true, ""},
 		{"final_mentions: {regex: 'defin(ed|ing)'}", true, ""},
 		{"final_mentions: 'finished'", false, "it said"},
@@ -146,6 +147,28 @@ func TestGlob(t *testing.T) {
 	} {
 		if re.MatchString(p) != want {
 			t.Errorf("%q: %v", p, !want)
+		}
+	}
+}
+
+func TestNoPrepFiles(t *testing.T) {
+	for _, c := range []struct {
+		steps []string
+		pass  bool
+	}{
+		{[]string{"Bash: prep show 01A", "Read: /w/src/main.go", "Bash: ls /w"}, true},
+		{[]string{"Bash: cat /w/.prep/issues/a/issue.md"}, false},
+		{[]string{"Bash: ls .prep"}, false},
+		{[]string{"Bash: grep -r todo .prep/"}, false},
+		{[]string{"Edit: /w/.prep/issues/a/issue.md"}, false},
+		{[]string{"Grep: /w/.prep"}, false},
+		{[]string{"Read: /w/.prepare/x"}, true},
+		{[]string{"Bash: prep edit 01A --body 'see .prep/ docs'"}, true},
+		{[]string{"Bash: echo hi | tee x.prep"}, true},
+	} {
+		r := check(t, session(c.steps...), "no_prep_files: true")
+		if r.Pass != c.pass {
+			t.Errorf("%v: pass=%v (%s)", c.steps, r.Pass, r.Reason)
 		}
 	}
 }

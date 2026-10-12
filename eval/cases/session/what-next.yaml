@@ -1,0 +1,14 @@
+name: session-what-next
+description: Asked what to work on, the agent asks prep, not the files.
+tags: [smoke]
+prompt: What should I work on next in this project?
+fixture: shop
+expect:
+  tools:
+    - ran: next
+    - no_prep_files: true
+    - max_calls: 8
+  outcome:
+    - unchanged: {all: true, knowledge: true}
+  rubric:
+    - The answer recommends the Payment integration issue and says why it is the one to pick.

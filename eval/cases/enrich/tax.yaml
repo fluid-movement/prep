@@ -1,0 +1,18 @@
+name: enrich-tax-rules
+description: A defined code issue is enriched from the code and signed off.
+prompt: Enrich the Tax rules issue so it is ready to implement. Read the code under src to ground the context.
+fixture: shop
+limits: {max_turns: 30}
+expect:
+  tools:
+    - before: {first: guide, then: context}
+    - ran: context
+    - ran: criterion
+    - ran: ready
+    - no_prep_files: true
+  outcome:
+    - issue: {ref: '{{tax}}', state: ready, criteria: {min: 1}}
+    - check: clean
+  rubric:
+    - The context names the code the work touches and links or names relevant knowledge.
+    - The acceptance criteria are checkable statements, not vague wishes.

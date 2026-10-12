@@ -1,0 +1,13 @@
+name: implement-claim-and-log
+description: Starting work means claim, then a work log line.
+tags: [smoke]
+prompt: Start work on Payment integration, and log that you have begun with the provider client.
+fixture: shop
+expect:
+  tools:
+    - before: {first: guide, then: claim}
+    - before: {first: claim, then: log}
+    - ran: log
+    - no_prep_files: true
+  outcome:
+    - claimed: '{{pay}}'

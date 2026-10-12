@@ -1,0 +1,80 @@
+# A small shop project: an epic with children in every state, a claimed
+# issue, a research issue, a decision, knowledge entries with facts to ask
+# about, and a stub codebase.
+name: shop
+repo:
+  files:
+    README.md: "# Shop\n\nA small shop backend.\n"
+    src/cart.go: "package shop\n\n// CartTotal sums the line items of a cart.\nfunc CartTotal(items []int) int {\n\tt := 0\n\tfor _, i := range items {\n\t\tt += i\n\t}\n\treturn t\n}\n"
+    src/pay.go: "package shop\n\n// Charge sends a charge to the payment provider.\nfunc Charge(cents int) error { return nil }\n"
+issues:
+  - alias: epic
+    title: Checkout epic
+    kind: manual
+    body: Everything needed for customers to check out.
+  - alias: cart
+    title: Cart page
+    parent: epic
+    state: done
+  - alias: pay
+    title: Payment integration
+    parent: epic
+    state: ready
+    depends_on: [cart]
+    tags: [payments]
+    priority: high
+    body: Take card payments through the provider.
+    context: The provider client goes in `src/pay.go`; see [Payments](/components/payments.md).
+    criteria: [A card can be charged]
+  - alias: tax
+    title: Tax rules
+    parent: epic
+    state: defined
+    body: Orders get the right sales tax for the customer's region.
+  - alias: ship
+    title: Shipping options
+    parent: epic
+    body: Customers want to choose how orders ship.
+  - alias: receipts
+    title: Receipts
+    parent: epic
+    state: ready
+    depends_on: [pay]
+    body: Customers get a receipt after paying.
+    context: Build the receipt from the paid order in `src/pay.go`.
+    criteria: [A receipt is produced]
+  - alias: emails
+    title: Order emails
+    state: in-progress
+    body: Send an email when an order is placed.
+    context: Hook into the order placed event.
+    criteria: [An email is sent when an order is placed]
+  - alias: wish
+    title: Wishlist
+    body: "Idea: let customers keep a wishlist."
+  - alias: pg
+    title: Why Postgres
+    kind: research
+    body: Why do we run on Postgres?
+    context: Compare with the alternatives we considered. Done when the reasons are written down.
+  - alias: queue
+    title: Pick a queue
+    kind: decision
+    body: Which job queue do we use?
+    context: Options are a database table, Redis, or a hosted queue.
+knowledge:
+  - path: /components/payments.md
+    type: component
+    title: Payments
+    description: How payments reach the provider, retries and webhooks.
+    body: "Payments go through the provider client in `src/pay.go`. Every charge carries an idempotency key so a retry never charges twice. Webhook secrets are rotated quarterly."
+  - path: /components/cart.md
+    type: component
+    title: Cart
+    description: How the cart computes totals.
+    body: "The cart total is the sum of line items in `src/cart.go`. Totals are computed on every page view."
+  - path: /conventions/naming.md
+    type: convention
+    title: Naming
+    description: How modules and files are named.
+    body: "Module names are lowercase singular nouns prefixed with their area, like cart-totals. Files use the module name."

@@ -1,0 +1,11 @@
+name: issues-edit-priority
+description: Changing priority and tags uses edit.
+prompt: Raise the priority of the Tax rules issue to critical and tag it compliance.
+fixture: shop
+expect:
+  tools:
+    - ran: edit
+    - no_prep_files: true
+  outcome:
+    - issue: {ref: '{{tax}}', priority: critical, tags: [compliance]}
+    - unchanged: {issues: ['{{cart}}', '{{pay}}', '{{ship}}']}

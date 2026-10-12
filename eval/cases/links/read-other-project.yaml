@@ -1,0 +1,12 @@
+name: links-read-other-project
+description: Another project's issue is read with --project, not by looking at its files.
+prompt: What state is the Auth endpoint issue in the api project?
+workspace: shop-api
+expect:
+  tools:
+    - ran: {command: show, project: api}
+    - no_prep_files: true
+    - final_mentions: ready
+  outcome:
+    - unchanged: {all: true, knowledge: true}
+    - unchanged: {all: true, knowledge: true, project: api}

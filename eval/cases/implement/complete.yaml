@@ -1,0 +1,11 @@
+name: implement-complete
+description: Finishing an issue checks its criteria and completes it with a documentation decision.
+prompt: Order emails is finished and the criterion is met. Check it off and complete the issue; it needed no documentation changes.
+fixture: shop
+expect:
+  tools:
+    - ran: {command: criterion, args: '--check'}
+    - ran: {command: complete, args: '(--no-impact|--docs)'}
+    - no_prep_files: true
+  outcome:
+    - issue: {ref: '{{emails}}', state: done}

@@ -1,0 +1,13 @@
+name: define-from-scratch
+description: A new idea becomes a defined issue.
+tags: [smoke]
+prompt: Create an issue for adding gift wrap to orders (customers can pick gift wrap at checkout for a small fee) and define it.
+fixture: shop
+expect:
+  tools:
+    - ran: new
+    - ran: define
+    - no_prep_files: true
+  outcome:
+    - issue: {title: gift wrap, kind: code, state: defined}
+    - check: clean

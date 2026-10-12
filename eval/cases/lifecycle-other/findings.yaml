@@ -1,0 +1,11 @@
+name: lifecycle-research-findings
+description: A research answer is recorded as findings on the research issue.
+prompt: Answer the "Why Postgres" research issue - we chose Postgres for JSON support and mature tooling - and record that as its findings.
+fixture: shop
+expect:
+  tools:
+    - ran: findings
+    - no_prep_files: true
+  outcome:
+    - issue: {ref: '{{pg}}'}
+    - check: clean

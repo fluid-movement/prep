@@ -1,0 +1,11 @@
+name: queries-blocked
+description: A question about blocked work is answered with prep's queries.
+prompt: Which issues are blocked right now, and what are they waiting for?
+fixture: shop
+expect:
+  tools:
+    - ran: list
+    - no_prep_files: true
+    - final_mentions: receipts
+  outcome:
+    - unchanged: {all: true, knowledge: true}

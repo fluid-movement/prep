@@ -1,0 +1,15 @@
+name: issues-file-child
+description: A new issue is created with parent, dependency, tag and priority in one go.
+tags: [smoke]
+prompt: |
+  File a new code issue "Add refund flow" under the Checkout epic. It depends on Payment integration,
+  is tagged payments and has high priority. The body can say refunds return money to the original card.
+fixture: shop
+expect:
+  tools:
+    - ran: {command: new, args: '--parent'}
+    - no_prep_files: true
+    - max_calls: 10
+  outcome:
+    - issue: {title: refund flow, kind: code, parent: '{{epic}}', depends_on: ['{{pay}}'], tags: [payments], priority: high}
+    - check: clean

@@ -1,0 +1,13 @@
+name: define-keeps-open-questions
+description: With unanswered questions the agent writes them down and does not define.
+prompt: |
+  Write up the requirement for the Wishlist issue, but I have not decided yet whether wishlists are public or private.
+  Keep that question open; do not define the issue until I answer.
+fixture: shop
+expect:
+  tools:
+    - not_ran: define
+    - ran: edit
+    - no_prep_files: true
+  outcome:
+    - issue: {ref: '{{wish}}', state: open, requirement: open questions}

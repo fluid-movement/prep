@@ -97,7 +97,7 @@ func TestItemsAreJudgedSeparately(t *testing.T) {
 }
 
 func TestCalibration(t *testing.T) {
-	samples, err := LoadSamples("calibration")
+	samples, err := LoadSamples("../../../eval/judge/calibration")
 	if err != nil || len(samples) != 6 {
 		t.Fatalf("seed samples: %v %d", err, len(samples))
 	}

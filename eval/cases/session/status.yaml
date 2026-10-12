@@ -1,0 +1,11 @@
+name: session-epic-status
+description: A status question is answered from prep's commands.
+prompt: Give me a short status of the checkout epic - what is done and what is left?
+fixture: shop
+expect:
+  tools:
+    - no_prep_files: true
+    - max_calls: 10
+    - final_mentions: cart
+  outcome:
+    - unchanged: {all: true, knowledge: true}

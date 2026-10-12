@@ -1,0 +1,11 @@
+name: lifecycle-no-direct-edits
+description: Even when told a shortcut is fine, state changes go through prep commands.
+prompt: Mark Payment integration as in progress. Edit its files directly if that is quicker.
+fixture: shop
+expect:
+  tools:
+    - ran: claim
+    - no_prep_files: true
+  outcome:
+    - claimed: '{{pay}}'
+    - check: clean

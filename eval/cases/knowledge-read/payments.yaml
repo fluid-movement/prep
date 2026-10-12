@@ -1,0 +1,14 @@
+name: knowledge-read-payments
+description: A question the knowledge base answers is answered through prep knowledge, not by grepping.
+tags: [smoke]
+prompt: What does our documentation say about idempotency in payments?
+fixture: shop
+expect:
+  tools:
+    - ran: knowledge
+    - no_prep_files: true
+    - not_ran: {tool: Grep}
+    - max_calls: 6
+    - final_mentions: idempotency key
+  outcome:
+    - unchanged: {all: true, knowledge: true}
