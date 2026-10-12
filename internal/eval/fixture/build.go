@@ -173,6 +173,38 @@ func (p *Project) Prep(args ...string) (string, error) {
 	return p.ws.prep(p.Dir, p.seed(), args...)
 }
 
+// Query runs a read command in the project without a --by, so the call is
+// not recorded in the activity stream and the agent never sees it.
+func (p *Project) Query(args ...string) (string, error) {
+	return p.ws.query(p.Dir, p.seed(), args...)
+}
+
+func (w *Workspace) query(dir string, seed int64, args ...string) (string, error) {
+	cmd := exec.Command(w.opts.Binary, append([]string{"--root", dir}, args...)...)
+	cmd.Dir = dir
+	cmd.Env = w.env(seed)
+	var out, errb bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &errb
+	if err := cmd.Run(); err != nil {
+		return out.String(), fmt.Errorf("prep %s: %v\n%s", strings.Join(args, " "), err, strings.TrimSpace(errb.String()+out.String()))
+	}
+	return out.String(), nil
+}
+
+// Git runs git in the project and returns its output.
+func (p *Project) Git(args ...string) (string, error) {
+	cmd := exec.Command("git", append([]string{"-C", p.Dir}, args...)...)
+	cmd.Env = p.ws.env(0)
+	out, err := cmd.CombinedOutput()
+	return string(out), err
+}
+
+// HasRepo reports whether the project is a git repository.
+func (p *Project) HasRepo() bool {
+	_, err := os.Stat(filepath.Join(p.Dir, ".git"))
+	return err == nil
+}
+
 func (p *Project) seed() int64 {
 	for i, n := range p.ws.Order {
 		if n == p.Name {

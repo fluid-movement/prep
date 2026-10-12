@@ -45,6 +45,8 @@ type Input struct {
 	// Before is the snapshot taken after the fixture was built and before
 	// the agent ran; After is the state when it finished.
 	Before, After *Snapshot
+	// Diff is the change from Before to After.
+	Diff *Diff
 }
 
 // Assertion is one check.
@@ -117,6 +119,3 @@ func Decode(g Group, n *yaml.Node) (Assertion, error) {
 	}
 	return a, nil
 }
-
-// Snapshot is the state of a workspace at one moment; see snapshot.go.
-type Snapshot struct{}
