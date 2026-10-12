@@ -23,6 +23,7 @@ import (
 	"github.com/fluid-movement/prep/internal/eval/models"
 	"github.com/fluid-movement/prep/internal/eval/mutate"
 	"github.com/fluid-movement/prep/internal/eval/results"
+	"github.com/fluid-movement/prep/internal/eval/transcript"
 	"github.com/fluid-movement/prep/internal/eval/variant"
 )
 
@@ -359,6 +360,34 @@ func evalDoctor(a *app, dir string, args []string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	// probe starts a session with a variant and says what it could see.
+	probe := func(name string, bundled []string) (meta transcript.Meta, leaks []string, err error) {
+		tmp, err := os.MkdirTemp("", "prep-eval-doctor-")
+		if err != nil {
+			return meta, nil, err
+		}
+		defer os.RemoveAll(tmp)
+		v, err := res.Materialize(name, filepath.Join(tmp, "plugin"))
+		if err != nil {
+			return meta, nil, err
+		}
+		e, err := env.New(env.Config{Binary: tools.binary, Claude: tools.claude, Auth: auth, Parent: tmp})
+		if err != nil {
+			return meta, nil, err
+		}
+		defer e.Cleanup()
+		if meta, err = e.Probe(ctx, *model, v.PluginDir); err != nil {
+			return meta, nil, err
+		}
+		want := env.ExpectedFromPlugin(v.PluginDir)
+		want.Bundled = bundled
+		return meta, e.Leaks(meta, want), nil
+	}
+	// The skills the harness bundles are what a session with no plugin sees.
+	var bundled []string
+	if meta, _, err := probe("none", nil); err == nil {
+		bundled = meta.Skills
+	}
 	bad := 0
 	type finding struct {
 		Variant string   `json:"variant"`
@@ -369,32 +398,11 @@ func evalDoctor(a *app, dir string, args []string) error {
 	var found []finding
 	for _, name := range csv(*variants) {
 		f := finding{Variant: name}
-		func() {
-			tmp, err := os.MkdirTemp("", "prep-eval-doctor-")
-			if err != nil {
-				f.Error = err.Error()
-				return
-			}
-			defer os.RemoveAll(tmp)
-			v, err := res.Materialize(name, filepath.Join(tmp, "plugin"))
-			if err != nil {
-				f.Error = err.Error()
-				return
-			}
-			e, err := env.New(env.Config{Binary: tools.binary, Claude: tools.claude, Auth: auth, Parent: tmp})
-			if err != nil {
-				f.Error = err.Error()
-				return
-			}
-			defer e.Cleanup()
-			meta, err := e.Probe(ctx, *model, v.PluginDir)
-			if err != nil {
-				f.Error = err.Error()
-				return
-			}
-			f.Leaks = e.Leaks(meta, env.ExpectedFromPlugin(v.PluginDir))
-			f.OK = len(f.Leaks) == 0
-		}()
+		if _, leaks, err := probe(name, bundled); err != nil {
+			f.Error = err.Error()
+		} else {
+			f.Leaks, f.OK = leaks, len(leaks) == 0
+		}
 		if !f.OK {
 			bad++
 		}

@@ -236,9 +236,9 @@ func (d *ProjectDiff) Empty() bool {
 		len(d.EntriesCreated) == 0 && len(d.EntriesChanged) == 0 && len(d.EntriesRemoved) == 0 && !d.HeadMoved && len(d.Files) == 0
 }
 
-// Compare computes the diff from before to after. The history log of an
-// issue is not compared: every write appends to it, which Changed already
-// shows through the fields that changed.
+// Compare computes the diff from before to after. An issue's history
+// counts as a field: a work log line or any other write shows up as a change
+// even when no other field differs.
 func Compare(w *fixture.Workspace, before, after *Snapshot) *Diff {
 	d := &Diff{Projects: map[string]*ProjectDiff{}}
 	for name, a := range after.Projects {
@@ -345,6 +345,7 @@ func issueFields(b, a *Issue) []string {
 	add("context", b.Context != a.Context)
 	add("criteria", hash(b.Criteria) != hash(a.Criteria))
 	add("claim", b.ClaimedBy != a.ClaimedBy)
+	add("history", b.History != a.History)
 	return f
 }
 

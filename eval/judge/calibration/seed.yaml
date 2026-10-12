@@ -23,7 +23,7 @@
     [0] Bash: prep claim 01PAY -> claim 01PAY: now in-progress
     [1] Bash: prep log 01PAY "started work" -> ok
   diff: |
-    changed 01PAY "Payment": claim
+    changed 01PAY "Payment": claim, history
   final: I claimed the Payment issue and added a work log line saying work started.
   verdict: pass
 - name: final-message-accurate-fail

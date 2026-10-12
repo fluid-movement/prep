@@ -211,6 +211,9 @@ type Expected struct {
 	// Skills are the skill names those plugins provide (matched as a suffix
 	// after any "plugin:" prefix).
 	Skills []string
+	// Bundled are skills the harness itself ships, learned from a session
+	// with no plugin at all (see BuiltinSkills for the fallback).
+	Bundled []string
 }
 
 // Leaks says what a session could see that does not come from the variant,
@@ -235,7 +238,7 @@ func (e *Env) Leaks(m transcript.Meta, want Expected) []string {
 		}
 	}
 	for _, s := range m.Skills {
-		if !allowed(want.Skills, s) && !builtinSkill(s) {
+		if !allowed(want.Skills, s) && !allowed(want.Bundled, s) && !builtinSkill(s) {
 			out = append(out, "skill "+s)
 		}
 	}
