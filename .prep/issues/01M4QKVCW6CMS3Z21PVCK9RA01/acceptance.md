@@ -1,5 +1,5 @@
-- [ ] Variants are directories under eval/variants/ with a variant.yaml naming a base and what is replaced, removed or added
-- [ ] current (the shipped plugin) and none (no prep integration) exist as built-in bases
-- [ ] A variant is materialized into a plugin directory in the isolated environment and loaded with --plugin-dir
-- [ ] Results record the variant name and a content hash
-- [ ] An unknown base or a replaced file that does not exist is an error
+- [x] Variants are directories under eval/variants/ with a variant.yaml naming a base and what is replaced, removed or added
+- [x] current (the shipped plugin) and none (no prep integration) exist as built-in bases
+- [x] A variant is materialized into a plugin directory in the isolated environment and loaded with --plugin-dir
+- [x] Results record the variant name and a content hash
+- [x] An unknown base or a replaced file that does not exist is an error
