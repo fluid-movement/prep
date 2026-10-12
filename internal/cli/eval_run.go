@@ -163,8 +163,15 @@ func execMatrix(a *app, dir string, m *matrixFlags, variants []string) (*results
 	}
 	defer os.RemoveAll(parent)
 	id := results.NewID(time.Now())
+	// Environments live inside the run's results directory, so the workspace
+	// of a failing run is still there to inspect afterwards.
+	work := filepath.Join(store.Dir(id), "work")
+	if err := os.MkdirAll(work, 0o755); err != nil {
+		return nil, nil, err
+	}
+	defer os.Remove(work) // only when empty: nothing was kept
 	live := &matrix.Live{Cases: map[string]*evalcase.Case{}, Variants: res, Binary: m.tools.binary, Claude: m.tools.claude, Auth: auth,
-		Parent: parent, OutDir: store.Dir(id), Keep: m.keep}
+		Parent: work, OutDir: store.Dir(id), Keep: m.keep}
 	for _, c := range cases {
 		live.Cases[c.Name] = c
 	}

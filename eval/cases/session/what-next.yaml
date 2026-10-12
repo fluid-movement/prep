@@ -1,11 +1,11 @@
 name: session-what-next
-description: Asked what to work on, the agent asks prep, not the files.
+description: Asked what to work on, the agent asks prep, not the files (prime or next both name the issue).
 tags: [smoke]
 prompt: What should I work on next in this project?
 fixture: shop
 expect:
   tools:
-    - ran: next
+    - final_mentions: payment
     - no_prep_files: true
     - max_calls: 8
   outcome:
