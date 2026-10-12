@@ -3,8 +3,9 @@ package matrix
 import "strings"
 
 // DefaultCostByModel is the guessed cost of one run when nothing is known
-// about a cell: dollars by model family.
-var DefaultCostByModel = map[string]float64{"haiku": 0.05, "sonnet": 0.25, "opus": 0.9}
+// about a cell: dollars (at API prices) by model family, from the first real
+// runs (sonnet averaged $0.043); later runs replace the guess with history.
+var DefaultCostByModel = map[string]float64{"haiku": 0.02, "sonnet": 0.05, "opus": 0.15}
 
 // unknownCost is used for a model of no known family.
 const unknownCost = 0.3

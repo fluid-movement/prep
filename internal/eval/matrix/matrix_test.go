@@ -295,15 +295,15 @@ func TestEstimator(t *testing.T) {
 	for c, want := range map[Cell]float64{
 		{"a", "v", "haiku"}:   0.02,
 		{"z", "v", "haiku"}:   0.03, // mean of the model's earlier cells
-		{"z", "v", "sonnet"}:  0.25, // no usable history: the family default
-		{"z", "v", "opus"}:    0.9,
+		{"z", "v", "sonnet"}:  0.05, // no usable history: the family default
+		{"z", "v", "opus"}:    0.15,
 		{"z", "v", "mystery"}: 0.3,
 	} {
 		if got := est(c); got < want-1e-9 || got > want+1e-9 {
 			t.Errorf("%v: %v, want %v", c, got, want)
 		}
 	}
-	if got := EstimateTotal([]Cell{{"a", "v", "haiku"}, {"z", "v", "opus"}}, 2, est); got < 1.8399 || got > 1.8401 {
+	if got := EstimateTotal([]Cell{{"a", "v", "haiku"}, {"z", "v", "opus"}}, 2, est); got < 0.3399 || got > 0.3401 {
 		t.Errorf("total %v", got)
 	}
 }

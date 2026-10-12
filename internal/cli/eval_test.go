@@ -132,10 +132,10 @@ func TestEvalListAndDryRun(t *testing.T) {
 	}
 	h.fails("no case matches", "eval", "list", "--dir", dir, "--case", "nonsense")
 	dry := h.ok("eval", "run", "--dir", dir, "--smoke", "--models", "haiku,opus", "--n", "2", "--dry-run")
-	if !strings.Contains(dry, "cell(s) x 2 run(s)") || !strings.Contains(dry, "session-what-next / current / opus") || !strings.Contains(dry, "~$0.900/run") {
+	if !strings.Contains(dry, "cell(s) x 2 run(s)") || !strings.Contains(dry, "session-what-next / current / opus") || !strings.Contains(dry, "~$0.150/run") {
 		t.Errorf("dry run:\n%s", dry)
 	}
-	h.fails("exceeds --max-usd", "eval", "run", "--dir", dir, "--smoke", "--models", "opus", "--n", "5", "--max-usd", "1", "--dry-run=false")
+	h.fails("exceeds --max-usd", "eval", "run", "--dir", dir, "--smoke", "--models", "opus", "--n", "50", "--max-usd", "1", "--dry-run=false")
 }
 
 func TestEvalRunDoctorAndJudgeCheck(t *testing.T) {
