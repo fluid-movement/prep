@@ -256,6 +256,9 @@ func (e *Env) Leaks(m transcript.Meta, want Expected) []string {
 var BuiltinSkills = []string{
 	"update-config", "keybindings-help", "simplify", "loop", "schedule", "claude-api",
 	"init", "review", "security-review", "code-review", "run", "fewer-permission-prompts",
+	// seen in the init event of Claude Code 2.1.296 with an empty configuration
+	"deep-research", "dataviz", "verify", "debug", "batch", "doctor", "workflow-authoring",
+	"run-skill-generator", "plugin-authoring",
 }
 
 func builtinSkill(name string) bool {

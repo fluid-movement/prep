@@ -16,17 +16,19 @@ type Transcript struct {
 
 // Meta says what ran and what it could see.
 type Meta struct {
-	Harness     string    `json:"harness"`
-	Version     string    `json:"version,omitempty"`
-	Model       string    `json:"model,omitempty"` // as resolved by the harness
-	SessionID   string    `json:"session_id,omitempty"`
-	Cwd         string    `json:"cwd,omitempty"`
-	Tools       []string  `json:"tools,omitempty"`
-	Skills      []string  `json:"skills,omitempty"`
-	Plugins     []string  `json:"plugins,omitempty"`
-	MemoryPaths []string  `json:"memory_paths,omitempty"`
-	Hooks       []HookRun `json:"hooks,omitempty"`
-	Warnings    []string  `json:"warnings,omitempty"`
+	Harness   string   `json:"harness"`
+	Version   string   `json:"version,omitempty"`
+	Model     string   `json:"model,omitempty"` // as resolved by the harness
+	SessionID string   `json:"session_id,omitempty"`
+	Cwd       string   `json:"cwd,omitempty"`
+	Tools     []string `json:"tools,omitempty"`
+	Skills    []string `json:"skills,omitempty"`
+	Plugins   []string `json:"plugins,omitempty"`
+	// BuiltinPlugins ship inside the harness and cannot be configured away.
+	BuiltinPlugins []string  `json:"builtin_plugins,omitempty"`
+	MemoryPaths    []string  `json:"memory_paths,omitempty"`
+	Hooks          []HookRun `json:"hooks,omitempty"`
+	Warnings       []string  `json:"warnings,omitempty"`
 }
 
 // HookRun is a hook that ran during the session.

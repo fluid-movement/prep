@@ -111,9 +111,33 @@ func (p *parser) init(line []byte) error {
 	m := &p.t.Meta
 	m.SessionID, m.Cwd, m.Model, m.Version = d.SessionID, d.Cwd, d.Model, d.Version
 	m.Tools, m.Skills = d.Tools, d.Skills
-	m.Plugins = names(d.Plugins)
+	m.Plugins, m.BuiltinPlugins = splitPlugins(d.Plugins)
 	m.MemoryPaths = names(d.Memory)
 	return nil
+}
+
+// splitPlugins separates the plugins that ship inside Claude Code (path
+// "builtin") from the ones loaded from disk.
+func splitPlugins(raw json.RawMessage) (loaded, builtin []string) {
+	var objs []struct {
+		Name string `json:"name"`
+		Path string `json:"path"`
+	}
+	if json.Unmarshal(raw, &objs) != nil {
+		return names(raw), nil
+	}
+	for _, o := range objs {
+		name := o.Name
+		if name == "" {
+			name = o.Path
+		}
+		if o.Path == "builtin" {
+			builtin = append(builtin, name)
+		} else {
+			loaded = append(loaded, name)
+		}
+	}
+	return loaded, builtin
 }
 
 // names reads a list that holds strings or objects with a name or path.

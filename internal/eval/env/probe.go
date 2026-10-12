@@ -80,5 +80,8 @@ func (e *Env) Probe(ctx context.Context, model, pluginDir string) (transcript.Me
 		}
 		return tr.Meta, fmt.Errorf("the harness reported no session: %s", msg)
 	}
+	if tr.Final.IsError {
+		return tr.Meta, fmt.Errorf("the probe session failed: %s", strings.TrimSpace(tr.Final.Text))
+	}
 	return tr.Meta, nil
 }

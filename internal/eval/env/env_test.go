@@ -164,6 +164,15 @@ printf '{"type":"system","subtype":"init","cwd":"%s","session_id":"s","model":"m
 			t.Errorf("leak %q not found in %q", w, leaks)
 		}
 	}
+	rejected := fakeClaude(t, `cat >/dev/null
+echo '{"type":"system","subtype":"init","session_id":"s","cwd":"/x"}'
+echo '{"type":"result","subtype":"success","is_error":true,"result":"Failed to authenticate. API Error: 401 OAuth access token is invalid."}'
+`)
+	e3, _ := New(Config{Claude: rejected, Auth: Auth{OAuthToken: "bad"}})
+	defer e3.Cleanup()
+	if _, err := e3.Probe(context.Background(), "haiku", ""); err == nil || !strings.Contains(err.Error(), "401") {
+		t.Errorf("rejected credentials: %v", err)
+	}
 	bad := fakeClaude(t, "echo 'not logged in' >&2; exit 1\n")
 	e2, _ := New(Config{Claude: bad, Auth: Auth{APIKey: "k"}})
 	defer e2.Cleanup()
