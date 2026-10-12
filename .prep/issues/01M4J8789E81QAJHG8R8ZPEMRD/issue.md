@@ -1,7 +1,7 @@
 ---
 title: Claude Code hooks make sure prep calls are made
 kind: code
-parent: 01M498VPZAAQJKHXGZZ3PWJH2F
+parent: 01M4QKTQVR3J6PJZAJM0MVWQR0
 depends_on:
   - 01M4J8780KZRKWHJR4NN8AD85M
   - 01M4J8JVQ7TVGMEF0BB2AZRFG8
