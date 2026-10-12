@@ -8,6 +8,7 @@
 * [CLI](/components/cli.md) - internal/cli — command table, global flags, JSON output and errors, write pipeline and git staging.
 * [Desktop app](/components/desktop.md) - desktop/: the macOS app (Swift, SwiftUI) over the prep CLI's JSON — PrepKit, the window model, project switching, building with just desktop, and how agents see it with snapshots.
 * [Domain package](/components/domain.md) - internal/domain — issue model, state derivation, FSM gates, validation codes, query engine, guide and knowledge retrieval.
+* [Agent behavior test cases](/components/eval-cases.md) - What the eval cases ask and why: built from real session shapes, which cases were dropped, the variants that split the plugin.
 * [Agent behavior tests (prep eval)](/components/eval.md) - internal/eval and eval/ — fixtures, isolated environment, transcripts, cases, runner, assertions, judge, matrix, results, variants, model comparison and mutation for testing how agents use prep; layout and commands of prep eval.
 * [Git helpers](/components/git.md) - internal/gitx — the few git calls prep makes (drift, staging, evidence, HEAD), how their output is read, and why git is optional.
 * [Markdown store](/components/markdown-store.md) - internal/mdstore — parses and renders .prep files canonically, atomic writes with compare-and-swap, fmt and fix.

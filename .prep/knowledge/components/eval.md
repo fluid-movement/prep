@@ -7,7 +7,7 @@ generated:
   at: 2026-10-12T08:52:42Z
 scope:
   - internal/eval/**
-confirmed_commit: c330544302980b53f8bb1c688f5f8ff8eba3b08d
+confirmed_commit: a21cbe4511ef1af46c5f6ad7a7974fc0da651c36
 ---
 
 # Agent behavior tests (prep eval)
@@ -27,5 +27,5 @@ Layout: code in `internal/eval/*`, content in `eval/` (`cases/<area>/*.yaml`, `f
 - **Variants** (`variant`): `current` (the shipped plugin), `none`, or a directory with a `variant.yaml` (base, replace, add, remove, append_system_prompt); materialized with a content hash recorded in results.
 - **Models** (`models`): `prep eval models <run>...` pools cases per area (`report` and `models` take several run IDs and pool the runs of each cell, `results.Merge`, so models can be run in separate sessions and topped up later) and names the cheapest sufficient model by cost per passing run (default: rate ≥ 90% and interval lower bound ≥ 80%), says "not enough data" with the number of runs needed, lists what cheaper models get wrong, and warns when a model alias resolved to different ids.
 - **Mutation** (`mutate`): operators (`drop-rule`, `first-sentence`, `move-rule`, `replace-wording`, `drop-section`, `drop-hook`) and model proposals produce variants under `eval/variants/mutants/`, validated as plugins; `prep eval mutate` runs base and mutants and ranks them. Nothing edits the shipped plugin; promote a good mutant by hand through `just sync-skill`.
-- **What the cases ask** (`eval/cases`, designed from the shapes of real sessions in other prep projects, not from the CLI's command list): `real/*` are prompts as users write them (set up the knowledge base, audit with subagents, plan what is next, a feature or bug told in the user's words); `natural/*` are tasks that never mention prep, with and without a matching issue (does the agent track it, and keep knowledge in step with the code it changed); `adversarial/*` try to break it (a claim that tests pass while the project's test fails, instructions hidden in an issue, a stale requirement, an ambiguous reference); `scale/*` repeat simple questions in a 60-issue project; `batch` has several chores in one message. Cases every model passes trivially were dropped: they cost money and show nothing. Variants `skill-only` and `hook-only` split the plugin; with `none` and `current` they answer what each part buys (`--tag plugin-ab`). `prep eval errors` lists the prep commands that failed in stored runs, which is how agents' guesses (`list --max`, `--tags`) were found.
+- **What the cases ask**: see [Agent behavior test cases](/components/eval-cases.md).
 - **Not covered yet**: other harnesses (a follow-up issue in release 0.4.0), and the first live baseline run (it needs a token).
