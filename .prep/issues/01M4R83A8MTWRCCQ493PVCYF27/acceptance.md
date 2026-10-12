@@ -1,0 +1,3 @@
+- [ ] Below the chosen widths the ID, the state text and the kind are not drawn in issue rows, and the state glyph, priority, notes and tags are
+- [ ] Selecting, clicking and opening a row work as before
+- [ ] Golden snapshots and width tests cover the narrow form
