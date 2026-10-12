@@ -184,3 +184,28 @@ func TestBaseline(t *testing.T) {
 		t.Error("missing file")
 	}
 }
+
+func TestMerge(t *testing.T) {
+	a := &Run{ID: "a", Created: time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC), SpentUSD: 1, Definition: Definition{N: 5, Models: []string{"haiku"}, Areas: map[string]string{"c1": "x"}},
+		Cells: []*matrix.CellResult{cellOf("c1", "v", "haiku", 4, 1), cellOf("c2", "v", "haiku", 5, 0)}}
+	b := &Run{ID: "b", Created: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), SpentUSD: 2, Definition: Definition{N: 10, Models: []string{"haiku", "opus"}, Areas: map[string]string{"c2": "y"}},
+		Cells: []*matrix.CellResult{cellOf("c1", "v", "haiku", 5, 0), cellOf("c1", "v", "opus", 5, 0)}}
+	m := Merge(a, b)
+	if m.ID != "a+b" || m.SpentUSD != 3 || m.Definition.N != 10 || !m.Created.Equal(b.Created) || len(m.Definition.Models) != 2 || m.Definition.Areas["c1"] != "x" || m.Definition.Areas["c2"] != "y" {
+		t.Fatalf("%+v", m)
+	}
+	got := map[matrix.Cell]*matrix.CellResult{}
+	for _, c := range m.Cells {
+		got[c.Cell] = c
+	}
+	pooled := got[matrix.Cell{Case: "c1", Variant: "v", Model: "haiku"}]
+	if pooled == nil || pooled.Passed != 9 || pooled.Failed != 1 || len(pooled.Runs) != 10 || pooled.Runs[9].Index != 9 {
+		t.Errorf("pooled cell: %+v", pooled)
+	}
+	if len(m.Cells) != 3 || got[matrix.Cell{Case: "c1", Variant: "v", Model: "opus"}] == nil {
+		t.Errorf("cells: %d", len(m.Cells))
+	}
+	if Merge(a) != a {
+		t.Error("a single run merges to itself")
+	}
+}

@@ -518,14 +518,11 @@ func evalModels(a *app, dir string, args []string) error {
 	if err != nil {
 		return err
 	}
-	if len(pos) > 1 {
-		return usageErr("usage: prep eval models [<run-id>|latest] [--variant v] [--md]")
+	ids := pos
+	if len(ids) == 0 {
+		ids = []string{"latest"}
 	}
-	id := "latest"
-	if len(pos) == 1 {
-		id = pos[0]
-	}
-	run, err := resultsStore(dir).Load(id)
+	run, err := resultsStore(dir).LoadAll(ids...)
 	if err != nil {
 		return err
 	}

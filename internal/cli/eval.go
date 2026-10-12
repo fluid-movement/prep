@@ -71,13 +71,11 @@ func evalReport(a *app, dir string, args []string) error {
 	if err != nil {
 		return err
 	}
-	id := "latest"
-	if len(pos) > 1 {
-		return usageErr("usage: prep eval report [<run-id>|latest] [--failures]")
-	} else if len(pos) == 1 {
-		id = pos[0]
+	ids := pos
+	if len(ids) == 0 {
+		ids = []string{"latest"}
 	}
-	run, err := resultsStore(dir).Load(id)
+	run, err := resultsStore(dir).LoadAll(ids...)
 	if err != nil {
 		return err
 	}

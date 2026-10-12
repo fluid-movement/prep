@@ -226,6 +226,20 @@ func TestEvalModels(t *testing.T) {
 		t.Errorf("json: %+v", j)
 	}
 	h.fails("no cells for variant", "eval", "models", "--dir", dir, "--variant", "nope")
+	// a model compared in a later run joins the table
+	err = st.Save(&results.Run{ID: "20261013-100000-bbbb", Created: time.Now(),
+		Definition: results.Definition{N: 10, Areas: map[string]string{"c1": "queries"}},
+		Cells:      []*matrix.CellResult{mk("c1", "opus", 20, 0, 0.5)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	both := h.ok("eval", "models", "--dir", dir, "20261012", "20261013")
+	if !strings.Contains(both, "opus") || !strings.Contains(both, "haiku") || !strings.Contains(both, "queries") {
+		t.Errorf("merged runs:\n%s", both)
+	}
+	if rep := h.ok("eval", "report", "--dir", dir, "20261012", "20261013"); !strings.Contains(rep, "current / opus") || !strings.Contains(rep, "current / haiku") {
+		t.Errorf("merged report:\n%s", rep)
+	}
 }
 
 func TestEvalMutate(t *testing.T) {

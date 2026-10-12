@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/fluid-movement/prep/internal/eval/matrix"
@@ -218,4 +219,88 @@ func (s Store) Prune(keep int) ([]string, error) {
 		removed = append(removed, id)
 	}
 	return removed, nil
+}
+
+// Merge combines runs into one: the runs of a cell in several stored runs are
+// pooled (so a model compared in a later run, or a cell topped up with more
+// runs, reads as one result). The ID joins the sources.
+func Merge(runs ...*Run) *Run {
+	if len(runs) == 1 {
+		return runs[0]
+	}
+	out := &Run{Definition: Definition{Areas: map[string]string{}}}
+	cells := map[matrix.Cell]*matrix.CellResult{}
+	var order []matrix.Cell
+	seenCase, seenModel := map[string]bool{}, map[string]bool{}
+	seenVar := map[string]bool{}
+	var ids []string
+	for _, r := range runs {
+		ids = append(ids, r.ID)
+		if out.Created.IsZero() || r.Created.Before(out.Created) {
+			out.Created = r.Created
+		}
+		if out.Versions.Prep == "" {
+			out.Versions = r.Versions
+		}
+		out.SpentUSD += r.SpentUSD
+		if r.Definition.N > out.Definition.N {
+			out.Definition.N = r.Definition.N
+		}
+		for k, v := range r.Definition.Areas {
+			out.Definition.Areas[k] = v
+		}
+		for _, c := range r.Definition.Cases {
+			if !seenCase[c] {
+				seenCase[c] = true
+				out.Definition.Cases = append(out.Definition.Cases, c)
+			}
+		}
+		for _, m := range r.Definition.Models {
+			if !seenModel[m] {
+				seenModel[m] = true
+				out.Definition.Models = append(out.Definition.Models, m)
+			}
+		}
+		for _, v := range r.Definition.Variants {
+			if !seenVar[v.Name] {
+				seenVar[v.Name] = true
+				out.Definition.Variants = append(out.Definition.Variants, v)
+			}
+		}
+		for _, c := range r.Cells {
+			into := cells[c.Cell]
+			if into == nil {
+				into = &matrix.CellResult{Cell: c.Cell}
+				cells[c.Cell] = into
+				order = append(order, c.Cell)
+			}
+			for _, run := range c.Runs {
+				run.Index = len(into.Runs)
+				into.Runs = append(into.Runs, run)
+			}
+			into.Planned += c.Planned
+		}
+	}
+	for _, k := range order {
+		matrix.Reduce(cells[k])
+		out.Cells = append(out.Cells, cells[k])
+	}
+	out.ID = strings.Join(ids, "+")
+	return out
+}
+
+// LoadAll loads several runs by ID and merges them.
+func (s Store) LoadAll(ids ...string) (*Run, error) {
+	var runs []*Run
+	for _, id := range ids {
+		r, err := s.Load(id)
+		if err != nil {
+			return nil, err
+		}
+		runs = append(runs, r)
+	}
+	if len(runs) == 0 {
+		return nil, fmt.Errorf("no run given")
+	}
+	return Merge(runs...), nil
 }
