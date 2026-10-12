@@ -32,6 +32,9 @@ type Result struct {
 	Desc   string `json:"desc"`
 	Pass   bool   `json:"pass"`
 	Reason string `json:"reason"`
+	// Errored means the check could not be made (a judge that returned
+	// nothing usable); it is neither a pass nor a failure of the agent.
+	Errored bool `json:"errored,omitempty"`
 	// Step is the transcript step that decided the result, or -1.
 	Step int `json:"step"`
 }

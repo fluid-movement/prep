@@ -1,6 +1,6 @@
-- [ ] Each cell (case × variant × model) runs N times with bounded parallelism and reduces to a pass rate with a confidence interval
-- [ ] Cost per cell (calls, errors, tokens, dollars, duration) is reported as mean and spread
-- [ ] Cells whose runs disagree are marked flaky
-- [ ] Harness errors are counted apart and excluded from the pass rate
-- [ ] An optional sequential stop ends a cell early once it clearly always passes or always fails
-- [ ] Interrupting a matrix keeps the finished runs
+- [x] Each cell (case × variant × model) runs N times with bounded parallelism and reduces to a pass rate with a confidence interval
+- [x] Cost per cell (calls, errors, tokens, dollars, duration) is reported as mean and spread
+- [x] Cells whose runs disagree are marked flaky
+- [x] Harness errors are counted apart and excluded from the pass rate
+- [x] An optional sequential stop ends a cell early once it clearly always passes or always fails
+- [x] Interrupting a matrix keeps the finished runs
