@@ -1,0 +1,14 @@
+{"type":"system","subtype":"hook_started","hook_id":"h1","hook_name":"SessionStart:startup","hook_event":"SessionStart","session_id":"s-1"}
+{"type":"system","subtype":"hook_response","hook_id":"h1","hook_name":"SessionStart:startup","hook_event":"SessionStart","output":"prep: 3 issues, 1 actionable","stdout":"prep: 3 issues, 1 actionable","stderr":"","exit_code":0,"outcome":"success","session_id":"s-1"}
+{"type":"system","subtype":"init","cwd":"/work/shop","session_id":"s-1","tools":["Bash","Read","Edit","Grep"],"model":"claude-haiku-5-5","claude_code_version":"2.1.296","skills":["prep"],"plugins":[{"name":"prep","path":"/plugins/prep"}],"memory_paths":{"auto":"/home/.claude/memory"},"slash_commands":["prep"]}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"I'll look at the guide first."},{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"cd /work/shop && prep guide 01ABC && echo done"}}]}}
+{"type":"rate_limit_event","rate_limit_info":{"status":"allowed"}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"step: claim\n","is_error":false}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t2","name":"Read","input":{"file_path":"/work/shop/.prep/issues/01ABC/issue.md"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t2","content":[{"type":"text","text":"# Cart page"}],"is_error":false}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t3","name":"Bash","input":{"command":"PREP_ACTOR=x prep --project api criterion 01ABC --add 'Works \"well\"' | head -3\nprep context 01ABC --body-file - <<'EOF'\nprep guide inside a heredoc\nEOF"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t3","content":"prep: no issue matches \"01ABC\" [E_NOT_FOUND]","is_error":true}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Could not find it."}]}}
+{"type":"future_event","anything":1}
+not json at all
+{"type":"result","subtype":"success","is_error":false,"result":"Could not find it.","stop_reason":"end_turn","num_turns":3,"total_cost_usd":0.0123,"duration_ms":4200,"duration_api_ms":3900,"session_id":"s-1","usage":{"input_tokens":12,"cache_creation_input_tokens":100,"cache_read_input_tokens":200,"output_tokens":55}}
