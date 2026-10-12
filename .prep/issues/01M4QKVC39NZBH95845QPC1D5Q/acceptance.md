@@ -1,5 +1,5 @@
-- [ ] Kinds ran, not_ran, before, max_calls, no_errors, args and final_mentions are implemented
-- [ ] Matching works on parsed prep commands, so different shell forms of one command match alike
-- [ ] not_ran can forbid a tool on a path pattern (for example Read of .prep/**)
-- [ ] Each result names the deciding step and says what was expected and found
-- [ ] Assertions register by kind so new kinds need no change to the case loader
+- [x] Kinds ran, not_ran, before, max_calls, no_errors, args and final_mentions are implemented
+- [x] Matching works on parsed prep commands, so different shell forms of one command match alike
+- [x] not_ran can forbid a tool on a path pattern (for example Read of .prep/**)
+- [x] Each result names the deciding step and says what was expected and found
+- [x] Assertions register by kind so new kinds need no change to the case loader
