@@ -2,6 +2,7 @@ package transcript
 
 import (
 	"path"
+	"regexp"
 	"strings"
 )
 
@@ -181,28 +182,34 @@ func (c *Command) setGlobal(name, v string) {
 	}
 }
 
-// stripHeredocs drops heredoc bodies and the redirection that starts them.
+// heredocStart matches the start of a heredoc: <<EOF, <<-EOF, <<'EOF', <<"EOF".
+var heredocStart = regexp.MustCompile(`<<-?\s*(?:'([^']*)'|"([^"]*)"|\\?([A-Za-z_][A-Za-z0-9_]*))`)
+
+// stripHeredocs drops heredoc bodies and the redirection that starts them,
+// keeping the rest of the line: `cat <<'EOF' | prep edit 01A --body-file -`
+// is still a prep command.
 func stripHeredocs(s string) string {
 	lines := strings.Split(s, "\n")
 	var out []string
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
-		k := strings.Index(line, "<<")
-		if k < 0 || strings.Contains(line[k:], "<<<") {
+		if strings.Contains(line, "<<<") {
 			out = append(out, line)
 			continue
 		}
-		rest := strings.TrimLeft(line[k+2:], "-~ \t")
-		delim := ""
-		if rest != "" {
-			f := strings.Fields(rest)[0]
-			delim = strings.Trim(f, `'"\`)
-		}
-		out = append(out, line[:k])
-		for i+1 < len(lines) {
-			i++
-			if strings.TrimSpace(lines[i]) == delim {
-				break
+		var delims []string
+		line = heredocStart.ReplaceAllStringFunc(line, func(m string) string {
+			sub := heredocStart.FindStringSubmatch(m)
+			delims = append(delims, sub[1]+sub[2]+sub[3])
+			return ""
+		})
+		out = append(out, line)
+		for _, d := range delims {
+			for i+1 < len(lines) {
+				i++
+				if strings.TrimSpace(lines[i]) == d {
+					break
+				}
 			}
 		}
 	}

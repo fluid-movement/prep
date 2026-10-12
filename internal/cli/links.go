@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
@@ -161,6 +163,10 @@ func (a *app) resolveDeps(t *domain.Tree, deps []string) ([]string, []domain.Pro
 		if !ok {
 			id, err := t.Resolve(d)
 			if err != nil {
+				var de *domain.Error
+				if errors.As(err, &de) && de.Code == domain.ErrNotFound && !strings.Contains(de.Message, "<project>") {
+					de.Message += "; an issue in another project is written <project>:<id> (prep projects lists the projects, --depends-on api:01ABC...)"
+				}
 				return nil, nil, err
 			}
 			ids = append(ids, id)

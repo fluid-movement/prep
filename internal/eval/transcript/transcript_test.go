@@ -18,6 +18,10 @@ func TestParseShell(t *testing.T) {
 		{"PREP_ACTOR=x prep next", []Command{{Name: "next", Raw: "PREP_ACTOR=x prep next"}}},
 		{`prep new --title "A b; c" --kind code`, []Command{{Name: "new", Args: []string{"--title", "A b; c", "--kind", "code"}, Raw: `prep new --title "A b; c" --kind code`}}},
 		{"prep edit 01A --body-file - <<'EOF'\nprep list\nEOF", []Command{{Name: "edit", Args: []string{"01A", "--body-file", "-"}, Raw: "prep edit 01A --body-file -"}}},
+		{"cat <<'EOF' | prep edit 01A --body-file - --by me\nprep drop inside\nEOF\nprep define 01A", []Command{
+			{Name: "edit", Args: []string{"01A", "--body-file", "-", "--by", "me"}, By: "me", Raw: "prep edit 01A --body-file - --by me"},
+			{Name: "define", Args: []string{"01A"}, Raw: "prep define 01A"}}},
+		{"prep new --title x --body-file - <<-EOT\n\tprep drop inside\n\tEOT", []Command{{Name: "new", Args: []string{"--title", "x", "--body-file", "-"}, Raw: "prep new --title x --body-file -"}}},
 		{"echo prep list", nil},
 		{`echo "prep list"`, nil},
 		{"x=$(prep next --json)", []Command{{Name: "next", Args: []string{"--json"}, Raw: "prep next --json"}}},
