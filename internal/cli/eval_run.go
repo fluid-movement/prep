@@ -21,6 +21,7 @@ import (
 	"github.com/fluid-movement/prep/internal/eval/judge"
 	"github.com/fluid-movement/prep/internal/eval/matrix"
 	"github.com/fluid-movement/prep/internal/eval/models"
+	"github.com/fluid-movement/prep/internal/eval/mutate"
 	"github.com/fluid-movement/prep/internal/eval/results"
 	"github.com/fluid-movement/prep/internal/eval/variant"
 )
@@ -88,93 +89,100 @@ func (f *caseFilter) selectFrom(dir string) ([]*evalcase.Case, error) {
 
 func csv(s string) []string { return splitTags([]string{s}) }
 
-// evalRun runs the matrix and reports it.
-func evalRun(a *app, dir string, args []string) error {
-	fs := flag.NewFlagSet("eval run", flag.ContinueOnError)
-	var tools evalTools
-	var filter caseFilter
-	tools.flags(fs)
-	filter.flags(fs)
-	variants := fs.String("variants", "current", "variants to run, comma-separated")
-	models := fs.String("models", "sonnet", "models to run, comma-separated (an extended run names several)")
-	n := fs.Int("n", 5, "runs per cell")
-	parallel := fs.Int("parallel", 2, "runs at once")
-	seed := fs.Int64("seed", 1, "seed for the order of runs")
-	maxUSD := fs.Float64("max-usd", 0, "stop when this much has been spent (0: no limit)")
-	sequential := fs.Bool("sequential", false, "stop a cell early once it clearly always passes or always fails")
-	keep := fs.Bool("keep", false, "keep every run's workspace")
-	yes := fs.Bool("yes", false, "run although the estimate exceeds --max-usd")
-	dry := fs.Bool("dry-run", false, "print the cells and the cost estimate, run nothing")
-	note := fs.String("note", "", "a note stored with the run")
-	judgeModel := fs.String("judge-model", "sonnet", "the model that judges rubric items")
-	noJudge := fs.Bool("no-judge", false, "leave rubric items unjudged")
-	pos, err := parse(fs, args)
+// matrixFlags are the flags of every command that runs a matrix.
+type matrixFlags struct {
+	tools                 evalTools
+	filter                caseFilter
+	variants, models      string
+	n, parallel           int
+	seed                  int64
+	maxUSD                float64
+	sequential, keep, yes bool
+	dry                   bool
+	note, judgeModel      string
+	noJudge               bool
+}
+
+func (m *matrixFlags) register(fs *flag.FlagSet, defVariants string) {
+	m.tools.flags(fs)
+	m.filter.flags(fs)
+	fs.StringVar(&m.variants, "variants", defVariants, "variants to run, comma-separated")
+	fs.StringVar(&m.models, "models", "sonnet", "models to run, comma-separated (an extended run names several)")
+	fs.IntVar(&m.n, "n", 5, "runs per cell")
+	fs.IntVar(&m.parallel, "parallel", 2, "runs at once")
+	fs.Int64Var(&m.seed, "seed", 1, "seed for the order of runs")
+	fs.Float64Var(&m.maxUSD, "max-usd", 0, "stop when this much has been spent (0: no limit)")
+	fs.BoolVar(&m.sequential, "sequential", false, "stop a cell early once it clearly always passes or always fails")
+	fs.BoolVar(&m.keep, "keep", false, "keep every run's workspace")
+	fs.BoolVar(&m.yes, "yes", false, "run although the estimate exceeds --max-usd")
+	fs.BoolVar(&m.dry, "dry-run", false, "print the cells and the cost estimate, run nothing")
+	fs.StringVar(&m.note, "note", "", "a note stored with the run")
+	fs.StringVar(&m.judgeModel, "judge-model", "sonnet", "the model that judges rubric items")
+	fs.BoolVar(&m.noJudge, "no-judge", false, "leave rubric items unjudged")
+}
+
+// execMatrix selects the cases, prints the estimate, runs the matrix for the
+// given variants and stores the run. It returns nil when it only estimated.
+func execMatrix(a *app, dir string, m *matrixFlags, variants []string) (*results.Run, []*evalcase.Case, error) {
+	res, err := m.tools.resolve(dir)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	if len(pos) > 0 {
-		return usageErr("unexpected arguments: %s", strings.Join(pos, " "))
-	}
-	res, err := tools.resolve(dir)
+	cases, err := m.filter.selectFrom(dir)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	cases, err := filter.selectFrom(dir)
-	if err != nil {
-		return err
-	}
-	opts := matrix.Options{Cases: cases, Variants: csv(*variants), Models: csv(*models), N: *n, Parallel: *parallel, Seed: *seed,
-		Sequential: *sequential, MaxUSD: *maxUSD}
+	opts := matrix.Options{Cases: cases, Variants: variants, Models: csv(m.models), N: m.n, Parallel: m.parallel, Seed: m.seed,
+		Sequential: m.sequential, MaxUSD: m.maxUSD}
 	cells := matrix.Cells(opts)
 	if len(cells) == 0 {
-		return usageErr("no case runs on this combination of variants and models")
+		return nil, nil, usageErr("no case runs on this combination of variants and models")
 	}
 	store := resultsStore(dir)
 	est := matrix.Estimator(recentCells(store, 5))
 	opts.Estimate = est
-	total := matrix.EstimateTotal(cells, *n, est)
-	a.printf("%d case(s), %d cell(s) x %d run(s); estimated cost about $%.2f\n", len(cases), len(cells), *n, total)
-	if *dry {
+	total := matrix.EstimateTotal(cells, m.n, est)
+	a.printf("%d case(s), %d cell(s) x %d run(s); estimated cost about $%.2f\n", len(cases), len(cells), m.n, total)
+	if m.dry {
 		for _, c := range cells {
 			a.printf("  %s  ~$%.3f/run\n", c, est(c))
 		}
-		return nil
+		return nil, cases, nil
 	}
-	if *maxUSD > 0 && total > *maxUSD && !*yes {
-		return usageErr("the estimate $%.2f exceeds --max-usd $%.2f; lower N or the cell count, or add --yes to run until the limit stops it", total, *maxUSD)
+	if m.maxUSD > 0 && total > m.maxUSD && !m.yes {
+		return nil, nil, usageErr("the estimate $%.2f exceeds --max-usd $%.2f; lower N or the cell count, or add --yes to run until the limit stops it", total, m.maxUSD)
 	}
 	auth, err := env.AuthFromEnv(nil)
 	if err != nil {
-		return &domain.Error{Code: domain.ErrGate, Message: err.Error()}
+		return nil, nil, &domain.Error{Code: domain.ErrGate, Message: err.Error()}
 	}
-
 	parent, err := os.MkdirTemp("", "prep-eval-run-")
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	defer os.RemoveAll(parent)
 	id := results.NewID(time.Now())
-	live := &matrix.Live{Cases: map[string]*evalcase.Case{}, Variants: res, Binary: tools.binary, Claude: tools.claude, Auth: auth,
-		Parent: parent, OutDir: store.Dir(id), Keep: *keep}
+	live := &matrix.Live{Cases: map[string]*evalcase.Case{}, Variants: res, Binary: m.tools.binary, Claude: m.tools.claude, Auth: auth,
+		Parent: parent, OutDir: store.Dir(id), Keep: m.keep}
 	for _, c := range cases {
 		live.Cases[c.Name] = c
 	}
-	if !*noJudge && hasRubric(cases) {
-		j, cleanup, err := judge.NewClaude(judge.Config{Model: *judgeModel, Claude: tools.claude, Auth: auth, Parent: parent})
+	if !m.noJudge && hasRubric(cases) {
+		j, cleanup, err := judge.NewClaude(judge.Config{Model: m.judgeModel, Claude: m.tools.claude, Auth: auth, Parent: parent})
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		defer cleanup()
 		live.Judge = j.Func()
 	}
 	opts.Runner = live
 	var refs []results.VariantRef
-	for _, v := range opts.Variants {
-		m, err := res.Materialize(v, filepath.Join(parent, "hash-"+strings.ReplaceAll(v, "/", "_")))
+	for _, v := range variants {
+		mat, err := res.Materialize(v, filepath.Join(parent, "hash-"+strings.ReplaceAll(v, "/", "_")))
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
-		refs = append(refs, results.VariantRef{Name: v, Hash: m.Hash})
+		refs = append(refs, results.VariantRef{Name: v, Hash: mat.Hash})
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -188,15 +196,15 @@ func evalRun(a *app, dir string, args []string) error {
 		case r.Passed():
 			verdict = "pass"
 		}
-		fmt.Fprintf(a.errw, "[%d/%d] %s run %d: %s (%s, $%.3f)\n", done, len(cells)**n, r.Cell, r.Index+1, verdict, r.Status, r.Cost.USD)
+		fmt.Fprintf(a.errw, "[%d/%d] %s run %d: %s (%s, $%.3f)\n", done, len(cells)*m.n, r.Cell, r.Index+1, verdict, r.Status, r.Cost.USD)
 	}
 	started := time.Now()
 	out, err := matrix.Run(ctx, opts)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	run := &results.Run{ID: id, Created: started, Note: *note,
-		Definition: results.Definition{Cases: caseNames(cases), Areas: caseAreas(cases), Variants: refs, Models: opts.Models, N: *n, Seed: *seed, Parallel: *parallel, Sequential: *sequential, MaxUSD: *maxUSD},
+	run := &results.Run{ID: id, Created: started, Note: m.note,
+		Definition: results.Definition{Cases: caseNames(cases), Areas: caseAreas(cases), Variants: refs, Models: opts.Models, N: m.n, Seed: m.seed, Parallel: m.parallel, Sequential: m.sequential, MaxUSD: m.maxUSD},
 		Versions:   results.Versions{Prep: Version, Git: gitRev()},
 		Cells:      out.Cells, StoppedBy: out.StoppedBy, SpentUSD: out.SpentUSD}
 	for _, c := range out.Cells {
@@ -207,6 +215,25 @@ func evalRun(a *app, dir string, args []string) error {
 		}
 	}
 	if err := store.Save(run); err != nil {
+		return nil, nil, err
+	}
+	return run, cases, nil
+}
+
+// evalRun runs the matrix and reports it.
+func evalRun(a *app, dir string, args []string) error {
+	fs := flag.NewFlagSet("eval run", flag.ContinueOnError)
+	var m matrixFlags
+	m.register(fs, "current")
+	pos, err := parse(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) > 0 {
+		return usageErr("unexpected arguments: %s", strings.Join(pos, " "))
+	}
+	run, _, err := execMatrix(a, dir, &m, csv(m.variants))
+	if err != nil || run == nil {
 		return err
 	}
 	if a.json {
@@ -214,7 +241,7 @@ func evalRun(a *app, dir string, args []string) error {
 		return nil
 	}
 	a.printf("%s", results.Report(run, results.ReportOptions{Failures: true}))
-	a.printf("\nstored as %s (prep eval report %s)\n", id, id)
+	a.printf("\nstored as %s (prep eval report %s)\n", run.ID, run.ID)
 	return nil
 }
 
@@ -497,4 +524,177 @@ func evalModels(a *app, dir string, args []string) error {
 		a.printf("%s", models.Text(an))
 	}
 	return nil
+}
+
+func init() {
+	evalCommands = append(evalCommands, evalCommand{"mutate", evalMutate})
+}
+
+// evalMutate generates mutants of a base variant, runs the matrix on the base
+// and every mutant, and ranks the mutants against the base.
+func evalMutate(a *app, dir string, args []string) error {
+	fs := flag.NewFlagSet("eval mutate", flag.ContinueOnError)
+	var m matrixFlags
+	m.register(fs, "")
+	base := fs.String("base", "current", "the variant to mutate")
+	ops := fs.String("operators", strings.Join(mutate.OperatorNames(), ","), "mechanical operators to apply, comma-separated")
+	only := fs.String("only", "", "only mutants whose id contains one of these words, comma-separated")
+	propose := fs.Int("propose", 0, "also ask a model for this many rewrites, each with a hypothesis")
+	proposeModel := fs.String("propose-model", "sonnet", "the model that proposes rewrites")
+	limit := fs.Int("limit", 12, "run at most this many mutants")
+	pos, err := parse(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) > 0 {
+		return usageErr("unexpected arguments: %s", strings.Join(pos, " "))
+	}
+	if m.variants != "" {
+		return usageErr("--variants does not apply to mutate: name the variant to mutate with --base")
+	}
+	res, err := m.tools.resolve(dir)
+	if err != nil {
+		return err
+	}
+	tmp, err := os.MkdirTemp("", "prep-eval-mutate-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmp)
+	mat, err := res.Materialize(*base, filepath.Join(tmp, "base"))
+	if err != nil {
+		return err
+	}
+	if mat.PluginDir == "" {
+		return usageErr("the base variant %q has no plugin to mutate", *base)
+	}
+	plugin := mutate.Plugin{Dir: mat.PluginDir}
+
+	var mutants []mutate.Mutant
+	available := mutate.Operators()
+	for _, name := range csv(*ops) {
+		op, ok := available[name]
+		if !ok {
+			return usageErr("unknown operator %q; known: %s", name, strings.Join(mutate.OperatorNames(), ", "))
+		}
+		ms, err := op.Apply(plugin)
+		if err != nil {
+			return fmt.Errorf("operator %s: %w", name, err)
+		}
+		mutants = append(mutants, ms...)
+	}
+	if *propose > 0 && !m.dry {
+		auth, err := env.AuthFromEnv(nil)
+		if err != nil {
+			return &domain.Error{Code: domain.ErrGate, Message: err.Error()}
+		}
+		call, cleanup, err := judge.NewClaudeCaller(judge.Config{Model: *proposeModel, Claude: m.tools.claude, Auth: auth, Parent: tmp})
+		if err != nil {
+			return err
+		}
+		defer cleanup()
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		ms, err := mutate.Propose(ctx, mutate.Caller(call), plugin, failureSummary(resultsStore(dir)), *propose)
+		if err != nil {
+			return fmt.Errorf("proposals: %w", err)
+		}
+		mutants = append(mutants, ms...)
+	}
+	if words := csv(*only); len(words) > 0 {
+		var kept []mutate.Mutant
+		for _, mu := range mutants {
+			for _, w := range words {
+				if strings.Contains(mu.ID, w) {
+					kept = append(kept, mu)
+					break
+				}
+			}
+		}
+		mutants = kept
+	}
+	if *limit > 0 && len(mutants) > *limit {
+		mutants = mutants[:*limit]
+	}
+	if len(mutants) == 0 {
+		return usageErr("no mutant to run")
+	}
+	var names []string
+	descs := map[string]string{}
+	for _, mu := range mutants {
+		name := "mutants/" + mu.ID
+		if !m.dry {
+			if name, err = mutate.Write(res.Root, *base, mu); err != nil {
+				return err
+			}
+			v, err := res.Materialize(name, filepath.Join(tmp, "m-"+mu.ID))
+			if err == nil {
+				err = mutate.Validate(v.PluginDir)
+			}
+			if err != nil {
+				fmt.Fprintf(a.errw, "prep: dropping mutant %s: %v\n", mu.ID, err)
+				os.RemoveAll(filepath.Join(res.Root, "mutants", mu.ID))
+				continue
+			}
+		}
+		names = append(names, name)
+		descs[name] = mu.Description
+	}
+	a.printf("%d mutant(s) of %s:\n", len(names), *base)
+	for _, n := range names {
+		a.printf("  %s  %s\n", n, strings.SplitN(descs[n], "\n", 2)[0])
+	}
+	run, cases, err := execMatrix(a, dir, &m, append([]string{*base}, names...))
+	if err != nil || run == nil {
+		return err
+	}
+	rows := mutate.Rank(run.Cells, *base, names, caseAreas(cases), descs)
+	baseRate := 0.0
+	if len(rows) > 0 {
+		baseRate = rows[0].BaseRate
+	}
+	if a.json {
+		a.emit(map[string]any{"run": run.ID, "base": *base, "ranking": rows})
+		return nil
+	}
+	a.printf("\n%s", mutate.Format(*base, baseRate, rows))
+	a.printf("\nstored as %s; compare one with prep eval compare %s --variants %s,<mutant>\n", run.ID, run.ID, *base)
+	return nil
+}
+
+// failureSummary lists what failed most in the latest stored run, for the
+// proposal prompt.
+func failureSummary(store results.Store) string {
+	run, err := store.Load("latest")
+	if err != nil {
+		return ""
+	}
+	counts := map[string]int{}
+	for _, c := range run.Cells {
+		for d, n := range c.FailedBy {
+			counts[d] += n
+		}
+	}
+	type kv struct {
+		d string
+		n int
+	}
+	var kvs []kv
+	for d, n := range counts {
+		kvs = append(kvs, kv{d, n})
+	}
+	sort.Slice(kvs, func(i, j int) bool {
+		if kvs[i].n != kvs[j].n {
+			return kvs[i].n > kvs[j].n
+		}
+		return kvs[i].d < kvs[j].d
+	})
+	var b strings.Builder
+	for i, e := range kvs {
+		if i == 8 {
+			break
+		}
+		fmt.Fprintf(&b, "- failed %d times: %s\n", e.n, e.d)
+	}
+	return b.String()
 }

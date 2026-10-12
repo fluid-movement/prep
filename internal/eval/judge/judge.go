@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -46,14 +47,30 @@ type Config struct {
 	Claude string
 	Auth   env.Auth
 	Parent string
+	// MaxBudgetUSD caps what one call may spend (default 0.30).
+	MaxBudgetUSD float64
 }
 
 // NewClaude returns a judge backed by `claude -p` with no tools, no
 // persistence and no plugins, in an isolated environment, and a function that
 // removes that environment.
 func NewClaude(cfg Config) (*Judge, func(), error) {
+	call, cleanup, err := NewClaudeCaller(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	return New(call), cleanup, nil
+}
+
+// NewClaudeCaller is the Caller NewClaude builds on: one prompt in, the
+// model's reply text out, with no tools and nothing persisted. Other pieces
+// of the suite that need a plain model call (mutation proposals) use it too.
+func NewClaudeCaller(cfg Config) (Caller, func(), error) {
 	if cfg.Model == "" {
 		cfg.Model = "sonnet"
+	}
+	if cfg.MaxBudgetUSD == 0 {
+		cfg.MaxBudgetUSD = 0.30
 	}
 	e, err := env.New(env.Config{Claude: cfg.Claude, Auth: cfg.Auth, Parent: cfg.Parent})
 	if err != nil {
@@ -63,7 +80,8 @@ func NewClaude(cfg Config) (*Judge, func(), error) {
 	call := func(ctx context.Context, prompt string) (string, error) {
 		mu.Lock() // one scratch directory; serialise starting the process only
 		cmd := e.Command(e.Workspace, "-p", "--model", cfg.Model, "--output-format", "json", "--tools", "",
-			"--no-session-persistence", "--disable-slash-commands", "--strict-mcp-config", "--max-turns", "1")
+			"--no-session-persistence", "--disable-slash-commands", "--strict-mcp-config", "--max-turns", "1",
+			"--max-budget-usd", strconv.FormatFloat(cfg.MaxBudgetUSD, 'f', -1, 64))
 		mu.Unlock()
 		cmd.Stdin = strings.NewReader(prompt)
 		out, err := runCmd(ctx, cmd)
@@ -82,7 +100,7 @@ func NewClaude(cfg Config) (*Judge, func(), error) {
 		}
 		return r.Result, nil
 	}
-	return New(call), e.Cleanup, nil
+	return call, e.Cleanup, nil
 }
 
 // Verdict is a parsed reply.

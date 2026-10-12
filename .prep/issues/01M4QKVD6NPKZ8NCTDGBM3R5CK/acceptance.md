@@ -1,5 +1,5 @@
-- [ ] Mechanical operators generate mutants of the skill rules and hooks, each an ordinary variant with description recorded
-- [ ] Agent-proposed mutants are generated with a stated hypothesis each, within a budget
-- [ ] prep eval mutate runs base and mutants through one matrix and ranks mutants against the base, marking differences beyond the noise
-- [ ] Mutants are written under eval/variants/mutants/ and can be promoted by hand; nothing edits the shipped plugin
-- [ ] Invalid mutants (not a valid plugin) are rejected before running
+- [x] Mechanical operators generate mutants of the skill rules and hooks, each an ordinary variant with description recorded
+- [x] Agent-proposed mutants are generated with a stated hypothesis each, within a budget
+- [x] prep eval mutate runs base and mutants through one matrix and ranks mutants against the base, marking differences beyond the noise
+- [x] Mutants are written under eval/variants/mutants/ and can be promoted by hand; nothing edits the shipped plugin
+- [x] Invalid mutants (not a valid plugin) are rejected before running

@@ -224,3 +224,38 @@ func TestEvalModels(t *testing.T) {
 	}
 	h.fails("no cells for variant", "eval", "models", "--dir", dir, "--variant", "nope")
 }
+
+func TestEvalMutate(t *testing.T) {
+	h := newHarness(t)
+	dir := copyEvalDir(t)
+	claude := fakeClaudeFor(t)
+	plugin := "../../plugins/claude-code"
+	bin := prepBinary(t)
+	// A dry run lists the mutants and writes nothing.
+	dry := h.ok("eval", "mutate", "--dir", dir, "--operators", "drop-hook", "--plugin", plugin, "--case", "session-what-next", "--models", "haiku", "--dry-run", "--binary", bin)
+	if !strings.Contains(dry, "mutants/drop-hook-sessionstart") || !strings.Contains(dry, "mutants/drop-bridge") {
+		t.Errorf("dry run:\n%s", dry)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "variants", "mutants")); err == nil {
+		t.Error("dry run wrote mutants")
+	}
+	h.fails("unknown operator", "eval", "mutate", "--dir", dir, "--operators", "nonsense", "--plugin", plugin)
+	h.fails("--base", "eval", "mutate", "--dir", dir, "--variants", "current", "--plugin", plugin)
+	h.fails("no mutant to run", "eval", "mutate", "--dir", dir, "--operators", "drop-hook", "--only", "zzz", "--plugin", plugin)
+	t.Setenv("ANTHROPIC_API_KEY", "k")
+	out := h.ok("eval", "mutate", "--dir", dir, "--operators", "drop-hook", "--plugin", plugin, "--case", "session-what-next", "--models", "haiku",
+		"--n", "1", "--no-judge", "--claude", claude, "--binary", bin)
+	for _, want := range []string{"2 mutant(s) of current", "mutants against current", "mutants/drop-hook-sessionstart", "mutants/drop-bridge", "stored as"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("mutate output lacks %q:\n%s", want, out)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "variants", "mutants", "drop-bridge", "variant.yaml")); err != nil {
+		t.Errorf("mutant not written: %v", err)
+	}
+	// the mutants are ordinary variants: they can be run by name
+	if out := h.ok("eval", "run", "--dir", dir, "--case", "session-what-next", "--models", "haiku", "--n", "1", "--no-judge", "--claude", claude,
+		"--plugin", plugin, "--binary", bin, "--variants", "mutants/drop-bridge"); !strings.Contains(out, "mutants/drop-bridge / haiku") {
+		t.Errorf("run of a mutant:\n%s", out)
+	}
+}
