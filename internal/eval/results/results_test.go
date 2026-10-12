@@ -155,3 +155,32 @@ func TestCompareVariantsInsideOneRun(t *testing.T) {
 		t.Errorf("%v", got)
 	}
 }
+
+func TestBaseline(t *testing.T) {
+	run := &Run{ID: "r1", Created: time.Date(2026, 10, 12, 0, 0, 0, 0, time.UTC), Cells: []*matrix.CellResult{
+		cellOf("fine", "v", "m", 10, 0), cellOf("slipped", "v", "m", 10, 0), cellOf("noise", "v", "m", 10, 0), cellOf("dropped-from-run", "v", "m", 10, 0),
+	}}
+	path := t.TempDir() + "/baseline.json"
+	b := NewBaseline(run, "smoke")
+	if err := SaveBaseline(path, b); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := LoadBaseline(path)
+	if err != nil || len(loaded.Cells) != 4 || loaded.Note != "smoke" || loaded.Cells[0].Case != "dropped-from-run" {
+		t.Fatalf("round trip: %v %+v", err, loaded)
+	}
+	now := &Run{ID: "r2", Cells: []*matrix.CellResult{
+		cellOf("fine", "v", "m", 10, 0), cellOf("slipped", "v", "m", 1, 9), cellOf("noise", "v", "m", 7, 3),
+	}}
+	chk := CheckBaseline(now, loaded)
+	if chk.Checked != 3 || len(chk.Regressions) != 1 || chk.Regressions[0].Cell.Case != "slipped" || len(chk.Missing) != 1 {
+		t.Errorf("%+v", chk)
+	}
+	out := chk.Format()
+	if !strings.Contains(out, "REGRESSED slipped / v / m: baseline 10/10 100%") || !strings.Contains(out, "not covered: dropped-from-run") {
+		t.Errorf("format:\n%s", out)
+	}
+	if _, err := LoadBaseline(t.TempDir() + "/none.json"); err == nil {
+		t.Error("missing file")
+	}
+}

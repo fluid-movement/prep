@@ -2,9 +2,11 @@ package cli
 
 import (
 	"flag"
+	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/eval/results"
 )
 
@@ -25,6 +27,7 @@ func init() {
 		evalCommand{"report", evalReport},
 		evalCommand{"compare", evalCompare},
 		evalCommand{"prune", evalPrune},
+		evalCommand{"check", evalCheck},
 	)
 }
 
@@ -129,6 +132,53 @@ func evalCompare(a *app, dir string, args []string) error {
 		return nil
 	}
 	a.printf("%s", results.FormatCompare(ra.ID, rb.ID, ds))
+	return nil
+}
+
+// evalCheck compares a stored run with the committed baseline and fails on a
+// regression beyond the noise; --update rewrites the baseline from the run.
+func evalCheck(a *app, dir string, args []string) error {
+	fs := flag.NewFlagSet("eval check", flag.ContinueOnError)
+	baselinePath := fs.String("baseline", "", "the baseline file (default <dir>/baseline.json)")
+	update := fs.Bool("update", false, "write the run's pass rates as the new baseline")
+	note := fs.String("note", "", "a note stored in a new baseline")
+	pos, err := parse(fs, args)
+	if err != nil {
+		return err
+	}
+	id := "latest"
+	if len(pos) > 1 {
+		return usageErr("usage: prep eval check [<run-id>|latest] [--baseline file] [--update]")
+	} else if len(pos) == 1 {
+		id = pos[0]
+	}
+	if *baselinePath == "" {
+		*baselinePath = filepath.Join(dir, "baseline.json")
+	}
+	run, err := resultsStore(dir).Load(id)
+	if err != nil {
+		return err
+	}
+	if *update {
+		if err := results.SaveBaseline(*baselinePath, results.NewBaseline(run, *note)); err != nil {
+			return err
+		}
+		a.printf("wrote %s from run %s\n", *baselinePath, run.ID)
+		return nil
+	}
+	b, err := results.LoadBaseline(*baselinePath)
+	if err != nil {
+		return err
+	}
+	chk := results.CheckBaseline(run, b)
+	if a.json {
+		a.emit(map[string]any{"run": run.ID, "baseline": b.Run, "checked": chk.Checked, "regressions": chk.Regressions, "missing": chk.Missing})
+	} else {
+		a.printf("%s", chk.Format())
+	}
+	if len(chk.Regressions) > 0 {
+		return silentErr{&domain.Error{Code: domain.ErrCheck, Message: fmt.Sprintf("%d cell(s) regressed against the baseline", len(chk.Regressions))}}
+	}
 	return nil
 }
 

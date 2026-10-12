@@ -259,3 +259,30 @@ func TestEvalMutate(t *testing.T) {
 		t.Errorf("run of a mutant:\n%s", out)
 	}
 }
+
+func TestEvalCheckAgainstBaseline(t *testing.T) {
+	h := newHarness(t)
+	dir := t.TempDir()
+	st := results.Store{Root: filepath.Join(dir, "results")}
+	save := func(id string, k, f int) {
+		if err := st.Save(&results.Run{ID: id, Created: time.Now(), Definition: results.Definition{N: 10}, Cells: []*matrix.CellResult{evalCell("a", "current", k, f)}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	save("20261012-100000-aaaa", 10, 0)
+	h.fails("baseline.json", "eval", "check", "--dir", dir)
+	if out := h.ok("eval", "check", "--dir", dir, "--update", "--note", "smoke"); !strings.Contains(out, "wrote") {
+		t.Errorf("update:\n%s", out)
+	}
+	if out := h.ok("eval", "check", "--dir", dir); !strings.Contains(out, "1 cell(s) checked against the baseline: 0 regressed") {
+		t.Errorf("same run:\n%s", out)
+	}
+	save("20261013-100000-bbbb", 1, 9)
+	code, out := h.run("eval", "check", "--dir", dir)
+	if code == 0 || !strings.Contains(out, "REGRESSED a / current / haiku") || !strings.Contains(out, "1 regressed") {
+		t.Errorf("regression: exit %d\n%s", code, out)
+	}
+	if out := h.ok("eval", "check", "20261012", "--dir", dir); !strings.Contains(out, "0 regressed") {
+		t.Errorf("older run:\n%s", out)
+	}
+}
