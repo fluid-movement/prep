@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/cli
   - cmd/prep
-confirmed_commit: 7487215880ef11a44a3a81cd7a7ddc3a1614abaf
+confirmed_commit: eaa2c0b5236dc2efd800a19d785fad9a302e51b8
 ---
 
 # CLI
@@ -43,4 +43,4 @@ Applies when adding or changing commands.
 - `prep skill` prints the embedded `internal/cli/skill.md`; `.claude/skills/prep/SKILL.md` must stay identical (tested).
 - Tests in `cli_test.go` drive whole lifecycles through `Main` with a fake clock; the package variables `clock` and `entropy` (nil: `crypto/rand`) feed `prep new` and the bootstrap issues their IDs, and tests read IDs from the commands' output.
 - **Completion evidence**: a code issue completed without `--commit` has no evidence in `resolution.md`; `resolveEvidence` (used by `prep show` and the guide's touched files) fills it in memory with the commit that added `resolution.md` (`gitx.AddedIn`), and `prep show` marks it pending (`evidence_pending` in JSON) until that commit exists. The domain gate only validates a given `--commit` (`G_EVIDENCE`), and the guide lists it as `[--commit <ref>]`.
-- **Eval**: `Main` reads `PREP_TEST_NOW` and `PREP_TEST_SEED` (`app.testSeams`: a fixed clock and a seed for ID randomness; unset changes nothing) for the eval fixture builder. `prep eval ...` (`eval.go`, `eval_run.go`, subcommands in `evalCommands`) needs no prep project: [Agent behavior tests](/components/eval.md).
+- **Eval**: test seams `PREP_TEST_NOW`, `PREP_TEST_SEED` (`testSeams`); [prep eval](/components/eval.md).

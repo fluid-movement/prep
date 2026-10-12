@@ -7,6 +7,7 @@ generated:
   at: 2026-10-12T08:52:42Z
 scope:
   - internal/eval/**
+confirmed_commit: eaa2c0b5236dc2efd800a19d785fad9a302e51b8
 ---
 
 # Agent behavior tests (prep eval)
