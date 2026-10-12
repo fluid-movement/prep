@@ -52,7 +52,20 @@ check:
 # Everything CI runs
 ci: lint test check
 
-# Agent behavior tests, the cheap smoke subset (needs CLAUDE_CODE_OAUTH_TOKEN from `claude setup-token`, or ANTHROPIC_API_KEY)
+# One-time login for the agent behavior tests: runs `claude setup-token` (opens a browser), then keeps the token it prints in ~/.config/prep/eval-token (mode 600)
+eval-login:
+    #!/usr/bin/env sh
+    set -eu
+    claude setup-token
+    printf 'Paste the token printed above (input is hidden): '
+    stty -echo; read -r token; stty echo; printf '\n'
+    [ -n "$token" ] || { echo "no token given" >&2; exit 1; }
+    dir="${XDG_CONFIG_HOME:-$HOME/.config}/prep"
+    mkdir -p "$dir"
+    ( umask 077; printf '%s' "$token" > "$dir/eval-token" )
+    echo "saved $dir/eval-token; try: just eval-smoke"
+
+# Agent behavior tests, the cheap smoke subset (needs `just eval-login` once, or CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY)
 eval-smoke *args: build
     ./prep eval run --smoke --models haiku --n 3 {{args}}
 

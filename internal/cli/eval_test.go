@@ -142,6 +142,9 @@ func TestEvalRunDoctorAndJudgeCheck(t *testing.T) {
 	h := newHarness(t)
 	dir := copyEvalDir(t)
 	claude := fakeClaudeFor(t)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir()) // no token file of the real user
+	t.Setenv("CLAUDE_CODE_OAUTH_TOKEN", "")
+	t.Setenv("ANTHROPIC_API_KEY", "")
 	h.fails("claude setup-token", "eval", "run", "--dir", dir, "--case", "session-what-next", "--models", "haiku", "--n", "1", "--claude", claude)
 	t.Setenv("ANTHROPIC_API_KEY", "k")
 	plugin := "../../plugins/claude-code"

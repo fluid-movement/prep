@@ -25,15 +25,41 @@ type Auth struct {
 
 // ErrNoAuth is returned when neither credential is available.
 var ErrNoAuth = errors.New("no credentials for the test runs: a private Claude Code configuration has no login, so " +
-	"run `claude setup-token` once and export the token as CLAUDE_CODE_OAUTH_TOKEN (uses your subscription), " +
-	"or export ANTHROPIC_API_KEY (billed per token)")
+	"run `just eval-login` once (it runs `claude setup-token` and keeps the token in ~/.config/prep/eval-token; uses your subscription), " +
+	"or export CLAUDE_CODE_OAUTH_TOKEN, or ANTHROPIC_API_KEY (billed per token)")
 
-// AuthFromEnv reads the credentials with getenv (os.Getenv if nil).
+// TokenFile is where `just eval-login` stores the token: eval-token in
+// prep's user configuration directory. "" when the home is unknown.
+func TokenFile(getenv func(string) string) string {
+	if getenv == nil {
+		getenv = os.Getenv
+	}
+	dir := getenv("XDG_CONFIG_HOME")
+	if dir == "" {
+		home := getenv("HOME")
+		if home == "" {
+			return ""
+		}
+		dir = filepath.Join(home, ".config")
+	}
+	return filepath.Join(dir, "prep", "eval-token")
+}
+
+// AuthFromEnv reads the credentials with getenv (os.Getenv if nil): the
+// CLAUDE_CODE_OAUTH_TOKEN and ANTHROPIC_API_KEY variables, else the token
+// file.
 func AuthFromEnv(getenv func(string) string) (Auth, error) {
 	if getenv == nil {
 		getenv = os.Getenv
 	}
 	a := Auth{OAuthToken: getenv("CLAUDE_CODE_OAUTH_TOKEN"), APIKey: getenv("ANTHROPIC_API_KEY")}
+	if a.OAuthToken == "" && a.APIKey == "" {
+		if f := TokenFile(getenv); f != "" {
+			if data, err := os.ReadFile(f); err == nil {
+				a.OAuthToken = strings.TrimSpace(string(data))
+			}
+		}
+	}
 	if a.OAuthToken == "" && a.APIKey == "" {
 		return a, ErrNoAuth
 	}

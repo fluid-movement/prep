@@ -30,7 +30,7 @@ func fakePrep(t *testing.T) string {
 
 func TestAuthRequired(t *testing.T) {
 	_, err := AuthFromEnv(func(string) string { return "" })
-	if err == nil || !strings.Contains(err.Error(), "claude setup-token") || !strings.Contains(err.Error(), "CLAUDE_CODE_OAUTH_TOKEN") {
+	if err == nil || !strings.Contains(err.Error(), "claude setup-token") || !strings.Contains(err.Error(), "CLAUDE_CODE_OAUTH_TOKEN") || !strings.Contains(err.Error(), "just eval-login") {
 		t.Errorf("error: %v", err)
 	}
 	if _, err := New(Config{Claude: fakeClaude(t, "true")}); err != ErrNoAuth {
@@ -169,5 +169,43 @@ printf '{"type":"system","subtype":"init","cwd":"%s","session_id":"s","model":"m
 	defer e2.Cleanup()
 	if _, err := e2.Probe(context.Background(), "haiku", ""); err == nil || !strings.Contains(err.Error(), "not logged in") {
 		t.Errorf("failing harness: %v", err)
+	}
+}
+
+func TestTokenFile(t *testing.T) {
+	home := t.TempDir()
+	get := func(k string) string {
+		if k == "HOME" {
+			return home
+		}
+		return ""
+	}
+	if f := TokenFile(get); f != filepath.Join(home, ".config", "prep", "eval-token") {
+		t.Errorf("file: %q", f)
+	}
+	if f := TokenFile(func(k string) string { return map[string]string{"XDG_CONFIG_HOME": "/x"}[k] }); f != "/x/prep/eval-token" {
+		t.Errorf("xdg: %q", f)
+	}
+	if TokenFile(func(string) string { return "" }) != "" {
+		t.Error("no home")
+	}
+	if _, err := AuthFromEnv(get); err != ErrNoAuth {
+		t.Errorf("no file yet: %v", err)
+	}
+	os.MkdirAll(filepath.Dir(TokenFile(get)), 0o755)
+	os.WriteFile(TokenFile(get), []byte("tok-from-file\n"), 0o600)
+	a, err := AuthFromEnv(get)
+	if err != nil || a.OAuthToken != "tok-from-file" {
+		t.Errorf("from file: %v %+v", err, a)
+	}
+	// the environment wins over the file
+	a, _ = AuthFromEnv(func(k string) string {
+		if k == "ANTHROPIC_API_KEY" {
+			return "key"
+		}
+		return get(k)
+	})
+	if a.APIKey != "key" || a.OAuthToken != "" {
+		t.Errorf("env should win: %+v", a)
 	}
 }
