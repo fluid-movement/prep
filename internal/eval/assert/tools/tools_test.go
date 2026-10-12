@@ -162,7 +162,6 @@ func TestNoPrepFiles(t *testing.T) {
 	}{
 		{[]string{"Bash: prep show 01A", "Read: /w/src/main.go", "Bash: ls /w"}, true},
 		{[]string{"Bash: cat /w/.prep/issues/a/issue.md"}, false},
-		{[]string{"Bash: ls .prep"}, false},
 		{[]string{"Bash: grep -r todo .prep/"}, false},
 		{[]string{"Edit: /w/.prep/issues/a/issue.md"}, false},
 		{[]string{"Grep: /w/.prep"}, false},
@@ -173,6 +172,13 @@ func TestNoPrepFiles(t *testing.T) {
 		{[]string{"Bash: rg headline --glob '!.prep'"}, true},
 		{[]string{"Bash: find . -path ./.prep -prune -o -type f -print"}, true},
 		{[]string{"Bash: grep -r headline --exclude-dir=.prep . .prep/knowledge"}, false},
+		{[]string{"Bash: cat README.md .prep/project.md"}, true},
+		{[]string{"Bash: cat .prep/config.yaml"}, true},
+		{[]string{"Bash: ls .prep"}, true},
+		{[]string{"Bash: ls .prep/knowledge"}, false},
+		{[]string{"Bash: find .prep -type f"}, false},
+		{[]string{"Read: /w/.prep/project.md"}, true},
+		{[]string{"Read: /w/.prep/issues/01A/issue.md"}, false},
 	} {
 		r := check(t, session(c.steps...), "no_prep_files: true")
 		if r.Pass != c.pass {

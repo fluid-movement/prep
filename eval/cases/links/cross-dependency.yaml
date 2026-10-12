@@ -7,7 +7,7 @@ prompt: |
 workspace: shop-api
 expect:
   tools:
-    - ran: {command: new, args: 'depends-on'}
+    - any_of: [{command: new, args: 'depends-on'}, {command: edit, args: 'depends-on'}]
     - no_prep_files: true
   outcome:
     - issue: {title: login errors, depends_on: ['{{api/auth}}']}

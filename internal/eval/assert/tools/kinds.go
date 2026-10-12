@@ -389,7 +389,13 @@ type noPrepFiles struct{}
 
 func decodeNoPrepFiles(n *yaml.Node) (assert.Assertion, error) { return noPrepFiles{}, nil }
 
-var prepDir = regexp.MustCompile(`(^|[/\s'"=])\.prep($|[/\s'"])`)
+// prepRecords matches a path into the records prep keeps and owns: issues,
+// knowledge, the local activity stream. Reading project.md or config.yaml is
+// not what the skill forbids.
+var prepRecords = regexp.MustCompile(`\.prep/(issues|knowledge|local)(/|\s|'|"|$)`)
+
+// prepSweep matches a command that walks the whole .prep directory.
+var prepSweep = regexp.MustCompile(`\b(find|grep|rg|ag|tree|du|cat|ls\s+-\S*R)\s[^|;&]*\.prep(\s|/?$|/?['"])`)
 
 // prepExcluded matches the ways a search says to leave .prep out, which is the
 // opposite of reading it.
@@ -401,10 +407,10 @@ func (a noPrepFiles) Check(in *assert.Input) assert.Result {
 	for _, st := range in.Transcript.Steps {
 		switch {
 		case st.Tool == "Bash":
-			if len(st.Commands) == 0 && prepDir.MatchString(prepExcluded.ReplaceAllString(st.Shell, "")) {
+			if sh := prepExcluded.ReplaceAllString(st.Shell, ""); len(st.Commands) == 0 && (prepRecords.MatchString(sh) || prepSweep.MatchString(sh)) {
 				return assert.Fail(a, fmt.Sprintf("step %d reached into .prep from the shell: %s", st.Index, clip(st.Shell)), st.Index)
 			}
-		case st.Path != "" && prepDir.MatchString(st.Path+"/"):
+		case st.Path != "" && (prepRecords.MatchString(st.Path+"/") || strings.HasSuffix(st.Path, "/.prep")):
 			return assert.Fail(a, fmt.Sprintf("step %d used %s on %s", st.Index, st.Tool, st.Path), st.Index)
 		}
 	}

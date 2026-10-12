@@ -1,8 +1,9 @@
 name: knowledge-write-new-entry
 description: New knowledge goes in as an entry written through prep.
 prompt: |
-  Document how the cart totals cache works as a new knowledge entry at /components/cart-cache.md:
-  totals are cached per cart for 10 minutes and invalidated on any item change.
+  We decided how the cart totals cache will work (it is not built yet). Write that decision down as a new
+  knowledge entry at /components/cart-cache.md: totals are cached per cart for 10 minutes and invalidated
+  on any item change.
 fixture: shop
 expect:
   tools:
