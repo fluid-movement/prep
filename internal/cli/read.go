@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -125,10 +126,25 @@ func cmdList(a *app, args []string) error {
 	tree := false
 	var query []string
 	view := ""
+	max := 0
 	for k := 0; k < len(args); k++ {
 		switch {
 		case args[k] == "--tree":
 			tree = true
+		case args[k] == "--max" || strings.HasPrefix(args[k], "--max="):
+			v := strings.TrimPrefix(args[k], "--max=")
+			if args[k] == "--max" {
+				if k+1 >= len(args) {
+					return usageErr("--max needs a number")
+				}
+				k++
+				v = args[k]
+			}
+			n, err := strconv.Atoi(v)
+			if err != nil || n < 1 {
+				return usageErr("--max needs a positive number, not %q", v)
+			}
+			max = n
 		case args[k] == "--view":
 			if k+1 >= len(args) {
 				return usageErr("--view needs a name")
@@ -161,6 +177,10 @@ func cmdList(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	matched := len(ids)
+	if max > 0 && !tree && len(ids) > max {
+		ids = ids[:max]
+	}
 	var out []summary
 	if tree {
 		matched := map[string]bool{}
@@ -190,10 +210,17 @@ func cmdList(a *app, args []string) error {
 		if out == nil {
 			out = []summary{}
 		}
+		if matched > len(out) && !tree {
+			a.emit(map[string]any{"issues": out, "matched": matched})
+			return nil
+		}
 		a.emit(map[string]any{"issues": out})
 		return nil
 	}
 	a.printSummaries(out)
+	if matched > len(out) && !tree {
+		a.printf("(%d of %d shown; --max N changes that)\n", len(out), matched)
+	}
 	return nil
 }
 

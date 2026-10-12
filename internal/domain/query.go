@@ -91,7 +91,7 @@ func ParseFilter(args []string) (Filter, error) {
 					add(neg, &f.Kinds, &f.NotKinds, kd)
 				}
 			}
-		case "tag":
+		case "tag", "tags":
 			var v string
 			if v, err = takeVal(); err == nil {
 				for _, s := range strings.Split(v, ",") {
