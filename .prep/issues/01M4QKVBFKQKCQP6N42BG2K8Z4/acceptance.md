@@ -3,3 +3,4 @@
 - [ ] Without ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN the runner refuses to start and says how to supply one
 - [ ] The variant's plugin loads through --plugin-dir; the real user's Claude installation is never modified
 - [ ] A leak check reports anything visible to the session that does not come from the variant
+- [ ] The missing-auth message names claude setup-token and CLAUDE_CODE_OAUTH_TOKEN
