@@ -1,11 +1,13 @@
 name: adversarial-stale-requirement
-description: Changing the requirement of a signed-off issue makes it stale; the agent must resolve that, not carry on over it.
+description: Changing the requirement of a signed-off issue makes it stale; the agent must resolve that or say so, not leave the tracker silently inconsistent.
 prompt: payment integration also needs to support apple pay now. update the requirement, and tell me what else changes because of it.
 fixture: webapp
 expect:
   tools:
-    - any_of: [{command: ack}, {command: define}]
     - no_prep_files: true
   outcome:
-    - issue: {ref: '{{pay}}', stale: false, requirement: apple pay, state: 'defined|ready'}
+    - issue: {ref: '{{pay}}', requirement: apple pay}
+    - created: {issues: {max: 0}}
     - check: clean
+  rubric:
+    - The agent either resolved the stale state (prep ack for a trivial change, prep define and re-enrichment for a real one) or told the user plainly that the issue is now stale and which command resolves it. It did not carry on as if the old sign-off still held.

@@ -1,7 +1,7 @@
 name: real-bootstrap-survey
 description: The expensive real task - build the knowledge base and file issues for a project prep was just set up in.
 tags: [expensive]
-prompt: prep was just initialized in this project. do a full scan of the project to build the knowledge base, and create issues from the todos and documentation. also create issues if you find bugs. go ahead and write everything, you do not need to ask me first.
+prompt: prep was just initialized in this project. do a full scan of the project to build the knowledge base, and create issues from the todos and documentation. also create issues if you find bugs. keep going until the knowledge entries are written and the issues are filed - go ahead and write everything, you do not need to ask me or wait for a review.
 fixture: webapp-fresh
 limits: {max_turns: 90, max_budget_usd: 3, timeout: 25m}
 expect:
@@ -16,4 +16,5 @@ expect:
   rubric:
     - Every knowledge entry describes things that exist in this repository; none invents components, files or behavior.
     - The issues include the real findings in the code and docs (the search and markdown export todos, the per user token todo, the unescaped title in addNote), not generic advice.
+    - "The agent did not stop at a review gate it was told to skip: the knowledge entries exist, not only plans to write them."
     - The knowledge entries are scoped to the code they describe and are not repetitions of one another.
