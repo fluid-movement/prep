@@ -22,14 +22,16 @@ type VariantRef struct {
 
 // Definition is what a matrix run was asked to do.
 type Definition struct {
-	Cases      []string     `json:"cases"`
-	Variants   []VariantRef `json:"variants"`
-	Models     []string     `json:"models"`
-	N          int          `json:"n"`
-	Seed       int64        `json:"seed"`
-	Parallel   int          `json:"parallel"`
-	Sequential bool         `json:"sequential,omitempty"`
-	MaxUSD     float64      `json:"max_usd,omitempty"`
+	Cases []string `json:"cases"`
+	// Areas maps each case to its area, so reports stand alone.
+	Areas      map[string]string `json:"areas,omitempty"`
+	Variants   []VariantRef      `json:"variants"`
+	Models     []string          `json:"models"`
+	N          int               `json:"n"`
+	Seed       int64             `json:"seed"`
+	Parallel   int               `json:"parallel"`
+	Sequential bool              `json:"sequential,omitempty"`
+	MaxUSD     float64           `json:"max_usd,omitempty"`
 }
 
 // Versions are what ran it.

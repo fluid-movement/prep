@@ -1,5 +1,5 @@
-- [ ] prep eval run --models runs the same cases on several models and prep eval models <run-id> reports per area and per case which models pass, at what rate and cost
-- [ ] The report prints the resolved model id and harness version, and warns when a cell's id drifted
-- [ ] Failures per model are listed by assertion with counts and example runs, split into tool use, outcome and judged quality
-- [ ] Cost per passing run is computed, and the cheapest sufficient model per area is named (default 90% rate, interval lower bound 80%) or "not enough data"
-- [ ] A markdown export of the decision table is available
+- [x] prep eval run --models runs the same cases on several models and prep eval models <run-id> reports per area and per case which models pass, at what rate and cost
+- [x] The report prints the resolved model id and harness version, and warns when a cell's id drifted
+- [x] Failures per model are listed by assertion with counts and example runs, split into tool use, outcome and judged quality
+- [x] Cost per passing run is computed, and the cheapest sufficient model per area is named (default 90% rate, interval lower bound 80%) or "not enough data"
+- [x] A markdown export of the decision table is available

@@ -186,3 +186,41 @@ func prepBinary(t *testing.T) string {
 	}
 	return bin
 }
+
+func TestEvalModels(t *testing.T) {
+	h := newHarness(t)
+	dir := t.TempDir()
+	st := results.Store{Root: filepath.Join(dir, "results")}
+	mk := func(c, model string, k, f int, usd float64) *matrix.CellResult {
+		cr := &matrix.CellResult{Cell: matrix.Cell{Case: c, Variant: "current", Model: model}}
+		for i := 0; i < k+f; i++ {
+			cr.Runs = append(cr.Runs, matrix.RunResult{Index: i, Status: run.Completed, ModelResolved: "id-" + model, Cost: matrix.Cost{USD: usd},
+				Assertions: []assert.Result{{Kind: "ran", Desc: "ran guide", Pass: i < k}}})
+		}
+		matrix.Reduce(cr)
+		return cr
+	}
+	err := st.Save(&results.Run{ID: "20261012-100000-aaaa", Created: time.Now(),
+		Definition: results.Definition{N: 10, Areas: map[string]string{"c1": "queries"}},
+		Cells:      []*matrix.CellResult{mk("c1", "haiku", 20, 0, 0.01), mk("c1", "sonnet", 20, 0, 0.05)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := h.ok("eval", "models", "--dir", dir)
+	if !strings.Contains(out, "queries") || !strings.Contains(out, "haiku") || !strings.Contains(out, "next up: sonnet") {
+		t.Errorf("models:\n%s", out)
+	}
+	if md := h.ok("eval", "models", "--dir", dir, "--md"); !strings.Contains(md, "| queries | haiku |") {
+		t.Errorf("markdown:\n%s", md)
+	}
+	var j struct {
+		Areas []struct {
+			Area, Cheapest string
+		} `json:"areas"`
+	}
+	h.jsonOf(&j, "eval", "models", "--dir", dir)
+	if len(j.Areas) != 1 || j.Areas[0].Cheapest != "haiku" {
+		t.Errorf("json: %+v", j)
+	}
+	h.fails("no cells for variant", "eval", "models", "--dir", dir, "--variant", "nope")
+}

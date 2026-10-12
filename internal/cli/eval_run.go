@@ -20,6 +20,7 @@ import (
 	"github.com/fluid-movement/prep/internal/eval/evalcase"
 	"github.com/fluid-movement/prep/internal/eval/judge"
 	"github.com/fluid-movement/prep/internal/eval/matrix"
+	"github.com/fluid-movement/prep/internal/eval/models"
 	"github.com/fluid-movement/prep/internal/eval/results"
 	"github.com/fluid-movement/prep/internal/eval/variant"
 )
@@ -195,7 +196,7 @@ func evalRun(a *app, dir string, args []string) error {
 		return err
 	}
 	run := &results.Run{ID: id, Created: started, Note: *note,
-		Definition: results.Definition{Cases: caseNames(cases), Variants: refs, Models: opts.Models, N: *n, Seed: *seed, Parallel: *parallel, Sequential: *sequential, MaxUSD: *maxUSD},
+		Definition: results.Definition{Cases: caseNames(cases), Areas: caseAreas(cases), Variants: refs, Models: opts.Models, N: *n, Seed: *seed, Parallel: *parallel, Sequential: *sequential, MaxUSD: *maxUSD},
 		Versions:   results.Versions{Prep: Version, Git: gitRev()},
 		Cells:      out.Cells, StoppedBy: out.StoppedBy, SpentUSD: out.SpentUSD}
 	for _, c := range out.Cells {
@@ -247,6 +248,14 @@ func caseNames(cases []*evalcase.Case) []string {
 	}
 	sort.Strings(n)
 	return n
+}
+
+func caseAreas(cases []*evalcase.Case) map[string]string {
+	m := map[string]string{}
+	for _, c := range cases {
+		m[c.Name] = c.Area
+	}
+	return m
 }
 
 func gitRev() string {
@@ -442,6 +451,50 @@ func evalJudgeCheck(a *app, dir string, args []string) error {
 	}
 	if !rep.Trusted {
 		return &domain.Error{Code: domain.ErrGate, Message: "the judge is untrusted: its agreement with the labels is below the threshold"}
+	}
+	return nil
+}
+
+func init() {
+	evalCommands = append(evalCommands, evalCommand{"models", evalModels})
+}
+
+// evalModels says which model is enough for which area, from a stored run
+// that covered several models.
+func evalModels(a *app, dir string, args []string) error {
+	fs := flag.NewFlagSet("eval models", flag.ContinueOnError)
+	variantName := fs.String("variant", "", "the variant to analyse (default: the first by name)")
+	minRate := fs.Float64("min-rate", 0.9, "pass rate a model needs in an area")
+	minLower := fs.Float64("min-lower", 0.8, "lower bound of the 95% interval a model needs")
+	minRuns := fs.Int("min-runs", 5, "fewest runs in an area that can show anything")
+	md := fs.Bool("md", false, "print the decision table as markdown (for eval/models.md)")
+	pos, err := parse(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) > 1 {
+		return usageErr("usage: prep eval models [<run-id>|latest] [--variant v] [--md]")
+	}
+	id := "latest"
+	if len(pos) == 1 {
+		id = pos[0]
+	}
+	run, err := resultsStore(dir).Load(id)
+	if err != nil {
+		return err
+	}
+	an, err := models.Analyze(run.ID, run.Versions.Harness, run.Definition.N, run.Cells, run.Definition.Areas,
+		models.Options{Variant: *variantName, MinRate: *minRate, MinLower: *minLower, MinRuns: *minRuns})
+	if err != nil {
+		return err
+	}
+	switch {
+	case a.json:
+		a.emit(an)
+	case *md:
+		a.printf("%s", models.Markdown(an))
+	default:
+		a.printf("%s", models.Text(an))
 	}
 	return nil
 }

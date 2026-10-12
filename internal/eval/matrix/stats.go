@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-// wilson returns the 95% Wilson score interval for k successes in n trials.
+// Wilson returns the 95% Wilson score interval for k successes in n trials.
 // With no trials it is the whole range.
-func wilson(k, n int) (lo, hi float64) {
+func Wilson(k, n int) (lo, hi float64) {
 	if n == 0 {
 		return 0, 1
 	}

@@ -120,7 +120,9 @@ type CellResult struct {
 	Flaky bool    `json:"flaky"`
 	// FailedBy counts the failing assertions by their description.
 	FailedBy map[string]int `json:"failed_by,omitempty"`
-	Cost     CostStats      `json:"cost"`
+	// FailKinds gives the assertion kind of each description in FailedBy.
+	FailKinds map[string]string `json:"fail_kinds,omitempty"`
+	Cost      CostStats         `json:"cost"`
 	// Resolved lists the model ids the harness reported.
 	Resolved []string `json:"resolved,omitempty"`
 }
@@ -305,7 +307,7 @@ func decided(cr *CellResult, minRuns int) bool {
 	if n < minRuns {
 		return false
 	}
-	lo, hi := wilson(k, n)
+	lo, hi := Wilson(k, n)
 	return lo >= DecideAbove || hi <= DecideBelow
 }
 
@@ -316,7 +318,7 @@ func Reduce(cr *CellResult) { reduce(cr) }
 func reduce(cr *CellResult) {
 	sort.SliceStable(cr.Runs, func(a, b int) bool { return cr.Runs[a].Index < cr.Runs[b].Index })
 	cr.Passed, cr.Failed, cr.Errored, cr.Unjudged = 0, 0, 0, 0
-	cr.FailedBy = map[string]int{}
+	cr.FailedBy, cr.FailKinds = map[string]int{}, map[string]string{}
 	var costs []Cost
 	resolved := map[string]bool{}
 	for _, r := range cr.Runs {
@@ -339,6 +341,7 @@ func reduce(cr *CellResult) {
 		for _, a := range append(append([]assert.Result{}, r.Assertions...), r.Judged...) {
 			if !a.Pass && !a.Errored {
 				cr.FailedBy[a.Desc]++
+				cr.FailKinds[a.Desc] = a.Kind
 			}
 		}
 	}
@@ -346,7 +349,7 @@ func reduce(cr *CellResult) {
 	if n > 0 {
 		cr.Rate = float64(cr.Passed) / float64(n)
 	}
-	cr.Lo, cr.Hi = wilson(cr.Passed, n)
+	cr.Lo, cr.Hi = Wilson(cr.Passed, n)
 	cr.Flaky = cr.Passed > 0 && cr.Failed > 0
 	cr.Cost = costStats(costs)
 	cr.Resolved = cr.Resolved[:0]
