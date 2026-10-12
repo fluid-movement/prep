@@ -1,0 +1,3 @@
+description: The skill without any hook - no session-start briefing and no activity bridge.
+base: current
+remove: [hooks/hooks.json]

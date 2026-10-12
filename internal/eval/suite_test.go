@@ -37,6 +37,9 @@ func TestShippedCases(t *testing.T) {
 			}
 		}
 		key := c.Fixture + "|" + c.Workspace
+		if testing.Short() && c.Fixture == "large" {
+			continue // sixty issues take a minute to build
+		}
 		w, ok := built[key]
 		if !ok {
 			w, err = fixture.BuildWorkspace(c.Resolved(), t.TempDir(), fixture.Options{Binary: bin})
@@ -49,7 +52,7 @@ func TestShippedCases(t *testing.T) {
 			t.Errorf("%s: %v", c.Name, err)
 		}
 	}
-	for _, a := range []string{"session", "define", "enrich", "implement", "issues", "knowledge-read", "knowledge-write", "links", "queries", "lifecycle-other"} {
+	for _, a := range []string{"session", "define", "enrich", "implement", "issues", "knowledge-read", "knowledge-write", "links", "lifecycle-other", "batch", "real", "natural", "adversarial", "scale"} {
 		if areas[a] == 0 {
 			t.Errorf("no cases in area %s", a)
 		}

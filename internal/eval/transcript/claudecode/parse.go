@@ -69,6 +69,7 @@ func (p *parser) line(line []byte) error {
 	var e struct {
 		Type    string `json:"type"`
 		Subtype string `json:"subtype"`
+		Parent  string `json:"parent_tool_use_id"`
 		Message struct {
 			Content json.RawMessage `json:"content"`
 		} `json:"message"`
@@ -85,7 +86,7 @@ func (p *parser) line(line []byte) error {
 			return p.hook(line)
 		}
 	case "assistant":
-		return p.assistant(e.Message.Content)
+		return p.assistant(e.Message.Content, e.Parent)
 	case "user":
 		return p.user(e.Message.Content)
 	case "result":
@@ -194,7 +195,7 @@ func (p *parser) hook(line []byte) error {
 	return nil
 }
 
-func (p *parser) assistant(content json.RawMessage) error {
+func (p *parser) assistant(content json.RawMessage, parent string) error {
 	blocks, err := blocks(content)
 	if err != nil {
 		return err
@@ -206,7 +207,7 @@ func (p *parser) assistant(content json.RawMessage) error {
 				p.pending = append(p.pending, b.Text)
 			}
 		case "tool_use":
-			s := transcript.Step{Index: len(p.t.Steps), Tool: b.Name, Input: b.Input, Before: strings.Join(p.pending, "\n")}
+			s := transcript.Step{Index: len(p.t.Steps), Tool: b.Name, Input: b.Input, Parent: parent, Before: strings.Join(p.pending, "\n")}
 			p.pending = nil
 			fillTarget(&s)
 			p.byID[b.ID] = len(p.t.Steps)

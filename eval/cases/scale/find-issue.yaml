@@ -1,0 +1,12 @@
+name: scale-find-issue
+description: Finding one issue among sixty. Watch the calls and the tokens.
+tags: [expensive]
+prompt: what state is the "Rename the export button label" issue in?
+fixture: large
+expect:
+  tools:
+    - no_prep_files: true
+    - max_calls: 5
+    - final_mentions: ready
+  outcome:
+    - unchanged: {all: true, knowledge: true}

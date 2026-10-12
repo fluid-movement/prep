@@ -28,6 +28,20 @@ type Spec struct {
 	Config map[string]any `yaml:"config"`
 	// Repo makes the project a git repository with stub files.
 	Repo *RepoSpec `yaml:"repo"`
+	// Bootstrap runs prep init the way a user does, creating the knowledge
+	// base bootstrap issues, and leaves the knowledge base empty (no
+	// overview): the starting point of "set up prep in this project".
+	Bootstrap bool `yaml:"bootstrap"`
+	// Generate adds synthetic issues and knowledge entries, to make a project
+	// as big as a real one.
+	Generate *GenSpec `yaml:"generate"`
+}
+
+// GenSpec describes synthetic bulk: deterministic, varied in state, kind,
+// priority, parent and dependencies, and free of any alias.
+type GenSpec struct {
+	Issues    int `yaml:"issues"`
+	Knowledge int `yaml:"knowledge"`
 }
 
 // IssueSpec describes one issue. Strings may use {{alias}} (or
@@ -53,12 +67,17 @@ type KnowledgeSpec struct {
 	Title       string `yaml:"title"`
 	Description string `yaml:"description"`
 	Body        string `yaml:"body"`
+	// Scope lists the paths or globs the entry applies to, which prep uses to
+	// notice drift when they change.
+	Scope []string `yaml:"scope"`
 }
 
 // RepoSpec describes the optional git repository around the project.
 type RepoSpec struct {
 	// Files maps relative paths to contents.
 	Files map[string]string `yaml:"files"`
+	// Executable lists files that get the executable bit.
+	Executable []string `yaml:"executable"`
 	// Commit makes the initial commit (default true).
 	Commit *bool `yaml:"commit"`
 }

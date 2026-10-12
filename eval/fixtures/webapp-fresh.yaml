@@ -1,0 +1,39 @@
+# A project that has just had `prep init`: the bootstrap issues exist, the
+# knowledge base is empty. The code has a few things worth finding.
+name: webapp-fresh
+bootstrap: true
+repo:
+  files:
+    README.md: |
+      # Notes
+
+      A small notes service. Notes are stored in a sqlite file and served over a json api.
+
+      ## Roadmap
+      - TODO: full text search over notes
+      - TODO: export notes as markdown
+    package.json: |
+      { "name": "notes", "scripts": { "start": "node src/server.js", "test": "node test/run.js" } }
+    src/server.js: |
+      // http server: GET /notes, POST /notes, DELETE /notes/:id
+      const { listNotes, addNote, removeNote } = require('./notes');
+      module.exports = { routes: { 'GET /notes': listNotes, 'POST /notes': addNote, 'DELETE /notes/:id': removeNote } };
+    src/notes.js: |
+      const db = require('./db');
+      exports.listNotes = () => db.all('select * from notes');
+      // BUG: the title is not escaped, so a quote in a title breaks the query
+      exports.addNote = (n) => db.run("insert into notes(title, body) values ('" + n.title + "', '" + n.body + "')");
+      exports.removeNote = (id) => db.run('delete from notes where id = ' + Number(id));
+    src/db.js: |
+      // sqlite wrapper; the file path comes from NOTES_DB (default ./notes.sqlite)
+      const path = process.env.NOTES_DB || './notes.sqlite';
+      exports.all = (sql) => []; exports.run = (sql) => ({ changes: 1 });
+    src/auth.js: |
+      // TODO: replace the shared token with per user tokens
+      exports.check = (req) => req.headers['x-token'] === process.env.NOTES_TOKEN;
+    test/run.js: |
+      console.log('no tests yet');
+    docs/deploy.md: |
+      # Deploy
+
+      Run `npm start` behind a reverse proxy. Set NOTES_TOKEN and NOTES_DB. Back up the sqlite file nightly.

@@ -1,0 +1,16 @@
+name: real-audit-subagents
+description: Asked to audit with subagents, the agent must pass prep's rules on - subagents read through prep, never the .prep files.
+tags: [expensive, plugin-ab]
+prompt: spawn explore subagents to check if our prep knowledge base and issues are complete
+fixture: webapp
+limits: {max_turns: 50, max_budget_usd: 2, timeout: 20m}
+expect:
+  tools:
+    - ran: {tool: Agent}
+    - no_prep_files: true
+    - ran: {command: knowledge, subagent: true}
+  outcome:
+    - created: {issues: {max: 8}}
+    - check: clean
+  rubric:
+    - The report names concrete gaps - at least that nothing in the knowledge base covers the pricing code or the totals code - instead of saying everything looks fine.

@@ -233,3 +233,57 @@ func TestSpecErrors(t *testing.T) {
 		t.Errorf("cycle: %v", err)
 	}
 }
+
+func TestScopeBootstrapAndGenerate(t *testing.T) {
+	const src = `
+name: big
+repo:
+  files: {src/a.go: "package a\n", test.sh: "#!/bin/sh\nexit 1\n"}
+  executable: [test.sh]
+generate: {issues: 21, knowledge: 6}
+knowledge:
+  - {path: /components/a.md, title: A, scope: [src/a.go], body: About a.}
+`
+	p, q := build(t, load(t, src)), build(t, load(t, src))
+	// the same spec twice gives the same tree (compared before anything else touches either)
+	if treeHash(t, p.Dir) != treeHash(t, q.Dir) {
+		t.Error("generated fixture is not deterministic")
+	}
+	out, err := p.Prep("list", "--json")
+	if err != nil || strings.Count(out, `"id"`) != 21 {
+		t.Fatalf("generated issues: %v\n%.200s", err, out)
+	}
+	if out, _ := p.Prep("knowledge", "list"); strings.Count(out, "/components/") != 7 {
+		t.Errorf("entries:\n%s", out)
+	}
+	if out, err := p.Prep("knowledge", "confirm", "/components/a.md"); err != nil {
+		t.Errorf("a scoped entry can be confirmed: %v\n%s", err, out)
+	}
+	if st, err := os.Stat(filepath.Join(p.Dir, "test.sh")); err != nil || st.Mode()&0o100 == 0 {
+		t.Errorf("executable bit: %v %v", err, st)
+	}
+	if out, err := p.Prep("check"); err != nil || !strings.Contains(out, "0 errors") {
+		t.Errorf("check: %v\n%s", err, out)
+	}
+	states := map[string]int{}
+	var l struct {
+		Issues []struct{ State string } `json:"issues"`
+	}
+	json.Unmarshal([]byte(func() string { o, _ := p.Prep("list", "--json"); return o }()), &l)
+	for _, i := range l.Issues {
+		states[i.State]++
+	}
+	for _, want := range []string{"open", "defined", "ready", "done", "dropped", "in-progress"} {
+		if states[want] == 0 {
+			t.Errorf("no generated issue in state %s: %v", want, states)
+		}
+	}
+	// bootstrap: the knowledge base starts empty, with the bootstrap issues
+	b := build(t, load(t, "name: fresh\nbootstrap: true\nrepo: {files: {main.go: \"package main\\n\"}}\n"))
+	if out, _ := b.Prep("list"); !strings.Contains(strings.ToLower(out), "bootstrap") && !strings.Contains(out, "knowledge") {
+		t.Errorf("bootstrap issues missing:\n%s", out)
+	}
+	if out, _ := b.Prep("knowledge", "list"); strings.Contains(out, "/overview.md") {
+		t.Errorf("a bootstrapped fixture should have no overview yet:\n%s", out)
+	}
+}

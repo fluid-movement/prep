@@ -82,3 +82,14 @@ func TestParseTolerant(t *testing.T) {
 		t.Errorf("empty: %v %+v", err, empty)
 	}
 }
+
+func TestSubagentSteps(t *testing.T) {
+	in := `{"type":"assistant","message":{"content":[{"type":"tool_use","id":"a1","name":"Agent","input":{"prompt":"look"}}]}}
+{"type":"assistant","parent_tool_use_id":"a1","message":{"content":[{"type":"tool_use","id":"b1","name":"Bash","input":{"command":"cat .prep/x"}}]}}
+{"type":"user","parent_tool_use_id":"a1","message":{"content":[{"type":"tool_result","tool_use_id":"b1","content":"x"}]}}
+`
+	tr, err := Parse(strings.NewReader(in))
+	if err != nil || len(tr.Steps) != 2 || tr.Steps[0].Parent != "" || tr.Steps[1].Parent != "a1" || tr.Steps[1].Result != "x" {
+		t.Errorf("%v %+v", err, tr.Steps)
+	}
+}

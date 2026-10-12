@@ -1,0 +1,13 @@
+# A project of realistic size: the work of a year, mostly done.
+name: large
+generate:
+  issues: 60
+  knowledge: 14
+issues:
+  - alias: needle
+    title: Rename the export button label
+    state: ready
+    tags: [quick]
+    body: The export button label says "Dump"; it should say "Export".
+    context: The label is in the export component.
+    criteria: [The button says Export]

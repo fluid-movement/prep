@@ -176,3 +176,19 @@ func TestNoPrepFiles(t *testing.T) {
 		}
 	}
 }
+
+func TestSubagentSelector(t *testing.T) {
+	tr := session("Agent: look around", "Bash: cat /w/.prep/issues/a/issue.md", "Bash: prep show 01A")
+	tr.Steps[1].Parent = "a1"
+	for src, pass := range map[string]bool{
+		"not_ran: {subagent: true, path: '.prep/**'}":  false,
+		"not_ran: {subagent: false, path: '.prep/**'}": true,
+		"ran: {tool: Bash, subagent: true}":            true,
+		"ran: {command: show, subagent: false}":        true,
+		"no_prep_files: true":                          false,
+	} {
+		if r := check(t, tr, src); r.Pass != pass {
+			t.Errorf("%s: %v (%s)", src, r.Pass, r.Reason)
+		}
+	}
+}

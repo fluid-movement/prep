@@ -279,6 +279,11 @@ func (p *Project) build(seed int64) error {
 				return err
 			}
 		}
+		for _, rel := range s.Repo.Executable {
+			if err := os.Chmod(filepath.Join(p.Dir, filepath.FromSlash(rel)), 0o755); err != nil {
+				return err
+			}
+		}
 		if err := w.git(p.Dir, "init", "-q"); err != nil {
 			return err
 		}
@@ -292,7 +297,11 @@ func (p *Project) build(seed int64) error {
 		}
 	}
 	run := func(args ...string) (string, error) { return w.prep(p.Dir, seed, args...) }
-	if _, err := run("init", "--no-bootstrap"); err != nil {
+	initArgs := []string{"init"}
+	if !s.Bootstrap {
+		initArgs = append(initArgs, "--no-bootstrap")
+	}
+	if _, err := run(initArgs...); err != nil {
 		return err
 	}
 	if _, err := w.prep(p.Dir, seed, "projects", "add", p.Dir); err != nil {
@@ -315,6 +324,11 @@ func (p *Project) build(seed int64) error {
 	if err := p.buildIssues(run); err != nil {
 		return err
 	}
+	// The builder's last write would otherwise show up as what "someone was
+	// recently working on" in the agent's first briefing.
+	if _, err := run("focus", "--clear"); err != nil {
+		return err
+	}
 	if err := p.buildKnowledge(run); err != nil {
 		return err
 	}
@@ -330,7 +344,10 @@ func (p *Project) build(seed int64) error {
 }
 
 func (p *Project) buildKnowledge(run func(...string) (string, error)) error {
-	entries := p.Spec.Knowledge
+	entries := append(append([]KnowledgeSpec{}, p.Spec.Knowledge...), generatedKnowledge(p.Spec.Generate)...)
+	if p.Spec.Bootstrap && len(entries) == 0 {
+		return nil // the agent builds the knowledge base from nothing
+	}
 	hasOverview := false
 	for _, k := range entries {
 		if k.Path == "/overview.md" {
@@ -366,7 +383,11 @@ func (p *Project) buildKnowledge(run func(...string) (string, error)) error {
 		if body == "" {
 			body = k.Title + "."
 		}
-		if _, err := run("knowledge", "new", k.Path, "--type", typ, "--title", k.Title, "--description", desc, "--body", body); err != nil {
+		args := []string{"knowledge", "new", k.Path, "--type", typ, "--title", k.Title, "--description", desc, "--body", body}
+		for _, sc := range k.Scope {
+			args = append(args, "--scope", sc)
+		}
+		if _, err := run(args...); err != nil {
 			return err
 		}
 	}
@@ -378,7 +399,7 @@ type writeOut struct {
 }
 
 func (p *Project) buildIssues(run func(...string) (string, error)) error {
-	issues := p.Spec.Issues
+	issues := append(append([]IssueSpec{}, p.Spec.Issues...), generatedIssues(p.Spec.Generate)...)
 	idx := map[string]int{}
 	for i, is := range issues {
 		if is.Alias != "" {

@@ -1,0 +1,18 @@
+name: real-feature-request
+description: A feature described in the user's own words becomes one issue that keeps every detail, and nothing is implemented.
+tags: [plugin-ab]
+prompt: lets create an issue to add pagination to the player list. add the pagination between the search box and the list. use the shadcn svelte pagination component. page size 25, and keep the current page in the url.
+fixture: webapp
+expect:
+  tools:
+    - ran: new
+    - no_prep_files: true
+  outcome:
+    - created: {issues: {min: 1, max: 1}}
+    - issue: {title: pagination, kind: code, requirement: search box}
+    - issue: {title: pagination, requirement: shadcn}
+    - issue: {title: pagination, requirement: '25'}
+    - repo: {untouched: ['src/**']}
+    - check: clean
+  rubric:
+    - The requirement keeps every detail the user gave (placement, component, page size, page in the url) and says why pagination is needed.

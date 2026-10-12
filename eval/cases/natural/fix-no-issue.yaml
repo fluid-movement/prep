@@ -1,0 +1,15 @@
+name: natural-fix-no-issue
+description: Negative control - a small fix with no tracked issue. The agent should just fix it, not flood the tracker.
+tags: [plugin-ab]
+prompt: formatPrice shows 5.5 instead of 5.50. fix it
+fixture: webapp
+limits: {max_turns: 25}
+expect:
+  tools:
+    - no_prep_files: true
+    - not_ran: {command: new}
+    - max_calls: 12
+  outcome:
+    - repo: {changed: ['src/lib/format.ts']}
+    - created: {issues: {max: 0}}
+    - check: clean

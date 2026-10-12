@@ -1,0 +1,23 @@
+name: batch-bookkeeping
+description: A real user batches chores into one message; every one must be done, none forgotten, each through the right command.
+prompt: |
+  a few things on the tracker: raise the priority of Tax rules to critical and tag it compliance.
+  drop the wishlist idea, out of scope for launch. I stopped working on Order emails for today, release it.
+  record a decision on Payment integration: we send an idempotency key with every charge, because retries would double charge.
+  and answer the Why Postgres research issue: we picked it for json support and mature tooling.
+fixture: shop
+limits: {max_turns: 40}
+expect:
+  tools:
+    - ran: {command: edit, args: '(?i)critical'}
+    - ran: {command: drop, args: '--reason'}
+    - ran: release
+    - ran: {command: decide, args: '(?i)idempot'}
+    - ran: findings
+    - no_prep_files: true
+  outcome:
+    - issue: {ref: '{{tax}}', priority: critical, tags: [compliance]}
+    - issue: {ref: '{{wish}}', state: dropped}
+    - issue: {ref: '{{emails}}', state: ready}
+    - unchanged: {issues: ['{{cart}}', '{{ship}}', '{{receipts}}']}
+    - check: clean

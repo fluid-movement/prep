@@ -33,6 +33,9 @@ type Selector struct {
 	Path string `yaml:"path"`
 	// Shell is a regular expression matched against a Bash command line.
 	Shell string `yaml:"shell"`
+	// Subagent restricts the match to steps run by a subagent (true) or by
+	// the main session (false).
+	Subagent *bool `yaml:"subagent"`
 
 	args  *regexp.Regexp
 	path  *regexp.Regexp
@@ -58,8 +61,8 @@ func parseSelector(n *yaml.Node) (Selector, error) {
 
 func (s *Selector) compile() error {
 	var err error
-	if s.Command == "" && s.Tool == "" && s.Path == "" && s.Shell == "" {
-		return fmt.Errorf("selector names nothing: give command, tool, path or shell")
+	if s.Command == "" && s.Tool == "" && s.Path == "" && s.Shell == "" && s.Subagent == nil {
+		return fmt.Errorf("selector names nothing: give command, tool, path, shell or subagent")
 	}
 	if s.Args != "" {
 		if s.args, err = regexp.Compile(s.Args); err != nil {
@@ -128,6 +131,9 @@ func (s Selector) Describe() string {
 	if s.Shell != "" {
 		parts = append(parts, "shell /"+s.Shell+"/")
 	}
+	if s.Subagent != nil {
+		parts = append(parts, map[bool]string{true: "in a subagent", false: "in the main session"}[*s.Subagent])
+	}
 	return strings.Join(parts, " ")
 }
 
@@ -166,6 +172,9 @@ func (s Selector) Matches(st transcript.Step) int {
 // stepMatches checks the tool, path and shell parts.
 func (s Selector) stepMatches(st transcript.Step) bool {
 	if s.Tool != "" && st.Tool != s.Tool {
+		return false
+	}
+	if s.Subagent != nil && (st.Parent != "") != *s.Subagent {
 		return false
 	}
 	if s.shell != nil && !s.shell.MatchString(st.Shell) {

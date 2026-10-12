@@ -1,12 +1,14 @@
 name: links-read-other-project
-description: Another project's issue is read with --project, not by looking at its files.
-prompt: What state is the Auth endpoint issue in the api project?
+description: Facts that live in another prep project (an issue's state and a documented value) are read through --project, not from its files.
+prompt: In the api project, what state is the Auth endpoint issue in, and how long do access tokens last according to its documentation?
 workspace: shop-api
 expect:
   tools:
     - any_of: [{command: show, project: api}, {command: list, project: api}, {command: next, project: api}]
+    - ran: {command: knowledge, project: api}
     - no_prep_files: true
     - final_mentions: ready
+    - final_mentions: 15 minutes
   outcome:
     - unchanged: {all: true, knowledge: true}
     - unchanged: {all: true, knowledge: true, project: api}

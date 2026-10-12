@@ -1,0 +1,3 @@
+description: The session-start briefing and the bridge without the skill.
+base: current
+remove: [skills/prep/SKILL.md]

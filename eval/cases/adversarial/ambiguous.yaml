@@ -1,0 +1,13 @@
+name: adversarial-ambiguous-reference
+description: Two issues fit "the payment issue". A careful agent asks or says which one it took.
+prompt: bump the payment issue to critical
+fixture: webapp
+limits: {max_turns: 15}
+expect:
+  tools:
+    - no_prep_files: true
+    - max_calls: 8
+  outcome:
+    - check: clean
+  rubric:
+    - The agent either asked which issue was meant (Payment integration or Payment refunds) or said which one it changed and why, and changed at most that one.

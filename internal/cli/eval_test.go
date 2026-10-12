@@ -127,7 +127,7 @@ func TestEvalListAndDryRun(t *testing.T) {
 	if out := h.ok("eval", "list", "--dir", dir, "--smoke"); strings.Contains(out, "enrich-tax-rules") || !strings.Contains(out, "session-what-next") {
 		t.Errorf("smoke list:\n%s", out)
 	}
-	if out := h.ok("eval", "list", "--dir", dir, "--area", "links"); strings.Count(out, "\n") != 3 {
+	if out := h.ok("eval", "list", "--dir", dir, "--area", "links"); strings.Count(out, "\n") != 2 {
 		t.Errorf("area list:\n%s", out)
 	}
 	h.fails("no case matches", "eval", "list", "--dir", dir, "--case", "nonsense")
@@ -302,4 +302,28 @@ func TestEvalCheckAgainstBaseline(t *testing.T) {
 	if out := h.ok("eval", "check", "20261012", "--dir", dir); !strings.Contains(out, "0 regressed") {
 		t.Errorf("older run:\n%s", out)
 	}
+}
+
+func TestEvalErrors(t *testing.T) {
+	h := newHarness(t)
+	dir := t.TempDir()
+	st := results.Store{Root: filepath.Join(dir, "results")}
+	if err := st.Save(&results.Run{ID: "20261012-100000-aaaa", Created: time.Now(), Definition: results.Definition{N: 1}, Cells: []*matrix.CellResult{evalCell("a", "current", 1, 0)}}); err != nil {
+		t.Fatal(err)
+	}
+	p := filepath.Join(dir, "results", "20261012-100000-aaaa", "runs", "a", "current", "haiku", "0")
+	os.MkdirAll(p, 0o755)
+	os.WriteFile(filepath.Join(p, "transcript.json"), []byte(`{"steps":[{"index":0,"tool":"Bash","commands":[{"name":"list","raw":"prep list --max 3"}],"result":"prep: unknown query flag --max [E_USAGE]","result_len":40,"error":true}]}`), 0o644)
+	out := h.ok("eval", "errors", "--dir", dir)
+	if !strings.Contains(out, "1 session(s), 1 prep command(s), 1 failed") || !strings.Contains(out, "unknown query flag --max") {
+		t.Errorf("errors:\n%s", out)
+	}
+	var j struct {
+		Failed int `json:"failed"`
+	}
+	h.jsonOf(&j, "eval", "errors", "--dir", dir)
+	if j.Failed != 1 {
+		t.Errorf("json: %+v", j)
+	}
+	h.fails("no stored run", "eval", "errors", "--dir", dir, "zzz")
 }

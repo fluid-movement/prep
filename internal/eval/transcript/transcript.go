@@ -55,6 +55,9 @@ type Step struct {
 	Result    string `json:"result,omitempty"`
 	ResultLen int    `json:"result_len"`
 	Error     bool   `json:"error,omitempty"`
+	// Parent is the tool call that spawned the subagent this step ran in; ""
+	// for the main session.
+	Parent string `json:"parent,omitempty"`
 	// Before is what the assistant said just before the call.
 	Before string `json:"before,omitempty"`
 }

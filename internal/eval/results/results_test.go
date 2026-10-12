@@ -1,6 +1,9 @@
 package results
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -8,6 +11,7 @@ import (
 	"github.com/fluid-movement/prep/internal/eval/assert"
 	"github.com/fluid-movement/prep/internal/eval/matrix"
 	"github.com/fluid-movement/prep/internal/eval/run"
+	"github.com/fluid-movement/prep/internal/eval/transcript"
 )
 
 // cellOf builds a reduced cell with k passes and f failures.
@@ -207,5 +211,56 @@ func TestMerge(t *testing.T) {
 	}
 	if Merge(a) != a {
 		t.Error("a single run merges to itself")
+	}
+}
+
+func writeTranscript(t *testing.T, dir, caseName, n string, steps []transcript.Step) {
+	t.Helper()
+	p := filepath.Join(dir, "runs", caseName, "current", "sonnet", n)
+	if err := os.MkdirAll(p, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := json.Marshal(transcript.Transcript{Steps: steps})
+	if err := os.WriteFile(filepath.Join(p, "transcript.json"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestErrors(t *testing.T) {
+	dir := t.TempDir()
+	list := transcript.ParseShell("prep list --text x --max 5")
+	show := transcript.ParseShell("prep show 01KE6P56E0ABYZR1S1G9JMY5HZ")
+	failList := transcript.Step{Tool: "Bash", Commands: list, Error: true, Result: "Exit code 2\nprep: unknown query flag --max [E_USAGE]"}
+	writeTranscript(t, dir, "a", "0", []transcript.Step{failList, {Tool: "Bash", Commands: show, Result: "ok"}})
+	writeTranscript(t, dir, "a", "1", []transcript.Step{failList})
+	writeTranscript(t, dir, "b", "0", []transcript.Step{failList,
+		{Tool: "Bash", Commands: show, Error: true, Result: "prep: no issue matches \"01KE6P56E0ABYZR1S1G9JMY5HZ\" [E_NOT_FOUND]"}, {Tool: "Read"}, {Tool: "Read"}})
+	rep, err := Errors(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Sessions != 3 || rep.PrepCalls != 5 || rep.Failed != 4 {
+		t.Errorf("counts: %+v", rep)
+	}
+	if len(rep.Groups) != 2 || rep.Groups[0].Count != 3 || rep.Groups[0].Command != "list" || rep.Groups[0].Message != "prep: unknown query flag --max [E_USAGE]" ||
+		strings.Join(rep.Groups[0].Cases, ",") != "a,b" {
+		t.Errorf("groups: %+v", rep.Groups)
+	}
+	if !strings.Contains(rep.Groups[1].Message, `no issue matches "<id>"`) {
+		t.Errorf("ids are not normalized: %q", rep.Groups[1].Message)
+	}
+	if rep.ByCommand["list"] != [2]int{3, 3} || rep.ByCommand["show"] != [2]int{2, 1} {
+		t.Errorf("by command: %v", rep.ByCommand)
+	}
+	if rep.MeanCalls[0].Case != "b" || rep.MeanCalls[0].Mean != 4 {
+		t.Errorf("mean calls: %+v", rep.MeanCalls)
+	}
+	out := FormatErrors(rep)
+	if !strings.Contains(out, "3x prep list") || !strings.Contains(out, "e.g. prep list --text x --max 5") {
+		t.Errorf("format:\n%s", out)
+	}
+	empty, _ := Errors(t.TempDir())
+	if !strings.Contains(FormatErrors(empty), "no prep command failed") {
+		t.Error("empty report")
 	}
 }

@@ -1,0 +1,13 @@
+name: scale-what-next
+description: What to work on in a project with sixty issues. Watch how much the agent reads.
+tags: [expensive]
+prompt: what should I work on next?
+fixture: large
+expect:
+  tools:
+    - no_prep_files: true
+    - max_calls: 6
+  outcome:
+    - unchanged: {all: true, knowledge: true}
+  rubric:
+    - The answer names one concrete issue that exists in the tracker and is ready to start, and gives a reason.

@@ -1,0 +1,14 @@
+name: real-bug-report-to-issue
+description: A bug the user describes is filed, without fixing it - and without duplicating the issue that already covers it.
+prompt: i have an issue to file. i added some data to a player in the app, saved, went back to the list and had to hard refresh for the profile badge to show up. the bigger problem was that when i cleared that data again, the badge stayed until i refreshed twice.
+fixture: webapp
+expect:
+  tools:
+    - any_of: [{command: list}, {command: show}, {command: next}]
+    - no_prep_files: true
+  outcome:
+    - repo: {untouched: ['src/**', 'db/**']}
+    - check: clean
+  rubric:
+    - The agent did not file a duplicate of the existing issue "Profile badge needs a hard refresh"; it extended that issue with the new symptom, or told the user it exists and explained why a separate issue is needed.
+    - Both symptoms (the badge missing after saving, the badge staying after clearing) and the steps to reproduce are recorded in the tracker.

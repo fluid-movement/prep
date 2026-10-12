@@ -23,6 +23,7 @@ func init() {
 	assert.Register(assert.Outcome, "check", decodeCheck)
 	assert.Register(assert.Outcome, "claimed", decodeClaimed)
 	assert.Register(assert.Outcome, "repo", decodeRepo)
+	assert.Register(assert.Outcome, "created", decodeCreated)
 }
 
 // project returns the snapshots of the named project (default: the
@@ -81,6 +82,8 @@ type issueCheck struct {
 		Checked  *int     `yaml:"checked"`
 	} `yaml:"criteria"`
 	Requirement string `yaml:"requirement"` // text the requirement contains
+	// Stale is true when the requirement changed after the baseline and was not acknowledged.
+	Stale *bool `yaml:"stale"`
 	// OpenQuestions is true when the issue has open questions, false when it has none.
 	OpenQuestions *bool  `yaml:"open_questions"`
 	Context       string `yaml:"context"` // text the context contains
@@ -194,7 +197,9 @@ func (c *issueCheck) Check(in *assert.Input) assert.Result {
 			problems = append(problems, fmt.Sprintf("%s is %q, want %q", what, got, want))
 		}
 	}
-	cmp("state", c.State, is.State)
+	if c.State != "" && !has(strings.Split(c.State, "|"), is.State) {
+		problems = append(problems, fmt.Sprintf("state is %q, want %q", is.State, c.State))
+	}
 	cmp("kind", c.IssueKind, is.Kind)
 	cmp("parent", c.Parent, is.Parent)
 	cmp("priority", c.Priority, is.Priority)
@@ -216,6 +221,9 @@ func (c *issueCheck) Check(in *assert.Input) assert.Result {
 	}
 	if c.Requirement != "" && !strings.Contains(strings.ToLower(is.Requirement), strings.ToLower(c.Requirement)) {
 		problems = append(problems, fmt.Sprintf("requirement lacks %q", c.Requirement))
+	}
+	if c.Stale != nil && is.Stale != *c.Stale {
+		problems = append(problems, fmt.Sprintf("stale is %v, want %v", is.Stale, *c.Stale))
 	}
 	if c.OpenQuestions != nil && (strings.TrimSpace(is.OpenQuestions) != "") != *c.OpenQuestions {
 		problems = append(problems, fmt.Sprintf("open questions present: %v, want %v", strings.TrimSpace(is.OpenQuestions) != "", *c.OpenQuestions))
@@ -639,4 +647,83 @@ func matchAny(files []string, glob string) bool {
 		}
 	}
 	return false
+}
+
+// ---- created
+
+// bounds is an inclusive range; a missing end is open.
+type bounds struct {
+	Min *int `yaml:"min"`
+	Max *int `yaml:"max"`
+}
+
+func (b *bounds) check(n int) bool {
+	return b == nil || ((b.Min == nil || n >= *b.Min) && (b.Max == nil || n <= *b.Max))
+}
+
+func (b *bounds) String() string {
+	switch {
+	case b.Min != nil && b.Max != nil && *b.Min == *b.Max:
+		return fmt.Sprintf("exactly %d", *b.Min)
+	case b.Min != nil && b.Max != nil:
+		return fmt.Sprintf("%d to %d", *b.Min, *b.Max)
+	case b.Max != nil:
+		return fmt.Sprintf("at most %d", *b.Max)
+	case b.Min != nil:
+		return fmt.Sprintf("at least %d", *b.Min)
+	}
+	return "any number"
+}
+
+// created bounds how many issues and knowledge entries the run added: enough
+// to show the agent did the work, few enough to show it did not flood the
+// project.
+type created struct {
+	Project string  `yaml:"project"`
+	Issues  *bounds `yaml:"issues"`
+	Entries *bounds `yaml:"entries"`
+}
+
+func decodeCreated(n *yaml.Node) (assert.Assertion, error) {
+	var c created
+	if err := assert.DecodeStrict(n, &c); err != nil {
+		return nil, err
+	}
+	if c.Issues == nil && c.Entries == nil {
+		return nil, fmt.Errorf("line %d: created needs issues or entries", n.Line)
+	}
+	return &c, nil
+}
+
+func (c *created) Kind() string { return "created" }
+func (c *created) Describe() string {
+	var parts []string
+	if c.Issues != nil {
+		parts = append(parts, c.Issues.String()+" new issues")
+	}
+	if c.Entries != nil {
+		parts = append(parts, c.Entries.String()+" new knowledge entries")
+	}
+	return "created " + strings.Join(parts, " and ")
+}
+func (c *created) Check(in *assert.Input) assert.Result {
+	name := c.Project
+	if name == "" {
+		name = in.Project.Name
+	}
+	pd := in.Diff.Projects[name]
+	if pd == nil {
+		return assert.Fail(c, "no diff for project "+name, -1)
+	}
+	var problems []string
+	if !c.Issues.check(len(pd.Created)) {
+		problems = append(problems, fmt.Sprintf("%d new issues, want %s", len(pd.Created), c.Issues))
+	}
+	if !c.Entries.check(len(pd.EntriesCreated)) {
+		problems = append(problems, fmt.Sprintf("%d new knowledge entries, want %s", len(pd.EntriesCreated), c.Entries))
+	}
+	if len(problems) > 0 {
+		return assert.Fail(c, strings.Join(problems, "; "), -1)
+	}
+	return assert.Pass(c, fmt.Sprintf("%d issues and %d entries created", len(pd.Created), len(pd.EntriesCreated)), -1)
 }

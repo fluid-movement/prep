@@ -1,0 +1,15 @@
+name: real-plan-next
+description: A planning question about the whole project is answered from the tracker, grounded and read-only.
+tags: [plugin-ab]
+prompt: we are getting ready to go live, what shall we tackle next? what are the low hanging fruit?
+fixture: webapp
+expect:
+  tools:
+    - no_prep_files: true
+    - max_calls: 14
+    - final_mentions: {regex: 'alt text|typo|export button'}
+  outcome:
+    - unchanged: {all: true, knowledge: true}
+  rubric:
+    - The recommendation names at least two specific existing issues as quick wins and says why they are small, using what the tracker records.
+    - It does not recommend the hosting cutover as a next step, or says plainly that it is blocked by the auth migration.

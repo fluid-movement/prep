@@ -12,7 +12,7 @@ import (
 
 // evalUsage is the one-line help of prep eval; the subcommands are listed in
 // evalCommands.
-const evalUsage = "eval run|list|doctor|report|compare|models|mutate|check|judge-check|prune  agent behavior tests: run prompts against fake projects and report how agents used prep (see the eval knowledge entry)"
+const evalUsage = "eval run|list|doctor|report|compare|models|errors|mutate|check|judge-check|prune  agent behavior tests: run prompts against fake projects and report how agents used prep (see the eval knowledge entry)"
 
 // evalCommand is one prep eval subcommand.
 type evalCommand struct {
@@ -28,6 +28,7 @@ func init() {
 		evalCommand{"compare", evalCompare},
 		evalCommand{"prune", evalPrune},
 		evalCommand{"check", evalCheck},
+		evalCommand{"errors", evalErrors},
 	)
 }
 
@@ -177,6 +178,38 @@ func evalCheck(a *app, dir string, args []string) error {
 	if len(chk.Regressions) > 0 {
 		return silentErr{&domain.Error{Code: domain.ErrCheck, Message: fmt.Sprintf("%d cell(s) regressed against the baseline", len(chk.Regressions))}}
 	}
+	return nil
+}
+
+// evalErrors lists the prep commands that failed in stored runs.
+func evalErrors(a *app, dir string, args []string) error {
+	fs := flag.NewFlagSet("eval errors", flag.ContinueOnError)
+	pos, err := parse(fs, args)
+	if err != nil {
+		return err
+	}
+	ids := pos
+	if len(ids) == 0 {
+		ids = []string{"latest"}
+	}
+	store := resultsStore(dir)
+	var dirs []string
+	for _, id := range ids {
+		r, err := store.Load(id)
+		if err != nil {
+			return err
+		}
+		dirs = append(dirs, store.Dir(r.ID))
+	}
+	rep, err := results.Errors(dirs...)
+	if err != nil {
+		return err
+	}
+	if a.json {
+		a.emit(rep)
+		return nil
+	}
+	a.printf("%s", results.FormatErrors(rep))
 	return nil
 }
 
