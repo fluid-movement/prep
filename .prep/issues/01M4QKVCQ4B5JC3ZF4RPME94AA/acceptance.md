@@ -1,5 +1,5 @@
-- [ ] Runs are stored under eval/results/<run-id>/ with the matrix definition, versions, every run's record and the cell results; the directory is git-ignored
-- [ ] prep eval report prints per-case tables with pass rate, interval, cost, flaky marks and failing assertions, and supports --json
-- [ ] prep eval compare lines up two runs and says per cell whether the difference exceeds the noise and how cost changed
-- [ ] Cells present in one run only are listed
-- [ ] prep eval prune removes old runs
+- [x] Runs are stored under eval/results/<run-id>/ with the matrix definition, versions, every run's record and the cell results; the directory is git-ignored
+- [x] prep eval report prints per-case tables with pass rate, interval, cost, flaky marks and failing assertions, and supports --json
+- [x] prep eval compare lines up two runs and says per cell whether the difference exceeds the noise and how cost changed
+- [x] Cells present in one run only are listed
+- [x] prep eval prune removes old runs

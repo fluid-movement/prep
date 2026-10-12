@@ -128,6 +128,7 @@ func init() {
 		{"theme", true, "theme list | new <name> [--from <theme>]  TUI themes: list them, or start a custom one with every token in .prep/config.yaml", cmdTheme},
 		{"setup", true, "setup [--harness h,...|--remove h|--refresh]  install harness integrations (skill, hooks, commands)", cmdSetup},
 		{"update", true, "update [--check]           replace this binary with the latest release (verifies its checksum)", cmdUpdate},
+		{"eval", false, evalUsage, cmdEval},
 		{"skill", false, "skill                      print the agent skill (static copy for environments without the binary)", cmdSkill},
 		{"version", false, "version                    print the version", cmdVersion},
 	}
