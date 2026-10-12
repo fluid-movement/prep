@@ -7,7 +7,7 @@ generated:
   by: claude-code/2.1.289
   at: 2026-10-05T00:00:00Z
 scope: internal/domain
-confirmed_commit: 7487215880ef11a44a3a81cd7a7ddc3a1614abaf
+confirmed_commit: 443b7c8c83a82d0359d8999aef69beedd7226633
 ---
 
 # Domain package
