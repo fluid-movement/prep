@@ -275,6 +275,7 @@ func (p *parser) result(line []byte) error {
 		IsError     bool    `json:"is_error"`
 		Result      string  `json:"result"`
 		StopReason  string  `json:"stop_reason"`
+		Terminal    string  `json:"terminal_reason"`
 		NumTurns    int     `json:"num_turns"`
 		Cost        float64 `json:"total_cost_usd"`
 		DurationMS  int     `json:"duration_ms"`
@@ -290,7 +291,7 @@ func (p *parser) result(line []byte) error {
 		return err
 	}
 	t := p.t
-	t.Final = transcript.Final{Text: d.Result, StopReason: d.StopReason, Status: d.Subtype, IsError: d.IsError}
+	t.Final = transcript.Final{Text: d.Result, StopReason: d.StopReason, Status: d.Subtype, IsError: d.IsError, Terminal: d.Terminal}
 	c := &t.Counts
 	c.Turns, c.CostUSD = d.NumTurns, d.Cost
 	c.InputTokens, c.OutputTokens, c.CacheRead, c.CacheWrite = d.Usage.In, d.Usage.Out, d.Usage.CacheRead, d.Usage.CacheWrite

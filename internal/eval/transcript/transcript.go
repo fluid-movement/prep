@@ -64,6 +64,9 @@ type Final struct {
 	// Status is the harness's result subtype ("success", "error_max_turns"...).
 	Status  string `json:"status,omitempty"`
 	IsError bool   `json:"is_error,omitempty"`
+	// Terminal is the harness's reason the session ended ("max_turns",
+	// "completed"...), when it says.
+	Terminal string `json:"terminal,omitempty"`
 }
 
 // Counts are the size and cost of the session.
