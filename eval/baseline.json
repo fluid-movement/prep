@@ -1,0 +1,175 @@
+{
+  "created": "2026-10-12T11:55:09.188389+02:00",
+  "run": "20261012-095509-1e73",
+  "note": "sonnet, N=3, all 24 cases, first real run",
+  "cells": [
+    {
+      "case": "define-from-scratch",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "define-keeps-open-questions",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "define-vague-issue",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "enrich-record-decision",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "enrich-tax-rules",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 1,
+      "runs": 3
+    },
+    {
+      "case": "implement-claim-and-log",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "implement-complete",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "implement-release",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "issues-drop-idea",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "issues-edit-priority",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "issues-file-child",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "knowledge-read-naming",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "knowledge-read-payments",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "knowledge-write-confirm",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "knowledge-write-new-entry",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "lifecycle-no-direct-edits",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "lifecycle-research-findings",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "links-cross-dependency",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "links-other-project-knowledge",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "links-read-other-project",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "queries-blocked",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "queries-high-priority",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "session-epic-status",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "case": "session-what-next",
+      "variant": "current",
+      "model": "sonnet",
+      "passed": 3,
+      "runs": 3
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+- [x] doctor and judge-check pass on the live harness
+- [x] The suite ran for real on sonnet and its baseline is stored in eval/baseline.json
+- [x] Failures that point at guidance gaps are recorded

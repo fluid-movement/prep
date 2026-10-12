@@ -1,0 +1,1 @@
+- 2026-10-12T09:59:01Z claude-code: First real run 2026-10-12: doctor ok, judge 100% agreement; 70/72 runs passed on sonnet at $3.12. Only enrich-tax-rules is flaky (1/3): the agent sometimes skips prep criterion or writes vague criteria. Other early failures were case-design faults, fixed.
