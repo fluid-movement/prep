@@ -31,6 +31,7 @@ internal/setup      harness integrations installed, refreshed and removed by pre
 internal/userconfig the user's choices in ~/.config/prep/config.yaml (harnesses, TUI mouse)
 internal/projects   the machine-local registry of project roots ($XDG_STATE_HOME/prep/projects.json), project identity and resolution (--project)
 internal/update     prep update: download, checksum check and replacement of the binary
+internal/eval       agent behavior tests: fixtures, isolated runs of Claude Code, transcripts, assertions, judge, matrix, results, variants, mutation (no imports of cli)
 desktop/            the macOS app (Swift), a client of the CLI's JSON and prep watch
 ```
 
@@ -39,4 +40,4 @@ desktop/            the macOS app (Swift), a client of the CLI's JSON and prep w
 - The CLI and the TUI share `domain.Filter` and `Tree.Query`, so both agree on derived states.
 - Git is versioning, not the system of record; every git call tolerates git being absent. A database adapter would have to provide what git gives today (history, branch-scoped review) itself; the domain assumes neither.
 
-Details: [domain](/components/domain.md), [markdown store](/components/markdown-store.md), [OKF store](/components/okf-store.md), [CLI](/components/cli.md), [TUI design system](/components/tui-design-system.md), [setup and user configuration](/components/setup.md), [release, install and update](/components/release.md), [desktop app](/components/desktop.md).
+Details: [domain](/components/domain.md), [markdown store](/components/markdown-store.md), [OKF store](/components/okf-store.md), [CLI](/components/cli.md), [TUI design system](/components/tui-design-system.md), [setup and user configuration](/components/setup.md), [release, install and update](/components/release.md), [desktop app](/components/desktop.md), [agent behavior tests](/components/eval.md).

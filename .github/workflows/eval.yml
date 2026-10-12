@@ -53,7 +53,8 @@ jobs:
       - name: smoke subset
         run: ./prep eval run --smoke --models haiku --n 3 --max-usd 5 --yes
       - name: compare with the committed baseline
-        run: ./prep eval check latest
+        run: |
+          if [ -f eval/baseline.json ]; then ./prep eval check latest; else echo "no eval/baseline.json yet; create it with prep eval check latest --update"; fi
       - name: report
         if: always()
         run: ./prep eval report latest --failures >> "$GITHUB_STEP_SUMMARY"
