@@ -1,0 +1,2 @@
+- [ ] Every child of this issue is resolved or dropped
+- [ ] The suite is rerun on haiku and sonnet after the fixes and the pass rates of the cases named in the children are recorded in their resolutions

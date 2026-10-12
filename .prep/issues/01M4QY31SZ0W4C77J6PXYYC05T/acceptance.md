@@ -1,0 +1,3 @@
+- [ ] prep new prints similar open issues when there are any, in text and JSON, and prints nothing otherwise
+- [ ] real-bug-report-to-issue passes on haiku in at least 3 of 5 runs and on sonnet in at least 4 of 5
+- [ ] The CLI knowledge entry and the skill describe the hint

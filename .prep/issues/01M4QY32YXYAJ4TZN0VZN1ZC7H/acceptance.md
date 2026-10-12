@@ -1,0 +1,3 @@
+- [ ] adversarial-ambiguous-reference passes on haiku in at least 3 of 5 runs and on sonnet in at least 4 of 5 with the chosen change
+- [ ] The cases that change issues by words (batch-bookkeeping, issues-file-child) still pass at the same rates
+- [ ] The change costs at most one sentence of skill text, or none

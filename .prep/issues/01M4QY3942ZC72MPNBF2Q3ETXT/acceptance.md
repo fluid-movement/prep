@@ -1,0 +1,3 @@
+- [ ] The briefing shows tags of actionable issues and says what is blocked, within its existing size cap
+- [ ] real-plan-next passes on sonnet in at least 4 of 5 runs and on haiku in at least 4 of 5
+- [ ] The agent-context knowledge entry describes the briefing's content

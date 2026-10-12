@@ -1,0 +1,3 @@
+- [ ] The mutation run ran on haiku with at least 5 runs per cell and its ranking is in the findings
+- [ ] Each mutant is marked better, worse or within the noise, with the cost change
+- [ ] Proposed skill and hook edits exist as issues, or the findings say none is justified

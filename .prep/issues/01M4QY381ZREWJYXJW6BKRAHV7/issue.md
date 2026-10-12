@@ -1,0 +1,12 @@
+---
+title: 'Decision: how should the bootstrap flow behave when the user says not to ask?'
+kind: decision
+parent: 01M4QY2WM6XN0JSSTHR5TGQFJT
+tags:
+  - knowledge
+  - decision
+---
+
+`prep init` creates the bootstrap issues: a parent, and "Survey the project into a knowledge map" whose steps tell the agent to write the map as findings, ask the user to review it, write `/overview.md`, then file one "Document <area>" issue per area; those child issues write the entries. A user who says "build the knowledge base, keep going, do not ask me" gets, from sonnet, an overview and a list of child issues but no entries, with the survey left open "because its acceptance criterion needs your review". Decide what the flow should do when the user has said not to ask, and whether one session is expected to finish the whole bootstrap.
+
+## Open questions

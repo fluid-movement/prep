@@ -1,0 +1,2 @@
+- [ ] The error for an unscoped entry says what to do next, with the exact command
+- [ ] prep knowledge confirm --drifted skips unscoped entries without error (tested)

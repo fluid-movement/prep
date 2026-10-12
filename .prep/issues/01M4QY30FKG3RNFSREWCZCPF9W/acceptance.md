@@ -1,0 +1,4 @@
+- [ ] natural-fix-matching-issue passes on haiku in at least 4 of 5 runs and still passes on sonnet
+- [ ] natural-fix-no-issue still passes on haiku (the agent creates no issue and claims nothing when none matches)
+- [ ] The nudge's token cost per prompt is measured and stated in the resolution
+- [ ] The change is in the plugin or the binary, with the knowledge entry for the Claude Code integration updated

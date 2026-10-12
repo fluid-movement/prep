@@ -1,0 +1,2 @@
+- [ ] A decision with the outcome flag records which of (a), (b), (c) applies to each of the three situations and why
+- [ ] The natural cases (eval/cases/natural) and the skill text are updated to match, or issues are filed for the differences

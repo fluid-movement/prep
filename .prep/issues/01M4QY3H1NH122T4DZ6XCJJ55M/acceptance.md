@@ -1,0 +1,3 @@
+- [ ] Haiku and sonnet ran over the whole suite with at least 5 runs per cell and the table is stored in eval/models.md
+- [ ] The table names, per area, the cheapest sufficient model or says there is not enough data and how many runs are missing
+- [ ] Failures that look like case faults were checked against the transcripts before being counted against a model

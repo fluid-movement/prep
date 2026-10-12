@@ -1,0 +1,4 @@
+- [ ] prep list text output is capped by default with a footer that says how to see all of it, and --json stays complete or has an explicit unlimited option
+- [ ] prep check groups repeated warnings with counts and a way to see them all
+- [ ] prep help is a short page, with details per command
+- [ ] A test pins the sizes on the large fixture, and the scale cases' token use is recorded before and after in the resolution

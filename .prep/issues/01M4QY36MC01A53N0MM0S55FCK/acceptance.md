@@ -1,0 +1,4 @@
+- [ ] natural-fix-matching-issue passes the check and knowledge assertions on haiku in at least 3 of 5 runs
+- [ ] The hook (or the changed command output) is silent when no entry is affected and short when one is
+- [ ] Pre-existing drift is not repeated at every stop
+- [ ] Documented in the Claude Code integration entry

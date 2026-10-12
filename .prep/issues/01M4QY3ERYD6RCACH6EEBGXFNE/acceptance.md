@@ -1,0 +1,3 @@
+- [ ] Each of the 11 rules is listed with the cases that exercise it, in the eval cases knowledge entry
+- [ ] New cases exist for the rules without one (7, 8, 9 and the commit part of 10), and each was run with and without its rule
+- [ ] Rules whose cases pass either way are noted as candidates for removal

@@ -1,0 +1,3 @@
+- [ ] A command run in a project under the system temp directory does not add it to the registry; prep projects add still does
+- [ ] Resolving such a project by path still works
+- [ ] The Project registry knowledge entry describes the rule

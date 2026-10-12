@@ -1,0 +1,2 @@
+- [ ] A decision with the outcome flag chooses between keeping the gate, an explicit autonomous path, or an optional review, with the reasons
+- [ ] If the flow changes, a follow-up issue exists for bootstrap.go and the eval case real-bootstrap-survey is updated to the chosen behavior

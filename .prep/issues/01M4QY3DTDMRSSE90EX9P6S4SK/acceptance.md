@@ -1,0 +1,2 @@
+- [ ] The case ran with at least 5 runs on haiku and on sonnet and the number of runs that went beyond the request is recorded in the findings
+- [ ] Either a follow-up issue exists with the proposed change, or the findings say why none is needed

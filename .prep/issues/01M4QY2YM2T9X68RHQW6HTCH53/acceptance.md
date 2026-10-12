@@ -1,0 +1,3 @@
+- [ ] The four variants ran on the plugin-ab cases with at least 5 runs per cell
+- [ ] The findings state per behavior (finding prep, tracking untracked work, reading knowledge through prep, auditing with subagents) which part of the plugin carries it
+- [ ] The findings give the input-token cost of the skill and of the hook per session, and a recommendation
