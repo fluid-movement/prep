@@ -81,7 +81,9 @@ type issueCheck struct {
 		Checked  *int     `yaml:"checked"`
 	} `yaml:"criteria"`
 	Requirement string `yaml:"requirement"` // text the requirement contains
-	Context     string `yaml:"context"`     // text the context contains
+	// OpenQuestions is true when the issue has open questions, false when it has none.
+	OpenQuestions *bool  `yaml:"open_questions"`
+	Context       string `yaml:"context"` // text the context contains
 }
 
 func decodeIssue(n *yaml.Node) (assert.Assertion, error) {
@@ -214,6 +216,9 @@ func (c *issueCheck) Check(in *assert.Input) assert.Result {
 	}
 	if c.Requirement != "" && !strings.Contains(strings.ToLower(is.Requirement), strings.ToLower(c.Requirement)) {
 		problems = append(problems, fmt.Sprintf("requirement lacks %q", c.Requirement))
+	}
+	if c.OpenQuestions != nil && (strings.TrimSpace(is.OpenQuestions) != "") != *c.OpenQuestions {
+		problems = append(problems, fmt.Sprintf("open questions present: %v, want %v", strings.TrimSpace(is.OpenQuestions) != "", *c.OpenQuestions))
 	}
 	if c.Context != "" && !strings.Contains(strings.ToLower(is.Context), strings.ToLower(c.Context)) {
 		problems = append(problems, fmt.Sprintf("context lacks %q", c.Context))

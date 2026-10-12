@@ -10,4 +10,4 @@ expect:
     - ran: edit
     - no_prep_files: true
   outcome:
-    - issue: {ref: '{{wish}}', state: open, requirement: open questions}
+    - issue: {ref: '{{wish}}', state: open, open_questions: true}

@@ -162,6 +162,9 @@ func (j *Judge) Func() func(ctx context.Context, rec *run.Record, rubric []strin
 		in := Input{Task: rec.Prompt, Transcript: Condense(rec.Transcript, j.MaxTranscript), Final: rec.Transcript.Final.Text}
 		if rec.Input != nil && rec.Input.Diff != nil {
 			in.Diff = rec.Input.Diff.Summary(rec.Input.After)
+			if detail := rec.Input.Diff.Detail(rec.Input.After, 2500); detail != "" {
+				in.Diff += "\nThe text as it now stands:\n" + detail
+			}
 		}
 		out := make([]assert.Result, len(rubric))
 		var wg sync.WaitGroup
@@ -219,7 +222,7 @@ func Condense(t *transcript.Transcript, max int) string {
 	if t == nil {
 		return ""
 	}
-	per := 600
+	per := 2500 // the longest piece of a step kept; halved until the whole fits
 	for {
 		var b strings.Builder
 		for _, s := range t.Steps {
@@ -237,7 +240,7 @@ func Condense(t *transcript.Transcript, max int) string {
 			if s.Error {
 				status = " (FAILED)"
 			}
-			fmt.Fprintf(&b, "[%d] %s: %s%s\n    -> %s\n", s.Index, s.Tool, clipTo(what, per), status, clipTo(s.Result, per))
+			fmt.Fprintf(&b, "[%d] %s: %s%s\n    -> %s\n", s.Index, s.Tool, clipTo(what, per), status, clipTo(s.Result, per/4))
 		}
 		out := b.String()
 		if len(out) <= max || per <= 60 {

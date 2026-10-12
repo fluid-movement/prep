@@ -169,6 +169,9 @@ func TestOutcomeKinds(t *testing.T) {
 			t.Errorf("%s: reason %q lacks %q", c.src, r.Reason, c.hint)
 		}
 	}
+	if det := w.in.Diff.Detail(w.in.After, 200); !strings.Contains(det, "Refunds for orders.") || !strings.Contains(det, "Refunds take 5 days.") || !strings.Contains(det, "Refunds work") {
+		t.Errorf("detail lacks the text the agent wrote:\n%s", det)
+	}
 	sum := w.in.Diff.Summary(w.in.After)
 	for _, want := range []string{`created `, `"Refund flow"`, "changed ", "criteria", "created knowledge entry /components/refunds.md", "new commits", "file changed"} {
 		if !strings.Contains(sum, want) {

@@ -19,6 +19,7 @@ func init() {
 	assert.Register(assert.Tools, "args", decodeArgs)
 	assert.Register(assert.Tools, "final_mentions", decodeFinal)
 	assert.Register(assert.Tools, "no_prep_files", decodeNoPrepFiles)
+	assert.Register(assert.Tools, "any_of", decodeAnyOf)
 }
 
 // ---- ran
@@ -404,4 +405,42 @@ func (a noPrepFiles) Check(in *assert.Input) assert.Result {
 		}
 	}
 	return assert.Pass(a, "no direct access", -1)
+}
+
+// ---- any_of
+
+// anyOf passes when at least one of its selectors matches a step: several
+// right ways to do the same thing.
+type anyOf struct{ sels []Selector }
+
+func decodeAnyOf(n *yaml.Node) (assert.Assertion, error) {
+	if n.Kind != yaml.SequenceNode || len(n.Content) == 0 {
+		return nil, fmt.Errorf("line %d: any_of needs a list of commands or selectors", n.Line)
+	}
+	a := &anyOf{}
+	for _, c := range n.Content {
+		s, err := parseSelector(c)
+		if err != nil {
+			return nil, err
+		}
+		a.sels = append(a.sels, s)
+	}
+	return a, nil
+}
+
+func (a *anyOf) Kind() string { return "any_of" }
+func (a *anyOf) Describe() string {
+	var d []string
+	for _, s := range a.sels {
+		d = append(d, s.Describe())
+	}
+	return "ran one of: " + strings.Join(d, " | ")
+}
+func (a *anyOf) Check(in *assert.Input) assert.Result {
+	for _, s := range a.sels {
+		if first, n := s.First(in.Transcript); n > 0 {
+			return assert.Pass(a, fmt.Sprintf("%s at step %d", s.Describe(), first), first)
+		}
+	}
+	return assert.Fail(a, "expected one of "+a.Describe()[len("ran one of: "):]+"; none happened", -1)
 }

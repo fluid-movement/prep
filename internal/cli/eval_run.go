@@ -157,26 +157,27 @@ func execMatrix(a *app, dir string, m *matrixFlags, variants []string) (*results
 	if err != nil {
 		return nil, nil, &domain.Error{Code: domain.ErrGate, Message: err.Error()}
 	}
-	parent, err := os.MkdirTemp("", "prep-eval-run-")
+	// scratch holds what is thrown away; work holds the run environments, of
+	// which a failing run's is kept for inspection. Both live outside any git
+	// repository, so the fixtures do not stage into this checkout.
+	scratch, err := os.MkdirTemp("", "prep-eval-scratch-")
 	if err != nil {
 		return nil, nil, err
 	}
-	defer os.RemoveAll(parent)
-	id := results.NewID(time.Now())
-	// Environments live inside the run's results directory, so the workspace
-	// of a failing run is still there to inspect afterwards.
-	work := filepath.Join(store.Dir(id), "work")
-	if err := os.MkdirAll(work, 0o755); err != nil {
+	defer os.RemoveAll(scratch)
+	work, err := os.MkdirTemp("", "prep-eval-work-")
+	if err != nil {
 		return nil, nil, err
 	}
 	defer os.Remove(work) // only when empty: nothing was kept
+	id := results.NewID(time.Now())
 	live := &matrix.Live{Cases: map[string]*evalcase.Case{}, Variants: res, Binary: m.tools.binary, Claude: m.tools.claude, Auth: auth,
 		Parent: work, OutDir: store.Dir(id), Keep: m.keep}
 	for _, c := range cases {
 		live.Cases[c.Name] = c
 	}
 	if !m.noJudge && hasRubric(cases) {
-		j, cleanup, err := judge.NewClaude(judge.Config{Model: m.judgeModel, Claude: m.tools.claude, Auth: auth, Parent: parent})
+		j, cleanup, err := judge.NewClaude(judge.Config{Model: m.judgeModel, Claude: m.tools.claude, Auth: auth, Parent: scratch})
 		if err != nil {
 			return nil, nil, err
 		}
@@ -186,7 +187,7 @@ func execMatrix(a *app, dir string, m *matrixFlags, variants []string) (*results
 	opts.Runner = live
 	var refs []results.VariantRef
 	for _, v := range variants {
-		mat, err := res.Materialize(v, filepath.Join(parent, "hash-"+strings.ReplaceAll(v, "/", "_")))
+		mat, err := res.Materialize(v, filepath.Join(scratch, "hash-"+strings.ReplaceAll(v, "/", "_")))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -205,6 +206,9 @@ func execMatrix(a *app, dir string, m *matrixFlags, variants []string) (*results
 			verdict = "pass"
 		}
 		fmt.Fprintf(a.errw, "[%d/%d] %s run %d: %s (%s, $%.3f)\n", done, len(cells)*m.n, r.Cell, r.Index+1, verdict, r.Status, r.Cost.USD)
+		if r.Status == "error" {
+			fmt.Fprintf(a.errw, "    %s\n", r.Err)
+		}
 	}
 	started := time.Now()
 	out, err := matrix.Run(ctx, opts)

@@ -26,20 +26,23 @@ type ProjectSnapshot struct {
 
 // Issue is what prep show reports about one issue.
 type Issue struct {
-	ID          string      `json:"id"`
-	Title       string      `json:"title"`
-	Kind        string      `json:"kind"`
-	State       string      `json:"state"`
-	Stale       bool        `json:"stale,omitempty"`
-	Parent      string      `json:"parent,omitempty"`
-	DependsOn   []string    `json:"depends_on,omitempty"`
-	Tags        []string    `json:"tags,omitempty"`
-	Priority    string      `json:"priority,omitempty"`
-	Requirement string      `json:"requirement,omitempty"`
-	Context     string      `json:"context,omitempty"`
-	Criteria    []Criterion `json:"criteria,omitempty"`
-	ClaimedBy   string      `json:"claimed_by,omitempty"`
-	History     string      `json:"history,omitempty"`
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Kind        string   `json:"kind"`
+	State       string   `json:"state"`
+	Stale       bool     `json:"stale,omitempty"`
+	Parent      string   `json:"parent,omitempty"`
+	DependsOn   []string `json:"depends_on,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Priority    string   `json:"priority,omitempty"`
+	Requirement string   `json:"requirement,omitempty"`
+	// OpenQuestions is the requirement's ## Open questions section, which prep
+	// reports apart from the rest of the requirement.
+	OpenQuestions string      `json:"open_questions,omitempty"`
+	Context       string      `json:"context,omitempty"`
+	Criteria      []Criterion `json:"criteria,omitempty"`
+	ClaimedBy     string      `json:"claimed_by,omitempty"`
+	History       string      `json:"history,omitempty"`
 }
 
 // Criterion is an acceptance criterion.
@@ -187,6 +190,7 @@ func parseShow(out string) (*Issue, error) {
 			DependsOn   []string    `json:"depends_on"`
 			Tags        []string    `json:"tags"`
 			Requirement string      `json:"requirement"`
+			OpenQ       string      `json:"open_questions"`
 			Criteria    []Criterion `json:"criteria"`
 			Claim       *struct {
 				By string `json:"by"`
@@ -198,7 +202,7 @@ func parseShow(out string) (*Issue, error) {
 	}
 	i := d.Issue
 	is := &Issue{ID: i.ID, Title: i.Title, Kind: i.Kind, State: d.State, Stale: d.Stale, Parent: i.Parent,
-		DependsOn: i.DependsOn, Tags: i.Tags, Priority: d.Priority, Requirement: i.Requirement,
+		DependsOn: i.DependsOn, Tags: i.Tags, Priority: d.Priority, Requirement: i.Requirement, OpenQuestions: i.OpenQ,
 		Context: d.Context, Criteria: i.Criteria, History: d.History}
 	if i.Claim != nil {
 		is.ClaimedBy = i.Claim.By
@@ -341,7 +345,7 @@ func issueFields(b, a *Issue) []string {
 	add("depends_on", strings.Join(b.DependsOn, ",") != strings.Join(a.DependsOn, ","))
 	add("tags", strings.Join(b.Tags, ",") != strings.Join(a.Tags, ","))
 	add("priority", b.Priority != a.Priority)
-	add("requirement", b.Requirement != a.Requirement)
+	add("requirement", b.Requirement != a.Requirement || b.OpenQuestions != a.OpenQuestions)
 	add("context", b.Context != a.Context)
 	add("criteria", hash(b.Criteria) != hash(a.Criteria))
 	add("claim", b.ClaimedBy != a.ClaimedBy)
@@ -397,6 +401,66 @@ func (d *Diff) Summary(after *Snapshot) string {
 	}
 	if b.Len() == 0 {
 		return "nothing changed\n"
+	}
+	return b.String()
+}
+
+// Detail writes out the text of everything the run created or changed — the
+// requirement, open questions, context and criteria of issues, the text of
+// knowledge entries — each clipped to max characters, so a judge reads what
+// the agent wrote and not only that it wrote something.
+func (d *Diff) Detail(after *Snapshot, max int) string {
+	clip := func(s string) string {
+		s = strings.TrimSpace(s)
+		if len(s) > max {
+			return s[:max] + "…"
+		}
+		return s
+	}
+	var names []string
+	for n := range d.Projects {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	var b strings.Builder
+	for _, n := range names {
+		pd, ps := d.Projects[n], after.Projects[n]
+		if pd == nil || ps == nil {
+			continue
+		}
+		ids := append([]string{}, pd.Created...)
+		for id := range pd.Changed {
+			ids = append(ids, id)
+		}
+		sort.Strings(ids)
+		for _, id := range ids {
+			is := ps.Issues[id]
+			if is == nil {
+				continue
+			}
+			fmt.Fprintf(&b, "--- issue %s %q (%s, %s, priority %s, tags %v, parent %q, depends on %v)\n", is.ID, is.Title, is.Kind, is.State, is.Priority, is.Tags, is.Parent, is.DependsOn)
+			if is.Requirement != "" {
+				fmt.Fprintf(&b, "requirement:\n%s\n", clip(is.Requirement))
+			}
+			if is.OpenQuestions != "" {
+				fmt.Fprintf(&b, "open questions:\n%s\n", clip(is.OpenQuestions))
+			}
+			if is.Context != "" {
+				fmt.Fprintf(&b, "context:\n%s\n", clip(is.Context))
+			}
+			for i, c := range is.Criteria {
+				mark := " "
+				if c.Checked {
+					mark = "x"
+				}
+				fmt.Fprintf(&b, "criterion %d [%s] %s\n", i+1, mark, clip(c.Text))
+			}
+		}
+		for _, path := range append(append([]string{}, pd.EntriesCreated...), pd.EntriesChanged...) {
+			if e := ps.Knowledge[path]; e != nil {
+				fmt.Fprintf(&b, "--- knowledge entry %s (%s) %q\n%s\n", e.Path, e.Type, e.Title, clip(e.Text))
+			}
+		}
 	}
 	return b.String()
 }

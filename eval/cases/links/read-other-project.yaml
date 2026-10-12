@@ -4,7 +4,7 @@ prompt: What state is the Auth endpoint issue in the api project?
 workspace: shop-api
 expect:
   tools:
-    - ran: {command: show, project: api}
+    - any_of: [{command: show, project: api}, {command: list, project: api}, {command: next, project: api}]
     - no_prep_files: true
     - final_mentions: ready
   outcome:

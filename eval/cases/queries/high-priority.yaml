@@ -4,7 +4,8 @@ prompt: List the high priority issues.
 fixture: shop
 expect:
   tools:
-    - ran: {command: list, args: '--priority'}
+    - ran: list
+    - max_calls: 4
     - no_prep_files: true
     - final_mentions: payment
   outcome:

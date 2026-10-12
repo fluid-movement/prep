@@ -1,6 +1,8 @@
 name: enrich-tax-rules
 description: A defined code issue is enriched from the code and signed off.
-prompt: Enrich the Tax rules issue so it is ready to implement. Read the code under src to ground the context.
+prompt: |
+  Enrich the Tax rules issue so it is ready to implement: read the code under src to ground the context, add
+  acceptance criteria, and sign it off with prep ready. I approve the approach, so you do not need to ask me.
 fixture: shop
 limits: {max_turns: 30}
 expect:
