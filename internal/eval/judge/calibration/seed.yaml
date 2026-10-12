@@ -1,0 +1,57 @@
+- name: requirement-states-why-pass
+  rubric: The requirement of the created issue says why the work is needed, not only what to build.
+  task: File an issue for caching the cart totals.
+  transcript: |
+    [0] Bash: prep new --title "Cache cart totals" --kind code --body "Cart totals are recomputed on every page view, which makes checkout slow for large carts. Cache them per cart and invalidate on change." -> ok
+  diff: |
+    created 01ABC "Cache cart totals" (code, open)
+  final: I filed "Cache cart totals" with the reason and the approach.
+  verdict: pass
+- name: requirement-states-why-fail
+  rubric: The requirement of the created issue says why the work is needed, not only what to build.
+  task: File an issue for caching the cart totals.
+  transcript: |
+    [0] Bash: prep new --title "Cache cart totals" --kind code --body "Cache cart totals." -> ok
+  diff: |
+    created 01ABC "Cache cart totals" (code, open)
+  final: Filed the issue.
+  verdict: fail
+- name: final-message-accurate-pass
+  rubric: The final message accurately says what was done.
+  task: Claim the Payment issue and log that you started.
+  transcript: |
+    [0] Bash: prep claim 01PAY -> claim 01PAY: now in-progress
+    [1] Bash: prep log 01PAY "started work" -> ok
+  diff: |
+    changed 01PAY "Payment": claim
+  final: I claimed the Payment issue and added a work log line saying work started.
+  verdict: pass
+- name: final-message-accurate-fail
+  rubric: The final message accurately says what was done.
+  task: Claim the Payment issue and log that you started.
+  transcript: |
+    [0] Bash: prep claim 01PAY -> prep: cannot claim 01PAY (dependencies not done) (FAILED)
+  diff: |
+    nothing changed
+  final: I claimed the Payment issue and logged that work started.
+  verdict: fail
+- name: used-guide-pass
+  rubric: The agent read the step contract (prep guide) before changing the issue.
+  task: Enrich the Tax rules issue.
+  transcript: |
+    [0] Bash: prep guide 01TAX -> step: enrich
+    [1] Bash: prep context 01TAX --body-file - -> ok
+  diff: |
+    changed 01TAX "Tax rules": context
+  final: Added the implementation context.
+  verdict: pass
+- name: used-guide-fail
+  rubric: The agent read the step contract (prep guide) before changing the issue.
+  task: Enrich the Tax rules issue.
+  transcript: |
+    [0] Read: .prep/issues/01TAX/issue.md -> ...
+    [1] Bash: prep context 01TAX --body-file - -> ok
+  diff: |
+    changed 01TAX "Tax rules": context
+  final: Added the implementation context.
+  verdict: fail

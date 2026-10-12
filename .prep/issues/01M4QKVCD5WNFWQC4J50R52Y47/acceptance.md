@@ -1,4 +1,4 @@
-- [ ] Each rubric item is judged separately by a pinned model with no tools and structured pass/fail output with a reason and evidence
-- [ ] Invalid judge output is retried once, then reported as error, never as pass
-- [ ] Reports keep deterministic and judged results apart, and a judged pass never overrides a deterministic failure
-- [ ] A calibration set of hand-labelled runs measures the judge's agreement and marks it untrusted below a threshold
+- [x] Each rubric item is judged separately by a pinned model with no tools and structured pass/fail output with a reason and evidence
+- [x] Invalid judge output is retried once, then reported as error, never as pass
+- [x] Reports keep deterministic and judged results apart, and a judged pass never overrides a deterministic failure
+- [x] A calibration set of hand-labelled runs measures the judge's agreement and marks it untrusted below a threshold

@@ -35,6 +35,8 @@ type Result struct {
 	// Errored means the check could not be made (a judge that returned
 	// nothing usable); it is neither a pass nor a failure of the agent.
 	Errored bool `json:"errored,omitempty"`
+	// Untrusted marks a judged result whose judge failed calibration.
+	Untrusted bool `json:"untrusted,omitempty"`
 	// Step is the transcript step that decided the result, or -1.
 	Step int `json:"step"`
 }
