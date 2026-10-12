@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -142,6 +143,7 @@ var (
 func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	out := &counter{w: stdout}
 	a := &app{out: out, errw: stderr, stdin: stdin, now: clock, entropy: entropy}
+	a.testSeams()
 	a.actor = os.Getenv("PREP_ACTOR")
 	a.root = os.Getenv("PREP_ROOT")
 	a.project = os.Getenv("PREP_PROJECT")
@@ -172,6 +174,22 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		}
 	}
 	return a.fail(usageErr("unknown command %q; run prep help", name))
+}
+
+// testSeams reads the test-only environment variables the eval fixture
+// builder sets: PREP_TEST_NOW (RFC3339) replaces the clock and PREP_TEST_SEED
+// (an integer) seeds the random bits of new issue IDs. Unset, nothing changes.
+func (a *app) testSeams() {
+	if v := os.Getenv("PREP_TEST_NOW"); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			a.now = func() time.Time { return t }
+		}
+	}
+	if v := os.Getenv("PREP_TEST_SEED"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			a.entropy = rand.New(rand.NewSource(n))
+		}
+	}
 }
 
 // resolveProject points the command at the project --project names. Flags

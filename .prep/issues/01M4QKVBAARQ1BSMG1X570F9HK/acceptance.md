@@ -1,5 +1,5 @@
-- [ ] A workspace spec builds N projects in one directory, each from its own spec, with the primary named
-- [ ] Links, cross-project depends_on and cross-project knowledge links resolve (prep check is clean in every project)
-- [ ] The workspace has its own project registry (XDG_STATE_HOME); the real one is untouched
-- [ ] Aliases work as project/alias across projects and as plain alias within one
-- [ ] Two builds of the same workspace are byte-identical; a cycle between projects is an error
+- [x] A workspace spec builds N projects in one directory, each from its own spec, with the primary named
+- [x] Links, cross-project depends_on and cross-project knowledge links resolve (prep check is clean in every project)
+- [x] The workspace has its own project registry (XDG_STATE_HOME); the real one is untouched
+- [x] Aliases work as project/alias across projects and as plain alias within one
+- [x] Two builds of the same workspace are byte-identical; a cycle between projects is an error
