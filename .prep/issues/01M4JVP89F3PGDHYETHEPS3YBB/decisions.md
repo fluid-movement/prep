@@ -4,3 +4,8 @@ date: 2026-10-10
 Mac-only removes the reason for Electron, Tauri or GPUI. None of them can share the Go domain in-process, so they all cross a process boundary anyway; the CLI's `--json` and `prep watch` already are that boundary. Wails (Go plus web UI, domain in-process) was the real alternative and is rejected unless the JSON contract turns out too thin. Reading `.prep/` from Swift is rejected: two domain implementations drift.
 
 Accepted downsides: no good native markdown editor or renderer (use a library or a small WebView for rendering); SwiftUI needs AppKit for the letter-sequence shortcuts and dense lists; agents verify native UI harder than the TUI or a web page (own issue); a second language with a macOS CI runner, signing and notarization.
+
+## D2: Retire desktop after migrating useful TUI behavior
+date: 2026-10-13
+
+User chose TUI-first development in the product interview. Migrate useful Inbox/review behavior and tests, then delete the desktop app rather than archive or maintain it. This supersedes continued desktop development; completed records remain historical. Migration requirements: 01M4TST3C4ZSZDKA5WKBA3ND4H, particularly 01M4TSWXMYESCAEW74ZS58M6J6. Remaining desktop expansion/distribution requirements need reconciliation before further implementation.

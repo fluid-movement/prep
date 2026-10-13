@@ -1,0 +1,11 @@
+---
+title: Versioned human approval and reopening without commit orchestration
+kind: code
+parent: 01M4TST3C4ZSZDKA5WKBA3ND4H
+tags:
+  - workflow
+---
+
+Track implementation completion separately from human review. Human approval applies to a specific resolution and identifiable code/evidence snapshot, without imposing a commit prerequisite or commit workflow. Changes to reviewed work require renewed approval. Store review and approval records in versioned project records, not machine-local Inbox state. If the human discusses a problem with the agent and instructs it to resume, the agent explicitly reopens the same issue; preserve earlier resolutions, evidence, and review history. Pending review does not globally block other ready work. Dependencies count implementation completion by default, with explicit support for requiring human approval. Related: 01M485SARRF3924985Z0Q4E6SS concerns entry-level knowledge review; issue approval should not silently declare every entry semantically correct.
+
+## Open questions
