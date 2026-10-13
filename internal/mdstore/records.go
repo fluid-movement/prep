@@ -64,10 +64,11 @@ type resolutionFM struct {
 }
 
 type projectFM struct {
-	Schema int               `yaml:"schema"`
-	ID     string            `yaml:"id,omitempty"`
-	Name   string            `yaml:"name,omitempty"`
-	Links  map[string]linkFM `yaml:"links,omitempty"`
+	Schema int                      `yaml:"schema"`
+	ID     string                   `yaml:"id,omitempty"`
+	Name   string                   `yaml:"name,omitempty"`
+	Links  map[string]linkFM        `yaml:"links,omitempty"`
+	Policy *domain.CompletionPolicy `yaml:"completion_policy,omitempty"`
 }
 
 // linkFM is one link under its local name; yaml writes the names sorted.
@@ -78,7 +79,7 @@ type linkFM struct {
 
 // project returns the frontmatter's facts.
 func (f projectFM) project() domain.Project {
-	p := domain.Project{Schema: f.Schema, ID: f.ID, Name: f.Name}
+	p := domain.Project{Schema: f.Schema, ID: f.ID, Name: f.Name, Policy: f.Policy}
 	for name, l := range f.Links {
 		p.Links = append(p.Links, domain.ProjectLink{Name: name, ID: l.ID, Remote: l.Remote})
 	}
@@ -87,7 +88,7 @@ func (f projectFM) project() domain.Project {
 }
 
 func projectFMOf(p domain.Project) projectFM {
-	f := projectFM{Schema: p.Schema, ID: p.ID, Name: p.Name}
+	f := projectFM{Schema: p.Schema, ID: p.ID, Name: p.Name, Policy: p.Policy}
 	if len(p.Links) > 0 {
 		f.Links = map[string]linkFM{}
 		for _, l := range p.Links {

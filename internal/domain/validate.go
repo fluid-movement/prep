@@ -35,6 +35,12 @@ func Validate(t *Tree) []Diagnostic {
 		}
 	}
 
+	if p := t.Project.Policy; p != nil && !p.Valid() {
+		add(Diagnostic{Code: CodePolicyInvalid, Severity: SevError, Class: ClassGuided, File: "project.md",
+			Message: "completion policy needs verification, documentation, actor and timestamp",
+			Fix:     "run prep policy set --verification <method> --documentation <method>"})
+	}
+
 	validateLinks(t, add)
 
 	for _, id := range t.IDs() {

@@ -42,6 +42,7 @@ const (
 	CodeLocalTracked    = "P007" // .prep/.gitignore does not ignore local/; prep fix adds it
 	CodeProjectNoID     = "P008" // project.md has no id; prep fix writes one
 	CodeProjectInvalid  = "P009" // project.md has an invalid id or name
+	CodePolicyInvalid   = "P010" // configured completion policy is incomplete
 
 	// Issue structure.
 	CodeBadID              = "I001" // directory name is not a valid ID

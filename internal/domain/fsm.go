@@ -89,7 +89,8 @@ type Change struct {
 	Knowledge      *KnowledgeEdit `json:"-"`
 	KnowledgeEntry *Entry         `json:"-"`
 	// Config is a new project configuration (settings).
-	Config *Config `json:"-"`
+	Config *Config           `json:"-"`
+	Policy *CompletionPolicy `json:"-"`
 	// Links is project.md's new link list; LinkRename (old, new) also
 	// rewrites every reference to old.
 	Links      *[]ProjectLink `json:"-"`
@@ -208,6 +209,9 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 			add(GateOpenQuestions, "the Open questions section in issue.md is not empty")
 		}
 	case OpReady:
+		if !t.Project.Policy.Valid() {
+			unmet = append(unmet, policyRequired())
+		}
 		if stale {
 			add(GateStale, "the requirement changed since the newest baseline; run prep define (re-enrich) or prep ack (trivial change)")
 		}
@@ -610,6 +614,10 @@ func (t *Tree) Apply(c *Change) *Tree {
 		entries = append(entries, c.KnowledgeEntry)
 	}
 	p := t.Project
+	if c.Policy != nil {
+		policy := *c.Policy
+		p.Policy = &policy
+	}
 	if c.Config != nil {
 		p.Config = *c.Config
 	}

@@ -304,6 +304,11 @@ func (p *Project) build(seed int64) error {
 	if _, err := run(initArgs...); err != nil {
 		return err
 	}
+	// Fixture setup is explicit about completion methods; init itself must not
+	// silently choose a policy for real projects.
+	if _, err := run("policy", "set", "--verification", "Verify each acceptance criterion and record results.", "--documentation", "Update affected knowledge or explain no impact."); err != nil {
+		return err
+	}
 	if _, err := w.prep(p.Dir, seed, "projects", "add", p.Dir); err != nil {
 		return err
 	}

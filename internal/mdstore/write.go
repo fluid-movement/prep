@@ -134,7 +134,7 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 		touched = append(touched, rel)
 		contents = append(contents, &out)
 	}
-	if c.Links != nil {
+	if c.Links != nil || c.Policy != nil {
 		rel := Dir + "/project.md"
 		raw, ok, err := s.read(rel)
 		if err == nil && !ok {
@@ -152,7 +152,12 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 			return nil, nil, fmt.Errorf("%s: %w", rel, err)
 		}
 		p := f.project()
-		p.Links = *c.Links
+		if c.Links != nil {
+			p.Links = *c.Links
+		}
+		if c.Policy != nil {
+			p.Policy = c.Policy
+		}
 		out := renderProject(p, body)
 		touched = append(touched, rel)
 		contents = append(contents, &out)

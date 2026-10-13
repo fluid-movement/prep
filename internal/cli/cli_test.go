@@ -30,6 +30,7 @@ func newHarness(t *testing.T) *harness {
 	clock = func() time.Time { h.now = h.now.Add(time.Second); return h.now }
 	t.Cleanup(func() { clock = time.Now })
 	h.ok("init", "--no-bootstrap")
+	h.ok("policy", "set", "--verification", "Verify each acceptance criterion.", "--documentation", "Update affected knowledge or explain no impact.")
 	h.ok("knowledge", "new", "/overview.md", "--type", "overview", "--title", "Project overview", "--description", "Entry point to the knowledge base.", "--body", "The test project.")
 	return h
 }

@@ -41,6 +41,18 @@ func newProject(t *testing.T) *project {
 	if _, err := mdstore.Open(p.dir).Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 		t.Fatal(err)
 	}
+	st := mdstore.Open(p.dir)
+	project, _, _, err := st.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := domain.NewTree(project, nil, nil, nil).PlanPolicy(domain.CompletionPolicy{Verification: "Verify acceptance criteria.", Documentation: "Review knowledge impact.", By: "test/1", At: p.now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.Apply(c); err != nil {
+		t.Fatal(err)
+	}
 	return p
 }
 

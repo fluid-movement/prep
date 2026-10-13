@@ -133,8 +133,10 @@ type Project struct {
 	Name string
 	// Links are the other projects this one refers to, by local name
 	// (sorted).
-	Links  []ProjectLink
-	DoD    []string
+	Links []ProjectLink
+	DoD   []string
+	// Policy is explicitly configured; nil identifies a legacy or unconfigured project.
+	Policy *CompletionPolicy
 	Config Config
 }
 

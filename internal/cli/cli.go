@@ -100,6 +100,8 @@ func init() {
 		{"watch", false, "watch                      stream a line per change under .prep until killed (for harness integrations)", cmdWatch},
 		{"flags", false, "flags                      every query flag with the values it accepts now and their issue counts", cmdFlags},
 		{"knowledge", false, "knowledge list|find|show   read the knowledge base: list [--type --status --scope words], find <query> [--max N] (best sections), show <entry>[#section]... [--outline]", cmdKnowledge},
+		{"policy", false, "policy show               show the explicit project completion policy", cmdPolicy},
+		{"policy", true, "policy set --verification V --documentation D  record completion methods (never executes checks)", cmdPolicy},
 		{"views", false, "views                      saved views from config.yaml (else config.yaml.dist)", cmdViews},
 		{"projects", false, "projects [add <dir> | remove <dir|name|id>]  prep projects on this machine, most recently used first (recorded by every command run in one): name, ID suffix, last use, root, remote", cmdProjects},
 		{"links", false, "links                      this project's links to other projects and where each is checked out here", cmdLinks},
