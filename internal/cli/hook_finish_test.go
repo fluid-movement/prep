@@ -42,7 +42,7 @@ func TestHookFinishReviewsOnlyTurnChanges(t *testing.T) {
 		}
 		write("main.go", "this turn "+harness)
 		out := runHook(t, "finish", harness, e)
-		if !strings.Contains(out, "Before finishing") || !strings.Contains(out, "/code.md") || !strings.Contains(out, "issue covering") {
+		if !strings.Contains(out, "Before finishing") || !strings.Contains(out, "/code.md") || !strings.Contains(out, "issue covering") || !strings.Contains(out, "grants no additional permission") || !strings.Contains(out, "no-record-write") {
 			t.Fatalf("missing review: %s", out)
 		}
 		if harness == "codex" && !strings.Contains(out, `"decision": "block"`) {

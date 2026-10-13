@@ -19,14 +19,15 @@ import (
 
 // writeResult is the JSON answer of every write command.
 type writeResult struct {
-	OK    bool         `json:"ok"`
-	Op    string       `json:"op"`
-	ID    string       `json:"id,omitempty"`
-	State domain.State `json:"state,omitempty"`
-	Stale bool         `json:"stale,omitempty"`
-	Entry string       `json:"entry,omitempty"` // knowledge entry path
-	Files []string     `json:"files"`
-	Next  string       `json:"next,omitempty"` // the command to run next
+	OK      bool         `json:"ok"`
+	Op      string       `json:"op"`
+	ID      string       `json:"id,omitempty"`
+	State   domain.State `json:"state,omitempty"`
+	Stale   bool         `json:"stale,omitempty"`
+	Entry   string       `json:"entry,omitempty"` // knowledge entry path
+	Files   []string     `json:"files"`
+	Next    string       `json:"next,omitempty"`           // the command to run next
+	Similar []summary    `json:"similar_issues,omitempty"` // bounded candidates, not a duplicate verdict
 	// Project names the project written when --project chose it.
 	Project *projectRef `json:"project,omitempty"`
 }
@@ -69,6 +70,12 @@ func (a *app) reportWrite(r writeResult) {
 	}
 	if r.Next != "" {
 		a.printf("Next: %s\n", r.Next)
+	}
+	if len(r.Similar) > 0 {
+		a.printf("Similar unresolved issues (review with prep show; reuse only a clear match):\n")
+		for _, s := range r.Similar {
+			a.printf("  %s [%s] %s\n", s.ID, s.State, s.Title)
+		}
 	}
 }
 
@@ -267,7 +274,7 @@ func cmdNew(a *app, args []string) error {
 		return err
 	}
 	a.note(activity.Event{Op: "new", Issue: c.IssueID, Verb: "created a " + string(in.Kind) + " issue", Target: in.Title, Area: activity.AreaIssue})
-	a.reportWrite(writeResult{OK: true, Op: "new", ID: c.IssueID, State: domain.StateOpen, Files: files})
+	a.reportWrite(writeResult{OK: true, Op: "new", ID: c.IssueID, State: domain.StateOpen, Files: files, Similar: similarIssues(t, in.Title)})
 	return nil
 }
 

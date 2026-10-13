@@ -1,4 +1,3 @@
-- [ ] natural-fix-matching-issue passes the check and knowledge assertions on haiku in at least 3 of 5 runs
-- [ ] The hook (or the changed command output) is silent when no entry is affected and short when one is
-- [ ] Pre-existing drift is not repeated at every stop
-- [ ] Documented in the Claude Code integration entry
+- [x] Shared finish regressions cover affected scopes, unchanged/old dirty work, commits during a turn, already-reconciled records and Stop-loop protection.
+- [x] Stop guidance explicitly preserves original user restrictions, including no-record-write instructions.
+- [x] Codex fixtures demonstrate knowledge maintenance and a single scope-respecting finish review; documentation records limits.

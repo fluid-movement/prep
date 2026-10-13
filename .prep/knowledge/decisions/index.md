@@ -6,3 +6,4 @@
 * [Out of scope](/decisions/out-of-scope.md) - Topics deliberately left out of prep; each can be added later without changing the model.
 * [Prior art](/decisions/prior-art.md) - What prep took from and avoided in Backlog.md and Beads, and why spec-driven tools are a different category.
 * [Stack](/decisions/stack.md) - Go single binary; Charm v2 (Bubble Tea, Bubbles, Lip Gloss, Glamour under charm.land) for the TUI; JSON-RPC over stdio for third-party storage adapters.
+* [Tracking implementation work](/decisions/tracking.md) - User-approved tracking policy: search before implementation, reuse clear matches, file unmatched work, honor opt-outs and preserve scope through finish reviews.

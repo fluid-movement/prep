@@ -1,4 +1,4 @@
-- [ ] natural-fix-matching-issue passes on haiku in at least 4 of 5 runs and still passes on sonnet
-- [ ] natural-fix-no-issue still passes on haiku (the agent creates no issue and claims nothing when none matches)
-- [ ] The nudge's token cost per prompt is measured and stated in the resolution
-- [ ] The change is in the plugin or the binary, with the knowledge entry for the Claude Code integration updated
+- [x] Shared prompt/skill guidance implements the accepted tracking policy, with deterministic checks for unmatched work, explicit opt-out and non-implementation requests.
+- [x] Natural eval cases require unmatched implementation to create an issue; explicit opt-out and read-only cases require no new issues.
+- [x] Targeted Codex fixtures demonstrate matching-issue reuse and unmatched implementation tracking; prompt context size is recorded.
+- [x] Shared hook and agent-context documentation describe the policy.

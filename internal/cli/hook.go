@@ -16,7 +16,7 @@ import (
 	"github.com/fluid-movement/prep/internal/userconfig"
 )
 
-const hookReminder = "Prep project: before code or research, search `prep list --text <distinctive words>` for existing work, then `prep next`. Use `prep guide <id>` before acting; create an issue only when no existing one covers authorized work. Resolve ambiguous references before changing records. Read tracker facts with `prep show` or `prep list`, not guesses from titles. Read knowledge through `prep knowledge find|show`; update affected knowledge after code changes. Use prep commands for record changes. Follow the user's scope; ordinary questions and work outside this project can proceed normally."
+const hookReminder = "Prep project: before implementation, search `prep list --text <distinctive words>` for existing work, then `prep next`. Reuse a clear match and run `prep guide <id>`; otherwise create an issue for implementation of any size, unless the user explicitly opts out of tracking. Questions, exploration and planning do not automatically need issues. If multiple issues fit, ask which one before changing records; do not pick the first. Read requirements and metadata through `prep show`/`prep list` before recommendations; never infer effort from titles. Read knowledge through `prep knowledge find|show` and maintain affected entries. Use prep commands for record changes. Preserve the original scope: requirement edits alone do not authorize implementation or completion, and no-record-write instructions remain binding through finish reviews."
 
 type hookEvent struct {
 	Cwd        string          `json:"cwd"`

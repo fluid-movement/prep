@@ -1,3 +1,4 @@
-- [ ] The briefing shows tags of actionable issues and says what is blocked, within its existing size cap
-- [ ] real-plan-next passes on sonnet in at least 4 of 5 runs and on haiku in at least 4 of 5
-- [ ] The agent-context knowledge entry describes the briefing's content
+- [x] The briefing shows actionable tags and bounded blocked issues, with JSON counts and no unbounded output section.
+- [x] Tests verify tags/dependency facts and truncation counts; guidance forbids invented effort estimates.
+- [x] A targeted Codex planning fixture reads tracker facts and does not claim unsupported effort estimates.
+- [x] Agent-context knowledge documents the briefing.

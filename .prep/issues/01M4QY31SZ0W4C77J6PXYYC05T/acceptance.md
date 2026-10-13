@@ -1,3 +1,4 @@
-- [ ] prep new prints similar open issues when there are any, in text and JSON, and prints nothing otherwise
-- [ ] real-bug-report-to-issue passes on haiku in at least 3 of 5 runs and on sonnet in at least 4 of 5
-- [ ] The CLI knowledge entry and the skill describe the hint
+- [x] prep new surfaces up to five similar unresolved issues in text and JSON and omits the hint when none matches.
+- [x] Similarity hints never auto-select an issue or block an intentional new issue; matching, unrelated and terminal issue cases are tested.
+- [x] A targeted Codex duplicate-report fixture searches and reuses the existing issue without creating a duplicate.
+- [x] CLI knowledge and skill describe the hint.

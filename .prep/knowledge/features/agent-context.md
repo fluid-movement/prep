@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/domain/guide.go
   - internal/cli/read.go
-confirmed_commit: 9c61698b74938475088e43b2ab260f5d0777b24c
+confirmed_commit: 54e8a28a1b0c5a0588d2c4face4c41b3e1f76986
 ---
 
 # Agent context
@@ -20,3 +20,6 @@ Applies when changing how agent sessions receive prep context or discover the ne
 - **Task guidance**: Codex `UserPromptSubmit` hooks add a task-time reminder to search for a matching issue, check `prep next`, and run `prep guide <id>` before changing code. A complete issue ID in the prompt triggers a live `prep guide`. Claude Code receives its workflow through the prep skill and agent context.
 - **Guide**: `prep guide <id>` tells the agent the current step, unmet gates, files to read and exact commands for outputs and transitions. Follow the guide before opening records or changing code.
 - **Limits**: plugin hooks must be trusted in Codex before they run. They provide automatic context and supported-tool guardrails, not perfect semantic enforcement; the skill remains the detailed workflow. No prep project needs an `AGENTS.md` file for the integration to work.
+## Planning and tracking facts
+
+Prime includes actionable issue tags and a capped list of unresolved dependencies blocking leaf work, with blocked_count in JSON and a footer for omitted blocked issues. Counts reflect all blocked work even when the list is capped. Shared prompt guidance asks the agent to read requirements and metadata before recommendations and forbids guessing effort from titles. See [Tracking implementation work](/decisions/tracking.md) for search/create behavior, explicit opt-outs and scope through Stop reviews.

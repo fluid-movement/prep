@@ -7,6 +7,6 @@ tags:
   - cli
 ---
 
-"bump the payment issue to critical" when two issues fit ("Payment integration" and "Payment refunds") was answered by editing one of them at once, with no question and no explanation, in 3 of 3 haiku runs and 1 of 1 sonnet run. A careful agent asks which one or states which it took and why. Decide how much of this the tool should do and make agents handle it, measured by `adversarial-ambiguous-reference`.
+Shared prompt guidance and the skill require clarification before changing records when a reference has multiple plausible matches, and honor explicit full issue IDs. Add deterministic checks and a targeted Codex ambiguity fixture that leaves both candidate issues unchanged until clarified. The original haiku/sonnet and batch regression requirements are deferred to 01M4J8789E81QAJHG8R8ZPEMRD.
 
 ## Open questions

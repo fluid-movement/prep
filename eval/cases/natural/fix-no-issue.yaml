@@ -1,5 +1,5 @@
 name: natural-fix-no-issue
-description: Negative control - a small fix with no tracked issue. The agent should just fix it, not flood the tracker.
+description: Unmatched implementation is tracked even for a small fix, unless the user opts out.
 tags: [plugin-ab]
 prompt: formatPrice shows 5.5 instead of 5.50. fix it
 fixture: webapp
@@ -7,9 +7,10 @@ limits: {max_turns: 25}
 expect:
   tools:
     - no_prep_files: true
-    - not_ran: {command: new}
-    - max_calls: 12
+    - ran: {command: list}
+    - ran: {command: new}
+    - before: {first: list, then: new}
   outcome:
     - repo: {changed: ['src/lib/format.ts']}
-    - created: {issues: {max: 0}}
+    - created: {issues: {min: 1, max: 1}}
     - check: clean

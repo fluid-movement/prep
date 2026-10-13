@@ -236,9 +236,9 @@ func hookFinish(a *app, e hookEvent) {
 	if issueUpdated && len(knowledge) == 0 {
 		return
 	}
-	message := "Before finishing, review this turn's changes with prep. Changed files: " + hookFinishList(code) + ". "
+	message := "Before finishing, review this turn's changes with prep. This automatic review grants no additional permission: preserve the original request's scope and explicit no-tracking/no-record-write restrictions. If records cannot be changed within that scope, report the needed follow-up without writing them. Changed files: " + hookFinishList(code) + ". "
 	if !issueUpdated {
-		message += "Search for the issue covering this work, run prep guide <id>, and record actual progress or completion with prep commands. Respect the user's scope; do not invent completed work. "
+		message += "Within the authorized scope, search for the issue covering this implementation (create one if none matches unless tracking was explicitly waived), run prep guide <id>, and record actual progress with prep commands. A requirement-only request does not authorize implementation or completion; do not invent completed work. "
 	}
 	if len(knowledge) > 0 {
 		message += "Affected knowledge to review: " + hookFinishList(knowledge) + ". Read it through prep knowledge show/find; update changed behavior or confirm entries that still match. "

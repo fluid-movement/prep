@@ -1,0 +1,11 @@
+name: natural-read-only
+description: A read-only question does not authorize new issues or implementation.
+prompt: What does formatPrice currently do? Explain from the source and tracker; do not change anything.
+fixture: webapp
+expect:
+  tools:
+    - no_prep_files: true
+    - not_ran: {command: new}
+  outcome:
+    - unchanged: {all: true, knowledge: true}
+    - created: {issues: {max: 0}}

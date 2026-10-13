@@ -7,6 +7,6 @@ tags:
   - cli
 ---
 
-Asked "what shall we tackle next? what are the low hanging fruit?", sonnet answered from the SessionStart briefing without a single tool call and offered effort estimates it had no basis for ("probably a single component", "likely a CSS fix"); the judge failed it for presenting guesses as facts. Haiku answered correctly in 2 of 3 runs. The tracker does record what is needed (tags such as `quick` and `large`, priority, dependencies, requirements that say "about an hour"), but the briefing lists only state, priority and title. Give the briefing (or the skill) what agents need to answer planning questions from evidence.
+Make the shared session briefing show actionable issue tags and a bounded summary of work blocked by unresolved dependencies. Prompt guidance tells agents to read tracker requirements/metadata before recommending work and not infer effort from titles. Verify output bounds and factual planning with deterministic tests and a targeted Codex fixture. Original haiku/sonnet thresholds are deferred to 01M4J8789E81QAJHG8R8ZPEMRD.
 
 ## Open questions

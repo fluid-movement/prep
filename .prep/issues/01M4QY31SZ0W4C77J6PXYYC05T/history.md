@@ -1,0 +1,3 @@
+- 2026-10-13T09:37:55Z edited by codex: requirement
+
+- 2026-10-13T14:00:00Z codex: Implemented bounded lexical similarity hints for prep new in text/JSON (maximum five unresolved candidates, no terminal/self candidates), preserving intentional creation and never automatically selecting a record. Deterministic tests cover matching, unrelated/generic titles, terminal records and cap. Codex bug-report session 01a134a9-0ffa-76c1-9460-3bee936cfd5a searched/read the existing issue and logged the report without creating a duplicate or editing source. It recovered from guesses about prep log flags; those are CLI usability observations, not a failure of duplicate avoidance. Sample size one; Claude thresholds retained in deferred verification.

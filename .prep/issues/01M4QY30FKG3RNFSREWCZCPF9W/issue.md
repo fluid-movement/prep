@@ -11,6 +11,6 @@ tags:
 priority: high
 ---
 
-When a user asks for work in plain words and a tracked issue covers it, the agent should find that issue, claim it, log progress and complete it with the knowledge entries in step (the outcome chosen in 01M4QY2XNA86D2MSFZXDT982K6). Haiku does not: on `natural-fix-matching-issue` it fixed the code and never looked at the tracker (0/3 runs), leaving the issue ready and unclaimed and the knowledge entry about the changed files drifting (`prep check` K005). Sonnet did the full loop. Make the plugin produce the behavior on haiku too, measured with the suite.
+Shared session/prompt hooks and the skill steer plain implementation requests through prep. Search existing issues before editing, reuse a clear matching issue, create an issue for unmatched implementation regardless of size, and follow current guides. Respect explicit tracking opt-outs; questions, exploration and planning do not automatically create issues. Update natural eval expectations to this policy. Original haiku/sonnet evidence and verification are retained in 01M4J8789E81QAJHG8R8ZPEMRD.
 
 ## Open questions

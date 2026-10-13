@@ -8,12 +8,6 @@ tags:
 priority: high
 ---
 
-Follow up the behavior failures found by the first real agent suite runs (2026-10-12, haiku and sonnet) against the new shared session, prompt and finish hooks. This 0.3.0 parent covers seven remaining reliability questions: the policy for work with no matching issue; finding tracked work from ordinary requests; avoiding duplicate issues; resolving ambiguous references; maintaining scoped knowledge; reading planning facts from the tracker; and staying within the user's requested scope. Each child retains its original evidence and acceptance criteria.
-
-General CLI polish, bootstrap policy, temporary-project/workspace cleanup and broader plugin A/B, skill-rule coverage, mutation and model research are deferred to Release 0.4.0. The original findings remain in those issues; deferral does not resolve them.
-
-The shared hooks and Codex integration are complete. Individual trusted Codex fixtures verified matching-issue search and lifecycle updates, knowledge maintenance, read-only knowledge use and one finish review that respected an explicit no-record-write constraint. These are smoke tests, not replacements for the repeated haiku/sonnet cases required by the children. No live Claude runs are authorized while the user is out of usage.
-
-Next settle the untracked-work policy before changing its test expectations: natural-fix-no-issue currently requires creating no issue, whereas the new prompt reminder says to create one when no existing issue covers authorized work. Existing CLI-specific requirements such as similarity hints in prep new and briefing tags are still unimplemented, despite the new hook guidance.
+Finish the seven shared-hook reliability children under the user-approved policy: track implementation of any size after searching for a clear match, honor explicit opt-outs, do not automatically track ordinary questions/exploration/planning, clarify ambiguous references, keep knowledge in step and preserve scope through Stop reviews. Focus 0.3.0 on reusable shared behavior and targeted Codex verification. Named-model haiku/sonnet checks are preserved in 01M4J8789E81QAJHG8R8ZPEMRD under Release 0.4.0; no Claude runs are currently authorized. The first-run evidence remains in child contexts/history and the deferred verification issue. Complete this parent only after all children and their updated criteria are met; do not claim Codex tests validate other agents.
 
 ## Open questions

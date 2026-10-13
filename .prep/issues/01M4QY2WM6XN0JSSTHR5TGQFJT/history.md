@@ -3,3 +3,5 @@
 - 2026-10-13T09:22:02Z edited by codex: title, requirement
 
 - 2026-10-13T09:22:03Z codex: Cleanup: 16 children reduced to 7 hook-reliability follow-ups; 9 broader issues moved to 0.4.0. Removed deferred A/B research as an implementation prerequisite for shipped tracking/knowledge hooks. Original child acceptance gates remain; none closed. Next is the untracked-work policy conflict, not more model runs.
+
+- 2026-10-13T09:38:03Z edited by codex: requirement

@@ -8,7 +8,7 @@ generated:
 scope:
   - internal/cli/hook*.go
   - internal/userconfig
-confirmed_commit: f2733602c55d299dd723c4ae727b4b5c3e11697d
+confirmed_commit: 54e8a28a1b0c5a0588d2c4face4c41b3e1f76986
 ---
 
 # Shared lifecycle hooks
@@ -51,3 +51,7 @@ Both plugins' `hooks/hooks.json` call these commands directly. Claude also retai
 Regression tests cover off/small/large, malformed/outside events, context bounds, direct paths, mixed shell calls, patch-body false positives, tool permissions, activity attribution, existing dirty files, committed turn changes, completed reconciliation and stop loops. Run `go test ./...`, `claude plugin test plugins/claude-code` and plugin validation. Actual Claude/Codex sessions and relevant behavior-suite cases remain integration verification, separate from these deterministic checks.
 
 Official protocol references: https://code.claude.com/docs/en/hooks and https://learn.chatgpt.com/docs/hooks.
+## Implementation tracking and scope
+
+The user-approved policy is [Tracking implementation work](/decisions/tracking.md): search first, reuse a clear match, create an issue for unmatched implementation of any size unless explicitly opted out, and do not automatically file issues for ordinary questions, exploration or planning. Ambiguous references require clarification before record changes. Planning answers read requirements/metadata and do not infer effort from titles. Stop text explicitly preserves original scope and no-record-write restrictions; automatic continuation grants no extra permission. Shared deterministic checks and targeted Codex fixtures are the current verification gate; original haiku/sonnet thresholds are retained in the deferred Claude verification issue under 0.4.0.
+The current small prompt reminder measures 839 UTF-8 bytes and 118 words (2026-10-13). This corrects the 893-byte figure accidentally written in the completed tracking child's final log; it is text size, not tokenizer-based cost.

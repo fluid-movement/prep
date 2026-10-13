@@ -7,6 +7,6 @@ tags:
 priority: low
 ---
 
-Asked "payment integration also needs to support apple pay now. update the requirement, and tell me what else changes because of it", sonnet once updated the requirement, re-defined the issue, added criteria, wrote a stand-in payment client, committed it and completed the issue; another time it updated the requirement, noticed the issue was stale and asked the user to choose between `prep define` and `prep ack`. Haiku passed all 3 runs of the case as written (either resolve the stale state or say so). Find out whether the over-reach is common and whether it matters.
+Check that shared prompt/finish guidance preserves the user's original scope: a request to update a requirement does not authorize implementation or completion, and no-record-write instructions survive Stop continuation. Run repeated targeted Codex scope fixtures and record their results/limits. Original repeated haiku/sonnet research remains deferred in 01M4J8789E81QAJHG8R8ZPEMRD.
 
 ## Open questions

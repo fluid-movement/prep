@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/cli
   - cmd/prep
-confirmed_commit: f2733602c55d299dd723c4ae727b4b5c3e11697d
+confirmed_commit: 54e8a28a1b0c5a0588d2c4face4c41b3e1f76986
 ---
 
 # CLI
@@ -39,8 +39,9 @@ Applies when adding or changing commands.
 - `prep show --json` carries the issue's fields plus `history` (the work log text), `context`, `findings`, derived state, relations, progress and the effective Definition of Done.
 - `prep projects`, `init`'s identity and `--new-id`: [project registry](/components/projects.md); `prep links`, `prep link`, `validate` (check plus registry checks): [Cross-project work](/features/cross-project.md).
 
-- `prep tui` is a read command that needs a terminal (stdin and stdout); it opens the [TUI](/components/tui.md), `--agent` opens it on the Agent screen, and `--gallery` shows the [TUI design system](/components/tui-design-system.md), loading the project config when there is one so custom themes and the chosen theme appear. `prep theme list` lists built-in and custom themes and marks the active one; `prep theme new <name> [--from <theme>]` writes `palette.Def` of the resolved theme into the user's own config through `PlanConfig` and selects it, refusing built-in and existing names ([Palette and themes](/components/palette.md)). `prep flags` prints `Tree.QueryFlags` plus the list-only `--view` (saved views and their queries) and `--tree`, grouped per flag with values and counts (`--json`: `{"flags": [...]}`). `prep views` lists saved views in config order, from config.yaml or else config.yaml.dist.
+- `prep tui` requires a terminal; `--agent` opens the Agent screen and `--gallery` shows the [design system](/components/tui-design-system.md) with project themes. `prep theme list|new` lists or creates/selects themes; see [Palette](/components/palette.md). `prep flags` lists query values/counts, including saved views and tree mode; `prep views` lists saved views in config order.
 - `prep skill` prints the embedded `internal/cli/skill.md`; `.claude/skills/prep/SKILL.md` must stay identical (tested).
 - Tests in `cli_test.go` drive whole lifecycles through `Main` with a fake clock; the package variables `clock` and `entropy` (nil: `crypto/rand`) feed `prep new` and the bootstrap issues their IDs, and tests read IDs from the commands' output.
 - **Completion evidence**: a code issue completed without `--commit` has no evidence in `resolution.md`; `resolveEvidence` (used by `prep show` and the guide's touched files) fills it in memory with the commit that added `resolution.md` (`gitx.AddedIn`), and `prep show` marks it pending (`evidence_pending` in JSON) until that commit exists. The domain gate only validates a given `--commit` (`G_EVIDENCE`), and the guide lists it as `[--commit <ref>]`.
 - **Eval**: test seams `PREP_TEST_NOW`, `PREP_TEST_SEED` (`testSeams`); [prep eval](/components/eval.md).
+`prep new` returns bounded advisory `similar_issues` candidates when titles overlap unresolved records; terminal/self records are omitted. Hints never prevent creation or choose a match. See [Tracking](/decisions/tracking.md).

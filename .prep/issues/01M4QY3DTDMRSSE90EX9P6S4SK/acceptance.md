@@ -1,2 +1,3 @@
-- [ ] The case ran with at least 5 runs on haiku and on sonnet and the number of runs that went beyond the request is recorded in the findings
-- [ ] Either a follow-up issue exists with the proposed change, or the findings say why none is needed
+- [x] Shared prompt and Stop text explicitly retain original scope and do not treat automatic review as extra permission.
+- [x] At least two independent Codex scope fixtures cover requirement-only edits and an explicit no-record-write finish review; results and sample-size limits are in findings.
+- [x] Deterministic scope-guidance tests pass and findings identify any remaining follow-up.

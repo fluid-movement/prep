@@ -673,18 +673,20 @@ func (s silentErr) Error() string { return s.err.Message }
 
 // primeBrief is the capped session-start briefing.
 type primeBrief struct {
-	Issues     int            `json:"issues"`
-	Actionable int            `json:"actionable"`
-	Parents    []summary      `json:"parents"`
-	Next       []summary      `json:"next"`
-	Stale      []summary      `json:"stale"`
-	Claims     []claimSummary `json:"claims"`
-	Check      checkSummary   `json:"check"`
-	Bootstrap  string         `json:"bootstrap,omitempty"` // alert while the knowledge base is not bootstrapped
-	Plugin     string         `json:"plugin,omitempty"`    // alert when the harness plugin and the binary differ
-	Focus      []focusSummary `json:"focus"`               // the newest current issues from the activity stream
-	Projects   []string       `json:"projects"`            // other prep projects on this machine, newest first
-	Hint       string         `json:"hint"`
+	Issues       int            `json:"issues"`
+	Actionable   int            `json:"actionable"`
+	Parents      []summary      `json:"parents"`
+	Next         []summary      `json:"next"`
+	Blocked      []summary      `json:"blocked"`
+	BlockedCount int            `json:"blocked_count"`
+	Stale        []summary      `json:"stale"`
+	Claims       []claimSummary `json:"claims"`
+	Check        checkSummary   `json:"check"`
+	Bootstrap    string         `json:"bootstrap,omitempty"` // alert while the knowledge base is not bootstrapped
+	Plugin       string         `json:"plugin,omitempty"`    // alert when the harness plugin and the binary differ
+	Focus        []focusSummary `json:"focus"`               // the newest current issues from the activity stream
+	Projects     []string       `json:"projects"`            // other prep projects on this machine, newest first
+	Hint         string         `json:"hint"`
 }
 
 type claimSummary struct {
@@ -707,6 +709,9 @@ func cmdPrime(a *app, args []string) error {
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
+	if *max < 0 {
+		return usageErr("prime --max must be nonnegative")
+	}
 	t, err := a.load(false)
 	if err != nil {
 		var de *domain.Error
@@ -721,7 +726,7 @@ func cmdPrime(a *app, args []string) error {
 		}
 		return ss
 	}
-	b := primeBrief{Issues: len(t.Issues), Parents: []summary{}, Next: []summary{}, Stale: []summary{}, Claims: []claimSummary{},
+	b := primeBrief{Issues: len(t.Issues), Parents: []summary{}, Next: []summary{}, Blocked: []summary{}, Stale: []summary{}, Claims: []claimSummary{},
 		Hint: "Run prep guide <id> for the issue you work on; it lists what to read and where outputs go. Read knowledge with prep knowledge find <words> (instead of grep) or prep knowledge show <entry>[#section], never the files. Give knowledge lookups across several entries to a subagent on the smallest model and wide surveys to a smaller one, and pass these rules on to them unchanged. Keep command output short; never read back a saved output file."}
 	for _, id := range t.IDs() {
 		i := t.Issues[id]
@@ -734,6 +739,10 @@ func cmdPrime(a *app, args []string) error {
 			b.Actionable++
 			b.Next = append(b.Next, summarize(t, id))
 		}
+		if !s.Terminal() && t.Blocked(id) && !t.IsParent(id) {
+			b.BlockedCount++
+			b.Blocked = append(b.Blocked, summarize(t, id))
+		}
 		if t.Stale(id) {
 			b.Stale = append(b.Stale, summarize(t, id))
 		}
@@ -741,8 +750,9 @@ func cmdPrime(a *app, args []string) error {
 			b.Claims = append(b.Claims, claimSummary{ID: id, Title: i.Title, By: i.Claim.By, Since: i.Claim.At})
 		}
 	}
-	b.Next, b.Stale = byPriority(t, b.Next), byPriority(t, b.Stale)
+	b.Next, b.Stale, b.Blocked = byPriority(t, b.Next), byPriority(t, b.Stale), byPriority(t, b.Blocked)
 	b.Parents, b.Next, b.Stale = cap(b.Parents), cap(b.Next), cap(b.Stale)
+	b.Blocked = cap(b.Blocked)
 	if len(b.Claims) > *max {
 		b.Claims = b.Claims[:*max]
 	}
@@ -784,11 +794,23 @@ func cmdPrime(a *app, args []string) error {
 			if s.Progress != nil {
 				extra = fmt.Sprintf(" (%d/%d resolved)", s.Progress.Done+s.Progress.Dropped, s.Progress.Total)
 			}
-			a.printf("  %s [%s] %s%s%s\n", s.ID, s.State, priorityMark(s.Priority), s.Title, extra)
+			if s.Blocked {
+				deps := t.UnresolvedDeps(s.ID)
+				if len(deps) > 2 {
+					extra += " (depends on " + strings.Join(deps[:2], ", ") + ", and more)"
+				} else {
+					extra += " (depends on " + strings.Join(deps, ", ") + ")"
+				}
+			}
+			a.printf("  %s [%s] %s%s%s%s\n", s.ID, s.State, priorityMark(s.Priority), s.Title, extra, tagSuffix(s.Tags))
 		}
 	}
 	section("Top-level parents", b.Parents)
 	section("Actionable (prep next)", b.Next)
+	section("Blocked (unresolved dependencies)", b.Blocked)
+	if b.BlockedCount > len(b.Blocked) {
+		a.printf("  %d more blocked; prep list --blocked shows them\n", b.BlockedCount-len(b.Blocked))
+	}
 	section("Stale (requirement changed since baseline)", b.Stale)
 	if len(b.Claims) > 0 {
 		a.printf("\nIn progress:\n")
