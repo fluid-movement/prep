@@ -113,6 +113,12 @@ func Validate(t *Tree) []Diagnostic {
 		}
 
 		// Records.
+		if i.Ready != nil && i.Ready.Contract != nil && i.Ready.Contract.ID != i.Ready.Contract.ContentID() {
+			e(CodeRecordInvalid, ClassManual, "ready.md", "restore the original contract or explicitly adopt the current policy", "completion contract content does not match its ID")
+		}
+		if t.PolicyChanged(id) && i.Resolution == nil {
+			w(CodePolicyChanged, ClassGuided, "ready.md", "review prep policy show <id> and run prep policy adopt <id>", "effective completion policy changed since readiness")
+		}
 		if i.Ready != nil && !t.ReadyValid(i) && i.Resolution == nil {
 			w(CodeReadyOutdated, ClassGuided, "ready.md", "enrich against the current requirement and run prep ready, or prep ack if the change was trivial", "ready.md references baseline %s, not the newest", i.Ready.Baseline)
 		}

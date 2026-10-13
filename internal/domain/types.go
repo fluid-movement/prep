@@ -193,10 +193,11 @@ type Baseline struct {
 
 // Ready is the enrichment sign-off.
 type Ready struct {
-	By       string    `json:"by"`
-	At       time.Time `json:"at"`
-	Baseline string    `json:"baseline"`
-	Note     string    `json:"note,omitempty"`
+	Contract *CompletionContract `json:"contract,omitempty"`
+	By       string              `json:"by"`
+	At       time.Time           `json:"at"`
+	Baseline string              `json:"baseline"`
+	Note     string              `json:"note,omitempty"`
 }
 
 // Claim marks work in progress.

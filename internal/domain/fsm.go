@@ -176,6 +176,9 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 		}
 		add(GateState, "%s requires state %s, issue is %s", op, joinStates(from), s)
 	}
+	if (op == OpClaim || op == OpComplete) && t.PolicyChanged(id) {
+		add(GatePolicy, "effective completion policy changed; review it with prep policy show %s and explicitly adopt it with prep policy adopt %s", id, id)
+	}
 	switch op {
 	case OpDefine:
 		if (s == StateDefined || s == StateReady) && !stale {
@@ -370,7 +373,7 @@ func (t *Tree) Plan(id string, op Op, in Input) (*Change, error) {
 			c.Ready = &r
 		}
 	case OpReady:
-		c.Ready = &Ready{By: in.Actor, At: now, Baseline: i.LatestBaseline().Name, Note: in.Note}
+		c.Ready = &Ready{By: in.Actor, At: now, Baseline: i.LatestBaseline().Name, Note: in.Note, Contract: t.Contract(id)}
 	case OpClaim:
 		c.Claim = &Claim{By: in.Actor, At: now, Note: in.Note}
 	case OpRelease:

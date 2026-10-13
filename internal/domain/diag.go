@@ -59,6 +59,7 @@ const (
 	CodeFindingsKind       = "I012" // findings.md on a non-research issue
 	CodeReadyOutdated      = "I013" // ready.md references an older baseline
 	CodeOrphanClaim        = "I014" // claim.md without valid ready sign-off
+	CodePolicyChanged      = "I029" // effective completion policy differs from ready contract
 	CodeRecordInvalid      = "I015" // baseline/ready/claim/resolution malformed
 	CodeDepDropped         = "I016"
 	CodeNotCanonical       = "I017"

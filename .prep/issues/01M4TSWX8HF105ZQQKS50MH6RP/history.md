@@ -1,1 +1,3 @@
 - 2026-10-13T16:47:43Z codex: First tested increment: explicit policy set/show, strict project.md roundtrip, missing-policy readiness gate, legacy-record compatibility, fixture updates. go test ./... passes. Remaining acceptance criteria (evidence, applicability, reconciliation, exceptions) are not implemented; issue stays in progress.
+
+- 2026-10-13T16:53:20Z codex: Second increment: ready records snapshot content-addressed effective contracts; ancestor/reparent/criterion/method changes invalidate bindings; claim and completion gates require explicit policy adopt; legacy records remain unbound. Added strict roundtrip and domain stability tests. Evidence and exceptions remain pending.

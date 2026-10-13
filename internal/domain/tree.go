@@ -212,7 +212,7 @@ func (t *Tree) Blocked(id string) bool {
 // Actionable = ready, not stale, dependencies done, unclaimed, and a leaf
 // (parents are not implemented themselves).
 func (t *Tree) Actionable(id string) bool {
-	return t.State(id) == StateReady && !t.Stale(id) && len(t.UnresolvedDeps(id)) == 0 && !t.IsParent(id)
+	return t.State(id) == StateReady && !t.Stale(id) && !t.PolicyChanged(id) && len(t.UnresolvedDeps(id)) == 0 && !t.IsParent(id)
 }
 
 // Progress counts resolved direct children of a parent.

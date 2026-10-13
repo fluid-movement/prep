@@ -32,9 +32,10 @@ type baselineFM struct {
 }
 
 type readyFM struct {
-	By       string    `yaml:"by"`
-	At       time.Time `yaml:"at"`
-	Baseline string    `yaml:"baseline"`
+	Contract *domain.CompletionContract `yaml:"contract,omitempty"`
+	By       string                     `yaml:"by"`
+	At       time.Time                  `yaml:"at"`
+	Baseline string                     `yaml:"baseline"`
 }
 
 type claimFM struct {
@@ -534,11 +535,11 @@ func parseReady(raw string) (*domain.Ready, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &domain.Ready{By: f.By, At: at, Baseline: f.Baseline, Note: normalize(body)}, nil
+	return &domain.Ready{By: f.By, At: at, Baseline: f.Baseline, Note: normalize(body), Contract: f.Contract}, nil
 }
 
 func renderReady(r *domain.Ready) string {
-	return withFrontmatter(encodeYAML(readyFM{By: r.By, At: fmtTime(r.At), Baseline: r.Baseline}), r.Note)
+	return withFrontmatter(encodeYAML(readyFM{By: r.By, At: fmtTime(r.At), Baseline: r.Baseline, Contract: r.Contract}), r.Note)
 }
 
 func parseClaim(raw string) (*domain.Claim, error) {
