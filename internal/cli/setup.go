@@ -13,6 +13,7 @@ import (
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/setup"
 	_ "github.com/fluid-movement/prep/internal/setup/claudecode" // registers the Claude Code harness
+	_ "github.com/fluid-movement/prep/internal/setup/codex"      // registers the Codex plugin harness
 	"github.com/fluid-movement/prep/internal/tui"
 	"github.com/fluid-movement/prep/internal/userconfig"
 )

@@ -1,0 +1,4 @@
+- [ ] The Codex plugin packages the shared prep skill and hooks that provide prep context at session start and task-relevant turns only in repositories initialized with prep.
+- [ ] prep setup detects Codex and can install, refresh, and remove the user-scoped plugin without disturbing other installed plugins.
+- [ ] The hook integration reports useful Codex session activity to prep activity add and fails open when prep is unavailable or the project is not initialized.
+- [ ] README and knowledge documentation explain installation, hook trust, context behavior, and limitations; using prep does not require AGENTS.md.

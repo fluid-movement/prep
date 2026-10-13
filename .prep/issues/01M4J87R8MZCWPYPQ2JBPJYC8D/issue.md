@@ -1,13 +1,11 @@
 ---
 title: 'Codex CLI: hooks make sure prep calls are made'
 kind: code
-parent: 01M4J87R4AFB193QF0G3AECNA0
+parent: 01M498VPZAAQJKHXGZZ3PWJH2F
 tags:
   - integration
 ---
 
-Port the Claude Code prep hooks (01M4J8789E81QAJHG8R8ZPEMRD) to Codex CLI through its own hook or extension mechanism: the briefing at session start, the redirects of misdirected calls under `.prep`, and the session's tool events sent to `prep activity add`. `prep setup` installs, refreshes and removes them. A failure in a hook never changes or blocks a tool call.
+Build and document a Codex plugin integration for prep, installed and refreshed through `prep setup`. The plugin packages the prep skill and Codex lifecycle hooks. In a repository initialized with prep, hooks inject a current `prep prime` briefing at session start and provide task-relevant guidance on user prompts so agents consult `prep next` or `prep guide <id>` before acting on tracked work. Hooks should identify likely prep-relevant work and redirect unsafe direct edits to `.prep` records toward the CLI; failures in the integration must not prevent ordinary tools from running. Where Codex exposes useful tool events, report them to `prep activity add` as the Claude Code bridge does. Document plugin installation, the one-time hook trust/review requirement, and behavior when hooks are unavailable or not trusted. Do not require projects using prep to add `AGENTS.md`.
 
 ## Open questions
-
-- Which hook points does Codex CLI offer, and which of the Claude Code hooks can it carry?

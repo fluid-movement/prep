@@ -21,7 +21,7 @@ jobs:
       - name: Plugin version matches the tag
         run: |
           want="${GITHUB_REF_NAME#v}"
-          for f in plugins/claude-code/.claude-plugin/plugin.json .claude-plugin/marketplace.json; do
+          for f in plugins/claude-code/.claude-plugin/plugin.json .claude-plugin/marketplace.json plugins/codex/.codex-plugin/plugin.json .agents/plugins/marketplace.json; do
             got=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$f" | head -1)
             if [ "$got" != "$want" ]; then
               echo "$f has version $got, the tag is $GITHUB_REF_NAME; prepare releases with just release" >&2

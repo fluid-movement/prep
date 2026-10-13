@@ -6,6 +6,7 @@
 * [Claude Code side panel](/components/claude-code-panel.md) - Removed: the prep side panel in Claude Code, replaced by prep tui's Agent screen; kept for the issues that link it.
 * [Claude Code integration](/components/claude-code.md) - The prep plugin for Claude Code: skill, SessionStart briefing and the activity bridge to prep tui's Agent screen, served from this repository as its own marketplace and installed per user by prep setup.
 * [CLI](/components/cli.md) - internal/cli — command table, global flags, JSON output and errors, write pipeline and git staging.
+* [Codex integration](/components/codex.md) - Codex CLI plugin: setup installation and lifecycle hooks for prep briefing, task steering, record safety and activity reporting.
 * [Desktop app](/components/desktop.md) - desktop/: the macOS app (Swift, SwiftUI) over the prep CLI's JSON — PrepKit, the window model, project switching, building with just desktop, and how agents see it with snapshots.
 * [Domain package](/components/domain.md) - internal/domain — issue model, state derivation, FSM gates, validation codes, query engine, guide and knowledge retrieval.
 * [Agent behavior test cases](/components/eval-cases.md) - What the eval cases ask and why: built from real session shapes, which cases were dropped, the variants that split the plugin.

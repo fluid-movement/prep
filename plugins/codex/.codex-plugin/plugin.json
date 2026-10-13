@@ -1,0 +1,7 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "prep",
+  "version": "0.3.0",
+  "description": "Guides Codex through prep issues and injects current prep workflow context in prep projects.",
+  "hooks": "./hooks/hooks.json"
+}
