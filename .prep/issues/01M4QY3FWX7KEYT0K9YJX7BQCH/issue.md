@@ -1,7 +1,7 @@
 ---
 title: 'Mutation run: which skill rules can be dropped or shortened?'
 kind: research
-parent: 01M4QY2WM6XN0JSSTHR5TGQFJT
+parent: 01M498VQD4Q85CZYK965WW3H9Q
 depends_on:
   - 01M4QY3ERYD6RCACH6EEBGXFNE
   - 01M4QY2YM2T9X68RHQW6HTCH53

@@ -1,5 +1,5 @@
 ---
-title: Findings from the first real runs of the agent behavior suite
+title: Hook reliability follow-ups from the first agent runs
 kind: manual
 parent: 01M498VPZAAQJKHXGZZ3PWJH2F
 tags:
@@ -8,6 +8,12 @@ tags:
 priority: high
 ---
 
-The agent behavior suite (01M4QKTQVR3J6PJZAJM0MVWQR0) ran for real for the first time on 2026-10-12, on haiku and sonnet. It found where agents do not use prep the way the skill and guide intend, and a few rough edges of the CLI. This parent collects what is still open; each child states the evidence, the options and how to check a fix with the suite. Fixed on the way and not tracked here: `prep list --max N` and `--tags` (agents guessed both), `prep guide` naming `.prep` record files instead of `prep show`, the `project:id` hint when a dependency is not found, and three faults in the eval cases and the transcript parser (heredoc pipelines).
+Follow up the behavior failures found by the first real agent suite runs (2026-10-12, haiku and sonnet) against the new shared session, prompt and finish hooks. This 0.3.0 parent covers seven remaining reliability questions: the policy for work with no matching issue; finding tracked work from ordinary requests; avoiding duplicate issues; resolving ambiguous references; maintaining scoped knowledge; reading planning facts from the tracker; and staying within the user's requested scope. Each child retains its original evidence and acceptance criteria.
+
+General CLI polish, bootstrap policy, temporary-project/workspace cleanup and broader plugin A/B, skill-rule coverage, mutation and model research are deferred to Release 0.4.0. The original findings remain in those issues; deferral does not resolve them.
+
+The shared hooks and Codex integration are complete. Individual trusted Codex fixtures verified matching-issue search and lifecycle updates, knowledge maintenance, read-only knowledge use and one finish review that respected an explicit no-record-write constraint. These are smoke tests, not replacements for the repeated haiku/sonnet cases required by the children. No live Claude runs are authorized while the user is out of usage.
+
+Next settle the untracked-work policy before changing its test expectations: natural-fix-no-issue currently requires creating no issue, whereas the new prompt reminder says to create one when no existing issue covers authorized work. Existing CLI-specific requirements such as similarity hints in prep new and briefing tags are still unimplemented, despite the new hook guidance.
 
 ## Open questions

@@ -3,7 +3,7 @@ title: Agents leave knowledge drifting after changing the code it describes
 kind: code
 parent: 01M4QY2WM6XN0JSSTHR5TGQFJT
 depends_on:
-  - 01M4QY2YM2T9X68RHQW6HTCH53
+  - 01M4SX94VFDXCRYWNKCJG1H01J
 tags:
   - knowledge
   - adoption

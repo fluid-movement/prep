@@ -1,7 +1,7 @@
 ---
 title: 'Decision: how should the bootstrap flow behave when the user says not to ask?'
 kind: decision
-parent: 01M4QY2WM6XN0JSSTHR5TGQFJT
+parent: 01M498VQD4Q85CZYK965WW3H9Q
 tags:
   - knowledge
   - decision

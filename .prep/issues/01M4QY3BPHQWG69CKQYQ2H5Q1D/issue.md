@@ -1,7 +1,7 @@
 ---
 title: prep knowledge confirm refuses entries without a scope with a message agents cannot act on
 kind: code
-parent: 01M4QY2WM6XN0JSSTHR5TGQFJT
+parent: 01M498VQD4Q85CZYK965WW3H9Q
 tags:
   - knowledge
   - cli

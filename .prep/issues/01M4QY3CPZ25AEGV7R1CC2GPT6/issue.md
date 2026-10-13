@@ -1,7 +1,7 @@
 ---
 title: Projects in temporary directories pollute the project registry
 kind: code
-parent: 01M4QY2WM6XN0JSSTHR5TGQFJT
+parent: 01M498VQD4Q85CZYK965WW3H9Q
 tags:
   - cli
   - projects
