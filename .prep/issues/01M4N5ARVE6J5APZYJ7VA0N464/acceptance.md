@@ -1,0 +1,1 @@
+- [x] All eight cross-project implementation children are done, covering permanent identity, project selection, dependencies, knowledge links, TUI and desktop presentation, and link management.

@@ -1,7 +1,7 @@
 ---
 title: Catch CI failures before they reach CI
 kind: code
-parent: 01M498VPZAAQJKHXGZZ3PWJH2F
+parent: 01M498VQD4Q85CZYK965WW3H9Q
 tags:
   - release
   - adoption

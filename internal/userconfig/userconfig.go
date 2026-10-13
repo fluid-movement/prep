@@ -21,7 +21,13 @@ type Config struct {
 	// Harnesses lists the harnesses prep integrates with, by name.
 	Harnesses []string `yaml:"harnesses"`
 	// TUI holds the terminal UI's choices.
-	TUI TUI `yaml:"tui,omitempty"`
+	TUI   TUI   `yaml:"tui,omitempty"`
+	Hooks Hooks `yaml:"hooks,omitempty"`
+}
+
+// Hooks controls context injected on each prompt. Empty means small.
+type Hooks struct {
+	Prompt string `yaml:"prompt,omitempty"`
 }
 
 // TUI is the terminal UI's part of the user configuration.

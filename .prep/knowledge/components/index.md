@@ -12,6 +12,7 @@
 * [Agent behavior test cases](/components/eval-cases.md) - What the eval cases ask and why: built from real session shapes, which cases were dropped, the variants that split the plugin.
 * [Agent behavior tests (prep eval)](/components/eval.md) - internal/eval and eval/ — fixtures, isolated environment, transcripts, cases, runner, assertions, judge, matrix, results, variants, model comparison and mutation for testing how agents use prep; layout and commands of prep eval.
 * [Git helpers](/components/git.md) - internal/gitx — the few git calls prep makes (drift, staging, evidence, HEAD), how their output is read, and why git is optional.
+* [Shared lifecycle hooks](/components/hooks.md) - Shared session, prompt, finish and supporting tool hooks: context levels, record redirects, turn reconciliation, harness protocols and regression tests.
 * [Markdown store](/components/markdown-store.md) - internal/mdstore — parses and renders .prep files canonically, atomic writes with compare-and-swap, fmt and fix.
 * [OKF store](/components/okf-store.md) - internal/okf — reads the knowledge bundle (links, drift) and writes entries for prep knowledge new, update and confirm.
 * [Palette and themes](/components/palette.md) - internal/palette — TUI color token names, the built-in themes, custom theme resolution and validation; how a theme reaches the screen.

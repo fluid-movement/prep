@@ -261,7 +261,7 @@ func TestEvalMutate(t *testing.T) {
 	h.fails("no mutant to run", "eval", "mutate", "--dir", dir, "--operators", "drop-hook", "--only", "zzz", "--plugin", plugin)
 	t.Setenv("ANTHROPIC_API_KEY", "k")
 	out := h.ok("eval", "mutate", "--dir", dir, "--operators", "drop-hook", "--plugin", plugin, "--case", "session-what-next", "--models", "haiku",
-		"--n", "1", "--no-judge", "--claude", claude, "--binary", bin)
+		"--only", "sessionstart,bridge", "--n", "1", "--no-judge", "--claude", claude, "--binary", bin)
 	for _, want := range []string{"2 mutant(s) of current", "mutants against current", "mutants/drop-hook-sessionstart", "mutants/drop-bridge", "stored as"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("mutate output lacks %q:\n%s", want, out)

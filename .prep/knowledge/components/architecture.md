@@ -9,7 +9,7 @@ generated:
 scope:
   - cmd/**
   - internal/**
-confirmed_commit: 0adad8486bbdf9824c5e600c96f1a024f49cd520
+confirmed_commit: cc61900f3371eefcbf2d9057631cf74dd21b9022
 ---
 
 # Architecture
@@ -28,7 +28,7 @@ internal/watch      fsnotify watcher over .prep (recursive, debounced), shared b
 internal/palette    TUI color tokens, built-in themes, custom theme resolution, derived state colors (no TUI imports)
 internal/tui        human interface: screens (Bubble Tea) loading through an injected loader; theme and ui hold the design system
 internal/setup      harness integrations installed, refreshed and removed by prep setup
-internal/userconfig the user's choices in ~/.config/prep/config.yaml (harnesses, TUI mouse)
+internal/userconfig the user's choices in ~/.config/prep/config.yaml (harnesses, TUI mouse/layout, prompt hook context)
 internal/projects   the machine-local registry of project roots ($XDG_STATE_HOME/prep/projects.json), project identity and resolution (--project)
 internal/update     prep update: download, checksum check and replacement of the binary
 internal/eval       agent behavior tests: fixtures, isolated runs of Claude Code, transcripts, assertions, judge, matrix, results, variants, mutation (no imports of cli)
@@ -39,5 +39,7 @@ desktop/            the macOS app (Swift), a client of the CLI's JSON and prep w
 - Adapters contain no FSM logic. The domain plans a write as a `domain.Change`; `Tree.CheckWrite` validates the tree with the change applied in memory and rejects writes that introduce errors; the adapter renders and writes it.
 - The CLI and the TUI share `domain.Filter` and `Tree.Query`, so both agree on derived states.
 - Git is versioning, not the system of record; every git call tolerates git being absent. A database adapter would have to provide what git gives today (history, branch-scoped review) itself; the domain assumes neither.
+
+Lifecycle hook behavior is shared in `internal/cli/hook.go` and `hook_finish.go`; harnesses provide event adapters, not workflow logic. See [Shared lifecycle hooks](/components/hooks.md).
 
 Details: [domain](/components/domain.md), [markdown store](/components/markdown-store.md), [OKF store](/components/okf-store.md), [CLI](/components/cli.md), [TUI design system](/components/tui-design-system.md), [setup and user configuration](/components/setup.md), [release, install and update](/components/release.md), [desktop app](/components/desktop.md), [agent behavior tests](/components/eval.md).

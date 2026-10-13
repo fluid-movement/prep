@@ -40,4 +40,4 @@ Only when both fail are the files the database and you edit them directly. Tell 
 
 ## Codex integration
 
-The Codex hooks export `PREP_SESSION` and `PREP_ACTOR=codex` for shell commands, so prep CLI activity is attributed to this agent automatically. If hooks are disabled or untrusted, run `prep prime` and follow this skill manually.
+The Codex session hook tells you to set `PREP_SESSION` and `PREP_ACTOR=codex` for shell commands so prep CLI activity carries attribution; follow that instruction. Hooks report tool activity directly without changing tool permissions. If hooks are disabled or untrusted, run `prep prime` and follow this skill manually.

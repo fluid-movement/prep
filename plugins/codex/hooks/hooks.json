@@ -5,9 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$PLUGIN_ROOT/hooks/prep_hook.py\" session",
-            "timeout": 10,
-            "statusMessage": "Loading prep briefing"
+            "command": "command -v prep >/dev/null 2>&1 && prep hook session-start --harness codex --plugin \"$PLUGIN_ROOT\" || true",
+            "timeout": 10
           }
         ]
       }
@@ -17,34 +16,44 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$PLUGIN_ROOT/hooks/prep_hook.py\" prompt",
-            "timeout": 10,
-            "statusMessage": "Checking prep workflow"
+            "command": "command -v prep >/dev/null 2>&1 && prep hook prompt --harness codex || true",
+            "timeout": 10
           }
         ]
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|apply_patch",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$PLUGIN_ROOT/hooks/prep_hook.py\" before-tool",
+            "command": "command -v prep >/dev/null 2>&1 && prep hook before-tool --harness codex || true",
             "timeout": 3
           }
-        ]
+        ],
+        "matcher": "Bash|Read|Grep|Glob|Edit|Write|NotebookEdit|apply_patch"
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$PLUGIN_ROOT/hooks/prep_hook.py\" after-tool",
+            "command": "command -v prep >/dev/null 2>&1 && prep hook after-tool --harness codex || true",
             "timeout": 5,
             "async": true
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v prep >/dev/null 2>&1 && prep hook finish --harness codex || true",
+            "timeout": 10
           }
         ]
       }

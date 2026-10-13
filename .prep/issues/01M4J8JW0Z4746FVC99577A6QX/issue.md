@@ -1,7 +1,7 @@
 ---
 title: prep knowledge list shows each entry's confirmation state
 kind: code
-parent: 01M498VPZAAQJKHXGZZ3PWJH2F
+parent: 01M498VQD4Q85CZYK965WW3H9Q
 tags:
   - knowledge
   - cli

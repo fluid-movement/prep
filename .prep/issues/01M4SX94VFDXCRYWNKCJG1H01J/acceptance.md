@@ -1,0 +1,5 @@
+- [x] Global hooks.prompt off/small/large defaults to small; off skips project lookup, small skips tracker loading and large injects bounded guides for full IDs.
+- [x] Supported record reads and writes are redirected to prep commands without blanket tool permission approval; activity preserves actor/session and omits prep calls.
+- [x] Claude Code and Codex adapters call the shared implementation; documentation and focused regression tests cover configuration, protocols and behavior-suite findings.
+- [x] Finish reviews changes from the current turn and prompts issue/knowledge reconciliation only when needed, with protection against stop loops and existing dirty work.
+- [x] Session-start, prompt, finish and both supporting tool commands accept event JSON, stay silent outside prep projects and fail open on integration errors.

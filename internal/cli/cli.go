@@ -90,6 +90,7 @@ func init() {
 	commands = []command{
 		{"init", true, "init [--no-bootstrap]      create .prep and the knowledge base bootstrap issues", cmdInit},
 		{"prime", false, "prime [--max N]            session-start briefing: parents, actionable count, alerts", cmdPrime},
+		{"hook", false, "hook session-start|prompt|finish|before-tool|after-tool [--harness claude-code|codex] [--plugin path]  shared lifecycle hooks (event JSON on stdin)", cmdHook},
 		{"guide", false, "guide <id>                 step contract: state, transitions, unmet gates, inputs, outputs", cmdGuide},
 		{"list", false, "list [query flags]         query issues: --state --kind --tag --priority --under --stale --actionable --blocked --parent --leaf --top --text --tree --view --max N; not-<value> negates (--state not-open)", cmdList},
 		{"next", false, "next [--under <id>]        actionable issues: ready, not stale, dependencies done, unclaimed", cmdNext},
@@ -151,6 +152,14 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	rest, err := a.globalFlags(args)
 	if err != nil {
 		return a.fail(err)
+	}
+	// Hooks must be able to return before any project lookup (prompt off),
+	// and use the event's cwd rather than a registered PREP_PROJECT.
+	if len(rest) > 0 && rest[0] == "hook" {
+		if err := cmdHook(a, rest[1:]); err != nil {
+			return a.fail(err)
+		}
+		return exitOK
 	}
 	if err := a.resolveProject(); err != nil {
 		return a.fail(err)

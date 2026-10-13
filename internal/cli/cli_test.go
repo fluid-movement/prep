@@ -963,9 +963,11 @@ func TestSetup(t *testing.T) {
 	var log []string
 	alpha := &fakeHarness{name: "alpha", detected: true, log: &log}
 	beta := &fakeHarness{name: "beta", detected: false, log: &log}
-	if cc, ok := setup.Get("claude-code"); ok {
-		setup.Unregister("claude-code")
-		t.Cleanup(func() { setup.Register(cc) })
+	for _, name := range []string{"claude-code", "codex"} {
+		if h, ok := setup.Get(name); ok {
+			setup.Unregister(name)
+			t.Cleanup(func() { setup.Register(h) })
+		}
 	}
 	setup.Register(alpha)
 	setup.Register(beta)
@@ -1070,8 +1072,8 @@ func TestClaudeCodePlugin(t *testing.T) {
 		t.Fatalf("marketplace.json does not serve prep from ./plugins/claude-code: %+v", market)
 	}
 	hooks, _ := os.ReadFile(filepath.Join(root, "plugins", "claude-code", "hooks", "hooks.json"))
-	if !strings.Contains(string(hooks), "prep prime --hook --plugin") {
-		t.Fatalf("hook does not run prime with the plugin root:\n%s", hooks)
+	if !strings.Contains(string(hooks), "prep hook session-start --harness claude-code --plugin") {
+		t.Fatalf("hook does not run the shared session hook with the plugin root:\n%s", hooks)
 	}
 }
 

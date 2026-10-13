@@ -1,7 +1,7 @@
 ---
 title: 'Agent view drops ended sessions: session lifecycle events in the activity stream'
 kind: code
-parent: 01M498VPZAAQJKHXGZZ3PWJH2F
+parent: 01M498VQD4Q85CZYK965WW3H9Q
 tags:
   - tui
   - activity

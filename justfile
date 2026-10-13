@@ -78,7 +78,7 @@ sync-skill:
     cp internal/cli/skill.md .claude/skills/prep/SKILL.md
     cp internal/cli/skill.md plugins/claude-code/skills/prep/SKILL.md
     cp internal/cli/skill.md plugins/codex/skills/prep/SKILL.md
-    printf '\n## Codex integration\n\nThe Codex hooks export `PREP_SESSION` and `PREP_ACTOR=codex` for shell commands, so prep CLI activity is attributed to this agent automatically. If hooks are disabled or untrusted, run `prep prime` and follow this skill manually.\n' >> plugins/codex/skills/prep/SKILL.md
+    printf '\n## Codex integration\n\nThe Codex session hook tells you to set `PREP_SESSION` and `PREP_ACTOR=codex` for shell commands so prep CLI activity carries attribution; follow that instruction. Hooks report tool activity directly without changing tool permissions. If hooks are disabled or untrusted, run `prep prime` and follow this skill manually.\n' >> plugins/codex/skills/prep/SKILL.md
 
 # Prepare a release: set the plugin version, commit and tag; push the tag yourself
 release version:

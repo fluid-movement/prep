@@ -1,0 +1,1 @@
+- [x] All seventeen implementation children are done, including isolated fixtures, Claude sessions, transcripts, tool/state assertions, judge, repeated-run reports, variants, mutation, model comparisons and the recorded first real suite run.

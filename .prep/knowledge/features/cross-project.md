@@ -10,7 +10,7 @@ scope:
   - internal/cli/links.go
   - internal/projects/links.go
   - internal/domain/links.go
-confirmed_commit: 0adad8486bbdf9824c5e600c96f1a024f49cd520
+confirmed_commit: cc61900f3371eefcbf2d9057631cf74dd21b9022
 ---
 
 # Cross-project work

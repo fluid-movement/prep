@@ -1,14 +1,9 @@
 // The activity bridge: tells prep what this Claude Code session does that
-// prep cannot see itself, so prep tui's Agent screen shows it: each tool
-// call (what it touched, how much it returned) and each model request (its
-// tokens, the context fill and the cost). The agent's own prep commands are
-// left out; prep records those. PREP_SESSION ties both sides together, and
+// prep cannot see itself: each model request's tokens, context fill and cost.
+// Shared command hooks report tool calls. PREP_SESSION ties both sides together, and
 // PREP_ACTOR names the agent where it gives no --by.
 
 import type { EngineInterface, Register } from 'claude-code'
-
-import { classify, prepSubcommands } from './classify'
-
 type Event = Record<string, unknown> & { kind: 'tool' | 'request' }
 
 // Events wait here until the next send; a send is one prep call.
@@ -21,7 +16,6 @@ let session: string | undefined
 let lastCost = 0
 
 const ACTOR = 'claude-code'
-const MAX_TARGET = 200
 
 /**
  * Exports the session and the actor for the agent's shell, so its prep calls
@@ -58,33 +52,6 @@ function send($: EngineInterface): Promise<void> {
   return sending
 }
 
-/** What a tool call did, in the feed's words. */
-export function toolEvent(tool: string, input: Record<string, unknown>, chars: number, failed: boolean): Event | undefined {
-  const t = classify(tool, input)
-  if (tool === 'Bash' && prepSubcommands(String(input.command ?? '')).length > 0) return undefined // prep records it
-  // A shell command that names no file is still work on the code (builds, tests).
-  const area = t.area === 'prep-cli' ? 'prep' : (t.area ?? (tool === 'Bash' ? 'code' : 'other'))
-  const verbs: Record<string, string> = {
-    Read: 'read',
-    Edit: 'edited',
-    Write: 'wrote',
-    NotebookEdit: 'edited',
-    Bash: 'ran',
-    Grep: 'searched',
-    Glob: 'looked for files',
-    WebFetch: 'fetched',
-    WebSearch: 'searched the web',
-    Agent: 'asked a subagent',
-    Skill: 'loaded a skill',
-  }
-  let target = t.target ?? (typeof input.url === 'string' ? input.url : typeof input.query === 'string' ? input.query : undefined)
-  if (target !== undefined) {
-    target = target.split('\n')[0]!
-    if (target.length > MAX_TARGET) target = `${target.slice(0, MAX_TARGET - 1)}…`
-  }
-  return { kind: 'tool', op: tool, verb: verbs[tool] ?? tool.toLowerCase(), target, area, chars, failed: failed || undefined }
-}
-
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
@@ -99,16 +66,8 @@ export const register: Register = on => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  // The bridge only observes: a failure here never changes the call.
-  on('tool.call', async ($, e, next) => {
-    const ran = await next(e)
-    const ev = toolEvent(e.tool, e as unknown as Record<string, unknown>, ran.deny === undefined ? (ran.text?.length ?? 0) : 0, ran.deny !== undefined || ran.isError === true)
-    if (ev && enabled) {
-      pending.push(ev)
-      void send($)
-    }
-    return ran
-  }).catch(($, e, next) => next(e))
+  // Tool activity is reported by the shared after-tool command in hooks.json.
+  // This module retains session attribution and request/token/cost reporting.
 
   on('turn.step', async function* ($, e, next) {
     const r = yield* next(e)

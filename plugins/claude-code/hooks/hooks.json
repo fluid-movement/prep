@@ -8,7 +8,68 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v prep >/dev/null 2>&1 && prep prime --hook --plugin \"${CLAUDE_PLUGIN_ROOT}\" || true"
+            "command": "command -v prep >/dev/null 2>&1 && prep hook session-start --harness claude-code --plugin \"${CLAUDE_PLUGIN_ROOT}\" || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v prep >/dev/null 2>&1 && prep hook prompt --harness claude-code || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v prep >/dev/null 2>&1 && prep hook before-tool --harness claude-code || true",
+            "timeout": 3
+          }
+        ],
+        "matcher": "Bash|Read|Grep|Glob|Edit|Write|NotebookEdit|apply_patch"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v prep >/dev/null 2>&1 && prep hook after-tool --harness claude-code || true",
+            "timeout": 5,
+            "async": true
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v prep >/dev/null 2>&1 && prep hook after-tool --harness claude-code || true",
+            "timeout": 5,
+            "async": true
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v prep >/dev/null 2>&1 && prep hook finish --harness claude-code || true",
+            "timeout": 10
           }
         ]
       }

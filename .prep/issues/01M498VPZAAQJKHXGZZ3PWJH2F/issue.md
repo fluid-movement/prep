@@ -7,6 +7,6 @@ tags:
   - release
 ---
 
-The release after 0.2.0: prep calls in Claude Code that happen when they should. prep reaches the person through the TUI rather than harness-specific panes, so the only harness-specific work left is hooks that make sure the agent calls prep. This release analyses real sessions in the ledger to find where prep was not used when expected and why, researches whether Jev can judge when a call should be a prep call, and iterates on the Claude Code hooks until the ledger shows prep used where expected. Its children are the work that must ship with it.
+Release 0.3.0 focuses on shared prep lifecycle hook commands and their Claude Code and Codex integrations. Hooks provide bounded session and prompt context, direct agents to existing issues and current guides, redirect direct prep record access to CLI commands, and report activity without breaking tools on integration errors. The completed cross-project feature and agent behavior suite ship with this release. Findings from the first real behavior runs remain a follow-up: use their evidence while implementing hooks, then rerun relevant cases and resolve only findings verified by those tests. General installation, CI, desktop, knowledge-editing, history retention and other harness work belongs to 0.4.0.
 
 ## Open questions

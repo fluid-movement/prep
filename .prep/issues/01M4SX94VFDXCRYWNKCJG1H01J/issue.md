@@ -1,16 +1,13 @@
 ---
 title: Configurable prompt hooks control injected Prep context
 kind: code
+parent: 01M498VPZAAQJKHXGZZ3PWJH2F
 tags:
   - integration
   - hooks
   - tokens
 ---
 
-Add a shared Prep hook entry point for harness prompt hooks, with global configuration controlling how much context it injects. When prompt hooks are off, the hook command should return immediately with no Prep lookup. When enabled, it should first detect whether the current working directory is a Prep project and return immediately otherwise. Support context levels: a low-cost mode that injects a concise workflow reminder, and a richer mode that parses the prompt for a Prep issue ID and includes the relevant issue guide/context when found. Keep harness-specific adapters thin and document the token and runtime tradeoffs.
+Implement shared prep hook session-start, prompt, finish, before-tool and after-tool commands accepting harness event JSON on stdin. Session-start tells the agent it is in a prep project and provides general current context. Prompt makes sure the agent searches existing issues and uses prep tools; global hooks.prompt off/small/large defaults to small. Off returns before project or tracker lookup. Enabled hooks detect the nearest prep project and stay silent outside it. Small injects concise search-before-create, next/guide, ambiguity, tracker-facts and knowledge workflow guidance; large adds bounded current guides for full issue ULIDs without guessing suffixes. Finish checks changes from this turn and asks the agent to reconcile issue progress and affected knowledge before stopping, without repeated stop loops or reminders for unchanged conversations. Before-tool redirects supported direct record access toward prep commands while preserving ordinary tool permissions; after-tool records supported activity without duplicating prep commands. Both Claude Code and Codex use thin adapters, retaining Claude request usage reporting. Malformed events, missing prep, invalid configuration and integration errors fail open. Document configuration, runtime/token tradeoffs, coverage and trust limitations. Use the first real behavior-suite findings to select regression cases; do not close those findings without rerun evidence.
 
 ## Open questions
-- What should the configuration key and default level be?
-- Should the levels be named off/small/large, or use a different scale?
-- Which prompt hook events and harnesses can support the shared behavior, and what fallback should be used where prompt hooks are unavailable?
-- Should issue-ID parsing accept only full IDs, or unique suffixes too?
