@@ -313,6 +313,8 @@ func cmdEdit(a *app, args []string) error {
 	bodyFile := fs.String("body-file", "", "read the new requirement from a file (- for stdin)")
 	var deps multi
 	fs.Var(&deps, "depends-on", "dependency id (repeatable, replaces the list; '' clears it)")
+	var approvalDeps multi
+	fs.Var(&approvalDeps, "depends-on-approval", "local dependency id that must have human resolution approval (repeatable, replaces the list; '' clears it)")
 	var tags multi
 	fs.Var(&tags, "tag", "tag (repeatable or comma-separated, replaces the list; '' clears it)")
 	fs.Var(&tags, "tags", "alias of --tag")
@@ -338,6 +340,7 @@ func cmdEdit(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	issue := t.Issues[id]
 	in := domain.EditInput{Actor: a.actor, Now: a.now()}
 	if set["title"] {
 		in.Title = title
@@ -371,6 +374,34 @@ func cmdEdit(a *app, args []string) error {
 			list, add = ids, more
 		}
 		in.DependsOn = &list
+	}
+	if set["depends-on-approval"] {
+		list := []string{}
+		if !(len(approvalDeps) == 1 && approvalDeps[0] == "") {
+			ordinary := slices.Clone(issue.DependsOn)
+			if in.DependsOn != nil {
+				ordinary = *in.DependsOn
+			}
+			for _, ref := range approvalDeps {
+				if ref == "" {
+					return usageErr("--depends-on-approval '' clears the list and cannot be combined with IDs")
+				}
+				if strings.Contains(ref, ":") {
+					return usageErr("approval prerequisites are supported only for local dependency IDs")
+				}
+				dep, err := t.Resolve(ref)
+				if err != nil {
+					return err
+				}
+				if !slices.Contains(ordinary, dep) {
+					return usageErr("--depends-on-approval ID must also appear in --depends-on")
+				}
+				if !slices.Contains(list, dep) {
+					list = append(list, dep)
+				}
+			}
+		}
+		in.DependsOnApproval = &list
 	}
 	if set["tag"] {
 		list := splitTags(tags)
@@ -428,6 +459,8 @@ func opCmd(op domain.Op) func(*app, []string) error {
 		case domain.OpDrop:
 			fs.StringVar(&in.Reason, "reason", "", "why the issue is dropped")
 			fs.StringVar(&in.Note, "note", "", "resolution note")
+		case domain.OpReopen:
+			fs.StringVar(&in.Reason, "reason", "", "why the done issue is explicitly reopened")
 		}
 		pos, err := parse(fs, args)
 		if err != nil {

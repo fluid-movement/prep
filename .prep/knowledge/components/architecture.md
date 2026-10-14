@@ -9,7 +9,7 @@ generated:
 scope:
   - cmd/**
   - internal/**
-confirmed_commit: 33d632fd0a3a2103b2fec6cedd2b47d7e8d5710d
+confirmed_commit: 557fb15e34310f8c71d3f9727b2828d65d8a83eb
 ---
 
 # Architecture
@@ -43,4 +43,4 @@ desktop/            the macOS app (Swift), a client of the CLI's JSON and prep w
 Lifecycle hook behavior is shared in `internal/cli/hook.go` and `hook_finish.go`; harnesses provide event adapters, not workflow logic. See [Shared lifecycle hooks](/components/hooks.md).
 
 Details: [domain](/components/domain.md), [markdown store](/components/markdown-store.md), [OKF store](/components/okf-store.md), [CLI](/components/cli.md), [TUI design system](/components/tui-design-system.md), [setup and user configuration](/components/setup.md), [release, install and update](/components/release.md), [desktop app](/components/desktop.md), [agent behavior tests](/components/eval.md).
-Scoped completion applicability uses the adapter-side `internal/worktree` fingerprint helper: mdstore loads current applicability and CLI records the work/configuration snapshot, while domain validates results and contracts without filesystem access. See [Completion policy](/features/completion-policy.md).
+Scoped completion applicability uses the adapter-side `internal/worktree` fingerprint helper: mdstore loads current applicability and includes selected knowledge entry files in resolution review fingerprints; CLI records the work/configuration snapshot, while domain validates results and contracts without filesystem access. See [Completion policy](/features/completion-policy.md).

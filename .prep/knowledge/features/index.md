@@ -9,3 +9,4 @@
 * [Cross-project work](/features/cross-project.md) - How a command reaches another prep project on the machine (--project), how that shows in output and activity, and how agents learn about other projects.
 * [Knowledge review in the issue lifecycle](/features/knowledge-lifecycle.md) - Bounded knowledge guidance and explicit, scoped reviews required for policy-bound completion.
 * [Issue lifecycle](/features/lifecycle.md) - States derived from records, transitions with their gates per kind, stale drift handling, parents, dependencies and Definition of Done.
+* [Resolution review and reopening](/features/resolution-review.md) - Human approvals bound to completed resolution history and scoped snapshots.

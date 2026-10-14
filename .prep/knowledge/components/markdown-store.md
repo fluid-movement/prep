@@ -7,7 +7,7 @@ generated:
   by: claude-code/2.1.289
   at: 2026-10-05T00:00:00Z
 scope: internal/mdstore
-confirmed_commit: 6a1a84958c37cb18db880dbb4f937214482a1f07
+confirmed_commit: 557fb15e34310f8c71d3f9727b2828d65d8a83eb
 ---
 
 # Markdown store
@@ -30,3 +30,5 @@ Applies when changing file formats or write behavior. Format details: [Storage f
 - Project identity: `parseProject` reads `id` and `name` into `domain.Project`; `ReadProject(root)` parses one project.md without opening a store (the [project registry](/components/projects.md) uses it). `projectFM.Links` holds the links (`project()`/`projectFMOf` convert); `render` writes `Change.Links` into project.md and applies `Change.LinkRename` with `domain.RenameLinkInText` to every file `linkRefFiles` lists (each issue's text records and every knowledge entry). `SetSchema` and `SetIdentity` rewrite the frontmatter through `editProject`, keeping the body; `renderProject` writes the frontmatter from a `domain.Project`. P008 (no id) and P009 (invalid id or name) come from `domain.Validate`.
 - Completion records: project.md retains `completion_policy`; ready.md can bind a contract, verification.md stores content-hash-chained reports, and resolution.md snapshots the contract and selected verification. Strict parsing checks report structure, identities and history order. `Load` derives report applicability from work/configuration content fingerprints via `internal/worktree`; applicability is not persisted. `Fmt` canonicalizes verification records. Legacy records omit these fields without fabricated evidence. See [Completion policy](/features/completion-policy.md).
 - Approval/history records: approvals.md stores a content-hash history chain, ready.md archives prior contracts, project.md archives changed policies, and resolution.md snapshots approvals actually used. Legacy omissions remain omissions. See [Completion approvals](/features/completion-approvals.md).
+
+- `knowledge-reviews.md`, `resolution-history.md` and `resolution-reviews.md` persist scoped knowledge reports and resolution review/reopen history. Resolution conversion preserves selected knowledge reports through archival. The adapter adds named knowledge entry files to review scope fingerprints; derived Git evidence never mutates recorded identity. See [Knowledge lifecycle](/features/knowledge-lifecycle.md) and [Resolution review](/features/resolution-review.md).

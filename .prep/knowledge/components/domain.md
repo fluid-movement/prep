@@ -7,7 +7,7 @@ generated:
   by: claude-code/2.1.289
   at: 2026-10-05T00:00:00Z
 scope: internal/domain
-confirmed_commit: 33d632fd0a3a2103b2fec6cedd2b47d7e8d5710d
+confirmed_commit: 557fb15e34310f8c71d3f9727b2828d65d8a83eb
 ---
 
 # Domain package
@@ -16,7 +16,7 @@ Applies when changing lifecycle rules, gates, diagnostics or queries.
 
 - `types.go`: `Issue`, records (`Baseline`, `Ready`, `Claim`, `Resolution`), `Entry`, kinds and states.
 - `tree.go`: `Tree.State` derives state from records; `Stale`, `Blocked`, `Actionable`, `ChildProgress`, `EffectiveDoD`, ID suffix resolution (`Resolve`: a full ID or any unique suffix, in either case since Crockford base32 ignores it); `Tree.IDs` sorts IDs as strings, which is creation order for ULIDs. `ValidStamp` checks baseline names.
-- `ulid.go`: issue IDs are ULIDs, implemented with the standard library (decided in 01M485SBR0WN8JDQSN7A3GT7CB). `ValidID` accepts only canonical ULIDs (issue IDs and project IDs); `ValidProjectName` checks project and link names (`ProjectNameRule`); `NewULID(now, entropy)` encodes the milliseconds and 80 bits from the reader (nil is `crypto/rand`); `ULIDTime` decodes the time. `PlanNew` calls `nextULID`, which increments the newest existing ID of the same millisecond when the new one would not sort after it, so IDs within one tree stay in creation order. `NewIssueInput.Entropy` and the `entropy` argument of `PlanBootstrap` inject the random source; tests seed it so IDs stay deterministic.
+- `ulid.go`: canonical ULID validation/generation and project-name validation. PlanNew increments the newest ID for the same millisecond to preserve order; injected clock/entropy make tests deterministic. ID format was chosen in 01M485SBR0WN8JDQSN7A3GT7CB.
 - `fsm.go`: `Gates` (unmet conditions with `G_*` codes; with nil input, argument-dependent gates become needs), `Plan` (records to write), `PlanNew` (drops repeated dependencies and refuses dropped ones, like `PlanEdit`), `PlanEdit` (edits of title, kind, parent, dependencies, tags, priority and requirement on unresolved issues; tag and priority edits also on resolved ones; refuses dropped dependency targets and leaves existence and cycles to `CheckWrite`), `Apply` and `CheckWrite`.
 - `records.go`: `PlanRecord` for the record writes (context, findings, decide, criterion, dod, log) on unresolved issues, with gates `G_CRITERION`, `G_DECISION`, `G_DOD` and `G_KIND`; the next decision ID is `D<max+1>`. Acceptance changes are `AcceptanceOp` operations, applied in memory by `ApplyAcceptance` (index operations refer to the numbering before the change, additions follow).
 - `import.go`: `ImportTag`, `ImportOpen` (the unresolved import issue), `PlanImport` (one research issue "Import existing work" with a guiding context and three criteria, planned on a progressively applied tree like `PlanBootstrap`; `ErrInvalid` while an import issue is unresolved). `Filter.Text` matches the title or the requirement (`Issue.Body`).
@@ -38,3 +38,5 @@ Applies when changing lifecycle rules, gates, diagnostics or queries.
 Rules worth knowing: see [Issue lifecycle](/features/lifecycle.md).
 - `links.go`: links to other projects, cross-project dependencies (`Tree.External`, `DepState`) and `StripCode` (`okf.StripCode` calls it): [Cross-project work](/features/cross-project.md).
 - [Completion policy](/features/completion-policy.md): readiness-bound requirements and verification. `approval.go` plans human exceptions, policy retention and DoD opt-out approvals, tracks CLI policy/request revisions and selects used resolution approvals. Domain validates adapter-computed applicability without filesystem access; details: [Completion approvals](/features/completion-approvals.md).
+
+- `knowledge_review.go` binds reported knowledge assessments to contracts, canonical entries and adapter-computed scoped applicability; `review.go` binds human resolution approvals to full resolution identity/generation and selected scope unions. Shared completion, reopen and dependency gates serve CLI and TUI. See [Knowledge lifecycle](/features/knowledge-lifecycle.md) and [Resolution review](/features/resolution-review.md).

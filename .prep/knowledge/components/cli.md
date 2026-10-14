@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/cli
   - cmd/prep
-confirmed_commit: 33d632fd0a3a2103b2fec6cedd2b47d7e8d5710d
+confirmed_commit: 557fb15e34310f8c71d3f9727b2828d65d8a83eb
 ---
 
 # CLI
@@ -44,3 +44,5 @@ Applies when adding or changing commands.
 - **Completion evidence**: a code issue completed without `--commit` has no evidence in `resolution.md`; `resolveEvidence` (used by `prep show` and the guide's touched files) fills it in memory with the commit that added `resolution.md` (`gitx.AddedIn`), and `prep show` marks it pending (`evidence_pending` in JSON) until that commit exists. A given `--commit` is validated as a hash and remains optional. Policy-bound issues also require passing applicable reports under `G_EVIDENCE`, independently of Git references. `prep evidence record/show` records results and inspects applicability; `prep policy show/set/adopt/retain` manages completion methods and bindings; `prep exception approve/show` and `prep dod approve` record explicit human approval.  See [Completion policy](/features/completion-policy.md).
 - **Eval**: test seams `PREP_TEST_NOW`, `PREP_TEST_SEED` (`testSeams`); [prep eval](/components/eval.md).
 `prep new` returns bounded advisory `similar_issues` candidates when titles overlap unresolved records; terminal/self records are omitted. Hints never prevent creation or choose a match. See [Tracking](/decisions/tracking.md).
+
+- `prep knowledge review record/show` records scoped assessments for policy-bound completion; `prep review approve/show` and `prep reopen` manage versioned resolution review/history. Approval-dependent local prerequisites use `edit --depends-on-approval`. See [Knowledge lifecycle](/features/knowledge-lifecycle.md) and [Resolution review](/features/resolution-review.md).

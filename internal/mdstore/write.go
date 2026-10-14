@@ -214,7 +214,7 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 		if err := parseIssue(raw, &i); err != nil {
 			return nil, nil, fmt.Errorf("%s: %w", rel, err)
 		}
-		i.Title, i.Kind, i.Parent, i.DependsOn, i.Tags, i.Priority = e.Title, e.Kind, e.Parent, e.DependsOn, e.Tags, e.Priority
+		i.Title, i.Kind, i.Parent, i.DependsOn, i.DependsOnApproval, i.Tags, i.Priority = e.Title, e.Kind, e.Parent, e.DependsOn, e.DependsOnApproval, e.Tags, e.Priority
 		if e.Body != nil {
 			i.Body = requirementBody(*e.Body)
 		}
@@ -265,6 +265,16 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 			state.OptOutRevisions = *c.OptOutRevisions
 		}
 		if err := w("approvals.md", renderApprovalState(state)); err != nil {
+			return nil, nil, err
+		}
+	}
+	if c.ResolutionHistory != nil {
+		if err := w("resolution-history.md", renderResolutionHistory(*c.ResolutionHistory)); err != nil {
+			return nil, nil, err
+		}
+	}
+	if c.ResolutionReviews != nil {
+		if err := w("resolution-reviews.md", renderResolutionReviews(*c.ResolutionReviews)); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -333,6 +343,10 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 		if err := w("resolution.md", renderResolution(c.Resolution)); err != nil {
 			return nil, nil, err
 		}
+	}
+	if c.RemoveResolution {
+		touched = append(touched, dir+"/resolution.md")
+		contents = append(contents, nil)
 	}
 	return touched, contents, nil
 }
@@ -425,6 +439,27 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 					return "", false
 				}
 				return renderResolution(r), true
+			}},
+			{"resolution-history.md", func(raw string) (string, bool) {
+				rs, err := parseResolutionHistory(raw)
+				if err != nil {
+					return "", false
+				}
+				return renderResolutionHistory(rs), true
+			}},
+			{"resolution-reviews.md", func(raw string) (string, bool) {
+				fm, body, ok, err := splitFrontmatter(raw)
+				if err != nil || !ok || strings.TrimSpace(body) != "" {
+					return "", false
+				}
+				var state resolutionReviewsFM
+				if err := decodeStrict(fm, &state); err != nil {
+					return "", false
+				}
+				if err := validateResolutionReviewChain(state.Reviews); err != nil {
+					return "", false
+				}
+				return renderResolutionReviews(state.Reviews), true
 			}},
 		}
 		for _, st := range steps {

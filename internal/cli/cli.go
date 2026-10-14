@@ -127,6 +127,8 @@ func init() {
 		{"claim", true, "claim <id> [--note]        start work", opCmd(domain.OpClaim)},
 		{"release", true, "release <id> [--reason]    stop work without finishing", opCmd(domain.OpRelease)},
 		{"complete", true, "complete <id>              finish: [--commit <hash>] --docs <entry>... | --no-impact <reason> [--note]", opCmd(domain.OpComplete)},
+		{"review", true, "review show <id> | approve <id> --reason <text> --by human:<name> [--scope <path>...]", cmdReview},
+		{"reopen", true, "reopen <id> --reason <text> explicitly resume a done issue through its existing ready sign-off", opCmd(domain.OpReopen)},
 		{"drop", true, "drop <id> --reason <text>  drop an issue in any unresolved state", opCmd(domain.OpDrop)},
 		{"fmt", true, "fmt [--check]              rewrite files in canonical format (--check: report only, exit 1 on changes)", cmdFmt},
 		{"fix", true, "fix                        safe auto-fixes from check", cmdFix},

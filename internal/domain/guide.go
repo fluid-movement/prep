@@ -135,22 +135,23 @@ type Pointer struct {
 // Guide is the step contract for an issue: where it is, what can happen
 // next, what blocks it, what to read and where outputs go.
 type Guide struct {
-	ID           string       `json:"id"`
-	Title        string       `json:"title"`
-	Kind         Kind         `json:"kind"`
-	State        State        `json:"state"`
-	Stale        bool         `json:"stale"`
-	Parent       bool         `json:"parent"`
-	Actionable   bool         `json:"actionable"`
-	Step         string       `json:"step"`
-	Instructions []string     `json:"instructions"`
-	Transitions  []Transition `json:"transitions"`
-	Inputs       []Pointer    `json:"inputs"`
-	Knowledge    []Candidate  `json:"knowledge"`
-	Outputs      []Pointer    `json:"outputs"`
-	DoD          []string     `json:"definition_of_done,omitempty"`
-	Diagnostics  []Diagnostic `json:"diagnostics,omitempty"`
-	Alerts       []string     `json:"alerts,omitempty"` // project-wide, such as a missing bootstrap
+	ID                     string       `json:"id"`
+	Title                  string       `json:"title"`
+	Kind                   Kind         `json:"kind"`
+	State                  State        `json:"state"`
+	Stale                  bool         `json:"stale"`
+	Parent                 bool         `json:"parent"`
+	Actionable             bool         `json:"actionable"`
+	ResolutionReviewStatus string       `json:"resolution_review_status,omitempty"`
+	Step                   string       `json:"step"`
+	Instructions           []string     `json:"instructions"`
+	Transitions            []Transition `json:"transitions"`
+	Inputs                 []Pointer    `json:"inputs"`
+	Knowledge              []Candidate  `json:"knowledge"`
+	Outputs                []Pointer    `json:"outputs"`
+	DoD                    []string     `json:"definition_of_done,omitempty"`
+	Diagnostics            []Diagnostic `json:"diagnostics,omitempty"`
+	Alerts                 []string     `json:"alerts,omitempty"` // project-wide, such as a missing bootstrap
 }
 
 // BuildGuide assembles the step contract. issueDir maps an ID to its
@@ -170,6 +171,9 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 		}
 		unmet, needs := t.Gates(id, op, nil)
 		cmd := "prep " + string(op) + " " + id
+		if op == OpResolutionReview {
+			cmd = "prep review approve " + id
+		}
 		for _, n := range needs {
 			cmd += " " + n
 		}
@@ -246,6 +250,23 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 	if a := t.BootstrapAlert(); a != "" {
 		g.Alerts = append(g.Alerts, a)
 	}
+	if i.Resolution != nil && i.Resolution.Outcome == OutcomeDone {
+		status := t.ResolutionReviewStatus(id)
+		g.ResolutionReviewStatus = status
+		g.Inputs = append(g.Inputs,
+			Pointer{f("resolution-history.md"), "earlier completed resolutions, preserved across explicit reopen", ""},
+			Pointer{f("resolution-reviews.md"), "human approvals bound to a specific resolution and scoped snapshot", ""},
+		)
+		g.Outputs = append(g.Outputs, Pointer{f("resolution-reviews.md"), "append-only resolution review history", "prep review approve " + id + " --reason <text> --scope <path>"})
+		switch status {
+		case ReviewApproved:
+			g.Instructions = append(g.Instructions, "Resolution review status: approved for the current resolution and declared scopes. The human actor is local attribution, not authenticated identity.")
+		case ReviewStale:
+			g.Instructions = append(g.Instructions, "Resolution review status: stale because scoped work changed. Show the review with prep review show "+id+"; only a human can approve the current resolution again with prep review approve "+id+" --reason <text> [--scope <path>...].")
+		default:
+			g.Instructions = append(g.Instructions, "Resolution review status: pending human approval. Show it with prep review show "+id+"; only a human can approve with prep review approve "+id+" --reason <text> [--scope <path>...]. Do not infer approval or block unrelated ready work.")
+		}
+	}
 	return g
 }
 
@@ -314,7 +335,7 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		switch {
 		case parent:
 		case i.Kind == KindCode:
-			ins = append(ins, "Run prep complete "+i.ID+" --docs <entry>... (or --no-impact <reason>), then commit the code together with the staged .prep changes: the commit that adds resolution.md is the evidence. For work committed earlier, pass --commit <hash>.")
+			ins = append(ins, "Run prep complete "+i.ID+" --docs <entry>... (or --no-impact <reason>); a commit is not required. If the work was committed earlier, optionally pass --commit <hash> as provenance. Human review is a separate action after completion.")
 		case i.Kind == KindResearch:
 			ins = append(ins, "Write the answer with prep findings "+i.ID+" --body-file -, then run prep complete "+i.ID+" --docs <entry>... (or --no-impact <reason>).")
 			outs = append(outs, Pointer{f("findings.md"), "research findings", "prep findings " + i.ID + " --body-file -"})

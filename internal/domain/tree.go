@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -197,7 +198,7 @@ func (t *Tree) Drifted(i *Issue) bool {
 func (t *Tree) UnresolvedDeps(id string) []string {
 	var out []string
 	for _, d := range t.Issues[id].DependsOn {
-		if s, known := t.DepState(d); known && s != StateDone {
+		if s, known := t.DepState(d); known && (s != StateDone || slices.Contains(t.Issues[id].DependsOnApproval, d) && t.ResolutionReviewStatus(d) != ReviewApproved) {
 			out = append(out, d)
 		}
 	}
