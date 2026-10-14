@@ -1,0 +1,28 @@
+  prep    Inbox    Issues    Agent    Knowledge                                                            ⚙
+  3 items need attention
+╭─ Inbox · 3 ──────────────────────────────────────────────╮╭─ Review / attention ───────────────────────────╮
+│ HNVAX3 Choose the default format                         ││ Choose the default format                      │
+│ completion-review · completed work needs review          ││                                                │
+│ EPMJ6R JSON writer                                       ││ 01KDYZ7YK09KT957QN9XHNVAX3                     │
+│ ready-signoff · issue is ready for human sign-off        ││                                                │
+│ EBHACM Survey export tools                               ││ Review: pending · generation 1                 │
+│ open-questions · open questions need answers             ││                                                │
+│                                                          ││ Resolution                                     │
+│                                                          ││ 3544a2ce040ee3fb4fa749a70af63ac0c9a9414ce6e96e │
+│                                                          ││ 1578d652ee0fbafb78                             │
+│                                                          ││                                                │
+│                                                          ││ Completed by test/1 at 2026-01-02 09:25:00Z    │
+│                                                          ││                                                │
+│                                                          ││ Requirement at ready signoff                   │
+│                                                          ││                                                │
+│                                                          ││ Pick the default export format.                │
+│                                                          ││                                                │
+│                                                          ││ Open questions                                 │
+│                                                          ││                                                │
+│                                                          ││ Current acceptance checklist                   │
+│                                                          ││                                                │
+│                                                          ││ [x] decided                                    │
+│                                                          ││                                                │
+│                                                          ││ Completion contract and Definition of Done     │
+╰──────────────────────────────────────────────────────────╯╰────────────────────────────────────────────────╯
+  enter inspect and scroll · a approve review · e select work scopes · o open issue · y copy issue ID · w…

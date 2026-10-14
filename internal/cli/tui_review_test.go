@@ -28,6 +28,34 @@ func doneTUIReviewFixture(t *testing.T) (*harness, string) {
 	return h, id
 }
 
+func doneTUIReviewConfigFixture(t *testing.T) (*harness, string) {
+	t.Helper()
+	h := newHarness(t)
+	id := h.newIssue("--title", "Review configured work", "--kind", "code", "--body", "Review this configured work.")
+	h.ok("define", id)
+	h.enrich(id)
+	h.ok("ready", id)
+	h.ok("claim", id)
+	h.replace(id, "acceptance.md", "- [ ]", "- [x]")
+	h.verify(id, "No knowledge change was needed.")
+	checks := filepath.Join(h.dir, "verification-checks.txt")
+	if err := os.WriteFile(checks, []byte("check set one\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var policy struct {
+		Bound *domain.CompletionContract `json:"bound"`
+	}
+	h.jsonOf(&policy, "policy", "show", id)
+	if policy.Bound == nil || len(policy.Bound.Requirements) == 0 {
+		t.Fatal("fixture has no completion requirement")
+	}
+	requirement := policy.Bound.Requirements[0]
+	h.ok("evidence", "record", id, "--requirement", requirement.ID, "--result", "pass", "--method", "manual",
+		"--observation", "Inspected configured checks.", "--scope", ".prep/knowledge", "--config-scope", "verification-checks.txt", "--by", "agent/test")
+	h.ok("complete", id, "--no-impact", "No knowledge change was needed.")
+	return h, id
+}
+
 func writeTUIReview(root string, plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
 	st := mdstore.Open(root)
 	t, err := domain.Load(st, &okf.Store{Root: root}, false)
@@ -175,7 +203,7 @@ func TestTUIReviewApprovalRejectsChangedScopeAndBadAttribution(t *testing.T) {
 		writes++
 		return writeTUIReview(h.dir, plan)
 	}, "human:reviewer", tui.ReviewApprovalRequest{Snapshot: snapshot, Reason: "Reviewed."})
-	if err == nil || !strings.Contains(err.Error(), "changed since they were displayed") || writes != 1 {
+	if err == nil || !strings.Contains(err.Error(), "knowledge-review applicability changed") || writes != 1 {
 		t.Fatalf("changed-scope approval err=%v writes=%d", err, writes)
 	}
 	if _, err := approveTUIReview(h.dir, func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
@@ -187,6 +215,68 @@ func TestTUIReviewApprovalRejectsChangedScopeAndBadAttribution(t *testing.T) {
 		return writeTUIReview(h.dir, plan)
 	}, "human:reviewer", tui.ReviewApprovalRequest{Snapshot: snapshot, Reason: "  "}); err == nil || !strings.Contains(err.Error(), "requires a reason") {
 		t.Fatalf("blank reason error = %v", err)
+	}
+}
+
+func TestTUIReviewRejectsCodeScopeChangedAfterDisplay(t *testing.T) {
+	h, id := doneTUIReviewFixture(t)
+	codePath := filepath.Join(h.dir, "src", "reviewed.go")
+	if err := os.MkdirAll(filepath.Dir(codePath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(codePath, []byte("package reviewed\n\nconst Version = 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := loadTUIReview(h.dir, id, []string{"src/reviewed.go"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(snapshot.WorkScopes, "src/reviewed.go") {
+		t.Fatalf("explicit code scope was not captured: %v", snapshot.WorkScopes)
+	}
+	if err := os.WriteFile(codePath, []byte("package reviewed\n\nconst Version = 2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err = approveTUIReview(h.dir, func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
+		return writeTUIReview(h.dir, plan)
+	}, "human:reviewer", tui.ReviewApprovalRequest{Snapshot: snapshot, Reason: "Stale code view should be refused."})
+	if err == nil || !strings.Contains(err.Error(), "review scopes changed since they were displayed") {
+		t.Fatalf("changed code scope error = %v", err)
+	}
+	loaded, err := loadTUIReviewTree(h.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := len(loaded.Issues[id].ResolutionReviews); got != 0 {
+		t.Fatalf("stale code view appended an approval; history length=%d", got)
+	}
+}
+
+func TestTUIReviewRejectsConfigScopeChangedAfterDisplay(t *testing.T) {
+	h, id := doneTUIReviewConfigFixture(t)
+	snapshot, err := loadTUIReview(h.dir, id, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(snapshot.ConfigScopes, "verification-checks.txt") {
+		t.Fatalf("resolution config scope not captured: %v", snapshot.ConfigScopes)
+	}
+	checks := filepath.Join(h.dir, "verification-checks.txt")
+	if err := os.WriteFile(checks, []byte("check set two\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err = approveTUIReview(h.dir, func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
+		return writeTUIReview(h.dir, plan)
+	}, "human:reviewer", tui.ReviewApprovalRequest{Snapshot: snapshot, Reason: "Stale configuration view should be refused."})
+	if err == nil || !strings.Contains(err.Error(), "review scopes changed since they were displayed") {
+		t.Fatalf("changed config scope error = %v", err)
+	}
+	loaded, err := loadTUIReviewTree(h.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := len(loaded.Issues[id].ResolutionReviews); got != 0 {
+		t.Fatalf("stale configuration view appended an approval; history length=%d", got)
 	}
 }
 
@@ -204,5 +294,128 @@ func TestTUIReviewRejectsResolutionChangedAfterDisplay(t *testing.T) {
 	}, "human:reviewer", tui.ReviewApprovalRequest{Snapshot: snapshot, Reason: "Reviewed."})
 	if err == nil || !strings.Contains(err.Error(), "no longer has a done resolution") || writes != 1 {
 		t.Fatalf("resolution-change approval err=%v writes=%d", err, writes)
+	}
+}
+
+func TestTUIReviewRejectsStatusChangedByAnotherApproval(t *testing.T) {
+	h, id := doneTUIReviewFixture(t)
+	snapshot, err := loadTUIReview(h.dir, id, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
+		return writeTUIReview(h.dir, plan)
+	}
+	if _, err := approveTUIReview(h.dir, writer, "human:first-reviewer", tui.ReviewApprovalRequest{Snapshot: snapshot, Reason: "First reviewer approved."}); err != nil {
+		t.Fatal(err)
+	}
+	_, err = approveTUIReview(h.dir, writer, "human:second-reviewer", tui.ReviewApprovalRequest{Snapshot: snapshot, Reason: "Stale view should be refused."})
+	if err == nil || !strings.Contains(err.Error(), "resolution review status changed from pending to approved") {
+		t.Fatalf("stale pending snapshot error = %v", err)
+	}
+	loaded, err := loadTUIReviewTree(h.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := len(loaded.Issues[id].ResolutionReviews); got != 1 {
+		t.Fatalf("stale view appended another approval; history length=%d", got)
+	}
+}
+
+func TestTUIReviewRejectsKnowledgeApplicabilityChangedByPolicy(t *testing.T) {
+	h, id := doneTUIReviewFixture(t)
+	snapshot, err := loadTUIReview(h.dir, id, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.KnowledgeCurrent) == 0 {
+		t.Fatal("fixture has no selected knowledge reports")
+	}
+	h.ok("policy", "set", "--verification", "Use the revised verification policy.", "--documentation", "Update affected knowledge or explain no impact.")
+	current, err := loadTUIReview(h.dir, id, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed := false
+	for report, wasCurrent := range snapshot.KnowledgeCurrent {
+		changed = changed || wasCurrent != current.KnowledgeCurrent[report]
+	}
+	if !changed {
+		t.Fatal("policy update did not change selected report applicability")
+	}
+	_, err = approveTUIReview(h.dir, func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
+		return writeTUIReview(h.dir, plan)
+	}, "human:reviewer", tui.ReviewApprovalRequest{Snapshot: snapshot, Reason: "Stale policy view should be refused."})
+	if err == nil || !strings.Contains(err.Error(), "current completion contract changed") {
+		t.Fatalf("stale knowledge applicability error = %v", err)
+	}
+	loaded, err := loadTUIReviewTree(h.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := len(loaded.Issues[id].ResolutionReviews); got != 0 {
+		t.Fatalf("stale policy view appended an approval; history length=%d", got)
+	}
+}
+
+func TestTUIReviewRejectsRequirementEditAfterDisplay(t *testing.T) {
+	h, id := doneTUIReviewFixture(t)
+	snapshot, err := loadTUIReview(h.dir, id, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.replace(id, "issue.md", "Review this work.", "Review this work and its consequences.")
+	loaded, err := loadTUIReviewTree(h.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Issues[id].Resolution.ContentID() != snapshot.ResolutionID {
+		t.Fatal("fixture changed the resolution identity instead of only issue display content")
+	}
+	_, err = approveTUIReview(h.dir, func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
+		return writeTUIReview(h.dir, plan)
+	}, "human:reviewer", tui.ReviewApprovalRequest{Snapshot: snapshot, Reason: "Stale requirement view should be refused."})
+	if err == nil || !strings.Contains(err.Error(), "issue requirements or acceptance content changed") {
+		t.Fatalf("stale requirement error = %v", err)
+	}
+	if got := len(loaded.Issues[id].ResolutionReviews); got != 0 {
+		t.Fatalf("stale requirement view appended an approval; history length=%d", got)
+	}
+}
+
+func TestTUIReviewRejectsCurrentPolicyChangeForLegacyResolution(t *testing.T) {
+	h, id := doneTUIReviewFixture(t)
+	// Historical resolutions without knowledge reports still capture the
+	// effective contract shown to the reviewer.
+	if err := os.WriteFile(h.path(id, "resolution.md"), []byte("---\noutcome: done\nby: agent/test\nat: 2026-10-05T12:00:00Z\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	legacyPath := filepath.Join(h.dir, "legacy.txt")
+	if err := os.WriteFile(legacyPath, []byte("legacy work\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := loadTUIReview(h.dir, id, []string{"legacy.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.KnowledgeCurrent) != 0 || snapshot.CurrentContractID == "" {
+		t.Fatalf("legacy snapshot contract=%q knowledge=%v", snapshot.CurrentContractID, snapshot.KnowledgeCurrent)
+	}
+	h.ok("policy", "set", "--verification", "A new policy for legacy work.", "--documentation", "Update affected knowledge or explain no impact.")
+	current, err := loadTUIReviewTree(h.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Issues[id].Resolution.ContentID() != snapshot.ResolutionID {
+		t.Fatal("policy update changed the legacy resolution identity")
+	}
+	_, err = approveTUIReview(h.dir, func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
+		return writeTUIReview(h.dir, plan)
+	}, "human:reviewer", tui.ReviewApprovalRequest{Snapshot: snapshot, Reason: "Stale policy view should be refused."})
+	if err == nil || !strings.Contains(err.Error(), "current completion contract changed") {
+		t.Fatalf("stale legacy policy error = %v", err)
+	}
+	if got := len(current.Issues[id].ResolutionReviews); got != 0 {
+		t.Fatalf("stale policy view appended an approval; history length=%d", got)
 	}
 }

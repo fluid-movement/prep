@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/cli
   - cmd/prep
-confirmed_commit: 557fb15e34310f8c71d3f9727b2828d65d8a83eb
+confirmed_commit: 3a9c5801f8e077e2e96c5f82abe24bce2025705a
 ---
 
 # CLI
@@ -46,3 +46,4 @@ Applies when adding or changing commands.
 `prep new` returns bounded advisory `similar_issues` candidates when titles overlap unresolved records; terminal/self records are omitted. Hints never prevent creation or choose a match. See [Tracking](/decisions/tracking.md).
 
 - `prep knowledge review record/show` records scoped assessments for policy-bound completion; `prep review approve/show` and `prep reopen` manage versioned resolution review/history. Approval-dependent local prerequisites use `edit --depends-on-approval`. See [Knowledge lifecycle](/features/knowledge-lifecycle.md) and [Resolution review](/features/resolution-review.md).
+`tui_review.go` supplies fresh, captured Inbox review/approval callbacks through the serialized writer. See [TUI Inbox](/components/tui-inbox.md).

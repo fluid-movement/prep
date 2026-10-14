@@ -7,7 +7,7 @@ generated:
   by: claude-code/2.1.289
   at: 2026-10-05T00:00:00Z
 scope: internal/domain
-confirmed_commit: 557fb15e34310f8c71d3f9727b2828d65d8a83eb
+confirmed_commit: 3a9c5801f8e077e2e96c5f82abe24bce2025705a
 ---
 
 # Domain package
@@ -40,3 +40,4 @@ Rules worth knowing: see [Issue lifecycle](/features/lifecycle.md).
 - [Completion policy](/features/completion-policy.md): readiness-bound requirements and verification. `approval.go` plans human exceptions, policy retention and DoD opt-out approvals, tracks CLI policy/request revisions and selects used resolution approvals. Domain validates adapter-computed applicability without filesystem access; details: [Completion approvals](/features/completion-approvals.md).
 
 - `knowledge_review.go` binds reported knowledge assessments to contracts, canonical entries and adapter-computed scoped applicability; `review.go` binds human resolution approvals to full resolution identity/generation and selected scope unions. Shared completion, reopen and dependency gates serve CLI and TUI. See [Knowledge lifecycle](/features/knowledge-lifecycle.md) and [Resolution review](/features/resolution-review.md).
+`inbox.go`: `Tree.Inbox` classifies and orders human attention without changing lifecycle/dependency gates; see [TUI Inbox](/components/tui-inbox.md).

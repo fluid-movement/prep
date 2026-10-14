@@ -46,20 +46,21 @@ func loadTUIReview(root, ref string, extraScopes []string) (tui.ReviewSnapshot, 
 	issue := *i
 	resolution := *i.Resolution
 	issue.Resolution = &resolution
-	snapshot := tui.ReviewSnapshot{
-		Issue:            &issue,
-		Status:           t.ResolutionReviewStatus(id),
-		ResolutionID:     i.Resolution.ContentID(),
-		WorkScopes:       workScopes,
-		ConfigScopes:     slices.Clone(configScopes),
-		KnowledgeCurrent: make(map[string]bool, len(i.Resolution.KnowledgeReviews)),
+	contractID := ""
+	if contract := t.Contract(id); contract != nil {
+		contractID = contract.ID
 	}
-	for n := range i.Resolution.KnowledgeReviews {
-		report := &i.Resolution.KnowledgeReviews[n]
-		snapshot.KnowledgeCurrent[report.ID] = t.KnowledgeReviewApplicable(id, report)
+	snapshot := tui.ReviewSnapshot{
+		Issue:             &issue,
+		Status:            t.ResolutionReviewStatus(id),
+		ResolutionID:      i.Resolution.ContentID(),
+		CurrentContractID: contractID,
+		WorkScopes:        workScopes,
+		ConfigScopes:      slices.Clone(configScopes),
+		KnowledgeCurrent:  selectedKnowledgeCurrent(t, id, i.Resolution),
 	}
 	if len(workScopes) == 0 {
-		snapshot.ChangesNote = "This legacy resolution has no reported work scope. Select at least one explicit scope before approval; human attribution is local trust, not authentication."
+		snapshot.ChangesNote = "This legacy resolution has no reported work scope. Select at least one explicit scope and inspect the refreshed bundle before approval."
 		return snapshot, nil
 	}
 	paths := append(slices.Clone(workScopes), configScopes...)
@@ -176,6 +177,23 @@ func approveTUIReview(root string, write func(func(*domain.Tree) (*domain.Change
 		if i.Resolution.ContentID() != s.ResolutionID {
 			return nil, fmt.Errorf("resolution changed since this review was displayed; reload before approval")
 		}
+		contractID := ""
+		if contract := t.Contract(i.ID); contract != nil {
+			contractID = contract.ID
+		}
+		if contractID != s.CurrentContractID {
+			return nil, fmt.Errorf("current completion contract changed since this review was displayed; reload before approval")
+		}
+		if issueReviewContentChanged(s.Issue, i) {
+			return nil, fmt.Errorf("displayed issue requirements or acceptance content changed; reload before approval")
+		}
+		if status := t.ResolutionReviewStatus(i.ID); status != s.Status {
+			return nil, fmt.Errorf("resolution review status changed from %s to %s since it was displayed; reload before approval", s.Status, status)
+		}
+		knowledgeCurrent := selectedKnowledgeCurrent(t, i.ID, i.Resolution)
+		if !sameBoolMap(s.KnowledgeCurrent, knowledgeCurrent) {
+			return nil, fmt.Errorf("selected knowledge-review applicability changed since it was displayed; reload before approval")
+		}
 		workScopes := mdstore.ResolutionReviewWorkScopes(i.Resolution)
 		workScopes = append(workScopes, s.WorkScopes...)
 		slices.Sort(workScopes)
@@ -208,6 +226,59 @@ func approveTUIReview(root string, write func(func(*domain.Tree) (*domain.Change
 			Scopes: slices.Clone(s.WorkScopes), ConfigScopes: slices.Clone(configScopes), Snapshot: s.Fingerprint,
 		})
 	})
+}
+
+func selectedKnowledgeCurrent(t *domain.Tree, id string, r *domain.Resolution) map[string]bool {
+	current := make(map[string]bool, len(r.KnowledgeReviews))
+	for n := range r.KnowledgeReviews {
+		report := &r.KnowledgeReviews[n]
+		current[report.ID] = t.KnowledgeReviewApplicable(id, report)
+	}
+	return current
+}
+
+func sameBoolMap(a, b map[string]bool) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for key, value := range a {
+		if other, ok := b[key]; !ok || other != value {
+			return false
+		}
+	}
+	return true
+}
+
+func issueReviewContentChanged(displayed, current *domain.Issue) bool {
+	if displayed == nil || current == nil {
+		return displayed != current
+	}
+	if displayed.Body != current.Body || displayed.Prose != current.Prose || displayed.OpenQuestions != current.OpenQuestions || !slices.Equal(displayed.Criteria, current.Criteria) {
+		return true
+	}
+	if displayed.Ready == nil || current.Ready == nil {
+		return displayed.Ready != current.Ready
+	}
+	if displayed.Ready.Baseline != current.Ready.Baseline {
+		return true
+	}
+	return !sameBaseline(baselineFor(displayed, displayed.Ready.Baseline), baselineFor(current, current.Ready.Baseline))
+}
+
+func baselineFor(i *domain.Issue, name string) *domain.Baseline {
+	for n := range i.Baselines {
+		if i.Baselines[n].Name == name {
+			return &i.Baselines[n]
+		}
+	}
+	return nil
+}
+
+func sameBaseline(a, b *domain.Baseline) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
 
 func sameStrings(a, b []string) bool {

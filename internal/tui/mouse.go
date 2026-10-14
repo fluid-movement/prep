@@ -122,6 +122,10 @@ func (m *Model) click(x, y int) tea.Cmd {
 			m.know.onEntry = false
 		case "entry":
 			m.know.onEntry = m.shownEntry() != ""
+		case "inbox":
+			m.inboxS.detail = false
+		case "inbox-detail":
+			m.inboxS.detail = m.inboxS.id != ""
 		}
 	case "row":
 		tb := m.current()
@@ -148,6 +152,17 @@ func (m *Model) click(x, y int) tea.Cmd {
 			return nil
 		}
 		m.know.cursor, m.know.path, m.know.onEntry = n, paths[n], false
+	case "inbox":
+		if n < 0 || n >= len(m.inboxS.items) {
+			return nil
+		}
+		if m.inboxS.cursor == n {
+			m.inboxS.detail = true
+			return nil
+		}
+		m.inboxS.cursor, m.inboxS.id, m.inboxS.detail = n, "", false
+		m.syncInbox()
+		return m.loadInboxReview()
 	case "set":
 		if m.setIdx == n {
 			return m.settingsKey("enter")
@@ -224,6 +239,12 @@ func (m *Model) wheel(msg tea.MouseWheelMsg) tea.Cmd {
 		}
 	case "entry":
 		m.know.vp, cmd = m.know.vp.Update(msg)
+	case "inbox":
+		if step != 0 {
+			m.inboxS.offset, m.wheeled = max(0, m.inboxS.offset+step), true
+		}
+	case "inbox-detail":
+		m.inboxS.vp, cmd = m.inboxS.vp.Update(msg)
 	case "feed", "issue", "usage":
 		// The Agent views scroll their lines; rendering clamps the offset.
 		if step != 0 {

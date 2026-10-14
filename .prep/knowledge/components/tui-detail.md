@@ -8,7 +8,7 @@ generated:
 scope:
   - internal/tui/app.go
   - internal/tui/editing.go
-confirmed_commit: ec81974212761fd8ee7556a96f20df2c00282d0d
+confirmed_commit: 3a9c5801f8e077e2e96c5f82abe24bce2025705a
 ---
 
 # TUI detail links

@@ -110,6 +110,7 @@ const (
 	screenSettings
 	screenKnowledge
 	screenAgent
+	screenInbox
 )
 
 type focus int
@@ -187,6 +188,7 @@ type Model struct {
 	modal         *modal
 	know          knowState
 	agentS        agentState
+	inboxS        inboxState
 	clock         func() time.Time
 	confirm       string            // a pending second key press: delete|view in settings
 	moving        bool              // settings: the selected view moves with j/k
@@ -215,7 +217,7 @@ func NewModel(th *theme.Theme, opts Options) *Model {
 	in.Placeholder = "--kind code --state open or words in titles"
 	in.SetStyles(inputStyles(th))
 	m := &Model{th: th, opts: opts, treeMode: true, scope: map[string][]string{}, cursor: map[string]int{}, offset: map[string]int{},
-		vp: newViewport(), page: newViewport(), know: knowState{vp: newViewport()}, filters: map[string]string{}, input: in,
+		vp: newViewport(), page: newViewport(), know: knowState{vp: newViewport()}, inboxS: inboxState{vp: newViewport()}, filters: map[string]string{}, input: in,
 		pending: map[string]string{}, mouse: !opts.NoMouse, single: opts.Single, runEditor: execEditor, after: tea.Tick, clock: opts.Now}
 	if m.clock == nil {
 		m.clock = time.Now
@@ -334,11 +336,13 @@ func (m *Model) apply(t *domain.Tree, err error) {
 		m.err = err
 		return
 	}
+	m.noteCompletions(t)
 	m.tree, m.err = t, nil
 	m.gen++
 	m.syncTheme()
 	m.rebuild()
 	m.syncKnowledge()
+	m.syncInbox()
 	if id := m.pendingSelect; id != "" && t.Issues[id] != nil {
 		m.pendingSelect = ""
 		m.jump(id, false)
@@ -608,10 +612,22 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case loadedMsg:
 		m.apply(msg.tree, msg.err)
-		if (m.screen == screenCheck || m.screen == screenKnowledge) && msg.err == nil {
-			return m, m.runCheck()
+		var cmds []tea.Cmd
+		if m.inboxS.pendingNotice != "" {
+			cmds = append(cmds, m.flash(m.inboxS.pendingNotice))
+			m.inboxS.pendingNotice = ""
 		}
-		return m, nil
+		if (m.screen == screenCheck || m.screen == screenKnowledge) && msg.err == nil {
+			cmds = append(cmds, m.runCheck())
+		}
+		if m.screen == screenInbox && msg.err == nil {
+			cmds = append(cmds, m.loadInboxReview())
+		}
+		return m, tea.Batch(cmds...)
+	case inboxReviewMsg:
+		return m, m.applyInboxReview(msg)
+	case inboxApprovedMsg:
+		return m, m.handleInboxApproved(msg)
 	case checkedMsg:
 		m.diags, m.diagErr, m.diagDone = msg.diags, msg.err, true
 		return m, nil
@@ -717,13 +733,15 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		return m.toggleLayout()
 	case "w":
 		return m.toggleScreen(screenAgent)
+	case "u":
+		return m.toggleScreen(screenInbox)
 	case "c":
 		return m.toggleScreen(screenCheck)
 	case "s":
 		return m.toggleScreen(screenSettings)
 	}
 	if m.screen != screenIssues {
-		if s == "esc" && !m.moving && m.screen != screenKnowledge {
+		if s == "esc" && !m.moving && m.screen != screenKnowledge && m.screen != screenInbox {
 			return m.goScreen(screenIssues)
 		}
 		if m.screen == screenSettings && m.tree != nil {
@@ -734,6 +752,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		}
 		if m.screen == screenAgent && m.tree != nil {
 			return m.agentKey(s)
+		}
+		if m.screen == screenInbox && m.tree != nil {
+			return m.inboxKey(s, k)
 		}
 		var cmd tea.Cmd
 		m.page, cmd = m.page.Update(k)
@@ -1036,6 +1057,8 @@ func (m *Model) flashErr(err error) tea.Cmd {
 // ID, the shown knowledge entry's path, or the agent's current issue.
 func (m *Model) copyTarget() string {
 	switch m.screen {
+	case screenInbox:
+		return m.inboxS.id
 	case screenIssues:
 		return m.selected()
 	case screenKnowledge:
@@ -1204,6 +1227,9 @@ func (m *Model) render() string {
 	case m.screen == screenAgent:
 		m.at = point{0, m.headerH()}
 		body = m.agentPane(m.w, bodyH)
+	case m.screen == screenInbox:
+		m.at = point{0, m.headerH()}
+		body = m.inboxPane(m.w, bodyH)
 	default:
 		m.at = point{0, m.headerH()}
 		listW, detailW := m.split(m.w, listRatio, minListW, minDetailW)
@@ -1290,6 +1316,7 @@ var (
 	}
 	screenBindings = []binding{
 		bind("Screens", "w", "agent (what it is doing, live)", true),
+		bind("Screens", "u", "inbox (reviews and attention)", true),
 		bind("Screens", "b", "knowledge", true),
 		bind("Screens", "P", "switch project (or click its name, top left)", false),
 		bind("Screens", "⌫", "back to where you were, across screens (the mouse's back button too)", false),
@@ -1381,6 +1408,8 @@ var knowledgeBindings = []binding{
 // bindings is the keymap of what the screen shows now.
 func (m *Model) bindings() []binding {
 	switch {
+	case m.screen == screenInbox:
+		return append([]binding{bind("Inbox", "enter", "inspect and scroll", true), bind("Inbox", "a", "approve review", true), bind("Inbox", "e", "select work scopes", true), bind("Inbox", "o", "open issue", true), bind("Inbox", "y", "copy issue ID", true)}, screenBindings...)
 	case m.screen == screenKnowledge && m.tree != nil:
 		return knowledgeBindings
 	case m.screen == screenAgent && m.tree != nil:
