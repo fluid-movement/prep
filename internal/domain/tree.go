@@ -212,7 +212,7 @@ func (t *Tree) Blocked(id string) bool {
 // Actionable = ready, not stale, dependencies done, unclaimed, and a leaf
 // (parents are not implemented themselves).
 func (t *Tree) Actionable(id string) bool {
-	return t.State(id) == StateReady && !t.Stale(id) && !t.PolicyChanged(id) && len(t.UnresolvedDeps(id)) == 0 && !t.IsParent(id)
+	return t.State(id) == StateReady && !t.Stale(id) && !t.PolicyReviewRequired(id) && len(t.UnresolvedDeps(id)) == 0 && !t.IsParent(id)
 }
 
 // Progress counts resolved direct children of a parent.
@@ -257,6 +257,7 @@ func (t *Tree) EffectiveDoD(id string) ([]string, []OptOut) {
 			for k, it := range items {
 				if it == o.Item {
 					items = append(items[:k], items[k+1:]...)
+					o.ApprovalID = approvedOptOut(i, o)
 					applied = append(applied, o)
 					break
 				}

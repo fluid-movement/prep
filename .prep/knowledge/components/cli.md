@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/cli
   - cmd/prep
-confirmed_commit: 54e8a28a1b0c5a0588d2c4face4c41b3e1f76986
+confirmed_commit: 33d632fd0a3a2103b2fec6cedd2b47d7e8d5710d
 ---
 
 # CLI
@@ -27,7 +27,7 @@ Applies when adding or changing commands.
 - `prep knowledge new|update|confirm` (`knowledge.go`): knowledge entry writes run plan (`Tree.PlanKnowledge`), render through the store, `CheckWrite`, write, stage; `confirm` sets `confirmed_commit` to HEAD for the named entries or `--drifted` ones and needs git and a scope.
 
 - Write pipeline: load → `Plan` → `CheckWrite` → `store.Apply` → stage.
-- Priority: `prep new --priority` and `prep edit --priority` (critical, high, medium, low; medium unsets; a priority-only edit works on resolved issues), `prep list --priority` filters (comma-separated OR, also in saved views). `summary` (list JSON, also `open_questions`, `resolved_at`/`_by`) and `prep show --json` always carry the effective `priority`; text output marks non-medium levels before the title (`!crit`, `!high`, `low`) and `show` prints `priority:`. `prep list`, `prep next` and prime's actionable and stale lists order by priority then ID (`Tree.ByPriority`, `byPriority` for prime summaries).
+- Priority: new/edit accept critical, high, medium or low; medium unsets. Priority-only edits work on resolved issues. list/next/prime order by priority then ID; JSON includes effective priority and text marks non-medium values.
 - Tags: `prep new --tag` and `prep edit --tag` (repeatable or comma-separated; edit replaces the list, `--tag ''` clears it, and a tag-only edit also works on resolved issues); `prep list --tag` filters; `prep list` shows tags as `#tag` after the title and `prep show` as a `tags:` line.
 - `prep init [--no-bootstrap]` creates `.prep` (no placeholder overview) and, unless skipped, the bootstrap issues via `Tree.PlanBootstrap`, written change by change; `prep knowledge bootstrap` does the same later when the knowledge base is not bootstrapped and no bootstrap issue is open. `prep prime` (JSON `bootstrap`) and `prep guide` (`alerts`) print the bootstrap alert first.
 - `prep import` creates the "Import existing work" research issue via `Tree.PlanImport`, written change by change like the bootstrap (`applyAll`), and reports it as open with `next: prep guide <id>` (text: a `Next:` line); while an import issue is unresolved it fails with `E_INVALID` naming that issue. Sources are project-specific, so there are no per-source importers: the issue's context guides the agent (decided in 01M47YPC2G69C52S5FWP6H42PH).
@@ -41,7 +41,6 @@ Applies when adding or changing commands.
 
 - `prep tui` requires a terminal; `--agent` opens the Agent screen and `--gallery` shows the [design system](/components/tui-design-system.md) with project themes. `prep theme list|new` lists or creates/selects themes; see [Palette](/components/palette.md). `prep flags` lists query values/counts, including saved views and tree mode; `prep views` lists saved views in config order.
 - `prep skill` prints the embedded `internal/cli/skill.md`; `.claude/skills/prep/SKILL.md` must stay identical (tested).
-- Tests in `cli_test.go` drive whole lifecycles through `Main` with a fake clock; the package variables `clock` and `entropy` (nil: `crypto/rand`) feed `prep new` and the bootstrap issues their IDs, and tests read IDs from the commands' output.
-- **Completion evidence**: a code issue completed without `--commit` has no evidence in `resolution.md`; `resolveEvidence` (used by `prep show` and the guide's touched files) fills it in memory with the commit that added `resolution.md` (`gitx.AddedIn`), and `prep show` marks it pending (`evidence_pending` in JSON) until that commit exists. A given `--commit` is validated as a hash and remains optional. Policy-bound issues also require passing applicable reports under `G_EVIDENCE`, independently of Git references. `prep evidence record/show` records results and inspects applicability; `prep policy show/set/adopt` manages completion methods and bindings. See [Completion policy](/features/completion-policy.md).
+- **Completion evidence**: a code issue completed without `--commit` has no evidence in `resolution.md`; `resolveEvidence` (used by `prep show` and the guide's touched files) fills it in memory with the commit that added `resolution.md` (`gitx.AddedIn`), and `prep show` marks it pending (`evidence_pending` in JSON) until that commit exists. A given `--commit` is validated as a hash and remains optional. Policy-bound issues also require passing applicable reports under `G_EVIDENCE`, independently of Git references. `prep evidence record/show` records results and inspects applicability; `prep policy show/set/adopt/retain` manages completion methods and bindings; `prep exception approve/show` and `prep dod approve` record explicit human approval.  See [Completion policy](/features/completion-policy.md).
 - **Eval**: test seams `PREP_TEST_NOW`, `PREP_TEST_SEED` (`testSeams`); [prep eval](/components/eval.md).
 `prep new` returns bounded advisory `similar_issues` candidates when titles overlap unresolved records; terminal/self records are omitted. Hints never prevent creation or choose a match. See [Tracking](/decisions/tracking.md).

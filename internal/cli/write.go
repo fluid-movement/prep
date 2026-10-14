@@ -609,6 +609,9 @@ func (l *intList) Set(v string) error {
 // the pipeline of every write and never change the issue's state.
 func recordCmd(op domain.Op) func(*app, []string) error {
 	return func(a *app, args []string) error {
+		if op == domain.OpDoD && len(args) > 0 && args[0] == "approve" {
+			return cmdApproveOptOut(a, args[1:])
+		}
 		fs := flag.NewFlagSet(string(op), flag.ContinueOnError)
 		in := domain.RecordInput{}
 		var body, bodyFile, reason string

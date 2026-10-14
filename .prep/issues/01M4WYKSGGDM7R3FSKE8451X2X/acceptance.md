@@ -1,0 +1,3 @@
+- [ ] Record the observed binary version, project/worktree, TUI screen and filter, and whether restart corrects the display; capture limits if the original setup is unavailable.
+- [ ] Establish whether external lifecycle changes produce watcher events and whether the TUI reloads and applies the resulting issue state.
+- [ ] Document findings and a focused regression/fix proposal only if a defect is confirmed, including any overlap with TUI Inbox work.

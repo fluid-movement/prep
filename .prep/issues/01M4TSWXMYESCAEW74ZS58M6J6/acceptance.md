@@ -1,0 +1,6 @@
+- [ ] Inbox is a top-level screen beside Issues, Agent and Knowledge, prioritizing review/sign-off/questions/staleness/dependency uncertainty while ordinary backlog stays in Issues.
+- [ ] A completed issue becomes available for review in Inbox and emits a non-blocking notification without changing the user's focus.
+- [ ] A bundled review displays requirements, identifiable code changes/snapshot, acceptance/DoD results, knowledge evidence and approved exceptions from the versioned contract.
+- [ ] Human approval uses the shared domain review action for the displayed snapshot; leaving review keeps it pending, and there is no reject/request-changes or implicit reopen action.
+- [ ] Issue IDs can be copied for feedback; stale/missing artifacts and unresolved dependency information are visible rather than presented as successful verification.
+- [ ] Navigation, rendering, notification and stale-approval behavior have focused TUI tests; legacy issues render safely and affected knowledge is maintained.

@@ -25,6 +25,10 @@ type ContractRequirement struct {
 	Text string `json:"text" yaml:"text"`
 }
 
+func requirementID(kind, text string) string {
+	return contentID(struct{ Kind, Text string }{kind, strings.TrimSpace(text)})
+}
+
 func contentID(v any) string {
 	b, _ := json.Marshal(v) // only concrete strings, slices and structs enter here
 	sum := sha256.Sum256(b)
@@ -50,7 +54,7 @@ func (t *Tree) Contract(id string) *CompletionContract {
 	c := &CompletionContract{Verification: p.Verification, Documentation: p.Documentation, Ancestors: t.Ancestors(id)}
 	add := func(kind, text string) {
 		r := ContractRequirement{Kind: kind, Text: strings.TrimSpace(text)}
-		r.ID = contentID(struct{ Kind, Text string }{r.Kind, r.Text})
+		r.ID = requirementID(r.Kind, r.Text)
 		for _, existing := range c.Requirements {
 			if existing.ID == r.ID {
 				return
@@ -96,7 +100,11 @@ func (t *Tree) PlanAdoptPolicy(id string, in Input) (*Change, error) {
 	if contract == nil {
 		return nil, &Error{Code: ErrGate, Message: "set the project completion policy before adopting it", Unmet: []Unmet{policyRequired()}}
 	}
+	if len(t.unapprovedOptOuts(id)) > 0 {
+		return nil, &Error{Code: ErrGate, Message: "obtain explicit human approval for inherited DoD opt-outs before adopting the contract"}
+	}
 	r := *i.Ready
+	r.PreviousContracts = previousContracts(i.Ready, contract)
 	r.Contract = contract
 	return &Change{Op: OpPolicy, IssueID: id, Ready: &r, History: "- " + in.Now.UTC().Format("2006-01-02T15:04:05Z") + " " + in.Actor + ": adopted completion contract " + contract.ID}, nil
 }

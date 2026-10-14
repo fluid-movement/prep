@@ -32,10 +32,11 @@ type baselineFM struct {
 }
 
 type readyFM struct {
-	Contract *domain.CompletionContract `yaml:"contract,omitempty"`
-	By       string                     `yaml:"by"`
-	At       time.Time                  `yaml:"at"`
-	Baseline string                     `yaml:"baseline"`
+	Contract          *domain.CompletionContract  `yaml:"contract,omitempty"`
+	PreviousContracts []domain.CompletionContract `yaml:"previous_contracts,omitempty"`
+	By                string                      `yaml:"by"`
+	At                time.Time                   `yaml:"at"`
+	Baseline          string                      `yaml:"baseline"`
 }
 
 type claimFM struct {
@@ -49,13 +50,15 @@ type docFM struct {
 }
 
 type optOutFM struct {
-	Item   string `yaml:"item"`
-	Reason string `yaml:"reason,omitempty"`
+	Item       string `yaml:"item"`
+	Reason     string `yaml:"reason,omitempty"`
+	ApprovalID string `yaml:"approval_id,omitempty"`
 }
 
 type resolutionFM struct {
 	Contract      *domain.CompletionContract    `yaml:"contract,omitempty"`
 	Verification  []domain.VerificationEvidence `yaml:"verification,omitempty"`
+	Approvals     []domain.CompletionApproval   `yaml:"approvals,omitempty"`
 	Outcome       string                        `yaml:"outcome"`
 	By            string                        `yaml:"by"`
 	At            time.Time                     `yaml:"at"`
@@ -67,11 +70,12 @@ type resolutionFM struct {
 }
 
 type projectFM struct {
-	Schema int                      `yaml:"schema"`
-	ID     string                   `yaml:"id,omitempty"`
-	Name   string                   `yaml:"name,omitempty"`
-	Links  map[string]linkFM        `yaml:"links,omitempty"`
-	Policy *domain.CompletionPolicy `yaml:"completion_policy,omitempty"`
+	Schema        int                       `yaml:"schema"`
+	ID            string                    `yaml:"id,omitempty"`
+	Name          string                    `yaml:"name,omitempty"`
+	Links         map[string]linkFM         `yaml:"links,omitempty"`
+	Policy        *domain.CompletionPolicy  `yaml:"completion_policy,omitempty"`
+	PolicyHistory []domain.CompletionPolicy `yaml:"completion_policy_history,omitempty"`
 }
 
 // linkFM is one link under its local name; yaml writes the names sorted.
@@ -82,7 +86,7 @@ type linkFM struct {
 
 // project returns the frontmatter's facts.
 func (f projectFM) project() domain.Project {
-	p := domain.Project{Schema: f.Schema, ID: f.ID, Name: f.Name, Policy: f.Policy}
+	p := domain.Project{Schema: f.Schema, ID: f.ID, Name: f.Name, Policy: f.Policy, PolicyHistory: f.PolicyHistory}
 	for name, l := range f.Links {
 		p.Links = append(p.Links, domain.ProjectLink{Name: name, ID: l.ID, Remote: l.Remote})
 	}
@@ -91,7 +95,7 @@ func (f projectFM) project() domain.Project {
 }
 
 func projectFMOf(p domain.Project) projectFM {
-	f := projectFM{Schema: p.Schema, ID: p.ID, Name: p.Name, Policy: p.Policy}
+	f := projectFM{Schema: p.Schema, ID: p.ID, Name: p.Name, Policy: p.Policy, PolicyHistory: p.PolicyHistory}
 	if len(p.Links) > 0 {
 		f.Links = map[string]linkFM{}
 		for _, l := range p.Links {
@@ -537,11 +541,11 @@ func parseReady(raw string) (*domain.Ready, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &domain.Ready{By: f.By, At: at, Baseline: f.Baseline, Note: normalize(body), Contract: f.Contract}, nil
+	return &domain.Ready{By: f.By, At: at, Baseline: f.Baseline, Note: normalize(body), Contract: f.Contract, PreviousContracts: f.PreviousContracts}, nil
 }
 
 func renderReady(r *domain.Ready) string {
-	return withFrontmatter(encodeYAML(readyFM{By: r.By, At: fmtTime(r.At), Baseline: r.Baseline, Contract: r.Contract}), r.Note)
+	return withFrontmatter(encodeYAML(readyFM{By: r.By, At: fmtTime(r.At), Baseline: r.Baseline, Contract: r.Contract, PreviousContracts: r.PreviousContracts}), r.Note)
 }
 
 func parseClaim(raw string) (*domain.Claim, error) {
@@ -583,7 +587,7 @@ func parseResolution(raw string) (*domain.Resolution, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &domain.Resolution{Outcome: f.Outcome, By: f.By, At: at, Reason: f.Reason, Evidence: f.Evidence, DoD: f.DoD, Note: normalize(body), Contract: f.Contract, Verification: f.Verification}
+	r := &domain.Resolution{Outcome: f.Outcome, By: f.By, At: at, Reason: f.Reason, Evidence: f.Evidence, DoD: f.DoD, Note: normalize(body), Contract: f.Contract, Verification: f.Verification, Approvals: f.Approvals}
 	if r.Contract != nil && r.Contract.ID != r.Contract.ContentID() {
 		return nil, fmt.Errorf("resolution completion contract content does not match its ID")
 	}
@@ -605,6 +609,28 @@ func parseResolution(raw string) (*domain.Resolution, error) {
 			return nil, fmt.Errorf("resolution verification names an unknown requirement")
 		}
 	}
+	for _, a := range r.Approvals {
+		if a.ID != a.ContentID() {
+			return nil, fmt.Errorf("resolution approval content does not match its ID")
+		}
+		if err := a.Validate(); err != nil {
+			return nil, err
+		}
+		if r.Contract == nil || a.Kind != domain.ApprovalOptOut && a.Contract != r.Contract.ID {
+			return nil, fmt.Errorf("resolution approval does not match its bound contract")
+		}
+		if a.Kind == domain.ApprovalException {
+			found := false
+			for _, requirement := range r.Contract.Requirements {
+				if requirement.ID == a.Requirement {
+					found = true
+				}
+			}
+			if !found {
+				return nil, fmt.Errorf("resolution exception names an unknown requirement")
+			}
+		}
+	}
 	if f.Documentation != nil {
 		r.Documentation = &domain.Documentation{NoImpact: f.Documentation.NoImpact}
 		for _, e := range f.Documentation.Entries {
@@ -612,18 +638,18 @@ func parseResolution(raw string) (*domain.Resolution, error) {
 		}
 	}
 	for _, o := range f.DoDOptOuts {
-		r.DoDOptOuts = append(r.DoDOptOuts, domain.OptOut{Item: o.Item, Reason: o.Reason})
+		r.DoDOptOuts = append(r.DoDOptOuts, domain.OptOut{Item: o.Item, Reason: o.Reason, ApprovalID: o.ApprovalID})
 	}
 	return r, nil
 }
 
 func renderResolution(r *domain.Resolution) string {
-	f := resolutionFM{Outcome: r.Outcome, By: r.By, At: fmtTime(r.At), Reason: r.Reason, Evidence: r.Evidence, DoD: r.DoD, Contract: r.Contract, Verification: r.Verification}
+	f := resolutionFM{Outcome: r.Outcome, By: r.By, At: fmtTime(r.At), Reason: r.Reason, Evidence: r.Evidence, DoD: r.DoD, Contract: r.Contract, Verification: r.Verification, Approvals: r.Approvals}
 	if r.Documentation != nil {
 		f.Documentation = &docFM{Entries: r.Documentation.Entries, NoImpact: r.Documentation.NoImpact}
 	}
 	for _, o := range r.DoDOptOuts {
-		f.DoDOptOuts = append(f.DoDOptOuts, optOutFM{Item: o.Item, Reason: o.Reason})
+		f.DoDOptOuts = append(f.DoDOptOuts, optOutFM{Item: o.Item, Reason: o.Reason, ApprovalID: o.ApprovalID})
 	}
 	return withFrontmatter(encodeYAML(f), r.Note)
 }

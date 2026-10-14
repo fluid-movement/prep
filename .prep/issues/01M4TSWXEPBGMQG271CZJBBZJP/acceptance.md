@@ -1,0 +1,6 @@
+- [ ] Implementation completion and pending/approved human review are distinct and visible; pending review does not block unrelated ready issues.
+- [ ] A human-attributed approval identifies a specific resolution and code/evidence snapshot without requiring a commit; agent-attributed approval is rejected.
+- [ ] Changing the reviewed snapshot or completing a reopened issue cannot reuse a prior approval, including change-away-and-back cases.
+- [ ] Explicit reopening preserves prior resolutions, verification and review history and resumes the same issue through shared domain/CLI transitions; feedback alone does not reopen.
+- [ ] Dependency satisfaction defaults to implementation completion and supports an explicit human-approval prerequisite with consistent domain/CLI behavior.
+- [ ] Versioned records round-trip and validate without fabricating approvals for legacy issues; regression coverage exercises approval, invalidation, reopen history and dependency gates.

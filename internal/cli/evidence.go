@@ -46,16 +46,19 @@ func cmdEvidence(a *app, args []string) error {
 			Problem    string                      `json:"problem,omitempty"`
 		}
 		records := make([]report, 0, len(t.Issues[id].Verification))
-		current := t.Contract(id)
+		var bound *domain.CompletionContract
+		if ready := t.Issues[id].Ready; ready != nil {
+			bound = ready.Contract
+		}
 		for _, e := range t.Issues[id].Verification {
 			paths := append(append([]string(nil), e.Scopes...), e.ConfigScopes...)
 			fp, err := worktree.Fingerprint(a.store.Root, paths)
-			r := report{Evidence: e, Applicable: err == nil && fp == e.Snapshot && current != nil && e.Contract == current.ID && !t.Stale(id)}
+			r := report{Evidence: e, Applicable: err == nil && fp == e.Snapshot && bound != nil && e.Contract == bound.ID && !t.PolicyReviewRequired(id) && !t.Stale(id)}
 			if err != nil {
 				r.Problem = err.Error()
 			} else if fp != e.Snapshot {
 				r.Problem = "scoped work or check configuration changed"
-			} else if current == nil || e.Contract != current.ID {
+			} else if bound == nil || e.Contract != bound.ID || t.PolicyReviewRequired(id) {
 				r.Problem = "completion contract changed; review prep policy show " + id
 			} else if t.Stale(id) {
 				r.Problem = "issue requirement changed; reconcile it before reusing evidence"

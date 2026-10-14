@@ -136,8 +136,9 @@ type Project struct {
 	Links []ProjectLink
 	DoD   []string
 	// Policy is explicitly configured; nil identifies a legacy or unconfigured project.
-	Policy *CompletionPolicy
-	Config Config
+	Policy        *CompletionPolicy
+	PolicyHistory []CompletionPolicy
+	Config        Config
 }
 
 // Config is the project-level configuration.
@@ -167,8 +168,9 @@ type Criterion struct {
 
 // OptOut removes an inherited Definition of Done item for an issue subtree.
 type OptOut struct {
-	Item   string `json:"item"`
-	Reason string `json:"reason"`
+	Item       string `json:"item"`
+	Reason     string `json:"reason"`
+	ApprovalID string `json:"approval_id,omitempty" yaml:"approval_id,omitempty"`
 }
 
 // Decision is one append-only entry in decisions.md.
@@ -193,11 +195,12 @@ type Baseline struct {
 
 // Ready is the enrichment sign-off.
 type Ready struct {
-	Contract *CompletionContract `json:"contract,omitempty"`
-	By       string              `json:"by"`
-	At       time.Time           `json:"at"`
-	Baseline string              `json:"baseline"`
-	Note     string              `json:"note,omitempty"`
+	Contract          *CompletionContract  `json:"contract,omitempty"`
+	PreviousContracts []CompletionContract `json:"previous_contracts,omitempty"`
+	By                string               `json:"by"`
+	At                time.Time            `json:"at"`
+	Baseline          string               `json:"baseline"`
+	Note              string               `json:"note,omitempty"`
 }
 
 // Claim marks work in progress.
@@ -223,6 +226,7 @@ type Documentation struct {
 type Resolution struct {
 	Contract      *CompletionContract    `json:"contract,omitempty"`
 	Verification  []VerificationEvidence `json:"verification,omitempty"`
+	Approvals     []CompletionApproval   `json:"approvals,omitempty"`
 	Outcome       string                 `json:"outcome"`
 	By            string                 `json:"by"`
 	At            time.Time              `json:"at"`
@@ -264,11 +268,15 @@ type Issue struct {
 	History   string     `json:"-"` // the work log
 	Findings  *string    `json:"-"`
 
-	Baselines    []Baseline             `json:"baselines,omitempty"` // oldest first
-	Ready        *Ready                 `json:"ready,omitempty"`
-	Claim        *Claim                 `json:"claim,omitempty"`
-	Resolution   *Resolution            `json:"resolution,omitempty"`
-	Verification []VerificationEvidence `json:"verification,omitempty"`
+	Baselines       []Baseline             `json:"baselines,omitempty"` // oldest first
+	Ready           *Ready                 `json:"ready,omitempty"`
+	Claim           *Claim                 `json:"claim,omitempty"`
+	Resolution      *Resolution            `json:"resolution,omitempty"`
+	Verification    []VerificationEvidence `json:"verification,omitempty"`
+	Approvals       []CompletionApproval   `json:"approvals,omitempty"`
+	DoDRevision     string                 `json:"dod_revision,omitempty"`
+	OptOutRevisions map[string]string      `json:"opt_out_revisions,omitempty"`
+	ApprovalCurrent map[string]bool        `json:"-"`
 	// EvidenceCurrent is adapter-computed applicability, never persisted.
 	EvidenceCurrent map[string]bool `json:"-"`
 

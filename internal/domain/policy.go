@@ -33,7 +33,11 @@ func (t *Tree) PlanPolicy(p CompletionPolicy) (*Change, error) {
 	if !p.Valid() {
 		return nil, &Error{Code: ErrUsage, Message: "completion policy requires verification, documentation, actor and timestamp", Unmet: []Unmet{{GatePolicy, "describe how work is verified and how documentation impact is reviewed"}}}
 	}
-	return &Change{Op: OpPolicy, Policy: &p}, nil
+	history := append([]CompletionPolicy(nil), t.Project.PolicyHistory...)
+	if old := t.Project.Policy; old.Valid() && (old.Verification != p.Verification || old.Documentation != p.Documentation) {
+		history = append(history, *old)
+	}
+	return &Change{Op: OpPolicy, Policy: &p, PolicyHistory: &history}, nil
 }
 
 func policyRequired() Unmet {

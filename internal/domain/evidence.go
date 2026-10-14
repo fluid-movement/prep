@@ -83,7 +83,7 @@ func (t *Tree) PlanEvidence(id string, e VerificationEvidence) (*Change, error) 
 	if t.State(id).Terminal() || i.Ready == nil || i.Ready.Contract == nil {
 		return reject("evidence requires an unresolved issue with an explicitly bound completion contract; use prep policy adopt <id>")
 	}
-	if t.PolicyChanged(id) || t.Stale(id) {
+	if t.PolicyReviewRequired(id) || t.Stale(id) {
 		return reject("review and reconcile changed requirements or completion policy before recording evidence")
 	}
 	found := false

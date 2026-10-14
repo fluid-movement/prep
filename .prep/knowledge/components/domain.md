@@ -7,7 +7,7 @@ generated:
   by: claude-code/2.1.289
   at: 2026-10-05T00:00:00Z
 scope: internal/domain
-confirmed_commit: 443b7c8c83a82d0359d8999aef69beedd7226633
+confirmed_commit: 33d632fd0a3a2103b2fec6cedd2b47d7e8d5710d
 ---
 
 # Domain package
@@ -21,7 +21,7 @@ Applies when changing lifecycle rules, gates, diagnostics or queries.
 - `records.go`: `PlanRecord` for the record writes (context, findings, decide, criterion, dod, log) on unresolved issues, with gates `G_CRITERION`, `G_DECISION`, `G_DOD` and `G_KIND`; the next decision ID is `D<max+1>`. Acceptance changes are `AcceptanceOp` operations, applied in memory by `ApplyAcceptance` (index operations refer to the numbering before the change, additions follow).
 - `import.go`: `ImportTag`, `ImportOpen` (the unresolved import issue), `PlanImport` (one research issue "Import existing work" with a guiding context and three criteria, planned on a progressively applied tree like `PlanBootstrap`; `ErrInvalid` while an import issue is unresolved). `Filter.Text` matches the title or the requirement (`Issue.Body`).
 - `bootstrap.go`: `Bootstrapped` (the overview entry exists), `BootstrapStart` (first open bootstrap-tagged leaf), `BootstrapAlert`, `PlanBootstrap` (parent and survey issues with requirement, context and criteria, planned on a progressively applied tree). `PlanKnowledge` refuses new entries other than the overview before bootstrapping (`G_BOOTSTRAP`); `Guide.Alerts` carries the alert.
-- Priority: `Priority` (critical, high, medium, low; `Priorities` in rank order), `Issue.Priority` as stored (empty is medium, `Effective()` for output), `ParsePriority` (medium and empty unset), `Rank` (unknown levels rank as medium), `Filter.Priorities` (`--priority`, medium matches unset), validation code I027, gate `G_PRIORITY`. `Tree.ByPriority` orders IDs by rank then ID; `Query` returns its result through it and `TreeOrder` walks roots and siblings with it, while `Tree.IDs` stays chronological. Like tags, priority is outside the baselined requirement and a priority-only edit works on resolved issues (decided in 01M4874AR04JFPZ5KYW0402JC1).
+- Priority: effective medium when unset; priority is outside the baseline. Query/next/prime use rank then ID, while Tree.IDs stays chronological. Priority-only edits work on resolved issues.
 - Tags: `Issue.Tags`, `NormalizeTags`/`ValidTag` (lowercase, `. _ - /`), `Filter.Tags` (repeated values OR), validation code I026. Tags are outside the baselined requirement, so they never make an issue stale; `PlanEdit` allows a tag-only edit on resolved issues.
 - `knowledge.go`: `KnowledgeEdit` and `Tree.PlanKnowledge` (path form, the reserved names `index.md` and `log.md` refused, no rename, existence, non-empty body, required fields for new entries, scope required for `confirmed_commit`); `Change.KnowledgeEntry` carries the adapter-rendered entry so `Tree.Apply` and `CheckWrite` validate it. The `KnowledgeStore` port has `Load`, `Render` and `Apply`.
 - `guide.go`: each `Pointer` in the Write list carries the `command` that writes it.
@@ -37,4 +37,4 @@ Applies when changing lifecycle rules, gates, diagnostics or queries.
 
 Rules worth knowing: see [Issue lifecycle](/features/lifecycle.md).
 - `links.go`: links to other projects, cross-project dependencies (`Tree.External`, `DepState`) and `StripCode` (`okf.StripCode` calls it): [Cross-project work](/features/cross-project.md).
-- [Completion policy](/features/completion-policy.md): readiness-bound requirements and verification.
+- [Completion policy](/features/completion-policy.md): readiness-bound requirements and verification. `approval.go` plans human exceptions, policy retention and DoD opt-out approvals, tracks CLI policy/request revisions and selects used resolution approvals. Domain validates adapter-computed applicability without filesystem access; details: [Completion approvals](/features/completion-approvals.md).

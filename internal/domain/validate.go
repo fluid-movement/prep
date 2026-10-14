@@ -40,6 +40,11 @@ func Validate(t *Tree) []Diagnostic {
 			Message: "completion policy needs verification, documentation, actor and timestamp",
 			Fix:     "run prep policy set --verification <method> --documentation <method>"})
 	}
+	for _, p := range t.Project.PolicyHistory {
+		if !p.Valid() {
+			add(Diagnostic{Code: CodePolicyInvalid, Severity: SevError, Class: ClassManual, File: "project.md", Message: "historical completion policy is incomplete", Fix: "restore the original policy history"})
+		}
+	}
 
 	validateLinks(t, add)
 
@@ -113,11 +118,25 @@ func Validate(t *Tree) []Diagnostic {
 		}
 
 		// Records.
+		previous := ""
+		for _, a := range i.Approvals {
+			if a.Validate() != nil || a.ID != a.ContentID() || a.Previous != previous {
+				e(CodeRecordInvalid, ClassManual, "approvals.md", "restore the original approval history", "invalid completion approval or history chain")
+			}
+			previous = a.ID
+		}
 		if i.Ready != nil && i.Ready.Contract != nil && i.Ready.Contract.ID != i.Ready.Contract.ContentID() {
 			e(CodeRecordInvalid, ClassManual, "ready.md", "restore the original contract or explicitly adopt the current policy", "completion contract content does not match its ID")
 		}
-		if t.PolicyChanged(id) && i.Resolution == nil {
-			w(CodePolicyChanged, ClassGuided, "ready.md", "review prep policy show <id> and run prep policy adopt <id>", "effective completion policy changed since readiness")
+		if t.PolicyReviewRequired(id) && i.Resolution == nil {
+			w(CodePolicyChanged, ClassGuided, "ready.md", "review prep policy show <id>, then adopt it or obtain explicit human approval to retain the bound policy", "effective completion policy changed since readiness")
+		}
+		if i.Ready != nil {
+			for _, c := range i.Ready.PreviousContracts {
+				if c.ID != c.ContentID() {
+					e(CodeRecordInvalid, ClassManual, "ready.md", "restore contract history", "previous completion contract content does not match its ID")
+				}
+			}
 		}
 		if i.Ready != nil && !t.ReadyValid(i) && i.Resolution == nil {
 			w(CodeReadyOutdated, ClassGuided, "ready.md", "enrich against the current requirement and run prep ready, or prep ack if the change was trivial", "ready.md references baseline %s, not the newest", i.Ready.Baseline)

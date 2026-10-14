@@ -137,6 +137,13 @@ func (t *Tree) PlanRecord(id string, op Op, in RecordInput) (*Change, error) {
 	if len(unmet) > 0 {
 		return nil, &Error{Code: ErrUsage, Message: fmt.Sprintf("cannot %s %s", op, id), Unmet: unmet}
 	}
+	if len(c.Acceptance) > 0 {
+		_, add, opts := ApplyAcceptance(i, c.Acceptance)
+		if revision, requests, changed := i.planDoDRevisions(add, opts); changed {
+			c.DoDRevision, c.OptOutRevisions = &revision, &requests
+			c.History = fmt.Sprintf("- %s %s: changed DoD policy revision %s", now.Format(time.RFC3339), in.Actor, revision)
+		}
+	}
 	return c, nil
 }
 

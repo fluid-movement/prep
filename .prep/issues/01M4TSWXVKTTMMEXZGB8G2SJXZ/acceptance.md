@@ -1,0 +1,6 @@
+- [ ] External dependency status distinguishes satisfied, unsatisfied and unknown and exposes source project/checkout/revision plus uncertainty through CLI and shared domain data.
+- [ ] An unavailable source checkout or unresolved external issue remains unknown and blocks claiming by default; cached or missing data cannot imply satisfaction.
+- [ ] A human-attributed override explicitly identifies the uncertain dependency and records a reason and applicable snapshot; agent-only or missing-reason overrides fail.
+- [ ] Dependencies default to implementation completion and can explicitly require applicable human approval using the review contract rather than a separate approval definition.
+- [ ] Source or dependency changes make stale observations/overrides visible and require reconciliation; local legacy dependencies retain compatible behavior.
+- [ ] Tests cover available/unavailable projects, unresolved targets, done-but-unapproved prerequisites and scoped overrides; no remote synchronization is required.

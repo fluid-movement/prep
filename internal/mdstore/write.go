@@ -136,6 +136,11 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 	}
 	if c.Links != nil || c.Policy != nil {
 		rel := Dir + "/project.md"
+		if c.PolicyHistory != nil {
+			if err := s.cas(rel); err != nil {
+				return nil, nil, err
+			}
+		}
 		raw, ok, err := s.read(rel)
 		if err == nil && !ok {
 			err = &domain.Error{Code: domain.ErrNoProject, Message: "project.md is missing"}
@@ -157,6 +162,9 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 		}
 		if c.Policy != nil {
 			p.Policy = c.Policy
+		}
+		if c.PolicyHistory != nil {
+			p.PolicyHistory = *c.PolicyHistory
 		}
 		out := renderProject(p, body)
 		touched = append(touched, rel)
@@ -221,6 +229,34 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 	}
 	if c.Verification != nil {
 		if err := w("verification.md", renderVerification(*c.Verification)); err != nil {
+			return nil, nil, err
+		}
+	}
+	if c.Approvals != nil || c.DoDRevision != nil || c.OptOutRevisions != nil {
+		var state approvalsFM
+		if err := s.cas(dir + "/approvals.md"); err != nil {
+			return nil, nil, err
+		}
+		raw, exists, err := s.read(dir + "/approvals.md")
+		if err != nil {
+			return nil, nil, err
+		}
+		if exists {
+			state, err = parseApprovalState(raw)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+		if c.Approvals != nil {
+			state.Approvals = *c.Approvals
+		}
+		if c.DoDRevision != nil {
+			state.DoDRevision = *c.DoDRevision
+		}
+		if c.OptOutRevisions != nil {
+			state.OptOutRevisions = *c.OptOutRevisions
+		}
+		if err := w("approvals.md", renderApprovalState(state)); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -353,6 +389,13 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 					return "", false
 				}
 				return renderClaim(c), true
+			}},
+			{"approvals.md", func(raw string) (string, bool) {
+				state, err := parseApprovalState(raw)
+				if err != nil {
+					return "", false
+				}
+				return renderApprovalState(state), true
 			}},
 			{"verification.md", func(raw string) (string, bool) {
 				records, err := parseVerification(raw)

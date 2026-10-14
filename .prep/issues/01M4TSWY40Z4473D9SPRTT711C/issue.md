@@ -2,6 +2,8 @@
 title: Lean knowledge policy and comparative usefulness experiments
 kind: research
 parent: 01M4TST3C4ZSZDKA5WKBA3ND4H
+depends_on:
+  - 01M4WSRP2FYKRNT2P61T88X9TH
 tags:
   - knowledge
 ---
