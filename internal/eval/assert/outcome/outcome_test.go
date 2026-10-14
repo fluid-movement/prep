@@ -114,6 +114,10 @@ func TestOutcomeKinds(t *testing.T) {
 		must(t, out, err)
 		out, err = p.Prep("criterion", p.IDs["pay"], "--add", "Refunds work")
 		must(t, out, err)
+		// Criteria are contract requirements. Reconcile the intentional change
+		// before asserting that the resulting project has no warnings.
+		out, err = p.Prep("policy", "adopt", p.IDs["pay"])
+		must(t, out, err)
 		out, err = p.Prep("claim", p.IDs["cart"])
 		must(t, out, err)
 		out, err = p.Prep("knowledge", "new", "/components/refunds.md", "--type", "component", "--title", "Refunds", "--description", "Refund rules", "--body", "Refunds take 5 days.")

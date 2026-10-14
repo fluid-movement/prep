@@ -304,6 +304,7 @@ func TestCrossProjectDependencies(t *testing.T) {
 	api.ok("define", target)
 	api.ok("ready", target)
 	api.ok("claim", target)
+	api.verify(target)
 	api.ok("complete", target, "--no-impact", "test")
 	home.ok("claim", id)
 

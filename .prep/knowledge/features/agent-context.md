@@ -18,7 +18,7 @@ Applies when changing how agent sessions receive prep context or discover the ne
 
 - **Session briefing**: the Claude Code plugin and Codex plugin run `prep prime --hook` at session start in a prep project. It provides capped pointers: bootstrap alert, top-level parents with progress, actionable issues, stale issues, claims, check failures, and recently worked-on issues.
 - **Task guidance**: Codex `UserPromptSubmit` hooks add a task-time reminder to search for a matching issue, check `prep next`, and run `prep guide <id>` before changing code. A complete issue ID in the prompt triggers a live `prep guide`. Claude Code receives its workflow through the prep skill and agent context.
-- **Guide**: `prep guide <id>` tells the agent the current step, unmet gates, files to read and exact commands for outputs and transitions. Follow the guide before opening records or changing code.
+- **Guide**: `prep guide <id>` tells the agent the current step, unmet gates, files to read and exact commands for outputs and transitions. Follow the guide before opening records or changing code. For policy-bound ready or in-progress work, it also supplies requirement and scoped verification commands; agents execute checks and prep validates recorded results. See [Completion policy](/features/completion-policy.md).
 - **Limits**: plugin hooks must be trusted in Codex before they run. They provide automatic context and supported-tool guardrails, not perfect semantic enforcement; the skill remains the detailed workflow. No prep project needs an `AGENTS.md` file for the integration to work.
 ## Planning and tracking facts
 

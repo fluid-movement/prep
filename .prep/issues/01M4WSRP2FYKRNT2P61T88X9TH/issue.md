@@ -1,0 +1,16 @@
+---
+title: Enforce knowledge enrichment and offer relevant knowledge throughout the lifecycle
+kind: code
+parent: 01M4TST3C4ZSZDKA5WKBA3ND4H
+depends_on:
+  - 01M4TSWX8HF105ZQQKS50MH6RP
+tags:
+  - knowledge
+  - workflow
+  - cli
+priority: high
+---
+
+Make knowledge enrichment an enforced part of prep's issue lifecycle rather than optional end-of-task guidance. During enrichment and implementation, prep guide offers bounded relevant knowledge candidates using issue context and available knowledge metadata; agents retrieve details through prep knowledge find/show. Before completion, require affected entries to be updated or explicitly reviewed as unchanged for this work, or record a justified no-impact assessment. A --docs reference to an existing entry alone must not prove review or an update. Preserve review provenance and applicability without claiming automated semantic correctness. Return the resulting knowledge to agents at later relevant lifecycle steps, preserving lean briefing and targeted retrieval. Use the completion contract from 01M4TSWX8HF105ZQQKS50MH6RP and shared domain gates rather than harness-only enforcement. Reuse existing hook, guide, freshness and bounded-output work. Keep comparative content/usefulness experiments in 01M4TSWY40Z4473D9SPRTT711C; this issue implements the lifecycle capability, not those experiments.
+
+## Open questions

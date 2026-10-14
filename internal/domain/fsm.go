@@ -71,19 +71,20 @@ type Input struct {
 
 // Change is the set of records a transition writes. Storage adapters render it.
 type Change struct {
-	Op          Op             `json:"op"`
-	IssueID     string         `json:"id"`
-	NewIssue    *Issue         `json:"-"`
-	Baseline    *Baseline      `json:"-"`
-	Ready       *Ready         `json:"-"`
-	Claim       *Claim         `json:"-"`
-	RemoveClaim bool           `json:"-"`
-	Resolution  *Resolution    `json:"-"`
-	Edit        *IssueEdit     `json:"-"`
-	Context     *string        `json:"-"`
-	Findings    *string        `json:"-"`
-	Decision    *Decision      `json:"-"`
-	Acceptance  []AcceptanceOp `json:"-"`
+	Op           Op                      `json:"op"`
+	IssueID      string                  `json:"id"`
+	NewIssue     *Issue                  `json:"-"`
+	Baseline     *Baseline               `json:"-"`
+	Ready        *Ready                  `json:"-"`
+	Claim        *Claim                  `json:"-"`
+	RemoveClaim  bool                    `json:"-"`
+	Resolution   *Resolution             `json:"-"`
+	Verification *[]VerificationEvidence `json:"-"`
+	Edit         *IssueEdit              `json:"-"`
+	Context      *string                 `json:"-"`
+	Findings     *string                 `json:"-"`
+	Decision     *Decision               `json:"-"`
+	Acceptance   []AcceptanceOp          `json:"-"`
 	// Knowledge is a knowledge write; KnowledgeEntry is the entry the
 	// adapter rendered from it, used to validate before writing.
 	Knowledge      *KnowledgeEdit `json:"-"`
@@ -298,6 +299,14 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 				}
 			}
 		}
+		if i.Ready != nil && i.Ready.Contract != nil {
+			for _, r := range i.Ready.Contract.Requirements {
+				e := LatestEvidence(i, r.ID)
+				if e == nil || e.ValidateReport() != nil || e.ID != e.ContentID() || e.Result != "pass" || !i.EvidenceCurrent[e.ID] {
+					add(GateEvidence, "passing applicable report required for %s; use prep evidence record %s --requirement %s", r.Text, id, r.ID)
+				}
+			}
+		}
 	case OpDrop:
 		if in == nil {
 			needs = append(needs, "--reason <text>")
@@ -386,6 +395,14 @@ func (t *Tree) Plan(id string, op Op, in Input) (*Change, error) {
 	case OpComplete:
 		dod, opt := t.EffectiveDoD(id)
 		res := &Resolution{Outcome: OutcomeDone, By: in.Actor, At: now, DoD: dod, DoDOptOuts: opt, Note: in.Note}
+		if i.Ready != nil && i.Ready.Contract != nil {
+			res.Contract = i.Ready.Contract
+			for _, r := range i.Ready.Contract.Requirements {
+				if e := LatestEvidence(i, r.ID); e != nil {
+					res.Verification = append(res.Verification, *e)
+				}
+			}
+		}
 		if !t.IsParent(id) && i.Kind == KindCode {
 			res.Evidence = strings.ToLower(in.Commit)
 		}
@@ -564,6 +581,9 @@ func (t *Tree) Apply(c *Change) *Tree {
 			}
 			if c.RemoveClaim {
 				cp.Claim = nil
+			}
+			if c.Verification != nil {
+				cp.Verification = append([]VerificationEvidence(nil), (*c.Verification)...)
 			}
 			if c.Resolution != nil {
 				r := *c.Resolution

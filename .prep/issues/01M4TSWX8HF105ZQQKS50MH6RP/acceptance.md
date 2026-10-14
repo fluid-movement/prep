@@ -1,4 +1,4 @@
-- [ ] Projects can explicitly record verification and documentation policies via CLI; readiness requires a configured policy without blocking capture or definition.
-- [ ] Effective completion requirements are bound at readiness and changes require explicit reconciliation.
+- [x] Projects can explicitly record verification and documentation policies via CLI; readiness requires a configured policy without blocking capture or definition.
+- [x] Effective completion requirements are bound at readiness and changes require explicit reconciliation.
 - [ ] Completion validates applicable evidence per requirement and human-approved exceptions without executing checks or requiring a commit.
-- [ ] Legacy records remain readable without fabricated evidence; domain, storage, CLI and project checks pass.
+- [x] Legacy records remain readable without fabricated evidence; domain, storage, CLI and project checks pass.

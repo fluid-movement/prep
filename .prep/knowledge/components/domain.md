@@ -37,3 +37,4 @@ Applies when changing lifecycle rules, gates, diagnostics or queries.
 
 Rules worth knowing: see [Issue lifecycle](/features/lifecycle.md).
 - `links.go`: links to other projects, cross-project dependencies (`Tree.External`, `DepState`) and `StripCode` (`okf.StripCode` calls it): [Cross-project work](/features/cross-project.md).
+- `policy.go`, `contract.go`, `evidence.go`: readiness-bound requirements and reported verification; adapters supply applicability. See [Completion policy](/features/completion-policy.md).

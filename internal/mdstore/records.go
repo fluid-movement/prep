@@ -54,14 +54,16 @@ type optOutFM struct {
 }
 
 type resolutionFM struct {
-	Outcome       string     `yaml:"outcome"`
-	By            string     `yaml:"by"`
-	At            time.Time  `yaml:"at"`
-	Reason        string     `yaml:"reason,omitempty"`
-	Evidence      string     `yaml:"evidence,omitempty"`
-	Documentation *docFM     `yaml:"documentation,omitempty"`
-	DoD           []string   `yaml:"dod,omitempty"`
-	DoDOptOuts    []optOutFM `yaml:"dod_opt_outs,omitempty"`
+	Contract      *domain.CompletionContract    `yaml:"contract,omitempty"`
+	Verification  []domain.VerificationEvidence `yaml:"verification,omitempty"`
+	Outcome       string                        `yaml:"outcome"`
+	By            string                        `yaml:"by"`
+	At            time.Time                     `yaml:"at"`
+	Reason        string                        `yaml:"reason,omitempty"`
+	Evidence      string                        `yaml:"evidence,omitempty"`
+	Documentation *docFM                        `yaml:"documentation,omitempty"`
+	DoD           []string                      `yaml:"dod,omitempty"`
+	DoDOptOuts    []optOutFM                    `yaml:"dod_opt_outs,omitempty"`
 }
 
 type projectFM struct {
@@ -581,7 +583,28 @@ func parseResolution(raw string) (*domain.Resolution, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &domain.Resolution{Outcome: f.Outcome, By: f.By, At: at, Reason: f.Reason, Evidence: f.Evidence, DoD: f.DoD, Note: normalize(body)}
+	r := &domain.Resolution{Outcome: f.Outcome, By: f.By, At: at, Reason: f.Reason, Evidence: f.Evidence, DoD: f.DoD, Note: normalize(body), Contract: f.Contract, Verification: f.Verification}
+	if r.Contract != nil && r.Contract.ID != r.Contract.ContentID() {
+		return nil, fmt.Errorf("resolution completion contract content does not match its ID")
+	}
+	for _, e := range r.Verification {
+		if r.Contract == nil || e.Contract != r.Contract.ID || e.ID != e.ContentID() {
+			return nil, fmt.Errorf("resolution verification does not match its contract or content ID")
+		}
+		if err := e.ValidateReport(); err != nil {
+			return nil, err
+		}
+		found := false
+		for _, requirement := range r.Contract.Requirements {
+			if requirement.ID == e.Requirement {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("resolution verification names an unknown requirement")
+		}
+	}
 	if f.Documentation != nil {
 		r.Documentation = &domain.Documentation{NoImpact: f.Documentation.NoImpact}
 		for _, e := range f.Documentation.Entries {
@@ -595,7 +618,7 @@ func parseResolution(raw string) (*domain.Resolution, error) {
 }
 
 func renderResolution(r *domain.Resolution) string {
-	f := resolutionFM{Outcome: r.Outcome, By: r.By, At: fmtTime(r.At), Reason: r.Reason, Evidence: r.Evidence, DoD: r.DoD}
+	f := resolutionFM{Outcome: r.Outcome, By: r.By, At: fmtTime(r.At), Reason: r.Reason, Evidence: r.Evidence, DoD: r.DoD, Contract: r.Contract, Verification: r.Verification}
 	if r.Documentation != nil {
 		f.Documentation = &docFM{Entries: r.Documentation.Entries, NoImpact: r.Documentation.NoImpact}
 	}

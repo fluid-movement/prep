@@ -21,6 +21,7 @@ import (
 	"github.com/fluid-movement/prep/internal/mdstore"
 	"github.com/fluid-movement/prep/internal/okf"
 	"github.com/fluid-movement/prep/internal/tui/theme"
+	"github.com/fluid-movement/prep/internal/worktree"
 )
 
 var update = flag.Bool("update", false, "rewrite golden files")
@@ -98,6 +99,37 @@ func (p *project) record(id string, op domain.Op, in domain.RecordInput) {
 	})
 }
 
+// verify records manual fixture observations without advancing the sample's
+// clock, so evidence does not change unrelated snapshot dates or issue IDs.
+func (p *project) verify(id string) {
+	p.t.Helper()
+	tr, err := p.load()
+	if err != nil {
+		p.t.Fatal(err)
+	}
+	contract := tr.Issues[id].Ready.Contract
+	snapshot, err := worktree.Fingerprint(p.dir, []string{".prep/knowledge"})
+	if err != nil {
+		p.t.Fatal(err)
+	}
+	for _, r := range contract.Requirements {
+		st := mdstore.Open(p.dir)
+		tr, err = domain.Load(st, &okf.Store{Root: p.dir}, false)
+		if err != nil {
+			p.t.Fatal(err)
+		}
+		c, err := tr.PlanEvidence(id, domain.VerificationEvidence{Requirement: r.ID, Result: "pass",
+			Method: "manual", Observation: "Fixture setup inspected.", By: "test/1", At: p.now,
+			Scopes: []string{".prep/knowledge"}, Snapshot: snapshot})
+		if err != nil {
+			p.t.Fatal(err)
+		}
+		if _, err := st.Apply(c); err != nil {
+			p.t.Fatal(err)
+		}
+	}
+}
+
 // sampleViews are more views than prep init writes, so tests can switch,
 // filter and reorder tabs.
 var sampleViews = []struct{ name, query string }{
@@ -156,6 +188,7 @@ func sample(t *testing.T) (*project, map[string]string) {
 	p.op(ids["format"], domain.OpClaim, domain.Input{})
 	p.record(ids["format"], domain.OpDecide, domain.RecordInput{Title: "CSV", Outcome: true})
 	p.record(ids["format"], domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "check", Index: 1}}})
+	p.verify(ids["format"])
 	p.op(ids["format"], domain.OpComplete, domain.Input{NoImpact: "fixture"})
 	return p, ids
 }
@@ -182,6 +215,7 @@ func knowledgeSample(t *testing.T) (*project, map[string]string) {
 	p.op(ids["doc"], domain.OpReady, domain.Input{})
 	p.op(ids["doc"], domain.OpClaim, domain.Input{})
 	p.record(ids["doc"], domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "check", Index: 1}}})
+	p.verify(ids["doc"])
 	p.op(ids["doc"], domain.OpComplete, domain.Input{Docs: []string{"/decisions/format.md"}})
 	return p, ids
 }
@@ -1297,6 +1331,8 @@ func TestTransitionsFromTheTUI(t *testing.T) {
 	run(m, "v")
 	run(m, "space")
 	run(m, "enter")
+	p.verify(id)
+	m.Update(loadedMsg(func() loadedMsg { tr, err := p.load(); return loadedMsg{tr, err} }()))
 	run(m, "a")
 	run(m, "f")
 	run(m, "enter") // no documentation decision yet

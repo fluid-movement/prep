@@ -100,6 +100,8 @@ func init() {
 		{"watch", false, "watch                      stream a line per change under .prep until killed (for harness integrations)", cmdWatch},
 		{"flags", false, "flags                      every query flag with the values it accepts now and their issue counts", cmdFlags},
 		{"knowledge", false, "knowledge list|find|show   read the knowledge base: list [--type --status --scope words], find <query> [--max N] (best sections), show <entry>[#section]... [--outline]", cmdKnowledge},
+		{"evidence", false, "evidence show <id>         inspect reported verification and current applicability", cmdEvidence},
+		{"evidence", true, "evidence record <id>       record scoped manual or automated results (never executes checks)", cmdEvidence},
 		{"policy", false, "policy show [id]          show project policy or an issue's bound/current contracts", cmdPolicy},
 		{"policy", true, "policy set --verification V --documentation D | adopt <id>  record or explicitly adopt completion methods", cmdPolicy},
 		{"views", false, "views                      saved views from config.yaml (else config.yaml.dist)", cmdViews},

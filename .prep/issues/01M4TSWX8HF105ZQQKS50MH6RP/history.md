@@ -1,3 +1,9 @@
 - 2026-10-13T16:47:43Z codex: First tested increment: explicit policy set/show, strict project.md roundtrip, missing-policy readiness gate, legacy-record compatibility, fixture updates. go test ./... passes. Remaining acceptance criteria (evidence, applicability, reconciliation, exceptions) are not implemented; issue stays in progress.
 
 - 2026-10-13T16:53:20Z codex: Second increment: ready records snapshot content-addressed effective contracts; ancestor/reparent/criterion/method changes invalidate bindings; claim and completion gates require explicit policy adopt; legacy records remain unbound. Added strict roundtrip and domain stability tests. Evidence and exceptions remain pending.
+
+- 2026-10-14T09:12:22Z codex: Implemented the scoped verification increment: evidence record/show, latest-report completion gates, work/configuration fingerprints, persisted report integrity and resolution snapshots, guide instructions, fixture migration and regression coverage. Missing, failed and inapplicable reports block policy-bound completion. Human-approved exceptions, approval to retain old policies, and approved inherited DoD opt-outs remain pending; this issue is not complete. Release 0.3 now includes the lifecycle parent; knowledge lifecycle implementation is tracked in 01M4WSRP2FYKRNT2P61T88X9TH.
+
+- 2026-10-14T09:13:44Z codex: Verification: go test ./... and go vet ./... passed; prep fmt --check passed and source CLI prep check reports zero errors. Release this claim after committing the evidence increment to prioritize critical Codex attribution issue 01M4WTN9CB82MSZYCDTWJY2RPN at user request. Acceptance criterion 3 remains unchecked because approved exceptions and policy retention are not implemented.
+
+- 2026-10-14T09:13:46Z released by codex (claimed by codex at 2026-10-13T14:33:33Z): Evidence increment ready to commit; switch to critical Codex attribution fix at user request. Human-approved exceptions and policy retention remain pending.

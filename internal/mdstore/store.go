@@ -17,6 +17,7 @@ import (
 	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/palette"
+	"github.com/fluid-movement/prep/internal/worktree"
 	"gopkg.in/yaml.v3"
 )
 
@@ -85,7 +86,7 @@ func (s *Store) read(rel string) (string, bool, error) {
 
 // Allowed top-level entries.
 var (
-	issueFiles   = map[string]bool{"issue.md": true, "acceptance.md": true, "context.md": true, "decisions.md": true, "history.md": true, "findings.md": true, "ready.md": true, "claim.md": true, "resolution.md": true}
+	issueFiles   = map[string]bool{"issue.md": true, "acceptance.md": true, "context.md": true, "decisions.md": true, "history.md": true, "findings.md": true, "ready.md": true, "claim.md": true, "resolution.md": true, "verification.md": true}
 	issueDirs    = map[string]bool{"baselines": true, "attachments": true}
 	schemaFiles  = []string{"acceptance.md", "context.md", "decisions.md", "history.md"}
 	projectFiles = map[string]bool{"project.md": true, "config.yaml": true, "config.yaml.dist": true, "issues": true, "knowledge": true, ".gitignore": true, activity.Dir: true}
@@ -313,8 +314,17 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 	if err := record("claim.md", func(raw string) (err error) { i.Claim, err = parseClaim(raw); return }, func() string { return renderClaim(i.Claim) }); err != nil {
 		return nil, nil, err
 	}
+	if err := record("verification.md", func(raw string) (err error) { i.Verification, err = parseVerification(raw); return }, func() string { return renderVerification(i.Verification) }); err != nil {
+		return nil, nil, err
+	}
 	if err := record("resolution.md", func(raw string) (err error) { i.Resolution, err = parseResolution(raw); return }, func() string { return renderResolution(i.Resolution) }); err != nil {
 		return nil, nil, err
+	}
+	i.EvidenceCurrent = map[string]bool{}
+	for _, e := range i.Verification {
+		paths := append(append([]string(nil), e.Scopes...), e.ConfigScopes...)
+		fingerprint, err := worktree.Fingerprint(s.Root, paths)
+		i.EvidenceCurrent[e.ID] = err == nil && fingerprint == e.Snapshot
 	}
 	return i, diags, nil
 }

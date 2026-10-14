@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/setup"
 )
 
@@ -75,6 +76,24 @@ func (h *harness) newIssue(args ...string) string {
 	var r writeResult
 	h.jsonOf(&r, append([]string{"new"}, args...)...)
 	return r.ID
+}
+
+// verify supplies explicit manual reports for fixtures whose completion is
+// incidental to the behavior under test. Evidence tests record their own runs.
+func (h *harness) verify(id string) {
+	h.t.Helper()
+	var policy struct {
+		Bound *domain.CompletionContract `json:"bound"`
+	}
+	h.jsonOf(&policy, "policy", "show", id)
+	if policy.Bound == nil {
+		h.t.Fatal("fixture has no bound completion contract")
+	}
+	for _, requirement := range policy.Bound.Requirements {
+		h.ok("evidence", "record", id, "--requirement", requirement.ID,
+			"--result", "pass", "--method", "manual", "--observation", "Fixture behavior inspected.",
+			"--scope", ".prep/knowledge", "--by", "agent/test")
+	}
 }
 
 func (h *harness) state(id string) (string, bool) {
@@ -218,6 +237,7 @@ func TestLifecycle(t *testing.T) {
 	h.fails("G_EVIDENCE", "complete", a, "--commit", "not-a-hash", "--no-impact", "none", "--json")
 	h.fails("G_DOCS", "complete", a, "--commit", "abc1234", "--json")
 	h.fails("G_ACTOR", "complete", a, "--commit", "abc1234", "--no-impact", "none", "--by", "human:andre", "--json")
+	h.verify(a)
 	h.ok("complete", a, "--commit", "abc1234", "--docs", "overview")
 	h.expectState(a, "done", false)
 	res := h.read(a, "resolution.md")
@@ -259,10 +279,12 @@ func TestParentCompletesWhenChildrenResolved(t *testing.T) {
 	h.ok("ready", c) // manual issues need no context
 	h.ok("claim", c)
 	h.replace(c, "acceptance.md", "- [ ]", "- [x]")
+	h.verify(c)
 	h.ok("complete", c, "--no-impact", "manual step", "--by", "human:andre")
 
 	h.fails("G_UNCHECKED", "complete", p, "--no-impact", "n/a", "--json")
 	h.replace(p, "acceptance.md", "- [ ]", "- [x]")
+	h.verify(p)
 	h.ok("complete", p, "--no-impact", "n/a")
 	h.expectState(p, "done", false)
 
@@ -285,11 +307,13 @@ func TestResearchAndDecisionEvidence(t *testing.T) {
 	}
 	h.fails("G_FINDINGS", "complete", r, "--no-impact", "x", "--json")
 	h.write(r, "findings.md", "Use the stdlib parser.\n")
+	h.verify(r)
 	h.ok("complete", r, "--no-impact", "x")
 
 	h.write(d, "decisions.md", "## D1: Use CSV\ndate: 2026-10-05\n\nDraft.\n")
 	h.fails("G_OUTCOME", "complete", d, "--no-impact", "x", "--json")
 	h.write(d, "decisions.md", "## D1: Use CSV\ndate: 2026-10-05\n\nDraft.\n\n## D2: Use JSON\ndate: 2026-10-06\nsupersedes: D1\noutcome: true\n\nAgreed with the user.\n")
+	h.verify(d)
 	h.ok("complete", d, "--no-impact", "x")
 
 	// The decision's outcome flows into dependents through guide.
@@ -1265,6 +1289,7 @@ func TestCompleteInTheSameCommit(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(h.dir, "export.go"), []byte("package export\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	h.verify(id)
 	h.ok("complete", id, "--no-impact", "test")
 	if out := h.ok("show", id); !strings.Contains(out, "not made yet") {
 		t.Fatalf("pending evidence not shown:\n%s", out)

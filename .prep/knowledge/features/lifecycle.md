@@ -22,7 +22,7 @@ States (never stored): resolution.md → done/dropped; claim.md with valid ready
 | --- | --- | --- |
 | define | open, or defined/ready when stale | title, valid kind, non-empty prose, empty Open questions |
 | ack | defined, ready, in progress when stale | empty Open questions; after a kind change on a signed-off issue, the context ready would require; rewrites ready.md to the new baseline |
-| ready | defined, not stale | at least one criterion; context.md non-empty unless manual or parent |
+| ready | defined, not stale | explicit project completion policy; at least one criterion; context.md non-empty unless manual or parent |
 | claim | ready, not stale | not a parent; dependencies done |
 | release | in progress | records the release in history.md |
 | complete | in progress (parents: ready or in progress) | not stale; all criteria checked; documentation decision; parents: children resolved; code: non-human actor, and a given --commit must be a hex hash; research: findings.md; decision: an outcome: true entry |
@@ -39,3 +39,4 @@ States (never stored): resolution.md → done/dropped; claim.md with valid ready
 - Parents are never claimed; their kind is ignored while they have children.
 
 Format of each record: [Storage format](/conventions/storage-format.md).
+Policy-bound issues additionally require passing applicable reports for each completion requirement, and explicit reconciliation when the contract changes. The informational Git commit reference above is separate from these reports; commits remain optional. Legacy records are not assigned fabricated contracts or reports. See [Completion policy and verification](/features/completion-policy.md).

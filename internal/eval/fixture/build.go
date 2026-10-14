@@ -611,6 +611,29 @@ func (p *Project) reach(run func(...string) (string, error), is IssueSpec, id, s
 				return err
 			}
 		}
+		// Completed fixture issues need explicit setup reports too. These are
+		// manual fixture observations, not evidence of a tested implementation.
+		policy, err := run("policy", "show", id, "--json")
+		if err != nil {
+			return err
+		}
+		var report struct {
+			Bound struct {
+				Requirements []struct {
+					ID string `json:"id"`
+				} `json:"requirements"`
+			} `json:"bound"`
+		}
+		if err := json.Unmarshal([]byte(policy), &report); err != nil {
+			return err
+		}
+		for _, r := range report.Bound.Requirements {
+			if _, err := run("evidence", "record", id, "--requirement", r.ID,
+				"--result", "pass", "--method", "manual", "--observation", "Fixture setup inspected.",
+				"--scope", ".prep/knowledge"); err != nil {
+				return err
+			}
+		}
 		if _, err := run("complete", id, "--no-impact", "fixture"); err != nil {
 			return err
 		}

@@ -219,6 +219,11 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 			return nil, nil, err
 		}
 	}
+	if c.Verification != nil {
+		if err := w("verification.md", renderVerification(*c.Verification)); err != nil {
+			return nil, nil, err
+		}
+	}
 	if c.Ready != nil {
 		if err := w("ready.md", renderReady(c.Ready)); err != nil {
 			return nil, nil, err
@@ -348,6 +353,13 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 					return "", false
 				}
 				return renderClaim(c), true
+			}},
+			{"verification.md", func(raw string) (string, bool) {
+				records, err := parseVerification(raw)
+				if err != nil {
+					return "", false
+				}
+				return renderVerification(records), true
 			}},
 			{"resolution.md", func(raw string) (string, bool) {
 				r, err := parseResolution(raw)

@@ -221,6 +221,11 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 		}
 	}
 	g.Step, g.Instructions, g.Outputs = stepContract(t, i, s, stale, parent, f)
+	if i.Ready != nil && i.Ready.Contract != nil && (s == StateReady || s == StateInProgress) {
+		g.Inputs = append(g.Inputs, Pointer{f("ready.md"), "bound completion requirements: prep policy show " + id, ""})
+		g.Instructions = append(g.Instructions, "Run the required checks yourself; prep never executes them. Use prep policy show "+id+" for requirement IDs, then prep evidence record "+id+" --requirement <id> --result pass|fail --method manual|automated --observation <text> --scope <work-path> (repeatable). Automated reports also need --command <command-run>; include check configuration with --config-scope <path>. Inspect applicability with prep evidence show "+id+"; changed scoped content invalidates earlier reports.")
+		g.Outputs = append(g.Outputs, Pointer{f("verification.md"), "versioned reported verification", "prep evidence record " + id + " --requirement <id> --result pass|fail --method manual|automated --observation <text> --scope <path>"})
+	}
 	if a := t.BootstrapAlert(); a != "" {
 		g.Alerts = append(g.Alerts, a)
 	}

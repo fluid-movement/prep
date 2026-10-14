@@ -29,3 +29,4 @@ Layout: code in `internal/eval/*`, content in `eval/` (`cases/<area>/*.yaml`, `f
 - **Mutation** (`mutate`): operators (`drop-rule`, `first-sentence`, `move-rule`, `replace-wording`, `drop-section`, `drop-hook`) and model proposals produce variants under `eval/variants/mutants/`, validated as plugins; `prep eval mutate` runs base and mutants and ranks them. Nothing edits the shipped plugin; promote a good mutant by hand through `just sync-skill`.
 - **What the cases ask**: see [Agent behavior test cases](/components/eval-cases.md).
 - **Not covered yet**: other harnesses (a follow-up issue in release 0.4.0), and the first live baseline run (it needs a token).
+Fixture completion setup records explicit manual observations for each bound requirement before completing an issue. These describe fixture construction, not independently verified implementation checks; live agent evaluation must supply its own reports. See [Completion policy](/features/completion-policy.md).
