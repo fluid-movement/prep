@@ -280,6 +280,7 @@ type Issue struct {
 	ResolutionHistory       []Resolution           `json:"resolution_history,omitempty"`
 	ResolutionReviews       []ResolutionReview     `json:"resolution_reviews,omitempty"`
 	ResolutionReviewCurrent map[string]bool        `json:"-"`
+	DependencyOverrides     []DependencyOverride   `json:"dependency_overrides,omitempty"`
 	Verification            []VerificationEvidence `json:"verification,omitempty"`
 	Approvals               []CompletionApproval   `json:"approvals,omitempty"`
 	KnowledgeReviews        []KnowledgeReview      `json:"knowledge_reviews,omitempty"`

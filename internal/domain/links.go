@@ -306,12 +306,23 @@ func applyLinkRename(i *Issue, old, new string) *Issue {
 // XIssue is another project's issue a dependency names, as the caller
 // found it through the project registry (Tree.External).
 type XIssue struct {
-	Ref    string  `json:"ref"` // <link>:<issue ID>
-	Link   string  `json:"link"`
-	ID     string  `json:"id"`
-	Status XStatus `json:"status"`
-	State  State   `json:"state,omitempty"`
-	Title  string  `json:"title,omitempty"`
+	Ref               string            `json:"ref"` // <link>:<issue ID>
+	Link              string            `json:"link"`
+	ID                string            `json:"id"`
+	Status            XStatus           `json:"status"`
+	Outcome           DependencyOutcome `json:"outcome"`
+	State             State             `json:"state,omitempty"`
+	Title             string            `json:"title,omitempty"`
+	ReviewStatus      string            `json:"review_status,omitempty"`
+	SourceProjectID   string            `json:"source_project_id,omitempty"`
+	Revision          string            `json:"revision,omitempty"`
+	TargetDigest      string            `json:"target_digest,omitempty"`
+	Uncertainty       string            `json:"uncertainty,omitempty"`
+	ProvenanceWarning string            `json:"provenance_warning,omitempty"`
+	OverrideStatus    string            `json:"override_status,omitempty"`
+	OverrideReason    string            `json:"override_reason,omitempty"`
+	OverrideBy        string            `json:"override_by,omitempty"`
+	RequiresApproval  bool              `json:"requires_approval,omitempty"`
 	// Project is the project's own name there; Root its checkout.
 	Project string `json:"project,omitempty"`
 	Root    string `json:"root,omitempty"`
@@ -327,6 +338,47 @@ const (
 	XMissing XStatus = "missing" // the project is checked out, the issue is not there
 	XUnknown XStatus = "unknown" // the project is not checked out here (or the link is undefined)
 )
+
+// DependencyOutcome describes whether a dependency is met independently of
+// whether its source checkout could be read. Unknown outcomes fail closed at
+// claim time unless the dependent issue has a current human override.
+type DependencyOutcome string
+
+const (
+	DependencySatisfied   DependencyOutcome = "satisfied"
+	DependencyUnsatisfied DependencyOutcome = "unsatisfied"
+	DependencyUnknown     DependencyOutcome = "unknown"
+)
+
+// ObservationDigest identifies the local source observation shown to a
+// human. It includes checkout provenance and the target's current content,
+// state, and review status; no remote data is fetched.
+func (x XIssue) ObservationDigest() string {
+	return contentID(struct {
+		Ref, Status, Outcome, State, Title, ReviewStatus string
+		ProjectID, Project, Root, Remote, Revision       string
+		TargetDigest, Uncertainty, ProvenanceWarning     string
+	}{x.Ref, string(x.Status), string(x.Outcome), string(x.State), x.Title, x.ReviewStatus,
+		x.SourceProjectID, x.Project, x.Root, x.Remote, x.Revision, x.TargetDigest, x.Uncertainty, x.ProvenanceWarning})
+}
+
+// DependencyTargetDigest hashes only issue content needed to reconcile an
+// external prerequisite; its caller adds checkout revision and review status.
+func DependencyTargetDigest(i *Issue) string {
+	if i == nil {
+		return ""
+	}
+	return contentID(struct {
+		ID, Title, Kind, Body, Parent string
+		DependsOn                     []string
+		DependsOnApproval             []string
+		Criteria                      []Criterion
+		Baselines                     []Baseline
+		Ready                         *Ready
+		Claim                         *Claim
+		Resolution                    *Resolution
+	}{i.ID, i.Title, string(i.Kind), i.Body, i.Parent, i.DependsOn, i.DependsOnApproval, i.Criteria, i.Baselines, i.Ready, i.Claim, i.Resolution})
+}
 
 // XRefs lists the cross-project dependencies in the tree, once each, in
 // issue order.
@@ -351,7 +403,7 @@ func (t *Tree) XIssueOf(ref string) XIssue {
 		return x
 	}
 	name, id, _ := SplitRef(ref)
-	x := XIssue{Ref: ref, Link: name, ID: id, Status: XUnknown}
+	x := XIssue{Ref: ref, Link: name, ID: id, Status: XUnknown, Outcome: DependencyUnknown}
 	if l, ok := t.Project.Link(name); ok {
 		x.Remote = l.Remote
 	}
@@ -360,7 +412,7 @@ func (t *Tree) XIssueOf(ref string) XIssue {
 
 // DepState returns a dependency's state: a local issue's, or a found
 // cross-project issue's. known is false for a cross-project issue that
-// is missing or not checked out: it never blocks.
+// is missing or not checked out; those outcomes block unless overridden.
 func (t *Tree) DepState(d string) (s State, known bool) {
 	if _, _, ok := SplitRef(d); !ok {
 		return t.State(d), true

@@ -110,7 +110,7 @@ func (t *Tree) inboxItem(id string, issue *Issue) (InboxItem, bool) {
 		if _, _, external := SplitRef(dep); !external {
 			continue
 		}
-		if _, known := t.DepState(dep); !known {
+		if _, known := t.DepState(dep); !known && t.DependencyOverrideStatus(id, dep) != "current" {
 			unknown = append(unknown, dep)
 		}
 	}

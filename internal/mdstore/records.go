@@ -85,6 +85,10 @@ type resolutionReviewsFM struct {
 	Reviews []domain.ResolutionReview `yaml:"reviews"`
 }
 
+type dependencyOverridesFM struct {
+	Overrides []domain.DependencyOverride `yaml:"overrides"`
+}
+
 type projectFM struct {
 	Schema        int                       `yaml:"schema"`
 	ID            string                    `yaml:"id,omitempty"`
@@ -793,6 +797,34 @@ func validateResolutionReviewChain(reviews []domain.ResolutionReview) error {
 
 func renderResolutionReviews(reviews []domain.ResolutionReview) string {
 	return withFrontmatter(encodeYAML(resolutionReviewsFM{Reviews: reviews}), "")
+}
+
+func parseDependencyOverrides(raw string) ([]domain.DependencyOverride, error) {
+	fm, body, ok, err := splitFrontmatter(raw)
+	if err != nil {
+		return nil, err
+	}
+	if !ok || strings.TrimSpace(body) != "" {
+		return nil, fmt.Errorf("dependency-overrides.md must contain frontmatter and no body")
+	}
+	var f dependencyOverridesFM
+	if err := decodeStrict(fm, &f); err != nil {
+		return nil, err
+	}
+	if f.Overrides == nil {
+		f.Overrides = []domain.DependencyOverride{}
+	}
+	if err := domain.ValidateDependencyOverrides(f.Overrides); err != nil {
+		return nil, err
+	}
+	return f.Overrides, nil
+}
+
+func renderDependencyOverrides(overrides []domain.DependencyOverride) string {
+	if overrides == nil {
+		overrides = []domain.DependencyOverride{}
+	}
+	return withFrontmatter(encodeYAML(dependencyOverridesFM{Overrides: overrides}), "")
 }
 
 // --- project.md ---

@@ -136,10 +136,10 @@ func (m *Model) projectRows(inner, rows int) []pickRow {
 // name before the ID, the state from that project, and for one not
 // checked out here the clone hint in place of a title.
 func (m *Model) xDepLine(ref string, k int, selected bool, key string, inner int) string {
-	x := m.tree.XIssueOf(ref)
+	x := m.tree.ExternalDependency(m.selected(), ref)
 	sub := m.th.S.Subtle
 	lead := sub.Render("← needs ")
-	if x.Status == domain.XFound && !x.State.Terminal() {
+	if x.Outcome != domain.DependencySatisfied && x.OverrideStatus != "current" {
 		lead = lipgloss.NewStyle().Foreground(m.th.C.Warning).Render("← needs ")
 	}
 	l := ui.Link{Lead: lead + m.th.S.Muted.Render(x.Link+" › "), State: x.State, ID: shortID(x.ID), Title: x.Title, Key: key}
@@ -147,10 +147,29 @@ func (m *Model) xDepLine(ref string, k int, selected bool, key string, inner int
 	case domain.XMissing:
 		l.Title = sub.Render("no such issue in " + x.Project)
 	case domain.XUnknown:
-		l.Title = sub.Render("not checked out here")
-		if x.Remote != "" {
-			l.Title = sub.Render("not checked out here · clone " + x.Remote)
+		l.Title = sub.Render("unknown: " + x.Uncertainty)
+		if x.Uncertainty == "" {
+			l.Title = sub.Render("not checked out here")
 		}
+		if x.Remote != "" {
+			l.Title += sub.Render(" · clone " + x.Remote)
+		}
+	}
+	if x.RequiresApproval && x.ReviewStatus != domain.ReviewApproved {
+		status := x.ReviewStatus
+		if status == domain.ReviewNone && x.Status != domain.XFound {
+			status = "unknown"
+		}
+		l.Title += sub.Render(" · approval " + status + " required")
+	}
+	if x.OverrideStatus != "none" {
+		l.Title += sub.Render(" · override " + x.OverrideStatus)
+		if x.OverrideReason != "" {
+			l.Title += sub.Render(" by " + x.OverrideBy + ": " + x.OverrideReason)
+		}
+	}
+	if x.ProvenanceWarning != "" {
+		l.Title += sub.Render(" · warning: " + x.ProvenanceWarning)
 	}
 	return ui.LinkLine(m.th, l, selected, inner)
 }

@@ -192,13 +192,22 @@ func (t *Tree) Drifted(i *Issue) bool {
 	return b.Requirement != i.Body || b.Kind != i.Kind
 }
 
-// UnresolvedDeps returns dependencies that are not done. A cross-project
-// dependency that cannot be resolved here (unknown) is left out: it never
-// blocks.
+// UnresolvedDeps returns dependencies that are not satisfied. Unknown
+// cross-project dependencies block unless the newest human override matches
+// both the current source observation and local requirement snapshot.
 func (t *Tree) UnresolvedDeps(id string) []string {
 	var out []string
 	for _, d := range t.Issues[id].DependsOn {
-		if s, known := t.DepState(d); known && (s != StateDone || slices.Contains(t.Issues[id].DependsOnApproval, d) && t.ResolutionReviewStatus(d) != ReviewApproved) {
+		switch t.DependencyOutcome(d) {
+		case DependencySatisfied:
+			if slices.Contains(t.Issues[id].DependsOnApproval, d) && t.DependencyApprovalStatus(d) != ReviewApproved {
+				out = append(out, d)
+			}
+		case DependencyUnknown:
+			if slices.Contains(t.Issues[id].DependsOnApproval, d) && t.DependencyApprovalStatus(d) != ReviewApproved || t.DependencyOverrideStatus(id, d) != "current" {
+				out = append(out, d)
+			}
+		default:
 			out = append(out, d)
 		}
 	}

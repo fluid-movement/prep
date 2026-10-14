@@ -314,7 +314,7 @@ func cmdEdit(a *app, args []string) error {
 	var deps multi
 	fs.Var(&deps, "depends-on", "dependency id (repeatable, replaces the list; '' clears it)")
 	var approvalDeps multi
-	fs.Var(&approvalDeps, "depends-on-approval", "local dependency id that must have human resolution approval (repeatable, replaces the list; '' clears it)")
+	fs.Var(&approvalDeps, "depends-on-approval", "dependency id or project:id that must have human resolution approval (repeatable, replaces the list; '' clears it)")
 	var tags multi
 	fs.Var(&tags, "tag", "tag (repeatable or comma-separated, replaces the list; '' clears it)")
 	fs.Var(&tags, "tags", "alias of --tag")
@@ -386,15 +386,13 @@ func cmdEdit(a *app, args []string) error {
 				if ref == "" {
 					return usageErr("--depends-on-approval '' clears the list and cannot be combined with IDs")
 				}
-				if strings.Contains(ref, ":") {
-					return usageErr("approval prerequisites are supported only for local dependency IDs")
-				}
-				dep, err := t.Resolve(ref)
+				resolved, _, err := a.resolveDeps(t, []string{ref})
 				if err != nil {
 					return err
 				}
+				dep := resolved[0]
 				if !slices.Contains(ordinary, dep) {
-					return usageErr("--depends-on-approval ID must also appear in --depends-on")
+					return usageErr("--depends-on-approval dependency must also appear in --depends-on")
 				}
 				if !slices.Contains(list, dep) {
 					list = append(list, dep)

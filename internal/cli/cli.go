@@ -104,6 +104,8 @@ func init() {
 		{"evidence", true, "evidence record <id>       record scoped manual or automated results (never executes checks)", cmdEvidence},
 		{"exception", false, "exception show <id>        inspect verification waivers and applicability", cmdException},
 		{"exception", true, "exception approve <id> --requirement R --reason T --scope P --by human:N  approve a scoped waiver", cmdException},
+		{"dependency", false, "dependency show <id>         show external dependency observations and override applicability", cmdDependency},
+		{"dependency", true, "dependency override <id> <project:id> --reason T --by human:N  override one unknown external dependency observation", cmdDependency},
 		{"policy", false, "policy show [id]          show project policy or an issue's bound/current contracts", cmdPolicy},
 		{"policy", true, "policy set --verification V --documentation D | adopt <id> | retain <id> --reason T --by human:N  configure or reconcile completion methods", cmdPolicy},
 		{"views", false, "views                      saved views from config.yaml (else config.yaml.dist)", cmdViews},

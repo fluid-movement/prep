@@ -116,11 +116,11 @@ func TestInboxReadyGatesAndStaleRequirement(t *testing.T) {
 	}
 }
 
-func TestInboxUnknownExternalDependencyDoesNotChangeBlocking(t *testing.T) {
+func TestInboxUnknownExternalDependencyBlocksClaim(t *testing.T) {
 	i := &Issue{ID: inboxID1, Title: "External dependency", Kind: KindManual, DependsOn: []string{"api:01M4FFFFFFFFFFFFFFFFFFFFFF"}}
 	tree := NewTree(Project{Links: []ProjectLink{{Name: "api"}}}, []*Issue{i}, nil, nil)
-	if tree.Blocked(i.ID) {
-		t.Fatal("unknown external dependency must remain non-blocking")
+	if !tree.Blocked(i.ID) {
+		t.Fatal("unknown external dependency must block claims until observed or overridden")
 	}
 	got := tree.Inbox()
 	if len(got) != 1 || got[0].Category != InboxUnknownDependency || got[0].IssueID != i.ID {

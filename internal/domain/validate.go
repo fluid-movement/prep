@@ -56,6 +56,9 @@ func Validate(t *Tree) []Diagnostic {
 		w := func(code string, class Class, file, fix, format string, a ...any) {
 			add(Diagnostic{Code: code, Severity: SevWarning, Class: class, Issue: id, File: file, Message: fmt.Sprintf(format, a...), Fix: fix})
 		}
+		if err := ValidateDependencyOverrides(i.DependencyOverrides); err != nil {
+			e(CodeRecordInvalid, ClassManual, "dependency-overrides.md", "restore the original dependency override history", "invalid dependency override history: %v", err)
+		}
 
 		if strings.TrimSpace(i.Title) == "" {
 			e(CodeTitleMissing, ClassManual, "issue.md", "add a title to the frontmatter", "title is missing")
@@ -114,8 +117,6 @@ func Validate(t *Tree) []Diagnostic {
 				w(CodeDuplicateDep, ClassFixable, "issue.md", "prep edit removes duplicate approval dependencies", "approval dependency %s listed twice", d)
 			} else if !seen[d] {
 				e(CodeDepMissing, ClassManual, "issue.md", "add it to depends_on or remove it from depends_on_approval", "approval dependency %s is not an ordinary dependency", d)
-			} else if _, _, cross := SplitRef(d); cross {
-				e(CodeDepMissing, ClassManual, "issue.md", "approval prerequisites are supported only for local dependencies", "approval dependency %s is cross-project", d)
 			}
 			seenApprovalDeps[d] = true
 		}

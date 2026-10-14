@@ -1,12 +1,15 @@
 package projects
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/fluid-movement/prep/internal/domain"
+	"github.com/fluid-movement/prep/internal/gitx"
 	"github.com/fluid-movement/prep/internal/mdstore"
 )
 
@@ -118,36 +121,51 @@ func FixRemotes(p domain.Project) ([]domain.ProjectLink, bool) {
 }
 
 // issueTrees loads other projects' issues (no knowledge) once per root.
-type issueTrees map[string]*domain.Tree
+type issueTrees struct {
+	trees map[string]*domain.Tree
+	diags map[string][]domain.Diagnostic
+}
 
-func (c issueTrees) get(root string) (*domain.Tree, error) {
-	if t, ok := c[root]; ok {
+func (c *issueTrees) get(root string) (*domain.Tree, error) {
+	if c.trees == nil {
+		c.trees = map[string]*domain.Tree{}
+	}
+	if c.diags == nil {
+		c.diags = map[string][]domain.Diagnostic{}
+	}
+	if t, ok := c.trees[root]; ok {
 		return t, nil
 	}
-	p, issues, _, err := mdstore.Open(root).Load()
+	p, issues, diags, err := mdstore.Open(root).Load()
 	if err != nil {
 		return nil, err
 	}
 	t := domain.NewTree(p, issues, nil, nil)
-	c[root] = t
+	c.trees[root], c.diags[root] = t, diags
 	return t, nil
 }
 
 // LoadTree returns the issues of the project at root, without its
 // knowledge base: what a cross-project reference needs.
-func LoadTree(root string) (*domain.Tree, error) { return issueTrees{}.get(root) }
+func LoadTree(root string) (*domain.Tree, error) { return (&issueTrees{}).get(root) }
 
 // ResolveExternal fills t.External with every cross-project dependency in
 // t: found (with state and title), missing in the checked-out project, or
 // unknown when the project is not checked out here. It loads each other
 // project once, and nothing when t has no cross-project dependencies.
 func ResolveExternal(t *domain.Tree) {
+	t.External = map[string]domain.XIssue{}
 	refs := t.XRefs()
 	if len(refs) == 0 {
 		return
 	}
 	rs, err := ResolveLinks(t.Project)
 	if err != nil {
+		for _, ref := range refs {
+			x := t.XIssueOf(ref)
+			x.Outcome, x.Uncertainty = domain.DependencyUnknown, "project registry could not be read: "+err.Error()
+			t.External[ref] = x
+		}
 		return
 	}
 	byName := map[string]Resolution{}
@@ -155,21 +173,105 @@ func ResolveExternal(t *domain.Tree) {
 		byName[r.Name] = r
 	}
 	trees := issueTrees{}
-	t.External = map[string]domain.XIssue{}
 	for _, ref := range refs {
 		x := t.XIssueOf(ref)
 		r, ok := byName[x.Link]
-		if ok && r.Checkout != nil {
-			x.Project, x.Root = r.Checkout.Name, r.Checkout.Root
-			if other, err := trees.get(r.Checkout.Root); err == nil {
-				x.Status = domain.XMissing
-				if i := other.Issues[x.ID]; i != nil {
-					x.Status, x.State, x.Title = domain.XFound, other.State(x.ID), i.Title
+		x.Outcome = domain.DependencyUnknown
+		switch {
+		case !ok:
+			x.Uncertainty = "project link is undefined"
+		case r.Checkout == nil:
+			x.SourceProjectID, x.Project, x.Remote = r.ID, r.Name, r.Remote
+			x.Uncertainty = "source project is not checked out on this machine"
+		default:
+			x.SourceProjectID, x.Project, x.Root = r.ID, r.Checkout.Name, r.Checkout.Root
+			if revision, err := gitx.Head(r.Checkout.Root); err == nil {
+				x.Revision = revision
+			} else {
+				x.ProvenanceWarning = "source Git revision is unavailable: " + err.Error()
+			}
+			other, err := trees.get(r.Checkout.Root)
+			if err != nil {
+				x.Status = domain.XUnknown
+				x.Uncertainty = "source checkout could not be read: " + err.Error()
+				break
+			}
+			if other.Project.ID != r.ID {
+				x.Status = domain.XUnknown
+				x.SourceProjectID = other.Project.ID
+				x.Uncertainty = fmt.Sprintf("checkout project ID %q does not match linked ID %q", other.Project.ID, r.ID)
+				break
+			}
+			invalid := ""
+			sourceDiagnostics := append([]domain.Diagnostic(nil), trees.diags[r.Checkout.Root]...)
+			sourceDiagnostics = append(sourceDiagnostics, domain.Validate(other)...)
+			for _, d := range sourceDiagnostics {
+				if d.Severity == domain.SevError && (d.Issue == "" || d.Issue == x.ID) {
+					invalid = fmt.Sprintf("source checkout has invalid %s: %s", d.File, d.Message)
+					break
 				}
+			}
+			if invalid != "" {
+				x.Status, x.Uncertainty = domain.XUnknown, invalid
+				x.TargetDigest, err = rawDependencyTargetDigest(r.Checkout.Root, x.ID)
+				if err != nil {
+					x.Uncertainty += "; target records could not be fingerprinted: " + err.Error()
+				}
+				break
+			}
+			if i := other.Issues[x.ID]; i != nil {
+				x.Status, x.State, x.Title = domain.XFound, other.State(x.ID), i.Title
+				x.ReviewStatus = other.ResolutionReviewStatus(x.ID)
+				x.TargetDigest = domain.DependencyTargetDigest(i)
+				if x.State == domain.StateDone {
+					x.Outcome = domain.DependencySatisfied
+				} else {
+					x.Outcome = domain.DependencyUnsatisfied
+				}
+			} else {
+				x.Status = domain.XMissing
+				x.Uncertainty = "target issue is missing from the checked-out source; checkout may be stale"
 			}
 		}
 		t.External[ref] = x
 	}
+}
+
+// rawDependencyTargetDigest fingerprints on-disk target records when the
+// source cannot be parsed. In particular, the same parser error can arise
+// from different uncommitted contents, and an override must become stale
+// when those contents change.
+func rawDependencyTargetDigest(root, id string) (string, error) {
+	dir := filepath.Join(root, mdstore.Dir, "issues", id)
+	h := sha256.New()
+	err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		rel = filepath.ToSlash(rel)
+		if rel != "issue.md" && rel != "acceptance.md" && rel != "ready.md" && rel != "claim.md" && rel != "resolution.md" && rel != "resolution-history.md" && rel != "resolution-reviews.md" && rel != "dependency-overrides.md" && !strings.HasPrefix(rel, "baselines/") {
+			return nil
+		}
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		h.Write([]byte(rel + "\x00"))
+		h.Write(contents)
+		h.Write([]byte("\x00"))
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // ResolveDep turns a cross-project dependency as given ("<project>:<ID or
@@ -201,7 +303,7 @@ func ResolveDep(t *domain.Tree, link, rest string) (ref string, add *domain.Proj
 			add = &l
 		}
 	}
-	x = domain.XIssue{Link: l.Name, Status: domain.XUnknown, Remote: l.Remote}
+	x = domain.XIssue{Link: l.Name, Status: domain.XUnknown, Outcome: domain.DependencyUnknown, Remote: l.Remote}
 	co, found, err := ByID(l.ID)
 	if err != nil {
 		return "", nil, x, err
@@ -224,6 +326,13 @@ func ResolveDep(t *domain.Tree, link, rest string) (ref string, add *domain.Proj
 			return "", nil, x, &domain.Error{Code: domain.ErrUsage, Message: fmt.Sprintf("cannot depend on dropped issue %s:%s", l.Name, id)}
 		}
 		x.ID, x.Status, x.State, x.Title, x.Project, x.Root = id, domain.XFound, other.State(id), other.Issues[id].Title, co.Name, co.Root
+		x.ReviewStatus = other.ResolutionReviewStatus(id)
+		x.TargetDigest = domain.DependencyTargetDigest(other.Issues[id])
+		if x.State == domain.StateDone {
+			x.Outcome = domain.DependencySatisfied
+		} else {
+			x.Outcome = domain.DependencyUnsatisfied
+		}
 	}
 	x.Ref = l.Name + ":" + x.ID
 	return x.Ref, add, x, nil

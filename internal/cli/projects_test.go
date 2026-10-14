@@ -318,11 +318,31 @@ func TestCrossProjectDependencies(t *testing.T) {
 
 	// Not checked out here: unknown, never blocking, never an error.
 	os.RemoveAll(filepath.Join(api.dir, ".prep"))
-	if out := home.ok("show", id); !strings.Contains(out, "unknown: not checked out here") {
+	if out := home.ok("show", id); !strings.Contains(out, "source project is not checked out") {
 		t.Fatalf("unknown: %s", out)
+	}
+	if _, out := home.run("claim", id); !strings.Contains(out, "dependencies not done") {
+		t.Fatalf("claim should block on unknown dependency: %s", out)
 	}
 	if code, out := home.run("check"); code != 0 || strings.Contains(out, "X00") {
 		t.Fatalf("check: %s", out)
+	}
+	home.fails("requires a reason", "dependency", "override", id, "api:"+target, "--by", "human:alex")
+	if _, err := os.Stat(filepath.Join(home.dir, ".prep", "issues", id, "dependency-overrides.md")); !os.IsNotExist(err) {
+		t.Fatalf("missing-reason attempt wrote override record: %v", err)
+	}
+	home.ok("dependency", "override", id, "api:"+target, "--reason", "Proceed while source is unavailable", "--by", "human:alex")
+	var deps struct {
+		Dependencies []struct {
+			Observation domain.XIssue `json:"observation"`
+		} `json:"dependencies"`
+	}
+	home.jsonOf(&deps, "dependency", "show", id)
+	if len(deps.Dependencies) != 1 || deps.Dependencies[0].Observation.OverrideStatus != "current" {
+		t.Fatalf("dependency override should remain current after reload: %+v", deps)
+	}
+	if out := home.ok("show", id); !strings.Contains(out, "override current") {
+		t.Fatalf("show should explain current override: %s", out)
 	}
 	home.fails("not checked out here", "new", "--title", "Y", "--kind", "code", "--depends-on", "api:"+target[20:])
 }

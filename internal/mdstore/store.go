@@ -87,7 +87,7 @@ func (s *Store) read(rel string) (string, bool, error) {
 
 // Allowed top-level entries.
 var (
-	issueFiles   = map[string]bool{"issue.md": true, "acceptance.md": true, "context.md": true, "decisions.md": true, "history.md": true, "findings.md": true, "ready.md": true, "claim.md": true, "resolution.md": true, "resolution-history.md": true, "resolution-reviews.md": true, "verification.md": true, "approvals.md": true, "knowledge-reviews.md": true}
+	issueFiles   = map[string]bool{"issue.md": true, "acceptance.md": true, "context.md": true, "decisions.md": true, "history.md": true, "findings.md": true, "ready.md": true, "claim.md": true, "resolution.md": true, "resolution-history.md": true, "resolution-reviews.md": true, "verification.md": true, "approvals.md": true, "knowledge-reviews.md": true, "dependency-overrides.md": true}
 	issueDirs    = map[string]bool{"baselines": true, "attachments": true}
 	schemaFiles  = []string{"acceptance.md", "context.md", "decisions.md", "history.md"}
 	projectFiles = map[string]bool{"project.md": true, "config.yaml": true, "config.yaml.dist": true, "issues": true, "knowledge": true, ".gitignore": true, activity.Dir: true}
@@ -319,6 +319,9 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 		return nil, nil, err
 	}
 	if err := record("knowledge-reviews.md", func(raw string) (err error) { i.KnowledgeReviews, err = parseKnowledgeReviews(raw); return }, func() string { return renderKnowledgeReviews(i.KnowledgeReviews) }); err != nil {
+		return nil, nil, err
+	}
+	if err := record("dependency-overrides.md", func(raw string) (err error) { i.DependencyOverrides, err = parseDependencyOverrides(raw); return }, func() string { return renderDependencyOverrides(i.DependencyOverrides) }); err != nil {
 		return nil, nil, err
 	}
 	if err := record("approvals.md", func(raw string) error {

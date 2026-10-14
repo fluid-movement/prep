@@ -240,6 +240,14 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 			return nil, nil, err
 		}
 	}
+	if c.DependencyOverrides != nil {
+		if err := s.cas(dir + "/dependency-overrides.md"); err != nil {
+			return nil, nil, err
+		}
+		if err := w("dependency-overrides.md", renderDependencyOverrides(*c.DependencyOverrides)); err != nil {
+			return nil, nil, err
+		}
+	}
 	if c.Approvals != nil || c.DoDRevision != nil || c.OptOutRevisions != nil {
 		var state approvalsFM
 		if err := s.cas(dir + "/approvals.md"); err != nil {
@@ -432,6 +440,13 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 					return "", false
 				}
 				return renderKnowledgeReviews(records), true
+			}},
+			{"dependency-overrides.md", func(raw string) (string, bool) {
+				records, err := parseDependencyOverrides(raw)
+				if err != nil {
+					return "", false
+				}
+				return renderDependencyOverrides(records), true
 			}},
 			{"resolution.md", func(raw string) (string, bool) {
 				r, err := parseResolution(raw)

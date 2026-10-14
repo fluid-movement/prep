@@ -57,7 +57,7 @@ func summarize(t *domain.Tree, id string) summary {
 	}
 	for _, d := range i.DependsOn {
 		if _, _, ok := domain.SplitRef(d); ok {
-			s.CrossDeps = append(s.CrossDeps, t.XIssueOf(d))
+			s.CrossDeps = append(s.CrossDeps, t.ExternalDependency(id, d))
 		}
 	}
 	s.OpenQuestions = strings.TrimSpace(i.OpenQuestions) != ""
@@ -417,7 +417,7 @@ func cmdShow(a *app, args []string) error {
 	}
 	for _, d := range i.DependsOn {
 		if _, _, ok := domain.SplitRef(d); ok {
-			a.printf("depends on: %s\n", xDepLine(t.XIssueOf(d)))
+			a.printf("depends on: %s\n", xDepLine(t.ExternalDependency(id, d)))
 			continue
 		}
 		label := "depends on"
@@ -885,17 +885,42 @@ func otherProjects(root, id string, max int) []string {
 
 // xDepLine describes a cross-project dependency for text output.
 func xDepLine(x domain.XIssue) string {
+	approval := ""
+	if x.RequiresApproval && x.ReviewStatus != domain.ReviewApproved {
+		status := x.ReviewStatus
+		if status == domain.ReviewNone && x.Status != domain.XFound {
+			status = "unknown"
+		}
+		approval = "; approval " + status + " required"
+	}
+	override := ""
+	if x.OverrideStatus != "none" {
+		override = "; override " + x.OverrideStatus + " by " + x.OverrideBy + ": " + x.OverrideReason
+	}
 	switch x.Status {
 	case domain.XFound:
-		return fmt.Sprintf("%s [%s] %s (in %s; prep show %s --project %s)", x.Ref, x.State, x.Title, x.Project, x.ID, x.Link)
+		state := string(x.State)
+		if x.Outcome == domain.DependencyUnsatisfied && x.RequiresApproval {
+			state = "approval pending"
+		}
+		if x.ProvenanceWarning != "" {
+			approval += "; provenance warning: " + x.ProvenanceWarning
+		}
+		return fmt.Sprintf("%s [%s%s%s] %s (in %s; prep show %s --project %s)", x.Ref, state, approval, override, x.Title, x.Project, x.ID, x.Link)
 	case domain.XMissing:
-		return fmt.Sprintf("%s [missing: no such issue in %s at %s]", x.Ref, x.Project, x.Root)
+		return fmt.Sprintf("%s [missing: no such issue in %s at %s%s%s]", x.Ref, x.Project, x.Root, approval, override)
 	}
 	hint := ""
 	if x.Remote != "" {
 		hint = "; clone " + x.Remote
 	}
-	return fmt.Sprintf("%s [unknown: not checked out here%s]", x.Ref, hint)
+	if x.Uncertainty != "" {
+		hint = "; " + x.Uncertainty + hint
+	}
+	if x.ProvenanceWarning != "" {
+		hint += "; provenance warning: " + x.ProvenanceWarning
+	}
+	return fmt.Sprintf("%s [unknown%s%s%s]", x.Ref, hint, approval, override)
 }
 
 func cmdSkill(a *app, args []string) error {

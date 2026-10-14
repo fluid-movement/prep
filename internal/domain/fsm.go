@@ -78,27 +78,28 @@ type Input struct {
 
 // Change is the set of records a transition writes. Storage adapters render it.
 type Change struct {
-	Op                Op                      `json:"op"`
-	IssueID           string                  `json:"id"`
-	NewIssue          *Issue                  `json:"-"`
-	Baseline          *Baseline               `json:"-"`
-	Ready             *Ready                  `json:"-"`
-	Claim             *Claim                  `json:"-"`
-	RemoveClaim       bool                    `json:"-"`
-	Resolution        *Resolution             `json:"-"`
-	RemoveResolution  bool                    `json:"-"`
-	ResolutionHistory *[]Resolution           `json:"-"`
-	ResolutionReviews *[]ResolutionReview     `json:"-"`
-	Verification      *[]VerificationEvidence `json:"-"`
-	Approvals         *[]CompletionApproval   `json:"-"`
-	KnowledgeReviews  *[]KnowledgeReview      `json:"-"`
-	DoDRevision       *string                 `json:"-"`
-	OptOutRevisions   *map[string]string      `json:"-"`
-	Edit              *IssueEdit              `json:"-"`
-	Context           *string                 `json:"-"`
-	Findings          *string                 `json:"-"`
-	Decision          *Decision               `json:"-"`
-	Acceptance        []AcceptanceOp          `json:"-"`
+	Op                  Op                      `json:"op"`
+	IssueID             string                  `json:"id"`
+	NewIssue            *Issue                  `json:"-"`
+	Baseline            *Baseline               `json:"-"`
+	Ready               *Ready                  `json:"-"`
+	Claim               *Claim                  `json:"-"`
+	RemoveClaim         bool                    `json:"-"`
+	Resolution          *Resolution             `json:"-"`
+	RemoveResolution    bool                    `json:"-"`
+	ResolutionHistory   *[]Resolution           `json:"-"`
+	ResolutionReviews   *[]ResolutionReview     `json:"-"`
+	DependencyOverrides *[]DependencyOverride   `json:"-"`
+	Verification        *[]VerificationEvidence `json:"-"`
+	Approvals           *[]CompletionApproval   `json:"-"`
+	KnowledgeReviews    *[]KnowledgeReview      `json:"-"`
+	DoDRevision         *string                 `json:"-"`
+	OptOutRevisions     *map[string]string      `json:"-"`
+	Edit                *IssueEdit              `json:"-"`
+	Context             *string                 `json:"-"`
+	Findings            *string                 `json:"-"`
+	Decision            *Decision               `json:"-"`
+	Acceptance          []AcceptanceOp          `json:"-"`
 	// Knowledge is a knowledge write; KnowledgeEntry is the entry the
 	// adapter rendered from it, used to validate before writing.
 	Knowledge      *KnowledgeEdit `json:"-"`
@@ -663,8 +664,8 @@ func (t *Tree) PlanEdit(id string, in EditInput) (*Change, error) {
 			if contains(e.DependsOnApproval, d) {
 				continue
 			}
-			if !contains(e.DependsOn, d) || strings.Contains(d, ":") {
-				unmet = append(unmet, Unmet{GateDeps, fmt.Sprintf("approval dependency %s must also be an ordinary local dependency", d)})
+			if !contains(e.DependsOn, d) {
+				unmet = append(unmet, Unmet{GateDeps, fmt.Sprintf("approval dependency %s must also be an ordinary dependency", d)})
 			}
 			e.DependsOnApproval = append(e.DependsOnApproval, d)
 		}
@@ -762,6 +763,12 @@ func (t *Tree) Apply(c *Change) *Tree {
 			}
 			if c.ResolutionReviews != nil {
 				cp.ResolutionReviews = slices.Clone(*c.ResolutionReviews)
+			}
+			if c.DependencyOverrides != nil {
+				cp.DependencyOverrides = slices.Clone(*c.DependencyOverrides)
+				if !cp.HasFile("dependency-overrides.md") {
+					cp.Files = append(append([]string(nil), cp.Files...), "dependency-overrides.md")
+				}
 			}
 			if e := c.Edit; e != nil {
 				cp.Title, cp.Kind, cp.Parent, cp.DependsOn, cp.DependsOnApproval, cp.Tags, cp.Priority = e.Title, e.Kind, e.Parent, e.DependsOn, e.DependsOnApproval, e.Tags, e.Priority
