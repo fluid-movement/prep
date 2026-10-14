@@ -27,8 +27,11 @@ const Dir = ".prep"
 
 // Store reads and writes a .prep tree rooted at Root (the repository root).
 type Store struct {
-	Root   string
-	hashes map[string]string // relative path -> sha256 of content at load; "" = absent
+	Root        string
+	hashes      map[string]string                   // relative path -> sha256 of content at load; "" = absent
+	loadedIDs   []string                            // valid issue directories observed at load
+	hasSnapshot bool                                // distinguishes an empty snapshot from no Load
+	txHook      func(stage string, index int) error // deterministic failure injection for transaction tests
 }
 
 // Open returns a store for the repository root.
@@ -95,6 +98,24 @@ var (
 
 // Load reads the project and every issue.
 func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, error) {
+	unlock, err := s.lock(false)
+	if err != nil {
+		return domain.Project{}, nil, nil, err
+	}
+	if unlock != nil {
+		defer unlock()
+	}
+	if err := s.recoverTransaction(); err != nil {
+		return domain.Project{}, nil, nil, err
+	}
+	return s.loadUnlocked()
+}
+
+// loadUnlocked reads the project while the caller holds the checkout lock.
+func (s *Store) loadUnlocked() (domain.Project, []*domain.Issue, []domain.Diagnostic, error) {
+	s.hashes = make(map[string]string)
+	s.loadedIDs = nil
+	s.hasSnapshot = false
 	var diags []domain.Diagnostic
 	diag := func(code string, sev domain.Severity, class domain.Class, issue, file, fix, format string, a ...any) {
 		diags = append(diags, domain.Diagnostic{Code: code, Severity: sev, Class: class, Issue: issue, File: file, Message: fmt.Sprintf(format, a...), Fix: fix})
@@ -123,7 +144,7 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 			diag(domain.CodeConfigInvalid, domain.SevError, domain.ClassManual, "", name, "fix "+name, "%s", strings.TrimPrefix(err.Error(), name+": "))
 		}
 	}
-	project.Config, _ = s.LoadConfig()
+	project.Config, _ = s.loadConfigUnlocked()
 	if s.localUnignored() {
 		diag(domain.CodeLocalTracked, domain.SevWarning, domain.ClassFixable, "", ".gitignore", "run prep fix, then commit", ".prep/.gitignore does not ignore %s, the per-machine activity stream", localIgnore)
 	}
@@ -143,10 +164,17 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 
 	dirs, err := os.ReadDir(s.abs(Dir + "/issues"))
 	if errors.Is(err, fs.ErrNotExist) {
+		s.loadedIDs = []string{}
+		s.hasSnapshot = true
 		return project, nil, diags, nil
 	}
 	if err != nil {
 		return project, nil, nil, err
+	}
+	for _, d := range dirs {
+		if d.IsDir() && domain.ValidID(d.Name()) {
+			s.loadedIDs = append(s.loadedIDs, d.Name())
+		}
 	}
 	var issues []*domain.Issue
 	for _, d := range dirs {
@@ -166,6 +194,7 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 			issues = append(issues, i)
 		}
 	}
+	s.hasSnapshot = true
 	return project, issues, diags, nil
 }
 
@@ -441,6 +470,20 @@ const (
 // LoadConfig reads the configuration in effect: config.yaml, else
 // config.yaml.dist; with neither, defaults.
 func (s *Store) LoadConfig() (domain.Config, error) {
+	unlock, err := s.lock(false)
+	if err != nil {
+		return domain.Config{}, err
+	}
+	if unlock != nil {
+		defer unlock()
+	}
+	if err := s.recoverTransaction(); err != nil {
+		return domain.Config{}, err
+	}
+	return s.loadConfigUnlocked()
+}
+
+func (s *Store) loadConfigUnlocked() (domain.Config, error) {
 	cfg, ok, err := s.loadConfigFile(ConfigOwn)
 	if ok || err != nil {
 		return cfg, err
@@ -509,8 +552,20 @@ const localIgnore = activity.Dir + "/"
 // localUnignored reports whether .prep/local exists without being
 // ignored, so git would offer per-machine state for commit.
 func (s *Store) localUnignored() bool {
-	_, err := os.Stat(s.abs(Dir + "/" + activity.Dir))
-	return err == nil && !s.ignores(localIgnore)
+	local := s.abs(Dir + "/" + activity.Dir)
+	entries, err := os.ReadDir(local)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false
+	}
+	if err != nil {
+		return true
+	}
+	for _, entry := range entries {
+		if entry.Name() != filepath.Base(lockFile) {
+			return !s.ignores(localIgnore)
+		}
+	}
+	return false
 }
 
 // IgnoresOwnConfig reports whether .prep/.gitignore lists config.yaml.

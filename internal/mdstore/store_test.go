@@ -291,6 +291,9 @@ func TestLocalDirMustBeIgnored(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, Dir, "local"), 0o755); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(root, Dir, "local", "activity.jsonl"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if c := codes(); !strings.Contains(c, domain.CodeLocalTracked) || strings.Contains(c, domain.CodeProjectUnknown) {
 		t.Fatalf("local dir unignored: %s", c)
 	}

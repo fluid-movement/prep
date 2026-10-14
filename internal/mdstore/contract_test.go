@@ -24,8 +24,12 @@ func TestContract(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, d := range dirs {
-			root := filepath.Join("..", "..", "testdata", "contract", kind, d.Name())
+			source := filepath.Join("..", "..", "testdata", "contract", kind, d.Name())
 			t.Run(kind+"/"+d.Name(), func(t *testing.T) {
+				root := t.TempDir()
+				if err := os.CopyFS(root, os.DirFS(source)); err != nil {
+					t.Fatal(err)
+				}
 				tree, err := domain.Load(mdstore.Open(root), &okf.Store{Root: root}, false)
 				if err != nil {
 					t.Fatal(err)
