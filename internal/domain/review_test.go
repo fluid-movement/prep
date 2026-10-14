@@ -29,6 +29,26 @@ func TestResolutionReviewRequiresHumanReasonAndScope(t *testing.T) {
 	}
 }
 
+func TestResolutionReviewRejectsBlankDeclaredAndInheritedScopes(t *testing.T) {
+	base := Input{Actor: "human:reviewer", Now: time.Now(), Reason: "Reviewed", Scopes: []string{"src"}, Snapshot: strings.Repeat("a", 64)}
+	for name, issue := range map[string]*Issue{
+		"declared work":    {ID: idA, Title: "Done", Kind: KindManual, Resolution: &Resolution{Outcome: OutcomeDone, Generation: 1}},
+		"inherited work":   {ID: idA, Title: "Done", Kind: KindManual, Resolution: &Resolution{Outcome: OutcomeDone, Generation: 1, Verification: []VerificationEvidence{{Scopes: []string{" "}}}}},
+		"inherited config": {ID: idA, Title: "Done", Kind: KindManual, Resolution: &Resolution{Outcome: OutcomeDone, Generation: 1, Verification: []VerificationEvidence{{Scopes: []string{"src"}, ConfigScopes: []string{"\t"}}}}},
+	} {
+		in := base
+		if name == "declared work" {
+			in.Scopes = []string{" "}
+		} else if name == "inherited config" {
+			in.ConfigScopes = []string{"\t"}
+		}
+		tr := NewTree(Project{}, []*Issue{issue}, nil, nil)
+		if _, err := tr.Plan(issue.ID, OpResolutionReview, in); err == nil {
+			t.Errorf("accepted blank %s scope", name)
+		}
+	}
+}
+
 func TestResolutionReviewStatusRequiresValidCurrentReview(t *testing.T) {
 	res := &Resolution{Outcome: OutcomeDone, Generation: 2}
 	i := &Issue{ID: idA, Title: "Done", Kind: KindManual, Resolution: res}

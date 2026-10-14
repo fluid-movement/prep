@@ -358,12 +358,28 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 			if len(in.Scopes) == 0 {
 				add(GateReview, "resolution review needs at least one declared work scope; legacy resolutions may pass --scope")
 			}
+			for _, scope := range in.Scopes {
+				if strings.TrimSpace(scope) == "" {
+					add(GateReview, "resolution review work scopes must not be blank")
+				}
+			}
+			for _, scope := range in.ConfigScopes {
+				if strings.TrimSpace(scope) == "" {
+					add(GateReview, "resolution review config scopes must not be blank")
+				}
+			}
 			for _, scope := range ReviewWorkScopes(i.Resolution) {
+				if strings.TrimSpace(scope) == "" {
+					add(GateReview, "recorded resolution work scopes must not be blank")
+				}
 				if !slices.Contains(in.Scopes, scope) {
 					add(GateReview, "resolution review must include recorded work scope %q", scope)
 				}
 			}
 			for _, scope := range ReviewConfigScopes(i.Resolution) {
+				if strings.TrimSpace(scope) == "" {
+					add(GateReview, "recorded resolution config scopes must not be blank")
+				}
 				if !slices.Contains(in.ConfigScopes, scope) {
 					add(GateReview, "resolution review must include recorded config scope %q", scope)
 				}
