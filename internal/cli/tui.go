@@ -114,8 +114,14 @@ func runTUI(root string, agent bool, previous string, at *tui.Switch) (*tui.Swit
 		SaveLayout: saveLayout,
 		Actor:      humanActor(),
 		Write:      write,
-		Load:       func() (*domain.Tree, error) { return load(false) },
-		Watch:      filepath.Join(root, mdstore.Dir),
+		Review: func(id string, extraScopes []string) (tui.ReviewSnapshot, error) {
+			return loadTUIReview(root, id, extraScopes)
+		},
+		ApproveReview: func(req tui.ReviewApprovalRequest) (string, error) {
+			return approveTUIReview(root, write, humanActor(), req)
+		},
+		Load:  func() (*domain.Tree, error) { return load(false) },
+		Watch: filepath.Join(root, mdstore.Dir),
 		// The last 2,000 events at most: the stream prunes itself near that.
 		Activity:   func() ([]activity.Event, error) { return activity.Read(filepath.Join(root, mdstore.Dir), 2000) },
 		StartAgent: agent,
