@@ -15,33 +15,22 @@ import (
 // compare-and-swap check against the hash seen at load time. Files never
 // read in this run must not exist yet.
 func (s *Store) write(rel, content string) error {
-	if err := s.cas(rel); err != nil {
-		return err
-	}
-	p := s.abs(rel)
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		return err
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(p), tempPrefix+"*")
+	unlock, err := s.lock(true)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tmp.Name())
-	if _, err := tmp.WriteString(content); err != nil {
-		tmp.Close()
+	defer unlock()
+	if err := s.recoverTransaction(); err != nil {
 		return err
 	}
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
+	if err := s.cas(rel); err != nil {
 		return err
 	}
-	if err := tmp.Close(); err != nil {
-		return err
+	before := s.hashes[rel]
+	if _, ok := s.hashes[rel]; !ok {
+		before = ""
 	}
-	if err := os.Chmod(tmp.Name(), 0o644); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp.Name(), p); err != nil {
+	if err := s.applyTransaction([]transactionEntry{{Path: rel, Before: before, After: hashOf([]byte(content))}}, map[string][]byte{rel: []byte(content)}); err != nil {
 		return err
 	}
 	s.hashes[rel] = hashOf([]byte(content))
@@ -49,10 +38,22 @@ func (s *Store) write(rel, content string) error {
 }
 
 func (s *Store) remove(rel string) error {
+	unlock, err := s.lock(true)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	if err := s.recoverTransaction(); err != nil {
+		return err
+	}
 	if err := s.cas(rel); err != nil {
 		return err
 	}
-	if err := os.Remove(s.abs(rel)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	before := s.hashes[rel]
+	if _, ok := s.hashes[rel]; !ok {
+		before = ""
+	}
+	if err := s.applyTransaction([]transactionEntry{{Path: rel, Before: before, Remove: true}}, nil); err != nil {
 		return err
 	}
 	s.hashes[rel] = ""
@@ -79,32 +80,81 @@ func (s *Store) cas(rel string) error {
 	return nil
 }
 
-// Apply renders a change into files and writes them. It returns the
-// repository-relative paths it touched. Every file is rendered and checked
-// against what was loaded before the first one is written, so a conflict
-// leaves the change unwritten rather than half applied.
+// Apply renders a change into files and writes them as a locked, recoverable
+// roll-forward transaction. It returns repository-relative touched paths.
 func (s *Store) Apply(c *domain.Change) ([]string, error) {
+	unlock, err := s.lock(true)
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+	if err := s.recoverTransaction(); err != nil {
+		return nil, err
+	}
+	loaded := cloneHashes(s.hashes)
 	touched, contents, err := s.render(c)
 	if err != nil {
 		return nil, err
 	}
-	for _, rel := range touched {
-		if err := s.cas(rel); err != nil {
+	// Validate the complete load read-set as well as any additional files
+	// consulted by render. This prevents a stale transition from using an old
+	// verification/ready record while changing a different file.
+	checks := cloneHashes(s.hashes)
+	for rel, before := range loaded {
+		checks[rel] = before
+	}
+	for rel, want := range checks {
+		if err := s.casExpected(rel, want); err != nil {
 			return nil, err
 		}
 	}
+	entries := make([]transactionEntry, 0, len(touched))
+	data := make(map[string][]byte, len(touched))
 	for k, rel := range touched {
-		var err error
-		if contents[k] == nil {
-			err = s.remove(rel)
-		} else {
-			err = s.write(rel, *contents[k])
+		before, ok := loaded[rel]
+		if !ok {
+			before, ok = s.hashes[rel]
 		}
-		if err != nil {
-			return touched[:k+1], err
+		if !ok {
+			before = ""
+		}
+		if contents[k] == nil {
+			entries = append(entries, transactionEntry{Path: rel, Before: before, Remove: true})
+		} else {
+			body := []byte(*contents[k])
+			entries = append(entries, transactionEntry{Path: rel, Before: before, After: hashOf(body)})
+			data[rel] = body
 		}
 	}
+	if err := s.applyTransaction(entries, data); err != nil {
+		return touched, err
+	}
+	for _, e := range entries {
+		s.hashes[e.Path] = e.After
+	}
 	return touched, nil
+}
+
+func cloneHashes(in map[string]string) map[string]string {
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
+func (s *Store) casExpected(rel, want string) error {
+	b, err := os.ReadFile(s.abs(rel))
+	cur := ""
+	if err == nil {
+		cur = hashOf(b)
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	if cur != want {
+		return &domain.Error{Code: domain.ErrConflict, Message: fmt.Sprintf("%s changed since it was read; re-run the command", rel)}
+	}
+	return nil
 }
 
 // render turns a change into the files it writes, in order, with their

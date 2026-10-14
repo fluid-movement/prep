@@ -5,8 +5,9 @@ package domain
 type IssueStore interface {
 	// Load reads the project and all issues, with format-level diagnostics.
 	Load() (Project, []*Issue, []Diagnostic, error)
-	// Apply writes the records of a change atomically per file and returns
-	// the storage locations it touched.
+	// Apply writes a change as a recoverable storage transaction and returns
+	// the storage locations it touched. Implementations may expose an
+	// interrupted transaction only by returning an error until recovery.
 	Apply(*Change) ([]string, error)
 }
 
