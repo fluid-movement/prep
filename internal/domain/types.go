@@ -224,18 +224,19 @@ type Documentation struct {
 
 // Resolution closes an issue as done or dropped.
 type Resolution struct {
-	Contract      *CompletionContract    `json:"contract,omitempty"`
-	Verification  []VerificationEvidence `json:"verification,omitempty"`
-	Approvals     []CompletionApproval   `json:"approvals,omitempty"`
-	Outcome       string                 `json:"outcome"`
-	By            string                 `json:"by"`
-	At            time.Time              `json:"at"`
-	Reason        string                 `json:"reason,omitempty"`
-	Evidence      string                 `json:"evidence,omitempty"`
-	Documentation *Documentation         `json:"documentation,omitempty"`
-	DoD           []string               `json:"dod,omitempty"`
-	DoDOptOuts    []OptOut               `json:"dod_opt_outs,omitempty"`
-	Note          string                 `json:"note,omitempty"`
+	Contract         *CompletionContract    `json:"contract,omitempty"`
+	Verification     []VerificationEvidence `json:"verification,omitempty"`
+	Approvals        []CompletionApproval   `json:"approvals,omitempty"`
+	KnowledgeReviews []KnowledgeReview      `json:"knowledge_reviews,omitempty"`
+	Outcome          string                 `json:"outcome"`
+	By               string                 `json:"by"`
+	At               time.Time              `json:"at"`
+	Reason           string                 `json:"reason,omitempty"`
+	Evidence         string                 `json:"evidence,omitempty"`
+	Documentation    *Documentation         `json:"documentation,omitempty"`
+	DoD              []string               `json:"dod,omitempty"`
+	DoDOptOuts       []OptOut               `json:"dod_opt_outs,omitempty"`
+	Note             string                 `json:"note,omitempty"`
 }
 
 // Issue is one issue with all of its records, as parsed by a storage adapter.
@@ -268,15 +269,17 @@ type Issue struct {
 	History   string     `json:"-"` // the work log
 	Findings  *string    `json:"-"`
 
-	Baselines       []Baseline             `json:"baselines,omitempty"` // oldest first
-	Ready           *Ready                 `json:"ready,omitempty"`
-	Claim           *Claim                 `json:"claim,omitempty"`
-	Resolution      *Resolution            `json:"resolution,omitempty"`
-	Verification    []VerificationEvidence `json:"verification,omitempty"`
-	Approvals       []CompletionApproval   `json:"approvals,omitempty"`
-	DoDRevision     string                 `json:"dod_revision,omitempty"`
-	OptOutRevisions map[string]string      `json:"opt_out_revisions,omitempty"`
-	ApprovalCurrent map[string]bool        `json:"-"`
+	Baselines              []Baseline             `json:"baselines,omitempty"` // oldest first
+	Ready                  *Ready                 `json:"ready,omitempty"`
+	Claim                  *Claim                 `json:"claim,omitempty"`
+	Resolution             *Resolution            `json:"resolution,omitempty"`
+	Verification           []VerificationEvidence `json:"verification,omitempty"`
+	Approvals              []CompletionApproval   `json:"approvals,omitempty"`
+	KnowledgeReviews       []KnowledgeReview      `json:"knowledge_reviews,omitempty"`
+	KnowledgeReviewCurrent map[string]bool        `json:"-"`
+	DoDRevision            string                 `json:"dod_revision,omitempty"`
+	OptOutRevisions        map[string]string      `json:"opt_out_revisions,omitempty"`
+	ApprovalCurrent        map[string]bool        `json:"-"`
 	// EvidenceCurrent is adapter-computed applicability, never persisted.
 	EvidenceCurrent map[string]bool `json:"-"`
 

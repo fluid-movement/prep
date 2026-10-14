@@ -53,6 +53,9 @@ func (t *Tree) Candidates(id string, touched []string) []Candidate {
 		}
 	}
 	addEntry(OverviewEntry, "overview")
+	if len(out) > 5 {
+		out = out[:5]
+	}
 	return out
 }
 
@@ -221,6 +224,13 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 		}
 	}
 	g.Step, g.Instructions, g.Outputs = stepContract(t, i, s, stale, parent, f)
+	if s == StateReady || s == StateInProgress {
+		if len(g.Knowledge) > 0 {
+			g.Instructions = append(g.Instructions, "Review up to five relevant knowledge candidates with prep knowledge show <entry>; report each affected entry before completion with prep knowledge review record "+id+" --entry <entry> --kind updated|unchanged --observation <what you checked> --scope <work-path> (repeat --scope and --config-scope as needed). Updated and unchanged are agent reports, not semantic proof.")
+		}
+		g.Outputs = append(g.Outputs, Pointer{path.Join(issueDir(id), "knowledge-reviews.md"), "append-only scoped knowledge review reports", "prep knowledge review record " + id + " ..."})
+		g.Instructions = append(g.Instructions, "Before completion, every --docs entry needs a current knowledge review report; alternatively record justified no-impact with prep knowledge review record "+id+" --no-impact --reason <reason> --scope <work-path>, then complete with the same --no-impact reason. Check applicability with prep knowledge review show "+id+".")
+	}
 	if t.PolicyReviewRequired(id) {
 		g.Instructions = append(g.Instructions, "Review changed completion requirements with prep policy show "+id+". Adopt them with prep policy adopt "+id+", or ask the human to approve retaining the bound policy with prep policy retain "+id+" --reason <reason> --by human:<name>. The agent must not invent human approval.")
 	}

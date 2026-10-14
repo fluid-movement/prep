@@ -80,7 +80,7 @@ func (h *harness) newIssue(args ...string) string {
 
 // verify supplies explicit manual reports for fixtures whose completion is
 // incidental to the behavior under test. Evidence tests record their own runs.
-func (h *harness) verify(id string) {
+func (h *harness) verify(id string, noImpact ...string) {
 	h.t.Helper()
 	var policy struct {
 		Bound *domain.CompletionContract `json:"bound"`
@@ -94,6 +94,16 @@ func (h *harness) verify(id string) {
 			"--result", "pass", "--method", "manual", "--observation", "Fixture behavior inspected.",
 			"--scope", ".prep/knowledge", "--by", "agent/test")
 	}
+	reason := "none"
+	if len(noImpact) > 0 {
+		reason = noImpact[0]
+	}
+	h.ok("knowledge", "review", "record", id, "--no-impact", "--reason", reason, "--scope", ".prep/knowledge")
+}
+
+func (h *harness) reviewEntry(id, entry string) {
+	h.t.Helper()
+	h.ok("knowledge", "review", "record", id, "--entry", entry, "--kind", "unchanged", "--observation", "Reviewed the relevant guidance; no update was needed.", "--scope", ".prep/knowledge")
 }
 
 func (h *harness) state(id string) (string, bool) {
@@ -238,10 +248,13 @@ func TestLifecycle(t *testing.T) {
 	h.fails("G_DOCS", "complete", a, "--commit", "abc1234", "--json")
 	h.fails("G_ACTOR", "complete", a, "--commit", "abc1234", "--no-impact", "none", "--by", "human:andre", "--json")
 	h.verify(a)
+	h.fails("G_KNOWLEDGE", "complete", a, "--commit", "abc1234", "--docs", "overview", "--json")
+	h.fails("scope paths must not be blank", "knowledge", "review", "record", a, "--entry", "overview", "--kind", "unchanged", "--observation", "Reviewed.", "--scope", " ")
+	h.reviewEntry(a, "overview")
 	h.ok("complete", a, "--commit", "abc1234", "--docs", "overview")
 	h.expectState(a, "done", false)
 	res := h.read(a, "resolution.md")
-	for _, want := range []string{"outcome: done", "evidence: abc1234", "/overview.md", "prep check passes"} {
+	for _, want := range []string{"outcome: done", "evidence: abc1234", "/overview.md", "knowledge_reviews:", "prep check passes"} {
 		if !strings.Contains(res, want) {
 			t.Fatalf("resolution.md lacks %q:\n%s", want, res)
 		}
@@ -279,12 +292,12 @@ func TestParentCompletesWhenChildrenResolved(t *testing.T) {
 	h.ok("ready", c) // manual issues need no context
 	h.ok("claim", c)
 	h.replace(c, "acceptance.md", "- [ ]", "- [x]")
-	h.verify(c)
+	h.verify(c, "manual step")
 	h.ok("complete", c, "--no-impact", "manual step", "--by", "human:andre")
 
 	h.fails("G_UNCHECKED", "complete", p, "--no-impact", "n/a", "--json")
 	h.replace(p, "acceptance.md", "- [ ]", "- [x]")
-	h.verify(p)
+	h.verify(p, "n/a")
 	h.ok("complete", p, "--no-impact", "n/a")
 	h.expectState(p, "done", false)
 
@@ -307,13 +320,13 @@ func TestResearchAndDecisionEvidence(t *testing.T) {
 	}
 	h.fails("G_FINDINGS", "complete", r, "--no-impact", "x", "--json")
 	h.write(r, "findings.md", "Use the stdlib parser.\n")
-	h.verify(r)
+	h.verify(r, "x")
 	h.ok("complete", r, "--no-impact", "x")
 
 	h.write(d, "decisions.md", "## D1: Use CSV\ndate: 2026-10-05\n\nDraft.\n")
 	h.fails("G_OUTCOME", "complete", d, "--no-impact", "x", "--json")
 	h.write(d, "decisions.md", "## D1: Use CSV\ndate: 2026-10-05\n\nDraft.\n\n## D2: Use JSON\ndate: 2026-10-06\nsupersedes: D1\noutcome: true\n\nAgreed with the user.\n")
-	h.verify(d)
+	h.verify(d, "x")
 	h.ok("complete", d, "--no-impact", "x")
 
 	// The decision's outcome flows into dependents through guide.
@@ -1289,7 +1302,7 @@ func TestCompleteInTheSameCommit(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(h.dir, "export.go"), []byte("package export\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	h.verify(id)
+	h.verify(id, "test")
 	h.ok("complete", id, "--no-impact", "test")
 	if out := h.ok("show", id); !strings.Contains(out, "not made yet") {
 		t.Fatalf("pending evidence not shown:\n%s", out)

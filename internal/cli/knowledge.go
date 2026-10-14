@@ -8,13 +8,14 @@ import (
 	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/gitx"
+	"github.com/fluid-movement/prep/internal/worktree"
 )
 
 // cmdKnowledge dispatches the knowledge reads (list, find, show) and writes
 // (new, update, confirm, bootstrap).
 func cmdKnowledge(a *app, args []string) error {
 	if len(args) == 0 {
-		return usageErr("knowledge needs a subcommand: list, find, show, new, update, confirm or bootstrap")
+		return usageErr("knowledge needs a subcommand: list, find, show, review, new, update, confirm or bootstrap")
 	}
 	switch args[0] {
 	case "list":
@@ -23,6 +24,8 @@ func cmdKnowledge(a *app, args []string) error {
 		return knowledgeFind(a, args[1:])
 	case "show":
 		return knowledgeShow(a, args[1:])
+	case "review":
+		return knowledgeReview(a, args[1:])
 	case "new":
 		return knowledgeEdit(a, args[1:], true)
 	case "update":
@@ -32,7 +35,100 @@ func cmdKnowledge(a *app, args []string) error {
 	case "bootstrap":
 		return knowledgeBootstrap(a, args[1:])
 	}
-	return usageErr("unknown knowledge subcommand %q: use list, find, show, new, update, confirm or bootstrap", args[0])
+	return usageErr("unknown knowledge subcommand %q: use list, find, show, review, new, update, confirm or bootstrap", args[0])
+}
+
+func knowledgeReview(a *app, args []string) error {
+	if len(args) == 0 || args[0] != "record" && args[0] != "show" {
+		return usageErr("knowledge review needs show <id> or record <id> --entry <path> --kind updated|unchanged --observation <text> --scope <work-path> [--config-scope <path>] (or --no-impact --reason <text>)")
+	}
+	fs := flag.NewFlagSet("knowledge review "+args[0], flag.ContinueOnError)
+	var r domain.KnowledgeReview
+	var scopes, configs multi
+	var noImpact bool
+	var reason string
+	if args[0] == "record" {
+		fs.StringVar(&r.Entry, "entry", "", "knowledge entry assessed")
+		fs.StringVar(&r.Kind, "kind", "", "updated or unchanged")
+		fs.StringVar(&r.Observation, "observation", "", "what was reviewed and why")
+		fs.BoolVar(&noImpact, "no-impact", false, "report that knowledge is unaffected")
+		fs.StringVar(&reason, "reason", "", "why no knowledge entry applies")
+		fs.Var(&scopes, "scope", "project-relative work path reviewed (repeatable)")
+		fs.Var(&configs, "config-scope", "project-relative check configuration path (repeatable)")
+	}
+	pos, err := parse(fs, args[1:])
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return usageErr("knowledge review needs one issue ID")
+	}
+	t, err := a.load(false)
+	if err != nil {
+		return err
+	}
+	id, err := t.Resolve(pos[0])
+	if err != nil {
+		return err
+	}
+	issue := t.Issues[id]
+	if args[0] == "show" {
+		type result struct {
+			Review     domain.KnowledgeReview `json:"review"`
+			Applicable bool                   `json:"applicable"`
+			Problem    string                 `json:"problem,omitempty"`
+		}
+		rows := make([]result, 0, len(issue.KnowledgeReviews))
+		for n := range issue.KnowledgeReviews {
+			r := &issue.KnowledgeReviews[n]
+			problem := t.KnowledgeReviewProblem(id, r)
+			rows = append(rows, result{Review: *r, Applicable: problem == "", Problem: problem})
+		}
+		if a.json {
+			a.emit(map[string]any{"id": id, "reviews": rows})
+			return nil
+		}
+		if len(rows) == 0 {
+			a.printf("No knowledge review reports.\n")
+		}
+		for _, row := range rows {
+			a.printf("%s %s entry=%s applicable=%t\n  %s\n", row.Review.ID, row.Review.Kind, row.Review.Entry, row.Applicable, row.Review.Observation)
+			if row.Problem != "" {
+				a.printf("  %s\n", row.Problem)
+			}
+		}
+		return nil
+	}
+	if noImpact {
+		if r.Entry != "" || r.Kind != "" {
+			return usageErr("--no-impact cannot be combined with --entry or --kind")
+		}
+		r.Kind = domain.KnowledgeNoImpact
+		r.Observation = reason
+	} else if r.Entry == "" || r.Kind != domain.KnowledgeUpdated && r.Kind != domain.KnowledgeUnchanged {
+		return usageErr("entry reviews need --entry and --kind updated|unchanged")
+	}
+	r.Scopes, r.ConfigScopes = scopes, configs
+	r.Snapshot, err = worktree.Fingerprint(a.store.Root, append(append([]string(nil), scopes...), configs...))
+	if err != nil {
+		return usageErr("cannot fingerprint knowledge review scopes: %v", err)
+	}
+	r.By, r.At = a.actor, a.now()
+	c, err := t.PlanKnowledgeReview(id, r)
+	if err != nil {
+		return err
+	}
+	if err := t.CheckWrite(c); err != nil {
+		return err
+	}
+	files, err := a.store.Apply(c)
+	if err != nil {
+		return err
+	}
+	a.afterWrite(files)
+	a.note(activity.Event{Op: "knowledge review", Verb: "recorded knowledge review", Target: id, Area: activity.AreaKnowledge})
+	a.reportWrite(writeResult{OK: true, Op: "knowledge review", ID: id, Files: files})
+	return nil
 }
 
 func knowledgeEdit(a *app, args []string, isNew bool) error {

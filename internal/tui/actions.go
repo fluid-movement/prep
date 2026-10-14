@@ -187,9 +187,9 @@ func (m *Model) actions() []action {
 	if crit == "" && len(i.Criteria) == 0 {
 		crit = "no criteria yet"
 	}
-	complete := m.gate(id, domain.OpComplete)
+	complete := m.gateCompletionForm(id)
 	if i.Kind == domain.KindCode && !m.tree.IsParent(id) {
-		complete = "code issues are completed by an agent with commit evidence"
+		complete = "code issues are completed by an agent"
 	}
 	return append(items,
 		action{key: "v", label: "Tick off criteria (verify)", reason: crit, run: m.openCriteria},
@@ -206,6 +206,21 @@ func (m *Model) gate(id string, op domain.Op) string {
 	in := domain.Input{Actor: m.opts.Actor, Reason: "-", NoImpact: "-"}
 	if unmet, _ := m.tree.Gates(id, op, &in); len(unmet) > 0 {
 		return unmet[0].Message
+	}
+	return ""
+}
+
+// gateCompletionForm previews every gate that can be checked before the
+// completion form collects its documentation decision. The submitted Plan
+// still enforces both documentation and the matching knowledge report.
+func (m *Model) gateCompletionForm(id string) string {
+	in := domain.Input{Actor: m.opts.Actor, Reason: "-"}
+	if unmet, _ := m.tree.Gates(id, domain.OpComplete, &in); len(unmet) > 0 {
+		for _, gate := range unmet {
+			if gate.Code != domain.GateDocs && gate.Code != domain.GateKnowledge {
+				return gate.Message
+			}
+		}
 	}
 	return ""
 }

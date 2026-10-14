@@ -232,6 +232,14 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 			return nil, nil, err
 		}
 	}
+	if c.KnowledgeReviews != nil {
+		if err := s.cas(dir + "/knowledge-reviews.md"); err != nil {
+			return nil, nil, err
+		}
+		if err := w("knowledge-reviews.md", renderKnowledgeReviews(*c.KnowledgeReviews)); err != nil {
+			return nil, nil, err
+		}
+	}
 	if c.Approvals != nil || c.DoDRevision != nil || c.OptOutRevisions != nil {
 		var state approvalsFM
 		if err := s.cas(dir + "/approvals.md"); err != nil {
@@ -403,6 +411,13 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 					return "", false
 				}
 				return renderVerification(records), true
+			}},
+			{"knowledge-reviews.md", func(raw string) (string, bool) {
+				records, err := parseKnowledgeReviews(raw)
+				if err != nil {
+					return "", false
+				}
+				return renderKnowledgeReviews(records), true
 			}},
 			{"resolution.md", func(raw string) (string, bool) {
 				r, err := parseResolution(raw)

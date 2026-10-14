@@ -7,4 +7,5 @@
 * [Human approval for completion contracts](/features/completion-approvals.md) - Explicit scoped waivers, policy retention and inherited DoD approval, including history and local trust limits.
 * [Explicit project completion policy](/features/completion-policy.md) - Project verification and documentation methods, configured through policy set and required for new readiness transitions.
 * [Cross-project work](/features/cross-project.md) - How a command reaches another prep project on the machine (--project), how that shows in output and activity, and how agents learn about other projects.
+* [Knowledge review in the issue lifecycle](/features/knowledge-lifecycle.md) - Bounded knowledge guidance and explicit, scoped reviews required for policy-bound completion.
 * [Issue lifecycle](/features/lifecycle.md) - States derived from records, transitions with their gates per kind, stale drift handling, parents, dependencies and Definition of Done.

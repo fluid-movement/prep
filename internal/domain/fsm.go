@@ -71,23 +71,24 @@ type Input struct {
 
 // Change is the set of records a transition writes. Storage adapters render it.
 type Change struct {
-	Op              Op                      `json:"op"`
-	IssueID         string                  `json:"id"`
-	NewIssue        *Issue                  `json:"-"`
-	Baseline        *Baseline               `json:"-"`
-	Ready           *Ready                  `json:"-"`
-	Claim           *Claim                  `json:"-"`
-	RemoveClaim     bool                    `json:"-"`
-	Resolution      *Resolution             `json:"-"`
-	Verification    *[]VerificationEvidence `json:"-"`
-	Approvals       *[]CompletionApproval   `json:"-"`
-	DoDRevision     *string                 `json:"-"`
-	OptOutRevisions *map[string]string      `json:"-"`
-	Edit            *IssueEdit              `json:"-"`
-	Context         *string                 `json:"-"`
-	Findings        *string                 `json:"-"`
-	Decision        *Decision               `json:"-"`
-	Acceptance      []AcceptanceOp          `json:"-"`
+	Op               Op                      `json:"op"`
+	IssueID          string                  `json:"id"`
+	NewIssue         *Issue                  `json:"-"`
+	Baseline         *Baseline               `json:"-"`
+	Ready            *Ready                  `json:"-"`
+	Claim            *Claim                  `json:"-"`
+	RemoveClaim      bool                    `json:"-"`
+	Resolution       *Resolution             `json:"-"`
+	Verification     *[]VerificationEvidence `json:"-"`
+	Approvals        *[]CompletionApproval   `json:"-"`
+	KnowledgeReviews *[]KnowledgeReview      `json:"-"`
+	DoDRevision      *string                 `json:"-"`
+	OptOutRevisions  *map[string]string      `json:"-"`
+	Edit             *IssueEdit              `json:"-"`
+	Context          *string                 `json:"-"`
+	Findings         *string                 `json:"-"`
+	Decision         *Decision               `json:"-"`
+	Acceptance       []AcceptanceOp          `json:"-"`
 	// Knowledge is a knowledge write; KnowledgeEntry is the entry the
 	// adapter rendered from it, used to validate before writing.
 	Knowledge      *KnowledgeEdit `json:"-"`
@@ -298,6 +299,9 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 		}
 		if in == nil {
 			needs = append(needs, "--docs <entry>... or --no-impact <reason>")
+			if i.Ready != nil && i.Ready.Contract != nil {
+				needs = append(needs, "prep knowledge review record <id> --entry <entry> --kind updated|unchanged --observation <text> --scope <work-path> (or --no-impact --reason <reason>)")
+			}
 		} else {
 			switch {
 			case len(in.Docs) == 0 && strings.TrimSpace(in.NoImpact) == "":
@@ -308,6 +312,12 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 			for _, d := range in.Docs {
 				if t.Knowledge[NormalizeEntryPath(d)] == nil {
 					add(GateDocEntry, "knowledge entry %s does not exist", NormalizeEntryPath(d))
+				}
+			}
+			if i.Ready != nil && i.Ready.Contract != nil && (len(in.Docs) > 0) != (strings.TrimSpace(in.NoImpact) != "") {
+				_, problems := t.KnowledgeReviewsForCompletion(id, in.Docs, in.NoImpact)
+				for _, problem := range problems {
+					add(GateKnowledge, "%s", problem)
 				}
 			}
 		}
@@ -431,6 +441,9 @@ func (t *Tree) Plan(id string, op Op, in Input) (*Change, error) {
 			doc.Entries = append(doc.Entries, NormalizeEntryPath(d))
 		}
 		res.Documentation = doc
+		if i.Ready != nil && i.Ready.Contract != nil {
+			res.KnowledgeReviews, _ = t.KnowledgeReviewsForCompletion(id, in.Docs, in.NoImpact)
+		}
 		c.Resolution = res
 	case OpDrop:
 		c.Resolution = &Resolution{Outcome: OutcomeDropped, By: in.Actor, At: now, Reason: strings.TrimSpace(in.Reason), Note: in.Note}
@@ -607,6 +620,9 @@ func (t *Tree) Apply(c *Change) *Tree {
 			}
 			if c.Approvals != nil {
 				cp.Approvals = append([]CompletionApproval(nil), (*c.Approvals)...)
+			}
+			if c.KnowledgeReviews != nil {
+				cp.KnowledgeReviews = append([]KnowledgeReview(nil), (*c.KnowledgeReviews)...)
 			}
 			if c.DoDRevision != nil {
 				cp.DoDRevision = *c.DoDRevision

@@ -79,6 +79,7 @@ func TestScopedEvidenceBlocksMissingFailedAndChangedReports(t *testing.T) {
 	if before != h.read(id, "verification.md") {
 		t.Fatal("read rewrote reports")
 	}
+	h.ok("knowledge", "review", "record", id, "--no-impact", "--reason", "No impact", "--scope", "work.txt", "--config-scope", "checks.txt")
 	h.ok("complete", id, "--no-impact", "No impact", "--json")
 	var resolved struct {
 		Issue struct {
