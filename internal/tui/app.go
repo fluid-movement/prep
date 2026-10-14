@@ -37,6 +37,10 @@ type Options struct {
 	// CheckWrite, store, stage) and returns the changed issue's ID. Nil
 	// makes the TUI read-only.
 	Write func(plan func(*domain.Tree) (*domain.Change, error)) (string, error)
+	// Review captures the bundle and current scoped work before approval.
+	Review func(id string, extraScopes []string) (ReviewSnapshot, error)
+	// ApproveReview rechecks the captured snapshot and records a human action.
+	ApproveReview func(ReviewApprovalRequest) (string, error)
 	// Actor records who writes, human:<name> for the TUI.
 	Actor string
 	// NoMouse starts with mouse capture off (the user's tui.mouse choice).
