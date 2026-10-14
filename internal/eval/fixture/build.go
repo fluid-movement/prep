@@ -634,6 +634,9 @@ func (p *Project) reach(run func(...string) (string, error), is IssueSpec, id, s
 				return err
 			}
 		}
+		if _, err := run("knowledge", "review", "record", id, "--no-impact", "--reason", "fixture", "--scope", ".prep/knowledge"); err != nil {
+			return err
+		}
 		if _, err := run("complete", id, "--no-impact", "fixture"); err != nil {
 			return err
 		}

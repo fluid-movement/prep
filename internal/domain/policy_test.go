@@ -27,7 +27,7 @@ func TestExplicitPolicyGatesOnlyNewReadiness(t *testing.T) {
 	i.Claim = &Claim{By: "agent"}
 	// Existing completions are not retroactively given evidence or a policy.
 	if got, _ := tr.Gates(i.ID, OpComplete, &Input{Actor: "agent", NoImpact: "No documentation impact."}); len(got) != 0 {
-		t.Fatalf("legacy completion: %+v", got)
+		t.Fatalf("legacy completion changed: %+v", got)
 	}
 	if _, err := tr.PlanPolicy(CompletionPolicy{Verification: "Only one method"}); err == nil {
 		t.Fatal("accepted incomplete policy")

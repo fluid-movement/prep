@@ -1,7 +1,7 @@
 ---
 type: component
 title: Agent behavior tests (prep eval)
-description: internal/eval and eval/ — fixtures, isolated environment, transcripts, cases, runner, assertions, judge, matrix, results, variants, model comparison and mutation for testing how agents use prep; layout and commands of prep eval.
+description: Fake eval setup records explicitly reported fixture observations and uses a synthetic stable work scope; those reports are not independent implementation checks.
 generated:
   by: claude-code
   at: 2026-10-12T08:52:42Z
@@ -29,4 +29,5 @@ Layout: code in `internal/eval/*`, content in `eval/` (`cases/<area>/*.yaml`, `f
 - **Mutation** (`mutate`): operators (`drop-rule`, `first-sentence`, `move-rule`, `replace-wording`, `drop-section`, `drop-hook`) and model proposals produce variants under `eval/variants/mutants/`, validated as plugins; `prep eval mutate` runs base and mutants and ranks them. Nothing edits the shipped plugin; promote a good mutant by hand through `just sync-skill`.
 - **What the cases ask**: see [Agent behavior test cases](/components/eval-cases.md).
 - **Not covered yet**: other harnesses (a follow-up issue in release 0.4.0), and the first live baseline run (it needs a token).
-Fixture completion setup records explicit manual observations for each bound requirement before completing an issue. These describe fixture construction, not independently verified implementation checks; live agent evaluation must supply its own reports. See [Completion policy](/features/completion-policy.md).
+
+Fixture completion setup records explicit manual observations for each bound requirement before completing an issue. It also records a matching no-impact knowledge review report, so bound-contract completion setup satisfies the completion contract. These are reports about fixture construction, not independently verified implementation checks; live agent evaluation must supply its own reports. See [Completion policy](/features/completion-policy.md).

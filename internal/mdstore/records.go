@@ -56,17 +56,18 @@ type optOutFM struct {
 }
 
 type resolutionFM struct {
-	Contract      *domain.CompletionContract    `yaml:"contract,omitempty"`
-	Verification  []domain.VerificationEvidence `yaml:"verification,omitempty"`
-	Approvals     []domain.CompletionApproval   `yaml:"approvals,omitempty"`
-	Outcome       string                        `yaml:"outcome"`
-	By            string                        `yaml:"by"`
-	At            time.Time                     `yaml:"at"`
-	Reason        string                        `yaml:"reason,omitempty"`
-	Evidence      string                        `yaml:"evidence,omitempty"`
-	Documentation *docFM                        `yaml:"documentation,omitempty"`
-	DoD           []string                      `yaml:"dod,omitempty"`
-	DoDOptOuts    []optOutFM                    `yaml:"dod_opt_outs,omitempty"`
+	Contract         *domain.CompletionContract    `yaml:"contract,omitempty"`
+	Verification     []domain.VerificationEvidence `yaml:"verification,omitempty"`
+	Approvals        []domain.CompletionApproval   `yaml:"approvals,omitempty"`
+	KnowledgeReviews []domain.KnowledgeReview      `yaml:"knowledge_reviews,omitempty"`
+	Outcome          string                        `yaml:"outcome"`
+	By               string                        `yaml:"by"`
+	At               time.Time                     `yaml:"at"`
+	Reason           string                        `yaml:"reason,omitempty"`
+	Evidence         string                        `yaml:"evidence,omitempty"`
+	Documentation    *docFM                        `yaml:"documentation,omitempty"`
+	DoD              []string                      `yaml:"dod,omitempty"`
+	DoDOptOuts       []optOutFM                    `yaml:"dod_opt_outs,omitempty"`
 }
 
 type projectFM struct {
@@ -587,7 +588,7 @@ func parseResolution(raw string) (*domain.Resolution, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &domain.Resolution{Outcome: f.Outcome, By: f.By, At: at, Reason: f.Reason, Evidence: f.Evidence, DoD: f.DoD, Note: normalize(body), Contract: f.Contract, Verification: f.Verification, Approvals: f.Approvals}
+	r := &domain.Resolution{Outcome: f.Outcome, By: f.By, At: at, Reason: f.Reason, Evidence: f.Evidence, DoD: f.DoD, Note: normalize(body), Contract: f.Contract, Verification: f.Verification, Approvals: f.Approvals, KnowledgeReviews: f.KnowledgeReviews}
 	if r.Contract != nil && r.Contract.ID != r.Contract.ContentID() {
 		return nil, fmt.Errorf("resolution completion contract content does not match its ID")
 	}
@@ -631,10 +632,39 @@ func parseResolution(raw string) (*domain.Resolution, error) {
 			}
 		}
 	}
+	for _, review := range r.KnowledgeReviews {
+		if review.ID != review.ContentID() || review.Validate() != nil || r.Contract == nil || review.Contract != r.Contract.ID {
+			return nil, fmt.Errorf("resolution knowledge review does not match its contract or content ID")
+		}
+	}
 	if f.Documentation != nil {
 		r.Documentation = &domain.Documentation{NoImpact: f.Documentation.NoImpact}
 		for _, e := range f.Documentation.Entries {
 			r.Documentation.Entries = append(r.Documentation.Entries, domain.NormalizeEntryPath(e))
+		}
+	}
+	if len(r.KnowledgeReviews) > 0 {
+		if r.Documentation == nil || r.Contract == nil {
+			return nil, fmt.Errorf("resolution knowledge reviews need documentation and a bound contract")
+		}
+		if len(r.Documentation.Entries) > 0 {
+			if strings.TrimSpace(r.Documentation.NoImpact) != "" || len(r.KnowledgeReviews) != len(r.Documentation.Entries) {
+				return nil, fmt.Errorf("resolution knowledge review snapshot does not match its documentation entries")
+			}
+			for _, entry := range r.Documentation.Entries {
+				found := false
+				for _, review := range r.KnowledgeReviews {
+					if review.Entry == entry && (review.Kind == domain.KnowledgeUpdated || review.Kind == domain.KnowledgeUnchanged) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return nil, fmt.Errorf("resolution is missing the selected review for knowledge entry %s", entry)
+				}
+			}
+		} else if len(r.KnowledgeReviews) != 1 || r.KnowledgeReviews[0].Kind != domain.KnowledgeNoImpact || r.KnowledgeReviews[0].Observation != strings.TrimSpace(r.Documentation.NoImpact) {
+			return nil, fmt.Errorf("resolution no-impact review does not match its documentation reason")
 		}
 	}
 	for _, o := range f.DoDOptOuts {
@@ -644,7 +674,7 @@ func parseResolution(raw string) (*domain.Resolution, error) {
 }
 
 func renderResolution(r *domain.Resolution) string {
-	f := resolutionFM{Outcome: r.Outcome, By: r.By, At: fmtTime(r.At), Reason: r.Reason, Evidence: r.Evidence, DoD: r.DoD, Contract: r.Contract, Verification: r.Verification, Approvals: r.Approvals}
+	f := resolutionFM{Outcome: r.Outcome, By: r.By, At: fmtTime(r.At), Reason: r.Reason, Evidence: r.Evidence, DoD: r.DoD, Contract: r.Contract, Verification: r.Verification, Approvals: r.Approvals, KnowledgeReviews: r.KnowledgeReviews}
 	if r.Documentation != nil {
 		f.Documentation = &docFM{Entries: r.Documentation.Entries, NoImpact: r.Documentation.NoImpact}
 	}

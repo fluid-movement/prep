@@ -1,5 +1,5 @@
-- [ ] Enrichment and implementation guidance offers bounded, relevant knowledge candidates with targeted prep knowledge find/show commands; candidates do not imply semantic correctness.
-- [ ] Completion requires per-work evidence of affected knowledge updates or explicit unchanged reviews, or a justified no-impact assessment; merely listing --docs entries cannot satisfy the gate.
-- [ ] Knowledge review records preserve actor, review/update kind and the issue/work and entry revision they apply to; relevant later changes invalidate applicability without fabricating reviews.
-- [ ] CLI and TUI use the same domain completion gate, and legacy records remain readable without invented knowledge evidence.
-- [ ] Regression coverage includes missing review, stale review, updated entries, unchanged confirmation, justified no-impact and bounded candidate output; affected knowledge is maintained.
+- [x] Enrichment and implementation guidance offers bounded, relevant knowledge candidates with targeted prep knowledge find/show commands; candidates do not imply semantic correctness.
+- [x] Completion requires per-work evidence of affected knowledge updates or explicit unchanged reviews, or a justified no-impact assessment; merely listing --docs entries cannot satisfy the gate.
+- [x] Knowledge review records preserve actor, review/update kind and the issue/work and entry revision they apply to; relevant later changes invalidate applicability without fabricating reviews.
+- [x] CLI and TUI use the same domain completion gate, and legacy records remain readable without invented knowledge evidence.
+- [x] Regression coverage includes missing review, stale review, updated entries, unchanged confirmation, justified no-impact and bounded candidate output; affected knowledge is maintained.

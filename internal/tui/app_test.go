@@ -8,6 +8,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -101,14 +102,17 @@ func (p *project) record(id string, op domain.Op, in domain.RecordInput) {
 
 // verify records manual fixture observations without advancing the sample's
 // clock, so evidence does not change unrelated snapshot dates or issue IDs.
-func (p *project) verify(id string) {
+func (p *project) verify(id string, noImpact ...string) {
 	p.t.Helper()
 	tr, err := p.load()
 	if err != nil {
 		p.t.Fatal(err)
 	}
 	contract := tr.Issues[id].Ready.Contract
-	snapshot, err := worktree.Fingerprint(p.dir, []string{".prep/knowledge"})
+	// The fixture reports describe a stable worktree input. Scoping them to
+	// .prep/knowledge would fingerprint the append-only review log itself and
+	// make each report stale as soon as it was written.
+	snapshot, err := worktree.Fingerprint(p.dir, []string{"go.mod"})
 	if err != nil {
 		p.t.Fatal(err)
 	}
@@ -120,13 +124,46 @@ func (p *project) verify(id string) {
 		}
 		c, err := tr.PlanEvidence(id, domain.VerificationEvidence{Requirement: r.ID, Result: "pass",
 			Method: "manual", Observation: "Fixture setup inspected.", By: "test/1", At: p.now,
-			Scopes: []string{".prep/knowledge"}, Snapshot: snapshot})
+			Scopes: []string{"go.mod"}, Snapshot: snapshot})
 		if err != nil {
 			p.t.Fatal(err)
 		}
 		if _, err := st.Apply(c); err != nil {
 			p.t.Fatal(err)
 		}
+	}
+	st := mdstore.Open(p.dir)
+	tr, err = domain.Load(st, &okf.Store{Root: p.dir}, false)
+	if err != nil {
+		p.t.Fatal(err)
+	}
+	entries := make([]string, 0, len(tr.Knowledge))
+	for path := range tr.Knowledge {
+		entries = append(entries, path)
+	}
+	sort.Strings(entries)
+	for _, path := range entries {
+		c, err := tr.PlanKnowledgeReview(id, domain.KnowledgeReview{Kind: domain.KnowledgeUnchanged, Entry: path,
+			Observation: "Fixture setup reviewed this entry.", By: "test/1", At: p.now, Scopes: []string{"go.mod"}, Snapshot: snapshot})
+		if err != nil {
+			p.t.Fatal(err)
+		}
+		if _, err := st.Apply(c); err != nil {
+			p.t.Fatal(err)
+		}
+		tr = tr.Apply(c)
+	}
+	reason := "fixture"
+	if len(noImpact) > 0 {
+		reason = noImpact[0]
+	}
+	c, err := tr.PlanKnowledgeReview(id, domain.KnowledgeReview{Kind: domain.KnowledgeNoImpact,
+		Observation: reason, By: "test/1", At: p.now, Scopes: []string{"go.mod"}, Snapshot: snapshot})
+	if err != nil {
+		p.t.Fatal(err)
+	}
+	if _, err := st.Apply(c); err != nil {
+		p.t.Fatal(err)
 	}
 }
 
@@ -1331,19 +1368,19 @@ func TestTransitionsFromTheTUI(t *testing.T) {
 	run(m, "v")
 	run(m, "space")
 	run(m, "enter")
-	p.verify(id)
+	p.verify(id, "announcement only")
 	m.Update(loadedMsg(func() loadedMsg { tr, err := p.load(); return loadedMsg{tr, err} }()))
 	run(m, "a")
 	run(m, "f")
-	run(m, "enter") // no documentation decision yet
-	if m.modal == nil || !strings.Contains(m.modal.err, "--docs") {
-		t.Fatalf("complete without documentation: modal %+v", m.modal)
+	run(m, "enter") // open the completion form
+	if m.modal == nil {
+		t.Fatal("completion form did not open")
 	}
 	run(m, "tab")
 	typeIn(m, "announcement only")
 	run(m, "enter")
 	if st, _ := stateOf(t, p, id); st != domain.StateDone {
-		t.Fatalf("after complete: %s (modal %+v)", st, m.modal)
+		t.Fatalf("after complete: %s (modal %+v notice %q)", st, m.modal, m.notice)
 	}
 	if r := issue(t, p, id).Resolution; r.By != "human:tester" {
 		t.Fatalf("completed by %q", r.By)
