@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -12,17 +13,19 @@ import (
 type Op string
 
 const (
-	OpDefine   Op = "define"
-	OpAck      Op = "ack"
-	OpReady    Op = "ready"
-	OpClaim    Op = "claim"
-	OpRelease  Op = "release"
-	OpComplete Op = "complete"
-	OpDrop     Op = "drop"
+	OpDefine           Op = "define"
+	OpAck              Op = "ack"
+	OpReady            Op = "ready"
+	OpClaim            Op = "claim"
+	OpRelease          Op = "release"
+	OpComplete         Op = "complete"
+	OpDrop             Op = "drop"
+	OpResolutionReview Op = "resolution-review"
+	OpReopen           Op = "reopen"
 )
 
 // Ops lists transitions in lifecycle order.
-var Ops = []Op{OpDefine, OpAck, OpReady, OpClaim, OpRelease, OpComplete, OpDrop}
+var Ops = []Op{OpDefine, OpAck, OpReady, OpClaim, OpRelease, OpComplete, OpDrop, OpResolutionReview, OpReopen}
 
 // Unmet is one gate condition that blocks a transition.
 type Unmet struct {
@@ -55,39 +58,46 @@ const (
 	GateTags          = "G_TAGS"
 	GatePriority      = "G_PRIORITY"
 	GateConfig        = "G_CONFIG"
+	GateReview        = "G_REVIEW"
 )
 
 // Input carries the arguments of a transition. Nil fields in guide mode mean
 // "not provided yet"; gates that depend on them are reported as needs.
 type Input struct {
-	Actor    string
-	Now      time.Time
-	Note     string
-	Reason   string
-	Commit   string
-	Docs     []string
-	NoImpact string
+	Actor        string
+	Now          time.Time
+	Note         string
+	Reason       string
+	Commit       string
+	Docs         []string
+	NoImpact     string
+	Scopes       []string
+	ConfigScopes []string
+	Snapshot     string
 }
 
 // Change is the set of records a transition writes. Storage adapters render it.
 type Change struct {
-	Op              Op                      `json:"op"`
-	IssueID         string                  `json:"id"`
-	NewIssue        *Issue                  `json:"-"`
-	Baseline        *Baseline               `json:"-"`
-	Ready           *Ready                  `json:"-"`
-	Claim           *Claim                  `json:"-"`
-	RemoveClaim     bool                    `json:"-"`
-	Resolution      *Resolution             `json:"-"`
-	Verification    *[]VerificationEvidence `json:"-"`
-	Approvals       *[]CompletionApproval   `json:"-"`
-	DoDRevision     *string                 `json:"-"`
-	OptOutRevisions *map[string]string      `json:"-"`
-	Edit            *IssueEdit              `json:"-"`
-	Context         *string                 `json:"-"`
-	Findings        *string                 `json:"-"`
-	Decision        *Decision               `json:"-"`
-	Acceptance      []AcceptanceOp          `json:"-"`
+	Op                Op                      `json:"op"`
+	IssueID           string                  `json:"id"`
+	NewIssue          *Issue                  `json:"-"`
+	Baseline          *Baseline               `json:"-"`
+	Ready             *Ready                  `json:"-"`
+	Claim             *Claim                  `json:"-"`
+	RemoveClaim       bool                    `json:"-"`
+	Resolution        *Resolution             `json:"-"`
+	RemoveResolution  bool                    `json:"-"`
+	ResolutionHistory *[]Resolution           `json:"-"`
+	ResolutionReviews *[]ResolutionReview     `json:"-"`
+	Verification      *[]VerificationEvidence `json:"-"`
+	Approvals         *[]CompletionApproval   `json:"-"`
+	DoDRevision       *string                 `json:"-"`
+	OptOutRevisions   *map[string]string      `json:"-"`
+	Edit              *IssueEdit              `json:"-"`
+	Context           *string                 `json:"-"`
+	Findings          *string                 `json:"-"`
+	Decision          *Decision               `json:"-"`
+	Acceptance        []AcceptanceOp          `json:"-"`
 	// Knowledge is a knowledge write; KnowledgeEntry is the entry the
 	// adapter rendered from it, used to validate before writing.
 	Knowledge      *KnowledgeEdit `json:"-"`
@@ -106,14 +116,15 @@ type Change struct {
 // IssueEdit is the new content of an issue's requirement record after
 // prep edit. Fields not edited keep their current values.
 type IssueEdit struct {
-	Title     string
-	Kind      Kind
-	Parent    string
-	DependsOn []string
-	Tags      []string
-	Priority  Priority
-	Body      *string // new requirement text; nil keeps the current one
-	Fields    []string
+	Title             string
+	Kind              Kind
+	Parent            string
+	DependsOn         []string
+	DependsOnApproval []string
+	Tags              []string
+	Priority          Priority
+	Body              *string // new requirement text; nil keeps the current one
+	Fields            []string
 }
 
 // Transition describes one possible transition for guide output.
@@ -142,6 +153,8 @@ func fromStates(op Op) []State {
 		return []State{StateInProgress}
 	case OpDrop:
 		return []State{StateOpen, StateDefined, StateReady, StateInProgress}
+	case OpResolutionReview, OpReopen:
+		return []State{StateDone}
 	}
 	return nil
 }
@@ -160,6 +173,10 @@ func (t *Tree) Applicable(id string, op Op) bool {
 	s := t.State(id)
 	if op == OpComplete && t.IsParent(id) {
 		return s == StateReady || s == StateInProgress
+	}
+	if op == OpResolutionReview || op == OpReopen {
+		i := t.Issues[id]
+		return i != nil && i.Resolution != nil && i.Resolution.Outcome == OutcomeDone
 	}
 	return hasState(fromStates(op), s)
 }
@@ -277,8 +294,8 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 				if in == nil {
 					needs = append(needs, "[--commit <ref>]")
 				} else {
-					// Without --commit, the evidence is the commit that adds
-					// resolution.md: code and records land together.
+					// A commit is optional provenance; completion and later review
+					// do not orchestrate or require one.
 					if in.Commit != "" && !commitPattern.MatchString(in.Commit) {
 						add(GateEvidence, "commit reference %q is not a hex commit hash", in.Commit)
 					}
@@ -324,6 +341,47 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 			needs = append(needs, "--reason <text>")
 		} else if strings.TrimSpace(in.Reason) == "" {
 			add(GateReason, "dropping requires --reason")
+		}
+	case OpResolutionReview:
+		if in == nil {
+			needs = append(needs, "--reason <text>", "--by human:<name>", "--scope <path>...")
+		} else {
+			if !humanActor(in.Actor) {
+				add(GateActor, "resolution review requires an explicit human:<name> actor")
+			}
+			if strings.TrimSpace(in.Reason) == "" {
+				add(GateReason, "resolution review requires --reason")
+			}
+			if in.Now.IsZero() {
+				add(GateReview, "resolution review needs a timestamp")
+			}
+			if len(in.Scopes) == 0 {
+				add(GateReview, "resolution review needs at least one declared work scope; legacy resolutions may pass --scope")
+			}
+			for _, scope := range ReviewWorkScopes(i.Resolution) {
+				if !slices.Contains(in.Scopes, scope) {
+					add(GateReview, "resolution review must include recorded work scope %q", scope)
+				}
+			}
+			for _, scope := range ReviewConfigScopes(i.Resolution) {
+				if !slices.Contains(in.ConfigScopes, scope) {
+					add(GateReview, "resolution review must include recorded config scope %q", scope)
+				}
+			}
+			if !validFingerprint(in.Snapshot) {
+				add(GateReview, "resolution review needs a current scoped work fingerprint")
+			}
+		}
+	case OpReopen:
+		if in == nil {
+			needs = append(needs, "--reason <text>")
+		} else {
+			if strings.TrimSpace(in.Actor) == "" || humanActor(in.Actor) {
+				add(GateActor, "reopen is an explicit agent action; use the current agent actor")
+			}
+			if strings.TrimSpace(in.Reason) == "" {
+				add(GateReason, "reopening requires --reason")
+			}
 		}
 	}
 	return unmet, needs
@@ -407,7 +465,7 @@ func (t *Tree) Plan(id string, op Op, in Input) (*Change, error) {
 		c.History = line
 	case OpComplete:
 		dod, opt := t.EffectiveDoD(id)
-		res := &Resolution{Outcome: OutcomeDone, By: in.Actor, At: now, DoD: dod, DoDOptOuts: opt, Note: in.Note}
+		res := &Resolution{Outcome: OutcomeDone, By: in.Actor, At: now, DoD: dod, DoDOptOuts: opt, Note: in.Note, Generation: nextResolutionGeneration(i)}
 		if i.Ready != nil && i.Ready.Contract != nil {
 			res.Contract = i.Ready.Contract
 			res.Approvals = t.CompletionApprovals(id)
@@ -432,6 +490,29 @@ func (t *Tree) Plan(id string, op Op, in Input) (*Change, error) {
 		}
 		res.Documentation = doc
 		c.Resolution = res
+	case OpResolutionReview:
+		r := i.Resolution
+		review := ResolutionReview{
+			Previous:     latestReviewID(i),
+			ResolutionID: r.ContentID(),
+			Generation:   reviewGeneration(r),
+			Reason:       strings.TrimSpace(in.Reason),
+			By:           in.Actor,
+			At:           now,
+			Scopes:       sortedUnique(slices.Clone(in.Scopes)),
+			ConfigScopes: sortedUnique(slices.Clone(in.ConfigScopes)),
+			Snapshot:     strings.ToLower(in.Snapshot),
+		}
+		review.ID = review.ContentID()
+		reviews := append(slices.Clone(i.ResolutionReviews), review)
+		c.ResolutionReviews = &reviews
+		c.History = fmt.Sprintf("- %s %s approved resolution %s (generation %d)", now.Format(time.RFC3339), in.Actor, review.ResolutionID, review.Generation)
+	case OpReopen:
+		history := append(slices.Clone(i.ResolutionHistory), *i.Resolution)
+		c.ResolutionHistory = &history
+		c.RemoveResolution = true
+		c.RemoveClaim = true
+		c.History = fmt.Sprintf("- %s %s reopened resolution %s (generation %d): %s", now.Format(time.RFC3339), in.Actor, i.Resolution.ContentID(), i.Resolution.Generation, strings.TrimSpace(in.Reason))
 	case OpDrop:
 		c.Resolution = &Resolution{Outcome: OutcomeDropped, By: in.Actor, At: now, Reason: strings.TrimSpace(in.Reason), Note: in.Note}
 	}
@@ -491,15 +572,16 @@ func (t *Tree) PlanNew(in NewIssueInput, now time.Time) (*Change, error) {
 
 // EditInput holds the fields prep edit changes. Nil means unchanged.
 type EditInput struct {
-	Actor     string
-	Now       time.Time
-	Title     *string
-	Kind      *Kind
-	Parent    *string
-	DependsOn *[]string
-	Tags      *[]string
-	Priority  *string // a level name; medium or empty unsets it
-	Body      *string // requirement text, including its Open questions section
+	Actor             string
+	Now               time.Time
+	Title             *string
+	Kind              *Kind
+	Parent            *string
+	DependsOn         *[]string
+	DependsOnApproval *[]string
+	Tags              *[]string
+	Priority          *string // a level name; medium or empty unsets it
+	Body              *string // requirement text, including its Open questions section
 }
 
 // PlanEdit validates an edit of an unresolved issue's title, kind, parent,
@@ -508,12 +590,12 @@ type EditInput struct {
 // self-dependencies are left to CheckWrite, which validates the edited tree.
 func (t *Tree) PlanEdit(id string, in EditInput) (*Change, error) {
 	i := t.Issues[id]
-	metaOnly := (in.Tags != nil || in.Priority != nil) && in.Title == nil && in.Kind == nil && in.Parent == nil && in.DependsOn == nil && in.Body == nil
+	metaOnly := (in.Tags != nil || in.Priority != nil) && in.Title == nil && in.Kind == nil && in.Parent == nil && in.DependsOn == nil && in.DependsOnApproval == nil && in.Body == nil
 	if s := t.State(id); s.Terminal() && !metaOnly {
 		return nil, &Error{Code: ErrGate, Message: fmt.Sprintf("cannot edit %s", id),
 			Unmet: []Unmet{{GateState, fmt.Sprintf("edit requires an unresolved issue, issue is %s; only --tag and --priority work on resolved issues", s)}}}
 	}
-	e := &IssueEdit{Title: i.Title, Kind: i.Kind, Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags, Priority: i.Priority}
+	e := &IssueEdit{Title: i.Title, Kind: i.Kind, Parent: i.Parent, DependsOn: i.DependsOn, DependsOnApproval: i.DependsOnApproval, Tags: i.Tags, Priority: i.Priority}
 	var unmet []Unmet
 	if in.Title != nil {
 		e.Title = strings.TrimSpace(*in.Title)
@@ -546,6 +628,25 @@ func (t *Tree) PlanEdit(id string, in EditInput) (*Change, error) {
 		}
 		e.Fields = append(e.Fields, "depends_on")
 	}
+	if in.DependsOnApproval != nil {
+		e.DependsOnApproval = nil
+		for _, d := range *in.DependsOnApproval {
+			if contains(e.DependsOnApproval, d) {
+				continue
+			}
+			if !contains(e.DependsOn, d) || strings.Contains(d, ":") {
+				unmet = append(unmet, Unmet{GateDeps, fmt.Sprintf("approval dependency %s must also be an ordinary local dependency", d)})
+			}
+			e.DependsOnApproval = append(e.DependsOnApproval, d)
+		}
+		e.Fields = append(e.Fields, "depends_on_approval")
+	} else if in.DependsOn != nil {
+		for _, d := range e.DependsOnApproval {
+			if !contains(e.DependsOn, d) {
+				unmet = append(unmet, Unmet{GateDeps, fmt.Sprintf("cannot remove dependency %s while it requires approval; clear --depends-on-approval or replace it", d)})
+			}
+		}
+	}
 	if in.Tags != nil {
 		tags, err := NormalizeTags(*in.Tags)
 		if err != nil {
@@ -568,7 +669,7 @@ func (t *Tree) PlanEdit(id string, in EditInput) (*Change, error) {
 		e.Fields = append(e.Fields, "requirement")
 	}
 	if len(e.Fields) == 0 {
-		unmet = append(unmet, Unmet{GateRequirement, "nothing to edit: pass --title, --kind, --parent, --depends-on, --tag, --priority, --body or --body-file"})
+		unmet = append(unmet, Unmet{GateRequirement, "nothing to edit: pass --title, --kind, --parent, --depends-on, --depends-on-approval, --tag, --priority, --body or --body-file"})
 	}
 	if len(unmet) > 0 {
 		return nil, &Error{Code: ErrUsage, Message: fmt.Sprintf("cannot edit %s", id), Unmet: unmet}
@@ -621,8 +722,17 @@ func (t *Tree) Apply(c *Change) *Tree {
 				r := *c.Resolution
 				cp.Resolution = &r
 			}
+			if c.RemoveResolution {
+				cp.Resolution = nil
+			}
+			if c.ResolutionHistory != nil {
+				cp.ResolutionHistory = slices.Clone(*c.ResolutionHistory)
+			}
+			if c.ResolutionReviews != nil {
+				cp.ResolutionReviews = slices.Clone(*c.ResolutionReviews)
+			}
 			if e := c.Edit; e != nil {
-				cp.Title, cp.Kind, cp.Parent, cp.DependsOn, cp.Tags, cp.Priority = e.Title, e.Kind, e.Parent, e.DependsOn, e.Tags, e.Priority
+				cp.Title, cp.Kind, cp.Parent, cp.DependsOn, cp.DependsOnApproval, cp.Tags, cp.Priority = e.Title, e.Kind, e.Parent, e.DependsOn, e.DependsOnApproval, e.Tags, e.Priority
 				if e.Body != nil {
 					cp.Body = *e.Body
 				}

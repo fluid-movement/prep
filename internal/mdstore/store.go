@@ -86,7 +86,7 @@ func (s *Store) read(rel string) (string, bool, error) {
 
 // Allowed top-level entries.
 var (
-	issueFiles   = map[string]bool{"issue.md": true, "acceptance.md": true, "context.md": true, "decisions.md": true, "history.md": true, "findings.md": true, "ready.md": true, "claim.md": true, "resolution.md": true, "verification.md": true, "approvals.md": true}
+	issueFiles   = map[string]bool{"issue.md": true, "acceptance.md": true, "context.md": true, "decisions.md": true, "history.md": true, "findings.md": true, "ready.md": true, "claim.md": true, "resolution.md": true, "resolution-history.md": true, "resolution-reviews.md": true, "verification.md": true, "approvals.md": true}
 	issueDirs    = map[string]bool{"baselines": true, "attachments": true}
 	schemaFiles  = []string{"acceptance.md", "context.md", "decisions.md", "history.md"}
 	projectFiles = map[string]bool{"project.md": true, "config.yaml": true, "config.yaml.dist": true, "issues": true, "knowledge": true, ".gitignore": true, activity.Dir: true}
@@ -329,6 +329,31 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 	if err := record("resolution.md", func(raw string) (err error) { i.Resolution, err = parseResolution(raw); return }, func() string { return renderResolution(i.Resolution) }); err != nil {
 		return nil, nil, err
 	}
+	if err := record("resolution-history.md", func(raw string) (err error) { i.ResolutionHistory, err = parseResolutionHistory(raw); return }, func() string { return renderResolutionHistory(i.ResolutionHistory) }); err != nil {
+		return nil, nil, err
+	}
+	resolutionGenerations := map[string]uint64{}
+	for n := range i.ResolutionHistory {
+		r := &i.ResolutionHistory[n]
+		generation := r.Generation
+		if generation == 0 {
+			generation = 1
+		}
+		resolutionGenerations[r.ContentID()] = generation
+	}
+	if i.Resolution != nil {
+		generation := i.Resolution.Generation
+		if generation == 0 {
+			generation = 1
+		}
+		resolutionGenerations[i.Resolution.ContentID()] = generation
+	}
+	if err := record("resolution-reviews.md", func(raw string) (err error) {
+		i.ResolutionReviews, err = parseResolutionReviews(raw, resolutionGenerations)
+		return
+	}, func() string { return renderResolutionReviews(i.ResolutionReviews) }); err != nil {
+		return nil, nil, err
+	}
 	i.EvidenceCurrent = map[string]bool{}
 	for _, e := range i.Verification {
 		paths := append(append([]string(nil), e.Scopes...), e.ConfigScopes...)
@@ -344,7 +369,23 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 		fingerprint, err := worktree.Fingerprint(s.Root, paths)
 		i.ApprovalCurrent[a.ID] = err == nil && fingerprint == a.Snapshot
 	}
+	i.ResolutionReviewCurrent = map[string]bool{}
+	for _, r := range i.ResolutionReviews {
+		if i.Resolution == nil || r.ResolutionID != i.Resolution.ContentID() || r.Generation != reviewGeneration(i.Resolution) {
+			continue
+		}
+		paths := append(append([]string(nil), r.Scopes...), r.ConfigScopes...)
+		fingerprint, err := worktree.Fingerprint(s.Root, paths)
+		i.ResolutionReviewCurrent[r.ID] = err == nil && fingerprint == r.Snapshot
+	}
 	return i, diags, nil
+}
+
+func reviewGeneration(r *domain.Resolution) uint64 {
+	if r.Generation == 0 {
+		return 1
+	}
+	return r.Generation
 }
 
 func canonicalAcceptance(raw string) string { return fileText(normalizeChecklist(raw)) }

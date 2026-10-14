@@ -361,7 +361,16 @@ func cmdShow(a *app, args []string) error {
 	}
 	a.noteRead(issueEvent(t, "show", id, "read the issue"))
 	i := t.Issues[id]
-	pending := a.resolveEvidence(t, id)
+	derivedEvidence, pending := a.derivedEvidence(t, id)
+	if derivedEvidence != "" && i.Resolution != nil {
+		// Git-derived presentation evidence is not part of the stored resolution
+		// identity used by human review snapshots.
+		copyIssue := *i
+		copyResolution := *i.Resolution
+		copyResolution.Evidence = derivedEvidence
+		copyIssue.Resolution = &copyResolution
+		i = &copyIssue
+	}
 	dod, opt := t.EffectiveDoD(id)
 	s := summarize(t, id)
 	var deps []projects.Dependent
@@ -381,7 +390,8 @@ func cmdShow(a *app, args []string) error {
 		a.emit(map[string]any{
 			"cross_deps": s.CrossDeps, "dependents": deps, "cross_knowledge": xknow,
 			"issue": i, "dir": mdstore.IssueDir(id), "priority": i.Priority.Effective(), "state": s.State, "stale": s.Stale, "blocked": s.Blocked,
-			"actionable": s.Actionable, "children": nonNil(t.Children(id)), "blocks": nonNil(t.Blocks(id)),
+			"resolution_review": reviewView(t, id),
+			"actionable":        s.Actionable, "children": nonNil(t.Children(id)), "blocks": nonNil(t.Blocks(id)),
 			"progress": s.Progress, "definition_of_done": nonNil(dod), "dod_opt_outs": opt,
 			"context": i.Context, "findings": i.Findings, "history": i.History, "evidence_pending": pending,
 		})
@@ -410,7 +420,11 @@ func cmdShow(a *app, args []string) error {
 			a.printf("depends on: %s\n", xDepLine(t.XIssueOf(d)))
 			continue
 		}
-		a.printf("depends on: %s [%s] %s\n", d, t.State(d), titleOf(t, d))
+		label := "depends on"
+		if slices.Contains(i.DependsOnApproval, d) {
+			label = "depends on approved resolution"
+		}
+		a.printf("%s: %s [%s] %s\n", label, d, t.State(d), titleOf(t, d))
 	}
 	for _, b := range t.Blocks(id) {
 		a.printf("blocks: %s [%s] %s\n", b, t.State(b), titleOf(t, b))
@@ -488,6 +502,9 @@ func cmdShow(a *app, args []string) error {
 			a.printf(" (evidence: the commit that adds its resolution.md, not made yet)")
 		}
 		a.printf("\n")
+		if r.Outcome == domain.OutcomeDone {
+			a.printf("- resolution review: %s (prep review show %s)\n", t.ResolutionReviewStatus(id), id)
+		}
 	}
 	return nil
 }
@@ -513,30 +530,36 @@ func nonNil(s []string) []string {
 	return s
 }
 
-// resolveEvidence fills a done code issue's evidence in memory when it was
-// completed without --commit: the commit that added its resolution.md. It
-// reports whether that commit is not made yet.
-func (a *app) resolveEvidence(t *domain.Tree, id string) (pending bool) {
+// derivedEvidence finds presentation-only evidence for a done code issue that
+// was completed without --commit. It reports whether that commit is not made
+// yet without mutating the stored resolution or its content identity.
+func (a *app) derivedEvidence(t *domain.Tree, id string) (evidence string, pending bool) {
 	i := t.Issues[id]
 	r := i.Resolution
 	if r == nil || r.Evidence != "" || r.Outcome != domain.OutcomeDone || i.Kind != domain.KindCode || t.IsParent(id) {
-		return false
+		return "", false
 	}
 	if !gitx.IsRepo(a.store.Root) {
-		return true
+		return "", true
 	}
-	r.Evidence = gitx.AddedIn(a.store.Root, mdstore.IssueDir(id)+"/resolution.md")
-	return r.Evidence == ""
+	evidence = gitx.AddedIn(a.store.Root, mdstore.IssueDir(id)+"/resolution.md")
+	return evidence, evidence == ""
 }
 
 // touchedFiles lists code paths an issue touched, from its commit evidence.
 func (a *app) touchedFiles(t *domain.Tree, id string) []string {
-	a.resolveEvidence(t, id)
 	r := t.Issues[id].Resolution
-	if r == nil || r.Evidence == "" || !gitx.IsRepo(a.store.Root) || !gitx.CommitExists(a.store.Root, r.Evidence) {
+	evidence := ""
+	if r != nil {
+		evidence = r.Evidence
+		if evidence == "" {
+			evidence, _ = a.derivedEvidence(t, id)
+		}
+	}
+	if r == nil || evidence == "" || !gitx.IsRepo(a.store.Root) || !gitx.CommitExists(a.store.Root, evidence) {
 		return nil
 	}
-	files, _ := gitx.FilesInCommit(a.store.Root, r.Evidence)
+	files, _ := gitx.FilesInCommit(a.store.Root, evidence)
 	return files
 }
 
@@ -572,6 +595,9 @@ func cmdGuide(a *app, args []string) error {
 	}
 	a.printf("%s  %s\n", g.ID, g.Title)
 	a.printf("kind: %s   state: %s", g.Kind, g.State)
+	if g.ResolutionReviewStatus != "" {
+		a.printf("   resolution review: %s", g.ResolutionReviewStatus)
+	}
 	if g.Stale {
 		a.printf("   STALE")
 	}

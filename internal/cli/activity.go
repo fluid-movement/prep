@@ -105,6 +105,8 @@ var opVerbs = map[domain.Op]string{
 	domain.OpRelease:  "released the issue",
 	domain.OpComplete: "completed the issue",
 	domain.OpDrop:     "dropped the issue",
+	domain.OpResolutionReview: "approved the resolution",
+	domain.OpReopen:           "reopened the issue",
 	domain.OpContext:  "wrote the context",
 	domain.OpFindings: "wrote the findings",
 	domain.OpDoD:      "changed the Definition of Done",

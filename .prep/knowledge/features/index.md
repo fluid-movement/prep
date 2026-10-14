@@ -8,3 +8,4 @@
 * [Explicit project completion policy](/features/completion-policy.md) - Project verification and documentation methods, configured through policy set and required for new readiness transitions.
 * [Cross-project work](/features/cross-project.md) - How a command reaches another prep project on the machine (--project), how that shows in output and activity, and how agents learn about other projects.
 * [Issue lifecycle](/features/lifecycle.md) - States derived from records, transitions with their gates per kind, stale drift handling, parents, dependencies and Definition of Done.
+* [Resolution review and reopening](/features/resolution-review.md) - Human approvals bound to completed resolution history and scoped snapshots.

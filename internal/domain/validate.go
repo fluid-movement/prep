@@ -108,6 +108,17 @@ func Validate(t *Tree) []Diagnostic {
 				w(CodeDepDropped, ClassGuided, "issue.md", "remove the dependency or replace it with the issue that supersedes it", "depends on dropped issue %s", d)
 			}
 		}
+		seenApprovalDeps := map[string]bool{}
+		for _, d := range i.DependsOnApproval {
+			if seenApprovalDeps[d] {
+				w(CodeDuplicateDep, ClassFixable, "issue.md", "prep edit removes duplicate approval dependencies", "approval dependency %s listed twice", d)
+			} else if !seen[d] {
+				e(CodeDepMissing, ClassManual, "issue.md", "add it to depends_on or remove it from depends_on_approval", "approval dependency %s is not an ordinary dependency", d)
+			} else if _, _, cross := SplitRef(d); cross {
+				e(CodeDepMissing, ClassManual, "issue.md", "approval prerequisites are supported only for local dependencies", "approval dependency %s is cross-project", d)
+			}
+			seenApprovalDeps[d] = true
+		}
 		if inDepCycle(t, id) {
 			e(CodeDepCycle, ClassManual, "issue.md", "remove a depends_on entry to break the cycle", "dependency cycle through this issue")
 		}
