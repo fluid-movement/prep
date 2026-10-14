@@ -1,0 +1,4 @@
+- [x] Codex session-start guidance limits PREP_ACTOR/PREP_SESSION assignments to prep CLI invocations and preserves ordinary shell command shape.
+- [x] Prep read/write activity retains the supplied Codex actor and session, with explicit --by precedence.
+- [x] Ordinary tools are neither rewritten nor auto-approved; tool events retain Codex attribution without command env assignments.
+- [x] Embedded and packaged skills, README and affected knowledge entries agree; relevant regressions and project checks pass.

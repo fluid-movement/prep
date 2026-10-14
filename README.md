@@ -31,7 +31,7 @@ hooks:
   prompt: small
 ```
 
-`small` is the default concise workflow reminder; `large` also includes bounded guides for up to two full issue IDs; `off` skips prompt input and project lookup. Session context, record redirects, activity and finish remain enabled. Turn finish uses Git snapshots of dirty files and commits, ignoring unchanged pre-existing work; it asks for one issue/knowledge review pass when needed and respects the stop-loop flag. Git/snapshot failures leave the turn alone. With prompt context off, its boundary is session start or the previous finish. Codex session context tells the agent to set `PREP_ACTOR` and `PREP_SESSION` for shell commands; it does not auto-approve or rewrite ordinary tools. Keep plugin and binary versions in sync (`prep setup --refresh`).
+`small` is the default concise workflow reminder; `large` also includes bounded guides for up to two full issue IDs; `off` skips prompt input and project lookup. Session context, record redirects, activity and finish remain enabled. Turn finish uses Git snapshots of dirty files and commits, ignoring unchanged pre-existing work; it asks for one issue/knowledge review pass when needed and respects the stop-loop flag. Git/snapshot failures leave the turn alone. With prompt context off, its boundary is session start or the previous finish. Codex session context tells the agent to set `PREP_ACTOR` and `PREP_SESSION` only on prep CLI invocations. Other shell commands keep their usual form so approved command prefixes can still match; hooks attribute their activity directly from event payloads and do not auto-approve or rewrite them. Keep plugin and binary versions in sync (`prep setup --refresh`).
 
 ## Update
 

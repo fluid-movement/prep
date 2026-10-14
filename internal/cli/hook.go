@@ -97,7 +97,7 @@ func cmdHook(a *app, args []string) error {
 			return nil
 		}
 		if *harness == "codex" {
-			message += "\nFor shell commands in this session, set PREP_ACTOR=codex and PREP_SESSION=" + hookQuote(e.Session) + " so prep CLI events carry attribution.\n"
+			message += "\nFor prep CLI invocations only, set PREP_ACTOR=codex and PREP_SESSION=" + hookQuote(e.Session) + " so prep CLI events carry attribution. Leave other shell commands (such as go test, git and rg) unchanged; do not add these assignments to them. Hooks attribute ordinary tool activity from the event payload.\n"
 		}
 		hookContext(a, name, hookBound(message, 10000))
 	case "prompt":

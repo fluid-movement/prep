@@ -8,6 +8,34 @@ import (
 	"testing"
 )
 
+func TestCodexSkillUsesPrepOnlyAttribution(t *testing.T) {
+	root := filepath.Join("..", "..")
+	path := filepath.Join(root, "plugins", "codex", "skills", "prep", "SKILL.md")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(string(b), skillText) {
+		t.Fatal("Codex skill base differs from embedded skill; run just sync-skill")
+	}
+	for _, text := range []string{string(b), skillText} {
+		if !strings.Contains(text, "For prep CLI invocations only") || !strings.Contains(text, "Leave unrelated shell commands unchanged") {
+			t.Fatal("skill requests attribution beyond prep CLI invocations")
+		}
+		if strings.Contains(text, "for shell commands so prep CLI activity") {
+			t.Fatal("legacy blanket attribution guidance remains")
+		}
+	}
+	// Keep the generator scoped too, so a later sync cannot restore the bug.
+	recipe, err := os.ReadFile(filepath.Join(root, "justfile"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(recipe), "only to prep CLI invocations") || strings.Contains(string(recipe), "for shell commands so prep CLI activity") {
+		t.Fatal("skill generator would restore blanket attribution guidance")
+	}
+}
+
 func TestCodexLegacyHookLauncher(t *testing.T) {
 	python, err := exec.LookPath("python3")
 	if err != nil {

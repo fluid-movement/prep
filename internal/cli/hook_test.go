@@ -180,3 +180,81 @@ func TestHookSessionAndActivity(t *testing.T) {
 		}
 	}
 }
+
+func TestCodexSessionAttributionIsLimitedToPrep(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	h := newHarness(t)
+	for _, session := range []string{"session-1", "session'quoted", ""} {
+		var output struct {
+			Hook struct {
+				Context string `json:"additionalContext"`
+			} `json:"hookSpecificOutput"`
+		}
+		out := runHook(t, "session-start", "codex", hookEvent{Cwd: h.dir, Session: session})
+		if err := json.Unmarshal([]byte(out), &output); err != nil {
+			t.Fatal(err)
+		}
+		context := output.Hook.Context
+		for _, want := range []string{"For prep CLI invocations only", "PREP_ACTOR=codex", "PREP_SESSION=" + hookQuote(session), "Leave other shell commands", "do not add these assignments to them"} {
+			if !strings.Contains(context, want) {
+				t.Fatalf("session guidance lacks %q: %s", want, context)
+			}
+		}
+		if strings.Contains(context, "For shell commands in this session") {
+			t.Fatal("session guidance still requests blanket prefixes")
+		}
+	}
+	if out := runHook(t, "session-start", "claude-code", hookEvent{Cwd: h.dir, Session: "session-1"}); strings.Contains(out, "PREP_ACTOR=codex") {
+		t.Fatal("Codex attribution leaked into Claude Code guidance")
+	}
+}
+
+func TestPrepInvocationAndOrdinaryToolAttribution(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	h := newHarness(t)
+	id := h.newIssue("--title", "Attribution", "--kind", "manual", "--body", "Observe attribution.")
+	// Only prep invocations need the session's attribution environment.
+	t.Setenv("PREP_ACTOR", "codex")
+	t.Setenv("PREP_SESSION", "session-attribution")
+	h.ok("guide", id)
+	h.ok("criterion", id, "--add", "Attributed", "--by", "agent/override")
+	// Ordinary shell commands keep their approved command shape; hook events
+	// obtain their actor and session from the harness event, not the environment.
+	t.Setenv("PREP_ACTOR", "")
+	t.Setenv("PREP_SESSION", "")
+	e := hookEvent{Cwd: h.dir, Session: "session-attribution", Tool: "Bash", Input: map[string]any{"command": "go test ./..."}, Response: json.RawMessage(`{"exit_code":0}`)}
+	if out := runHook(t, "before-tool", "codex", e); out != "" {
+		t.Fatalf("ordinary command rewritten or approved: %s", out)
+	}
+	runHook(t, "after-tool", "codex", e)
+	var feed struct {
+		Events []struct{ Actor, Session, Op, Target, Kind string }
+	}
+	h.jsonOf(&feed, "activity", "--max", "20")
+	seen := map[string]bool{}
+	for _, event := range feed.Events {
+		if event.Session != "session-attribution" {
+			continue
+		}
+		switch event.Op {
+		case "guide":
+			if event.Actor != "codex" {
+				t.Fatalf("prep read attribution: %+v", event)
+			}
+			seen["read"] = true
+		case "criterion":
+			if event.Actor != "agent/override" {
+				t.Fatalf("explicit actor lost precedence: %+v", event)
+			}
+			seen["write"] = true
+		case "Bash":
+			if event.Actor != "codex" || event.Target != "go test ./..." || event.Kind != "tool" {
+				t.Fatalf("ordinary tool attribution: %+v", event)
+			}
+			seen["tool"] = true
+		}
+	}
+	if len(seen) != 3 {
+		t.Fatalf("missing attributed events: %+v", feed)
+	}
+}
