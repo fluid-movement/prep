@@ -1,0 +1,10 @@
+## D1: Tri-state local source observations and scoped human uncertainty overrides
+date: 2026-10-14
+
+Implement the already defined requirement using the existing [Cross-project work](/features/cross-project.md), [Project registry](/components/projects.md), [Domain](/components/domain.md), [Resolution review](/features/resolution-review.md) and [Lifecycle](/features/lifecycle.md). Historical 01M4N5ARVE6J5APZYJ7VA0N464 establishes permanent project IDs and checkout-local links; its unknown-never-blocks behavior is intentionally superseded here.
+
+`internal/domain/links.go` and `tree.go` currently skip missing/unknown dependencies. Keep lookup presence distinct from satisfied/unsatisfied/unknown outcome; claim and actionable predicates fail closed for unknown. Sources are freshly loaded local checkouts only, with permanent project ID, checkout root/name, Git revision when available, deterministic target-content/review-status observation digest and explicit uncertainty. Missing checkout, target or readable source is unknown; no cached satisfaction or remote fetching.
+
+Add a versioned human-attributed uncertainty override bound to the exact dependency reference, observed source digest and local dependency/requirement snapshot, with nonempty reason. It overrides unknown only; known incomplete work or required review still blocks. Source or local requirement/dependency changes invalidate the override. External approval prerequisites reuse the existing current resolution-review status, not a second approval definition. Expose provenance/outcome/uncertainty and stale overrides through CLI/shared data and TUI dependency presentation.
+
+Own domain/project/CLI/TUI dependency changes and narrow mdstore override parse/render additions. The concurrent storage worker owns Load/Apply transaction wrappers; keep edits disjoint and integrate after code review. Root owns all issue and knowledge records. Focused tests cover fresh/unavailable/missing/read-error sources, optional approval, stale overrides, actor/reason checks, source identity changes and legacy local compatibility.
