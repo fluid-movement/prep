@@ -105,6 +105,23 @@ func (s *Store) recoverTransaction() error {
 	return syncDirectory(filepath.Dir(s.abs(transactionFile)))
 }
 
+func (s *Store) readIssueInventory() ([]string, error) {
+	dirs, err := os.ReadDir(s.abs(Dir + "/issues"))
+	if errors.Is(err, fs.ErrNotExist) {
+		return []string{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(dirs))
+	for _, d := range dirs {
+		if d.IsDir() && domain.ValidID(d.Name()) {
+			ids = append(ids, d.Name())
+		}
+	}
+	return ids, nil
+}
+
 func validTransactionEntry(e transactionEntry) bool {
 	clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(e.Path)))
 	if clean != e.Path || !transactionPathAllowed(clean) {

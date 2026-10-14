@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/fluid-movement/prep/internal/domain"
@@ -91,6 +92,16 @@ func (s *Store) Apply(c *domain.Change) ([]string, error) {
 	if err := s.recoverTransaction(); err != nil {
 		return nil, err
 	}
+	loadedIssueIDs := slices.Clone(s.loadedIDs)
+	if s.hasSnapshot {
+		currentIDs, err := s.readIssueInventory()
+		if err != nil {
+			return nil, err
+		}
+		if !slices.Equal(loadedIssueIDs, currentIDs) {
+			return nil, &domain.Error{Code: domain.ErrConflict, Message: "issue directory inventory changed since it was read; re-run the command"}
+		}
+	}
 	loaded := cloneHashes(s.hashes)
 	touched, contents, err := s.render(c)
 	if err != nil {
@@ -131,6 +142,10 @@ func (s *Store) Apply(c *domain.Change) ([]string, error) {
 	}
 	for _, e := range entries {
 		s.hashes[e.Path] = e.After
+	}
+	if c.NewIssue != nil && s.hasSnapshot {
+		s.loadedIDs = append(s.loadedIDs, c.IssueID)
+		slices.Sort(s.loadedIDs)
 	}
 	return touched, nil
 }

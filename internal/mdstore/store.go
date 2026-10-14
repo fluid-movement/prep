@@ -27,9 +27,11 @@ const Dir = ".prep"
 
 // Store reads and writes a .prep tree rooted at Root (the repository root).
 type Store struct {
-	Root   string
-	hashes map[string]string                   // relative path -> sha256 of content at load; "" = absent
-	txHook func(stage string, index int) error // deterministic failure injection for transaction tests
+	Root        string
+	hashes      map[string]string                   // relative path -> sha256 of content at load; "" = absent
+	loadedIDs   []string                            // valid issue directories observed at load
+	hasSnapshot bool                                // distinguishes an empty snapshot from no Load
+	txHook      func(stage string, index int) error // deterministic failure injection for transaction tests
 }
 
 // Open returns a store for the repository root.
@@ -112,6 +114,8 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 // loadUnlocked reads the project while the caller holds the checkout lock.
 func (s *Store) loadUnlocked() (domain.Project, []*domain.Issue, []domain.Diagnostic, error) {
 	s.hashes = make(map[string]string)
+	s.loadedIDs = nil
+	s.hasSnapshot = false
 	var diags []domain.Diagnostic
 	diag := func(code string, sev domain.Severity, class domain.Class, issue, file, fix, format string, a ...any) {
 		diags = append(diags, domain.Diagnostic{Code: code, Severity: sev, Class: class, Issue: issue, File: file, Message: fmt.Sprintf(format, a...), Fix: fix})
@@ -160,10 +164,17 @@ func (s *Store) loadUnlocked() (domain.Project, []*domain.Issue, []domain.Diagno
 
 	dirs, err := os.ReadDir(s.abs(Dir + "/issues"))
 	if errors.Is(err, fs.ErrNotExist) {
+		s.loadedIDs = []string{}
+		s.hasSnapshot = true
 		return project, nil, diags, nil
 	}
 	if err != nil {
 		return project, nil, nil, err
+	}
+	for _, d := range dirs {
+		if d.IsDir() && domain.ValidID(d.Name()) {
+			s.loadedIDs = append(s.loadedIDs, d.Name())
+		}
 	}
 	var issues []*domain.Issue
 	for _, d := range dirs {
@@ -183,6 +194,7 @@ func (s *Store) loadUnlocked() (domain.Project, []*domain.Issue, []domain.Diagno
 			issues = append(issues, i)
 		}
 	}
+	s.hasSnapshot = true
 	return project, issues, diags, nil
 }
 

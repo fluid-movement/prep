@@ -292,3 +292,84 @@ func TestApplyAllowsBaselinePath(t *testing.T) {
 		t.Fatalf("baseline was not written: %v", err)
 	}
 }
+
+func TestStaleClaimCannotMissNewChildIssueDirectory(t *testing.T) {
+	root := t.TempDir()
+	setup := Open(root)
+	if _, err := setup.Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
+	loadTree := func(s *Store) *domain.Tree {
+		t.Helper()
+		project, issues, diagnostics, err := s.Load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return domain.NewTree(project, issues, nil, diagnostics)
+	}
+	newParent, err := domain.NewTree(domain.Project{}, nil, nil, nil).PlanNew(domain.NewIssueInput{
+		Title: "Parent", Kind: domain.KindManual, Body: "A ready parent before a child exists.",
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := setup.Apply(newParent); err != nil {
+		t.Fatal(err)
+	}
+	parentID := newParent.IssueID
+	policy, err := loadTree(setup).PlanPolicy(domain.CompletionPolicy{Verification: "Inspect", Documentation: "Review", By: "human:test", At: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := setup.Apply(policy); err != nil {
+		t.Fatal(err)
+	}
+	criteria, err := loadTree(setup).PlanRecord(parentID, domain.OpCriterion, domain.RecordInput{
+		Actor: "human:test", Now: now, Acceptance: []domain.AcceptanceOp{{Op: "add", Text: "Parent behavior is sound"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := setup.Apply(criteria); err != nil {
+		t.Fatal(err)
+	}
+	defined, err := loadTree(setup).Plan(parentID, domain.OpDefine, domain.Input{Actor: "human:test", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := setup.Apply(defined); err != nil {
+		t.Fatal(err)
+	}
+	ready, err := loadTree(setup).Plan(parentID, domain.OpReady, domain.Input{Actor: "human:test", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := setup.Apply(ready); err != nil {
+		t.Fatal(err)
+	}
+	stale := Open(root)
+	claim, err := loadTree(stale).Plan(parentID, domain.OpClaim, domain.Input{Actor: "agent:test", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	childWriter := Open(root)
+	child, err := loadTree(childWriter).PlanNew(domain.NewIssueInput{Title: "New child", Kind: domain.KindManual, Parent: parentID, Body: "A child changes the parent's leaf gate."}, now.Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := childWriter.Apply(child); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := stale.Apply(claim); err == nil {
+		t.Fatal("stale parent claim succeeded after a child issue was added")
+	} else {
+		var de *domain.Error
+		if !errors.As(err, &de) || de.Code != domain.ErrConflict {
+			t.Fatalf("stale claim error = %v", err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, IssueDir(parentID), "claim.md")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("stale parent claim record was written: %v", err)
+	}
+}
