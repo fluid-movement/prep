@@ -1,6 +1,6 @@
-- [ ] New lifecycle, evidence, knowledge-review and approval commands provide bounded actionable guidance and consistent machine-readable success/error fields, using shared domain decisions.
-- [ ] Contract failures identify the unmet requirement/reconciliation step and a usable next command without implying that prep executes checks or authenticates actor identities.
-- [ ] External workflow artifacts can be referenced with source identity/location and displayed as references; authoritative external content is not copied or treated as applicable verification solely because a link exists.
-- [ ] Existing CLI clients and legacy records remain compatible, with regression coverage for affected JSON/error contracts and external-reference round trips.
-- [ ] General list/check/help output caps and guide section selection remain with their existing issues; this child verifies integration rather than implementing duplicate features.
-- [ ] Record focused contract-compliance checks and observed friction; no MCP server, dedicated external adapter, bidirectional sync or unmeasured small-change shortcut is introduced.
+- [x] New lifecycle, evidence, knowledge-review and approval commands provide bounded actionable guidance and consistent machine-readable success/error fields, using shared domain decisions.
+- [x] Contract failures identify the unmet requirement/reconciliation step and a usable next command without implying that prep executes checks or authenticates actor identities.
+- [x] External workflow artifacts can be referenced with source identity/location and displayed as references; authoritative external content is not copied or treated as applicable verification solely because a link exists.
+- [x] Existing CLI clients and legacy records remain compatible, with regression coverage for affected JSON/error contracts and external-reference round trips.
+- [x] General list/check/help output caps and guide section selection remain with their existing issues; this child verifies integration rather than implementing duplicate features.
+- [x] Record focused contract-compliance checks and observed friction; no MCP server, dedicated external adapter, bidirectional sync or unmeasured small-change shortcut is introduced.
