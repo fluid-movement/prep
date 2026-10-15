@@ -9,12 +9,10 @@ generated:
 scope:
   - internal/cli
   - cmd/prep
-confirmed_commit: 3a9c5801f8e077e2e96c5f82abe24bce2025705a
+confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
 ---
 
 # CLI
-
-Applies when adding or changing commands.
 
 - Commands are registered in `internal/cli/cli.go` with a read/write flag; read and write commands are strictly separate.
 - Global flags anywhere before a `--`: `--json` (`--json=false` turns it off), `--root`, `--project` ([Cross-project work](/features/cross-project.md)), `--by` (or `PREP_ACTOR`, `PREP_ROOT`, `PREP_PROJECT`); from `--` on, arguments are passed as written and `parse` takes them all as positionals, so a text can be `--json`. The default actor is `cli/prep-<version>`; actors starting with `human:` cannot complete code issues.
@@ -22,7 +20,7 @@ Applies when adding or changing commands.
 - `prep edit <id>` changes any of `--title`, `--kind`, `--parent` (`''` removes it), `--depends-on` (repeatable, replaces the list; `''` clears it) and `--body`/`--body-file`. It uses `flag.Visit` to tell unset from empty, and reports `state` and `stale` after the write.
 - Record writes (`recordCmd` in `write.go`): `context` and `findings` replace their record and require `--body` or `--body-file`; `decide` appends a decision; `criterion` (`--add`, `--check`/`--uncheck`/`--remove <n>`) and `dod` (`--add`, `--opt-out` with `--reason`, `--remove <item>`) change acceptance.md; `log <id> <text>` appends to history. `prep show` numbers criteria for `--check <n>`.
 - `prep fmt` (and `--check`) and `prep fix` also regenerate the OKF index files of the knowledge bundle.
-- `record` stages written paths except those git ignores (`gitx.Tracked`, so the user's own `.prep/config.yaml` is never staged); `afterWrite` prints its errors, the TUI's write function returns them. prep never commits: the user or agent commits the staged `.prep` files with the code (commit mode was removed in 01M4AJ9DN4CK5S4WX2N68VBR98).
+- `record` stages written paths except those git ignores (`gitx.Tracked`, so the user's own `.prep/config.yaml` is never staged); `afterWrite` prints its errors, the TUI's write function returns them. prep never commits: the user or agent commits the staged `.prep` files with the code.
 - `prep knowledge list|find|show` (`knowread.go`) are reads, listed under read commands by a second `knowledge` row in the command table (dispatch takes the first; both run `cmdKnowledge`): `list` takes the knowledge filter, `find <query> [--max N]` prints matching blocks grouped by entry, `show <entry>[#anchor]... [--outline]` accepts several references in the forms `NormalizeEntryPath` takes; an unknown anchor fails naming the anchors. `prep guide` lists its knowledge candidates as entry paths to read with `prep knowledge show`.
 - `prep knowledge new|update|confirm` (`knowledge.go`): knowledge entry writes run plan (`Tree.PlanKnowledge`), render through the store, `CheckWrite`, write, stage; `confirm` sets `confirmed_commit` to HEAD for the named entries or `--drifted` ones and needs git and a scope.
 
@@ -45,5 +43,6 @@ Applies when adding or changing commands.
 - **Eval**: test seams `PREP_TEST_NOW`, `PREP_TEST_SEED` (`testSeams`); [prep eval](/components/eval.md).
 `prep new` returns bounded advisory `similar_issues` candidates when titles overlap unresolved records; terminal/self records are omitted. Hints never prevent creation or choose a match. See [Tracking](/decisions/tracking.md).
 
-- `prep knowledge review record/show` records scoped assessments for policy-bound completion; `prep review approve/show` and `prep reopen` manage versioned resolution review/history. Approval-dependent local prerequisites use `edit --depends-on-approval`. See [Knowledge lifecycle](/features/knowledge-lifecycle.md) and [Resolution review](/features/resolution-review.md).
+- `prep knowledge review record/show` records scoped assessments for policy-bound completion; `prep review approve/show` and `prep reopen` manage versioned resolution review/history. Approval-dependent local or cross-project prerequisites use `edit --depends-on-approval`. See [Knowledge lifecycle](/features/knowledge-lifecycle.md) and [Resolution review](/features/resolution-review.md).
 `tui_review.go` supplies fresh, captured Inbox review/approval callbacks through the serialized writer. See [TUI Inbox](/components/tui-inbox.md).
+`prep dependency show|override`: [source observations and scoped human overrides](/features/cross-project.md).

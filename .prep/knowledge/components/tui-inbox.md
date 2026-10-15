@@ -13,7 +13,7 @@ scope:
   - internal/cli/tui_review_test.go
   - internal/domain/inbox.go
   - internal/domain/inbox_test.go
-confirmed_commit: 3a9c5801f8e077e2e96c5f82abe24bce2025705a
+confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
 ---
 
 # TUI Inbox and completion bundles
@@ -24,7 +24,7 @@ Applies when changing Inbox classification, attention navigation, completion not
 
 ## Classification
 
-`inbox.go`: `Tree.Inbox` returns one highest-priority attention category/reason per issue: pending/stale completion review, eligible ready signoff, open questions, stale requirement, stale policy, or unknown external dependency. It omits ordinary backlog and dropped issues, and sorts category, priority, completion time and stable ID without changing lifecycle or dependency gates. It shares `ResolutionReviewStatus`, `Contract` and `KnowledgeReviewApplicable` read APIs with the TUI review adapter; the adapter owns filesystem snapshots and persistence.
+`inbox.go`: `Tree.Inbox` returns one highest-priority attention category/reason per issue: pending/stale completion review, eligible ready signoff, open questions, stale requirement, stale policy, or unresolved unknown external dependency. A current implementation override removes ordinary unknown attention, but an unknown required resolution review remains in Inbox and blocks claiming. It omits ordinary backlog and dropped issues, and sorts category, priority, completion time and stable ID without changing lifecycle or dependency gates. It shares `ResolutionReviewStatus`, `Contract` and `KnowledgeReviewApplicable` read APIs with the TUI review adapter; the adapter owns filesystem snapshots and persistence.
 
 ## Review adapter
 

@@ -6,11 +6,18 @@ generated:
   by: claude-code/opus-5.5
   at: 2026-10-11T10:15:38Z
 scope:
-  - internal/cli/cli.go
-  - internal/cli/links.go
+  - internal/cli/dependency.go
+  - internal/cli/read.go
+  - internal/cli/write.go
   - internal/projects/links.go
+  - internal/domain/dependency.go
   - internal/domain/links.go
-confirmed_commit: 557fb15e34310f8c71d3f9727b2828d65d8a83eb
+  - internal/domain/tree.go
+  - internal/mdstore/records.go
+  - internal/mdstore/store.go
+  - internal/mdstore/write.go
+  - internal/tui/projects.go
+confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
 ---
 
 # Cross-project work
@@ -24,4 +31,4 @@ Applies when changing how prep works with projects other than the one a command 
 - **TUI**: the header names the project; `P` or a click on it switches projects ([TUI navigation](/components/tui-navigation.md)); `prep tui --project <name>` opens on one. The detail shows cross-project dependencies and knowledge links and follows them into their project ([TUI detail links](/components/tui-detail.md)); the list's blocked marks count cross-project blockers.
 - **Discovery**: `prep prime` lists the other registered projects (JSON `projects`, at most `--max`, the project's own clones left out) with how to reach them; the skill's rule 11 teaches `prep projects` and `--project`, and never to edit `id:`.
 - **Links**: project.md `links` maps each local name to the target's permanent ID and its last known remote (the clone hint). Records refer to `<name>:<full issue ID>` (dependencies) and `[text](<name>:/path.md#section)` (knowledge links); `Tree.LinkRefs` finds them in requirements, context, findings, decisions, criteria, work logs and knowledge entries. Commands (`internal/cli/links.go`): `prep links` (each link's checkout here, else its clone hint), `prep link add <project> [--as name]` (a registered project with an ID; the name defaults to its own), `prep link rename <old> <new>` (project.md and every reference in one change), `prep link remove <name>` (refused while referenced, listing where). Checks: X001 a reference to an undefined name, X002 an invalid link (name, ID, or the project itself), X003 two links to one project, X004 a stale clone hint (`prep fix` updates it).
-- **Dependencies on other projects**: `prep new|edit --depends-on <project>:<ID or suffix>` (`cli.resolveDeps`, `projects.ResolveDep`). The project part is a link, else a registered project, which is linked in the same command (the link change is applied first, `withLinks`). A suffix resolves in that project's checkout; a project not checked out here needs the full ID. Dropped targets are refused. Stored as `<link>:<full ID>` in `depends_on`. On every load `Tree.External` says what each is here: found (state, title, checkout), missing (checked out, no such issue: X005 warning), unknown (not checked out: shown with the clone hint, never blocking, never reported). A found one that is not done blocks like a local dependency; one dropped there is X006. `prep show` lists them (`cross_deps` in JSON, also in list summaries), `prep guide` points at found ones, and `prep show <id> --dependents` scans other checkouts for issues depending on this one ("blocks in <project>"); "blocks" stays within the project otherwise. Cycles across projects are not detected. In the domain (`links.go`): `Apply` renames references in memory (`RenameLinkInText`) so `CheckWrite` sees a rename's result and carries `External`; `DepState` makes `UnresolvedDeps` skip unknown references, and `PlanNew`/`PlanEdit` refuse dropped targets through it.
+- **Dependencies on other projects**: `prep new|edit --depends-on <project>:<ID or suffix>` resolves a linked or registered project, adding the link in the same command when needed. Stored references use `<link>:<full ID>`; without a local checkout the full ID is required, and dropped targets are refused. Fresh local `ResolveExternal` observations distinguish lookup presence (found, missing, unavailable) from dependency outcome (satisfied, unsatisfied, unknown), with permanent project ID, checkout root/name, Git revision when available, target-content/review digest and explicit uncertainty. A missing/unreadable checkout or target, malformed source, or replaced project identity remains unknown and blocks claiming by default; cached observations are cleared. Found non-done targets block; done targets satisfy implementation dependencies. `--depends-on-approval` can name local or cross-project dependencies and additionally requires their current resolution review to be approved. Unknown-source overrides cannot waive that review. `prep dependency show <id>` exposes current/stale overrides and retired overrides for removed/renamed references; `prep dependency override <id> <project:id> --reason <text> --by human:<name>` records an explicit human decision for one unknown source/local requirement snapshot. Source or local requirement/dependency changes invalidate it. Overrides are hash-chained in `dependency-overrides.md`; declared human attribution is local trust. `prep show` includes observations in `cross_deps` JSON and text; TUI lines show uncertainty, provenance and review/override state. X005 missing-target and X006 dropped diagnostics remain warnings; cross-project cycles are not detected. Resolution uses locally registered checkouts only, with no remote synchronization and no atomic coordination across source and dependent checkouts.

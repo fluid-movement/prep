@@ -36,6 +36,29 @@ func cmdDependency(a *app, args []string) error {
 	}
 	i := t.Issues[id]
 	if op == "show" {
+		type retiredOverride struct {
+			Override domain.DependencyOverride `json:"override"`
+			Status   string                    `json:"status"`
+		}
+		var retired []retiredOverride
+		seen := map[string]bool{}
+		for n := len(i.DependencyOverrides) - 1; n >= 0; n-- {
+			o := i.DependencyOverrides[n]
+			if seen[o.Ref] {
+				continue
+			}
+			seen[o.Ref] = true
+			declared := false
+			for _, ref := range i.DependsOn {
+				if ref == o.Ref {
+					declared = true
+					break
+				}
+			}
+			if !declared {
+				retired = append(retired, retiredOverride{o, t.DependencyOverrideStatus(id, o.Ref)})
+			}
+		}
 		type item struct {
 			Ref         string        `json:"ref"`
 			Observation domain.XIssue `json:"observation"`
@@ -47,12 +70,15 @@ func cmdDependency(a *app, args []string) error {
 			}
 		}
 		if a.json {
-			a.emit(map[string]any{"id": id, "dependencies": items})
+			data := map[string]any{"id": id, "dependencies": items}
+			if len(retired) > 0 {
+				data["retired_overrides"] = retired
+			}
+			a.emit(data)
 			return nil
 		}
 		if len(items) == 0 {
 			a.printf("No external dependencies.\n")
-			return nil
 		}
 		for _, it := range items {
 			x := it.Observation
@@ -74,6 +100,9 @@ func cmdDependency(a *app, args []string) error {
 			if x.ProvenanceWarning != "" {
 				a.printf("  provenance warning: %s\n", x.ProvenanceWarning)
 			}
+		}
+		for _, r := range retired {
+			a.printf("retired override %s: %s by %s: %s (dependency removed or renamed)\n", r.Override.Ref, r.Status, r.Override.By, r.Override.Reason)
 		}
 		return nil
 	}

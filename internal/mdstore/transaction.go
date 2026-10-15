@@ -11,11 +11,125 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
 )
 
 const transactionFile = Dir + "/.write-transaction.json"
 const lockFile = Dir + "/local/write.lock"
+
+const absentDirectoryManifest = "<absent>"
+
+type directoryEntry struct {
+	Name string `json:"name"`
+	Mode uint32 `json:"mode"`
+}
+
+func (s *Store) recordDirectoryEntries(rel string, entries []os.DirEntry, include func(string) bool) {
+	manifest := make([]directoryEntry, 0, len(entries))
+	for _, entry := range entries {
+		if include != nil && !include(entry.Name()) {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			// ReadDir returned this entry while the checkout lock was held. If
+			// metadata is unavailable, preserve its name with an unknown mode;
+			// the next validation will conservatively conflict.
+			manifest = append(manifest, directoryEntry{Name: entry.Name()})
+			continue
+		}
+		manifest = append(manifest, directoryEntry{Name: entry.Name(), Mode: uint32(info.Mode())})
+	}
+	b, _ := json.Marshal(manifest)
+	s.loadedDirs[rel] = hashOf(b)
+}
+
+func (s *Store) directoryManifest(rel string) (string, error) {
+	entries, err := os.ReadDir(s.abs(rel))
+	if errors.Is(err, fs.ErrNotExist) {
+		return absentDirectoryManifest, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	include := func(string) bool { return true }
+	switch rel {
+	case Dir:
+		include = func(name string) bool {
+			return name != transactionFile[len(Dir)+1:] && name != activity.Dir && !strings.HasPrefix(name, tempPrefix)
+		}
+	case Dir + "/issues":
+		include = func(name string) bool {
+			return !strings.HasPrefix(name, tempPrefix) && !strings.HasPrefix(name, ".")
+		}
+	default:
+		if strings.HasPrefix(rel, Dir+"/issues/") && !strings.HasSuffix(rel, "/baselines") {
+			include = func(name string) bool { return !strings.HasPrefix(name, tempPrefix) }
+		}
+	}
+	manifest := make([]directoryEntry, 0, len(entries))
+	for _, entry := range entries {
+		if !include(entry.Name()) {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return "", err
+		}
+		manifest = append(manifest, directoryEntry{Name: entry.Name(), Mode: uint32(info.Mode())})
+	}
+	b, err := json.Marshal(manifest)
+	if err != nil {
+		return "", err
+	}
+	return hashOf(b), nil
+}
+
+func (s *Store) validateDirectorySnapshot() error {
+	for rel, want := range s.loadedDirs {
+		got, err := s.directoryManifest(rel)
+		if err != nil {
+			return err
+		}
+		if got != want {
+			return &domain.Error{Code: domain.ErrConflict, Message: fmt.Sprintf("%s directory contents changed since it was read; re-run the command", rel)}
+		}
+	}
+	return nil
+}
+
+func (s *Store) refreshDirectorySnapshot(touched []string) error {
+	dirs := make(map[string]bool, len(s.loadedDirs))
+	for rel := range s.loadedDirs {
+		dirs[rel] = true
+	}
+	for _, rel := range touched {
+		if !strings.HasPrefix(rel, Dir+"/") {
+			continue
+		}
+		parent := filepath.ToSlash(filepath.Dir(rel))
+		for strings.HasPrefix(parent, Dir) && parent != "." {
+			dirs[parent] = true
+			if parent == Dir {
+				break
+			}
+			parent = filepath.ToSlash(filepath.Dir(parent))
+		}
+	}
+	for rel := range dirs {
+		manifest, err := s.directoryManifest(rel)
+		if errors.Is(err, fs.ErrNotExist) {
+			s.loadedDirs[rel] = absentDirectoryManifest
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		s.loadedDirs[rel] = manifest
+	}
+	return nil
+}
 
 type transactionEntry struct {
 	Path   string `json:"path"`
@@ -103,23 +217,6 @@ func (s *Store) recoverTransaction() error {
 		return recoveryError("could not remove completed transaction journal: " + err.Error())
 	}
 	return syncDirectory(filepath.Dir(s.abs(transactionFile)))
-}
-
-func (s *Store) readIssueInventory() ([]string, error) {
-	dirs, err := os.ReadDir(s.abs(Dir + "/issues"))
-	if errors.Is(err, fs.ErrNotExist) {
-		return []string{}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	ids := make([]string, 0, len(dirs))
-	for _, d := range dirs {
-		if d.IsDir() && domain.ValidID(d.Name()) {
-			ids = append(ids, d.Name())
-		}
-	}
-	return ids, nil
 }
 
 func validTransactionEntry(e transactionEntry) bool {

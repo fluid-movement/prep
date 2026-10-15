@@ -7,15 +7,15 @@ generated:
   by: claude-code/2.1.289
   at: 2026-10-05T00:00:00Z
 scope: internal/mdstore
-confirmed_commit: 557fb15e34310f8c71d3f9727b2828d65d8a83eb
+confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
 ---
 
 # Markdown store
 
 Applies when changing file formats or write behavior. Format details: [Storage format](/conventions/storage-format.md).
 
-- `Load` reads every file on every run (no cache) and records a SHA-256 per file. Issue directories must be ULIDs (`domain.ValidID`, else I001 naming the ULID shape); baseline files must be timestamps (`domain.ValidStamp`). Format-level problems become diagnostics (unknown files, frontmatter errors, non-canonical files, missing schema files). `splitFrontmatter` tolerates a leading BOM, which `prep fmt` then drops. Names starting with `tempPrefix` (`.prep-tmp-`, the temp files of atomic writes) are skipped in `.prep` and issue directories: one may belong to a write in flight or be left by a crash.
-- Writes go through a temp file plus rename; before writing, the current content hash must equal the one read at load (absent for new files), else `E_CONFLICT`. `Apply` first renders the whole change (`render`: paths and contents, nil content removes a file) and checks every path, then writes, so a conflict leaves the change unwritten rather than half applied; only an I/O error midway can leave part of it.
+- `Load` takes the checkout lock, recovers unfinished Apply transactions, resets its snapshot and reads every file (no cache), recording SHA-256 hashes and relevant directory-entry manifests, including issue and baseline membership. Issue directories must be ULIDs (`domain.ValidID`, else I001 naming the ULID shape); baseline files must be timestamps (`domain.ValidStamp`). Format-level problems become diagnostics (unknown files, frontmatter errors, non-canonical files, missing schema files). `splitFrontmatter` tolerates a leading BOM, which `prep fmt` then drops. Names starting with `tempPrefix` (`.prep-tmp-`, the temp files of atomic writes) are skipped in `.prep` and issue directories: one may belong to a write in flight or be left by a crash.
+- Writes use checkout-local advisory serialization and per-file atomic rename. `Apply` validates frozen loaded record hashes and loaded directory-entry manifests, then stages a recoverable multi-file journal; stale plans return E_CONFLICT before mutation. Locked loads recover by rolling forward, or retain conflicting data and fail visibly. Maintenance writes remain per-file CAS operations. See [Local write safety](/features/local-write-safety.md) for protocol, recovery and limits.
 - `requirementBody` builds the issue.md body from requirement text for `prep new` and `prep edit`: it keeps the text's own `## Open questions` section and appends an empty one only when missing. An edit rewrites issue.md from the edited fields under the same compare-and-swap.
 - Record writes: context.md and findings.md are rewritten; decisions are appended by `renderDecision` (`date:` directly under the heading); acceptance operations are applied line by line by `applyAcceptance`, so text between criteria survives. Appends and line edits read the file under compare-and-swap first.
 - issue.md frontmatter carries `priority` after `tags`; `renderIssue` omits medium (and empty) and keeps an unknown level for `prep check` to report.
@@ -32,3 +32,5 @@ Applies when changing file formats or write behavior. Format details: [Storage f
 - Approval/history records: approvals.md stores a content-hash history chain, ready.md archives prior contracts, project.md archives changed policies, and resolution.md snapshots approvals actually used. Legacy omissions remain omissions. See [Completion approvals](/features/completion-approvals.md).
 
 - `knowledge-reviews.md`, `resolution-history.md` and `resolution-reviews.md` persist scoped knowledge reports and resolution review/reopen history. Resolution conversion preserves selected knowledge reports through archival. The adapter adds named knowledge entry files to review scope fingerprints; derived Git evidence never mutates recorded identity. See [Knowledge lifecycle](/features/knowledge-lifecycle.md) and [Resolution review](/features/resolution-review.md).
+
+- `dependency-overrides.md` parsing/rendering and Fmt preserve the versioned human override chain; policy/applicability lives in `domain/dependency.go`, not storage.

@@ -316,7 +316,7 @@ func TestCrossProjectDependencies(t *testing.T) {
 		t.Fatalf("check: %s", out)
 	}
 
-	// Not checked out here: unknown, never blocking, never an error.
+	// Not checked out here: unknown blocks claiming, without a check error.
 	os.RemoveAll(filepath.Join(api.dir, ".prep"))
 	if out := home.ok("show", id); !strings.Contains(out, "source project is not checked out") {
 		t.Fatalf("unknown: %s", out)
@@ -345,6 +345,20 @@ func TestCrossProjectDependencies(t *testing.T) {
 		t.Fatalf("show should explain current override: %s", out)
 	}
 	home.fails("not checked out here", "new", "--title", "Y", "--kind", "code", "--depends-on", "api:"+target[20:])
+	home.ok("edit", id, "--depends-on", "")
+	if out := home.ok("dependency", "show", id); !strings.Contains(out, "retired override api:"+target+": stale by human:alex") {
+		t.Fatalf("removed dependency should expose its stale override: %s", out)
+	}
+	var retired struct {
+		Retired []struct {
+			Override domain.DependencyOverride `json:"override"`
+			Status   string                    `json:"status"`
+		} `json:"retired_overrides"`
+	}
+	home.jsonOf(&retired, "dependency", "show", id)
+	if len(retired.Retired) != 1 || retired.Retired[0].Status != "stale" || retired.Retired[0].Override.Ref != "api:"+target {
+		t.Fatalf("retired override JSON = %+v", retired)
+	}
 }
 
 // rename sets the project's name in project.md.

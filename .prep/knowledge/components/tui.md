@@ -10,7 +10,7 @@ scope:
   - internal/tui/*.go
   - internal/cli/tui.go
   - internal/cli/tui_review.go
-confirmed_commit: 3a9c5801f8e077e2e96c5f82abe24bce2025705a
+confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
 ---
 
 # TUI

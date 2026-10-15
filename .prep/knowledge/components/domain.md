@@ -7,7 +7,7 @@ generated:
   by: claude-code/2.1.289
   at: 2026-10-05T00:00:00Z
 scope: internal/domain
-confirmed_commit: 3a9c5801f8e077e2e96c5f82abe24bce2025705a
+confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
 ---
 
 # Domain package
@@ -36,7 +36,7 @@ Applies when changing lifecycle rules, gates, diagnostics or queries.
 - `errors.go`: `E_*` error codes for commands.
 
 Rules worth knowing: see [Issue lifecycle](/features/lifecycle.md).
-- `links.go`: links to other projects, cross-project dependencies (`Tree.External`, `DepState`) and `StripCode` (`okf.StripCode` calls it): [Cross-project work](/features/cross-project.md).
+- `links.go`/`dependency.go`: links, fail-closed outcomes, scoped overrides and review prerequisites ([Cross-project](/features/cross-project.md)); `StripCode` serves OKF.
 - [Completion policy](/features/completion-policy.md): readiness-bound requirements and verification. `approval.go` plans human exceptions, policy retention and DoD opt-out approvals, tracks CLI policy/request revisions and selects used resolution approvals. Domain validates adapter-computed applicability without filesystem access; details: [Completion approvals](/features/completion-approvals.md).
 
 - `knowledge_review.go` binds reported knowledge assessments to contracts, canonical entries and adapter-computed scoped applicability; `review.go` binds human resolution approvals to full resolution identity/generation and selected scope unions. Shared completion, reopen and dependency gates serve CLI and TUI. See [Knowledge lifecycle](/features/knowledge-lifecycle.md) and [Resolution review](/features/resolution-review.md).

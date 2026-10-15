@@ -29,6 +29,10 @@ func TestUnknownDependencyOverrideIsHumanScopedAndDoesNotWaiveApproval(t *testin
 	if !withOverride.Blocked(i.ID) {
 		t.Fatal("unknown dependency override must not waive required resolution approval")
 	}
+	items := withOverride.Inbox()
+	if len(items) != 1 || items[0].Category != InboxUnknownDependency {
+		t.Fatal("unknown required review must remain visible in Inbox despite an implementation override")
+	}
 	if _, err := withOverride.PlanDependencyOverride(i.ID, DependencyOverrideInput{Ref: ref, Actor: "human:alex", Reason: "again", Now: now.Add(time.Minute)}); err == nil {
 		t.Fatal("duplicate current override should be rejected")
 	}

@@ -1,1 +1,3 @@
 - 2026-10-14T12:00:09Z edited by codex: depends_on
+
+- 2026-10-15T06:51:39Z codex: Implemented fresh cross-project satisfied/unsatisfied/unknown observations with source identity, checkout/revision and uncertainty. Unknown blocks claims; explicit human reason/snapshot overrides only implementation uncertainty and expires on source/local changes. Shared required human resolution review cannot be waived. CLI/TUI show active and retired stale override data. Domain, project, adapter and storage integration tests cover unavailable/missing/malformed sources, stale observations and review prerequisites. Desktop changes excluded at user request.

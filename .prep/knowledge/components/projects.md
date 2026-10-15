@@ -7,6 +7,7 @@ generated:
   at: 2026-10-10T12:18:55Z
 scope:
   - internal/projects/**
+confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
 ---
 
 # Project registry
@@ -23,3 +24,4 @@ Applies when changing how prep remembers projects, how a project is identified, 
 - **Links** (`links.go`): `ResolveLinks` finds each link's newest checkout by ID; `Check` adds X004 (clone hint differs from the checkout's remote; never for a project not checked out) to every check the CLI and TUI show (`cli.validate`); `FixRemotes` gives `prep fix` the updated hints. `ResolveExternal(t)` fills `t.External` for every cross-project dependency (each other project's issues loaded once through `LoadTree`, no knowledge; nothing when there are none); `cli.a.load` and the TUI loader call it. `ResolveDep` turns `<project>:<ID or suffix>` into `<link>:<full ID>`. `Dependents` scans other checkouts for issues depending on one of this project's. `Check` also reports X005 (no such issue in the checked-out project; a warning, since that checkout may be behind) and X006 (dropped there), and X007 (a knowledge link to an entry file the checked-out project lacks).
 - **Clients**: the [desktop app](/components/desktop.md)'s project switcher lists it.
 - **Tests**: CLI tests point `XDG_STATE_HOME` at a temporary directory in `TestMain`, so commands they run never record into the real registry; store tests pass a fixed identity to `Init`, and the contract fixtures carry `id: 01M4AAAAAAAAAAAAAAAAAAAAAA`.
+`ResolveExternal` clears prior observations, loads each locally resolved source once per call, checks the loaded permanent project ID, and reports source/target errors as unknown. Source observations include Git revision when available, raw/parsed target-content and review-state digests, and uncertainty. Claim gating and human overrides use the shared [Cross-project work](/features/cross-project.md) contract; no remote synchronization or cross-checkout transaction is implied.

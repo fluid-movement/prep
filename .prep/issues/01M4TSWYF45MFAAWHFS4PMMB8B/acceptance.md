@@ -1,6 +1,6 @@
-- [ ] Document and reproduce concurrent check/write/rename and interrupted multi-file failure modes with deterministic tests before claiming stronger guarantees.
-- [ ] Conflicting writes within one checkout cannot silently lose another writer's records; stale writers fail with actionable conflict information and preserve prior data.
-- [ ] Multi-file lifecycle writes have an explicit bounded atomicity/recovery guarantee; injected interruption tests verify recoverability and prevent silently presenting incomplete transitions as successful.
-- [ ] Approval, verification and requirement/history records retain their content-chain and revision integrity through conflicts and recovery.
-- [ ] Document that claims and activity are worktree/branch local and cannot reserve work globally; parallel-agent assignments remain an orchestrator responsibility.
-- [ ] Keep Markdown and domain/storage boundaries, with no distributed service, remote lock, scheduler or automatic branch merging; focused conflict/recovery and project checks pass.
+- [x] Document and reproduce concurrent check/write/rename and interrupted multi-file failure modes with deterministic tests before claiming stronger guarantees.
+- [x] Conflicting writes within one checkout cannot silently lose another writer's records; stale writers fail with actionable conflict information and preserve prior data.
+- [x] Multi-file lifecycle writes have an explicit bounded atomicity/recovery guarantee; injected interruption tests verify recoverability and prevent silently presenting incomplete transitions as successful.
+- [x] Approval, verification and requirement/history records retain their content-chain and revision integrity through conflicts and recovery.
+- [x] Document that claims and activity are worktree/branch local and cannot reserve work globally; parallel-agent assignments remain an orchestrator responsibility.
+- [x] Keep Markdown and domain/storage boundaries, with no distributed service, remote lock, scheduler or automatic branch merging; focused conflict/recovery and project checks pass.

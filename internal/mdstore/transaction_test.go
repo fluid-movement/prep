@@ -293,6 +293,78 @@ func TestApplyAllowsBaselinePath(t *testing.T) {
 	}
 }
 
+func TestEmptyDirectoryManifestMatchesLoadAndApply(t *testing.T) {
+	root := t.TempDir()
+	rel := IssueDir("01M4AAAAAAAAAAAAAAAAAAAAAA") + "/baselines"
+	if err := os.MkdirAll(filepath.Join(root, rel), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	s := Open(root)
+	entries, err := os.ReadDir(filepath.Join(root, rel))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.loadedDirs = make(map[string]string)
+	s.recordDirectoryEntries(rel, entries, nil)
+	got, err := s.directoryManifest(rel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := s.loadedDirs[rel]; got != want {
+		t.Fatalf("empty directory manifest differs: load=%q apply=%q", want, got)
+	}
+}
+
+func TestStalePlanCannotMissNewBaselineInExistingIssueDirectory(t *testing.T) {
+	root := t.TempDir()
+	id := transactionIssue(t, Open(root))
+	loadPlan := func(now time.Time) (*Store, *domain.Change) {
+		t.Helper()
+		s := Open(root)
+		project, issues, diagnostics, err := s.Load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		c, err := domain.NewTree(project, issues, nil, diagnostics).Plan(id, domain.OpDefine, domain.Input{Actor: "human:test", Now: now})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s, c
+	}
+	staleStore, stalePlan := loadPlan(time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC))
+	freshStore, freshPlan := loadPlan(time.Date(2026, 10, 14, 12, 1, 0, 0, time.UTC))
+	if _, err := freshStore.Apply(freshPlan); err != nil {
+		t.Fatalf("fresh baseline Apply: %v", err)
+	}
+	if err := freshStore.validateDirectorySnapshot(); err != nil {
+		t.Fatalf("successful Apply did not refresh directory manifests: %v", err)
+	}
+	if _, err := staleStore.Apply(stalePlan); err == nil {
+		t.Fatal("stale plan unexpectedly succeeded after a baseline entry was added")
+	} else {
+		var de *domain.Error
+		if !errors.As(err, &de) || de.Code != domain.ErrConflict {
+			t.Fatalf("stale plan error = %v", err)
+		}
+		if !strings.Contains(de.Message, "directory contents changed") {
+			t.Fatalf("stale plan did not fail on the directory manifest: %v", err)
+		}
+	}
+	_, issues, _, err := Open(root).Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var issue *domain.Issue
+	for _, candidate := range issues {
+		if candidate.ID == id {
+			issue = candidate
+		}
+	}
+	if issue == nil || len(issue.Baselines) != 1 {
+		t.Fatalf("fresh baseline missing or duplicate: issue=%#v", issue)
+	}
+}
+
 func TestStaleClaimCannotMissNewChildIssueDirectory(t *testing.T) {
 	root := t.TempDir()
 	setup := Open(root)

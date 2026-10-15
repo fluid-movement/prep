@@ -67,13 +67,17 @@ State is derived from which records exist in `.prep/issues/<id>/`, never stored:
 
 | State | Record | Written by |
 | --- | --- | --- |
-| open | `issue.md` | `prep new`, then edited by hand |
+| open | `issue.md` | `prep new`, `prep edit` |
 | defined | `baselines/<timestamp>.md` | `prep define`, `prep ack` |
 | ready | `ready.md` referencing the newest baseline | `prep ready` |
 | in progress | `claim.md` | `prep claim` (`prep release` removes it and logs to `history.md`) |
 | done / dropped | `resolution.md` | `prep complete`, `prep drop` |
 
 An issue is **stale** when its requirement or kind differs from the newest baseline: `prep ack` for a trivial change, `prep define` and re-enrichment for a real one. **Actionable** = ready, not stale, dependencies done, unclaimed, not a parent.
+
+Cross-project dependencies use fresh local checkout observations: satisfied, unsatisfied, or unknown. An unavailable checkout or missing target is unknown and blocks claiming. `prep dependency show <id>` shows the source, revision, uncertainty and current or stale human overrides. Only an explicit human decision can override one unknown observation: `prep dependency override <id> <project:id> --reason <text> --by human:<name>`. Source or local requirement/dependency changes invalidate it. Dependencies normally require implementation completion; include a dependency in `--depends-on-approval` as well to require its current human resolution approval. An uncertainty override cannot waive that review.
+
+Prep serializes cooperating record writers within one checkout and recovers interrupted multi-file lifecycle writes before loading records. Conflicts return `E_CONFLICT`; reload and re-plan. Recovery conflicts retain the journal and staged data for reconciliation. Claims and activity remain local to each branch/worktree, so assigning parallel agents is the orchestrator's responsibility. This storage guarantee covers process interruption, with per-file atomic renames; it does not coordinate other worktrees or promise power-loss atomicity.
 
 ## The TUI
 

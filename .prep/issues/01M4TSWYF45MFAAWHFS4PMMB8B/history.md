@@ -1,1 +1,3 @@
 - 2026-10-14T12:00:10Z edited by codex: depends_on
+
+- 2026-10-15T06:51:47Z codex: Implemented checkout-local advisory locking, frozen loaded file hashes and directory manifests, stale E_CONFLICT protection and validated staged journal roll-forward recovery. Deterministic conflict/interruption tests preserve approval, verification, override and history chains. Read probes do not create projects; Windows compile and focused race checks passed. Full CI caught empty-directory []/null manifest mismatch; normalized empty manifests with a regression test. Claims/activity remain branch-local and orchestrator assignment responsibility; no distributed or power-loss guarantee.

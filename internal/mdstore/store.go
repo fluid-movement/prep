@@ -29,7 +29,7 @@ const Dir = ".prep"
 type Store struct {
 	Root        string
 	hashes      map[string]string                   // relative path -> sha256 of content at load; "" = absent
-	loadedIDs   []string                            // valid issue directories observed at load
+	loadedDirs  map[string]string                   // relevant directory entry manifests observed at load
 	hasSnapshot bool                                // distinguishes an empty snapshot from no Load
 	txHook      func(stage string, index int) error // deterministic failure injection for transaction tests
 }
@@ -114,7 +114,7 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 // loadUnlocked reads the project while the caller holds the checkout lock.
 func (s *Store) loadUnlocked() (domain.Project, []*domain.Issue, []domain.Diagnostic, error) {
 	s.hashes = make(map[string]string)
-	s.loadedIDs = nil
+	s.loadedDirs = make(map[string]string)
 	s.hasSnapshot = false
 	var diags []domain.Diagnostic
 	diag := func(code string, sev domain.Severity, class domain.Class, issue, file, fix, format string, a ...any) {
@@ -156,6 +156,9 @@ func (s *Store) loadUnlocked() (domain.Project, []*domain.Issue, []domain.Diagno
 	if err != nil {
 		return project, nil, nil, err
 	}
+	s.recordDirectoryEntries(Dir, entries, func(name string) bool {
+		return name != transactionFile[len(Dir)+1:] && name != activity.Dir && !strings.HasPrefix(name, tempPrefix)
+	})
 	for _, e := range entries {
 		if !projectFiles[e.Name()] && !strings.HasPrefix(e.Name(), tempPrefix) {
 			diag(domain.CodeProjectUnknown, domain.SevError, domain.ClassManual, "", e.Name(), "remove the file; schema files are fixed", "unknown entry in .prep: %s", e.Name())
@@ -164,18 +167,16 @@ func (s *Store) loadUnlocked() (domain.Project, []*domain.Issue, []domain.Diagno
 
 	dirs, err := os.ReadDir(s.abs(Dir + "/issues"))
 	if errors.Is(err, fs.ErrNotExist) {
-		s.loadedIDs = []string{}
+		s.loadedDirs[Dir+"/issues"] = absentDirectoryManifest
 		s.hasSnapshot = true
 		return project, nil, diags, nil
 	}
 	if err != nil {
 		return project, nil, nil, err
 	}
-	for _, d := range dirs {
-		if d.IsDir() && domain.ValidID(d.Name()) {
-			s.loadedIDs = append(s.loadedIDs, d.Name())
-		}
-	}
+	s.recordDirectoryEntries(Dir+"/issues", dirs, func(name string) bool {
+		return !strings.HasPrefix(name, tempPrefix) && !strings.HasPrefix(name, ".")
+	})
 	var issues []*domain.Issue
 	for _, d := range dirs {
 		if strings.HasPrefix(d.Name(), ".") {
@@ -209,6 +210,7 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 	if err != nil {
 		return nil, nil, err
 	}
+	s.recordDirectoryEntries(dir, entries, func(name string) bool { return !strings.HasPrefix(name, tempPrefix) })
 	for _, e := range entries {
 		n := e.Name()
 		if strings.HasPrefix(n, tempPrefix) {
@@ -319,6 +321,7 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 	}
 
 	if bs, err := os.ReadDir(s.abs(dir + "/baselines")); err == nil {
+		s.recordDirectoryEntries(dir+"/baselines", bs, nil)
 		for _, b := range bs {
 			n := b.Name()
 			name := strings.TrimSuffix(n, ".md")
@@ -335,7 +338,9 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 			}
 		}
 		i.SortBaselines()
-	} else if !errors.Is(err, fs.ErrNotExist) {
+	} else if errors.Is(err, fs.ErrNotExist) {
+		s.loadedDirs[dir+"/baselines"] = absentDirectoryManifest
+	} else {
 		return nil, nil, err
 	}
 	if err := record("ready.md", func(raw string) (err error) { i.Ready, err = parseReady(raw); return }, func() string { return renderReady(i.Ready) }); err != nil {

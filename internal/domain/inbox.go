@@ -110,7 +110,8 @@ func (t *Tree) inboxItem(id string, issue *Issue) (InboxItem, bool) {
 		if _, _, external := SplitRef(dep); !external {
 			continue
 		}
-		if _, known := t.DepState(dep); !known && t.DependencyOverrideStatus(id, dep) != "current" {
+		needsReview := contains(issue.DependsOnApproval, dep) && t.DependencyApprovalStatus(dep) != ReviewApproved
+		if _, known := t.DepState(dep); !known && (t.DependencyOverrideStatus(id, dep) != "current" || needsReview) {
 			unknown = append(unknown, dep)
 		}
 	}
