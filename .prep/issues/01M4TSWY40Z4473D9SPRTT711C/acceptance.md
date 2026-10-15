@@ -1,6 +1,6 @@
-- [ ] Findings specify a reproducible comparison of code-only, current-knowledge and lean-knowledge conditions on identical repository snapshots and tasks, including deliberately stale knowledge.
-- [ ] The comparison reuses existing evaluation infrastructure and plugin A/B work, records model/version, prompts, repetitions and retrieval conditions, and separates contract compliance from exploratory usefulness metrics.
-- [ ] Report correctness, missed constraints and time/token/maintenance cost with limitations and sample sizes; do not claim superiority or add hard CI thresholds unsupported by reliable deterministic evidence.
-- [ ] Lean examples retain decisions, constraints and navigation hints, with small briefings and targeted retrieval under the current OK Format storage contract.
-- [ ] Findings and a recommendation identify justified incremental knowledge changes; affected entries touched by this work are updated or reviewed rather than deferred.
-- [ ] No lifecycle gates, alternate knowledge format or duplicate evaluation framework are implemented under this research issue.
+- [x] Findings specify a reproducible comparison of code-only, current-knowledge and lean-knowledge conditions on identical repository snapshots and tasks, including deliberately stale knowledge.
+- [x] The comparison reuses existing evaluation infrastructure and plugin A/B work, records model/version, prompts, repetitions and retrieval conditions, and separates contract compliance from exploratory usefulness metrics.
+- [x] Report correctness, missed constraints and time/token/maintenance cost with limitations and sample sizes; do not claim superiority or add hard CI thresholds unsupported by reliable deterministic evidence.
+- [x] Lean examples retain decisions, constraints and navigation hints, with small briefings and targeted retrieval under the current OK Format storage contract.
+- [x] Findings and a recommendation identify justified incremental knowledge changes; affected entries touched by this work are updated or reviewed rather than deferred.
+- [x] No lifecycle gates, alternate knowledge format or duplicate evaluation framework are implemented under this research issue.
