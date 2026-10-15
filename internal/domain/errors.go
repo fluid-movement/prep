@@ -20,6 +20,7 @@ const (
 type Error struct {
 	Code    string       `json:"code"`
 	Message string       `json:"message"`
+	Next    string       `json:"next,omitempty"`
 	Unmet   []Unmet      `json:"unmet,omitempty"`
 	Diags   []Diagnostic `json:"diagnostics,omitempty"`
 }

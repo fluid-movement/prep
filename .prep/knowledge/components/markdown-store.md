@@ -12,7 +12,7 @@ confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
 
 # Markdown store
 
-Applies when changing file formats or write behavior. Format details: [Storage format](/conventions/storage-format.md).
+Applies when changing file formats or write behavior. Format details: [Storage format](/conventions/storage-format.md). Optional artifact references round-trip as issue metadata: [CLI contracts](/features/cli-contracts.md).
 
 - `Load` takes the checkout lock, recovers unfinished Apply transactions, resets its snapshot and reads every file (no cache), recording SHA-256 hashes and relevant directory-entry manifests, including issue and baseline membership. Issue directories must be ULIDs (`domain.ValidID`, else I001 naming the ULID shape); baseline files must be timestamps (`domain.ValidStamp`). Format-level problems become diagnostics (unknown files, frontmatter errors, non-canonical files, missing schema files). `splitFrontmatter` tolerates a leading BOM, which `prep fmt` then drops. Names starting with `tempPrefix` (`.prep-tmp-`, the temp files of atomic writes) are skipped in `.prep` and issue directories: one may belong to a write in flight or be left by a crash.
 - Writes use checkout-local advisory serialization and per-file atomic rename. `Apply` validates frozen loaded record hashes and loaded directory-entry manifests, then stages a recoverable multi-file journal; stale plans return E_CONFLICT before mutation. Locked loads recover by rolling forward, or retain conflicting data and fail visibly. Maintenance writes remain per-file CAS operations. See [Local write safety](/features/local-write-safety.md) for protocol, recovery and limits.

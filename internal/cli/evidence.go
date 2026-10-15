@@ -66,7 +66,7 @@ func cmdEvidence(a *app, args []string) error {
 			records = append(records, r)
 		}
 		if a.json {
-			a.emit(map[string]any{"id": id, "records": records})
+			a.emit(map[string]any{"ok": true, "id": id, "records": records, "next": "prep guide " + id})
 		} else {
 			if len(records) == 0 {
 				a.printf("No recorded verification evidence.\n")
@@ -88,7 +88,7 @@ func cmdEvidence(a *app, args []string) error {
 	e.By, e.At = a.actor, a.now()
 	c, err := t.PlanEvidence(id, e)
 	if err != nil {
-		return err
+		return withNext(err, "prep guide "+id)
 	}
 	if err := t.CheckWrite(c); err != nil {
 		return err
@@ -98,6 +98,6 @@ func cmdEvidence(a *app, args []string) error {
 		return err
 	}
 	a.afterWrite(files)
-	a.reportWrite(writeResult{OK: true, Op: "evidence", ID: id, Files: files})
+	a.reportWrite(writeResult{OK: true, Op: "evidence", ID: id, Files: files, Next: "prep evidence show " + id})
 	return nil
 }

@@ -9,6 +9,7 @@ scope:
   - internal/domain/approval.go
   - internal/cli/approval.go
   - internal/mdstore/approval.go
+confirmed_commit: bacc2245668c64831389dced173514b2db6000df
 ---
 
 Applies when changing verification waivers, policy retention or inherited DoD opt-outs. Prep records explicit human actions; it does not run checks or require a commit before completion.

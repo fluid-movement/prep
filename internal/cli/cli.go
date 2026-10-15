@@ -130,6 +130,7 @@ func init() {
 		{"release", true, "release <id> [--reason]    stop work without finishing", opCmd(domain.OpRelease)},
 		{"complete", true, "complete <id>              finish: [--commit <hash>] --docs <entry>... | --no-impact <reason> [--note]", opCmd(domain.OpComplete)},
 		{"review", true, "review show <id> | approve <id> --reason <text> --by human:<name> [--scope <path>...]", cmdReview},
+		{"artifact", true, "artifact add|remove <id> --source <identity> --location <reference> [--title <text>]  record an external reference only", cmdArtifact},
 		{"reopen", true, "reopen <id> --reason <text> explicitly resume a done issue through its existing ready sign-off", opCmd(domain.OpReopen)},
 		{"drop", true, "drop <id> --reason <text>  drop an issue in any unresolved state", opCmd(domain.OpDrop)},
 		{"fmt", true, "fmt [--check]              rewrite files in canonical format (--check: report only, exit 1 on changes)", cmdFmt},
@@ -332,6 +333,16 @@ func usageErr(format string, a ...any) error {
 	return &domain.Error{Code: domain.ErrUsage, Message: fmt.Sprintf(format, a...)}
 }
 
+func withNext(err error, next string) error {
+	var de *domain.Error
+	if !errors.As(err, &de) || de.Next != "" {
+		return err
+	}
+	copy := *de
+	copy.Next = next
+	return &copy
+}
+
 func (a *app) fail(err error) int {
 	var se silentErr
 	if errors.As(err, &se) {
@@ -347,6 +358,9 @@ func (a *app) fail(err error) int {
 		fmt.Fprintf(a.errw, "prep: %s [%s]\n", de.Error(), de.Code)
 		for _, d := range de.Diags {
 			fmt.Fprintf(a.errw, "  %s\n", formatDiag(d))
+		}
+		if de.Next != "" {
+			fmt.Fprintf(a.errw, "Next: %s\n", de.Next)
 		}
 	}
 	switch de.Code {

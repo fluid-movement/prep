@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/domain/guide.go
   - internal/cli/read.go
-confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
+confirmed_commit: bacc2245668c64831389dced173514b2db6000df
 ---
 
 # Agent context

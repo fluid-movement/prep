@@ -14,7 +14,7 @@ confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
 
 Applies when changing lifecycle rules, gates, diagnostics or queries.
 
-- `types.go`: `Issue`, records (`Baseline`, `Ready`, `Claim`, `Resolution`), `Entry`, kinds and states.
+- `types.go`: issues, lifecycle records and entries; `artifact.go` plans reference-only metadata. Optional `Error.Next` carries [CLI guidance](/features/cli-contracts.md).
 - `tree.go`: `Tree.State` derives state from records; `Stale`, `Blocked`, `Actionable`, `ChildProgress`, `EffectiveDoD`, ID suffix resolution (`Resolve`: a full ID or any unique suffix, in either case since Crockford base32 ignores it); `Tree.IDs` sorts IDs as strings, which is creation order for ULIDs. `ValidStamp` checks baseline names.
 - `ulid.go`: canonical ULID validation/generation and project-name validation. PlanNew increments the newest ID for the same millisecond to preserve order; injected clock/entropy make tests deterministic. ID format was chosen in 01M485SBR0WN8JDQSN7A3GT7CB.
 - `fsm.go`: `Gates` (unmet conditions with `G_*` codes; with nil input, argument-dependent gates become needs), `Plan` (records to write), `PlanNew` (drops repeated dependencies and refuses dropped ones, like `PlanEdit`), `PlanEdit` (edits of title, kind, parent, dependencies, tags, priority and requirement on unresolved issues; tag and priority edits also on resolved ones; refuses dropped dependency targets and leaves existence and cycles to `CheckWrite`), `Apply` and `CheckWrite`.

@@ -59,6 +59,9 @@ func Validate(t *Tree) []Diagnostic {
 		if err := ValidateDependencyOverrides(i.DependencyOverrides); err != nil {
 			e(CodeRecordInvalid, ClassManual, "dependency-overrides.md", "restore the original dependency override history", "invalid dependency override history: %v", err)
 		}
+		if err := ValidateArtifactReferences(i.Artifacts); err != nil {
+			e(CodeRecordInvalid, ClassManual, "issue.md", "use prep artifact add/remove to reconcile references", "invalid artifact references: %v", err)
+		}
 
 		if strings.TrimSpace(i.Title) == "" {
 			e(CodeTitleMissing, ClassManual, "issue.md", "add a title to the frontmatter", "title is missing")

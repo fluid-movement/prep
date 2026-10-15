@@ -1,0 +1,3 @@
+- [ ] All eight scoped lifecycle orchestration children are done, with findings and verification recorded for their respective contracts.
+- [ ] Integrated CLI/domain and TUI behavior guides the consistent lifecycle and enforces completion policy, knowledge review, explicit human review and dependency uncertainty.
+- [ ] Final project CI and formatting pass; affected knowledge is maintained and reviewed without claiming semantic proof or global scheduling.

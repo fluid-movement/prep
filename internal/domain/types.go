@@ -251,6 +251,8 @@ type Issue struct {
 	// have an applicable human resolution review.
 	DependsOnApproval []string `json:"depends_on_approval,omitempty"`
 	Tags              []string `json:"tags,omitempty"`
+	// Artifacts are reference-only metadata, never imported requirements or evidence.
+	Artifacts []ArtifactReference `json:"artifacts,omitempty"`
 	// Priority as stored: empty means medium. Output carries Effective().
 	Priority Priority `json:"-"`
 

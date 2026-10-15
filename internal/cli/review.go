@@ -13,6 +13,7 @@ import (
 const reviewCoverageLimit = "fingerprints cover only the declared work/configuration scopes and selected knowledge-review paths; unlisted work may be absent. Human actor names are local attribution, not authentication."
 
 type resolutionReviewView struct {
+	OK             bool                      `json:"ok"`
 	ID             string                    `json:"id"`
 	Status         string                    `json:"status"`
 	ResolutionID   string                    `json:"resolution_id,omitempty"`
@@ -21,6 +22,7 @@ type resolutionReviewView struct {
 	WorkScopes     []string                  `json:"work_scopes"`
 	ConfigScopes   []string                  `json:"config_scopes"`
 	CoverageLimits string                    `json:"coverage_limits"`
+	Next           string                    `json:"next,omitempty"`
 }
 
 func cmdReview(a *app, args []string) error {
@@ -39,7 +41,7 @@ func cmdReview(a *app, args []string) error {
 
 func reviewView(t *domain.Tree, id string) resolutionReviewView {
 	i := t.Issues[id]
-	v := resolutionReviewView{ID: id, Status: t.ResolutionReviewStatus(id), Reviews: slices.Clone(i.ResolutionReviews), CoverageLimits: reviewCoverageLimit}
+	v := resolutionReviewView{OK: true, ID: id, Status: t.ResolutionReviewStatus(id), Reviews: slices.Clone(i.ResolutionReviews), CoverageLimits: reviewCoverageLimit}
 	if i.Resolution != nil && i.Resolution.Outcome == domain.OutcomeDone {
 		v.ResolutionID = i.Resolution.ContentID()
 		v.Generation = i.Resolution.Generation
@@ -55,7 +57,21 @@ func reviewView(t *domain.Tree, id string) resolutionReviewView {
 	if v.ConfigScopes == nil {
 		v.ConfigScopes = []string{}
 	}
+	v.Next = reviewNext(v.Status, id, len(v.WorkScopes) > 0)
 	return v
+}
+
+func reviewNext(status, id string, hasRecordedWorkScope bool) string {
+	switch status {
+	case domain.ReviewPending, domain.ReviewStale:
+		next := "prep review approve " + id + " --reason <text> --by human:<name>"
+		if !hasRecordedWorkScope {
+			next += " --scope <work-path>"
+		}
+		return next
+	default:
+		return "prep guide " + id
+	}
 }
 
 func cmdReviewShow(a *app, args []string) error {
@@ -94,6 +110,7 @@ func cmdReviewShow(a *app, args []string) error {
 		}
 	}
 	a.printf("Coverage: %s\n", v.CoverageLimits)
+	a.printf("Next: %s\n", v.Next)
 	return nil
 }
 
@@ -120,11 +137,11 @@ func cmdReviewApprove(a *app, args []string) error {
 	}
 	issue := t.Issues[id]
 	if issue.Resolution == nil || issue.Resolution.Outcome != domain.OutcomeDone {
-		return &domain.Error{Code: domain.ErrGate, Message: "review approval requires a done resolution"}
+		return &domain.Error{Code: domain.ErrGate, Message: "review approval requires a done resolution", Next: "prep guide " + id}
 	}
 	for _, p := range explicit {
 		if strings.TrimSpace(p) == "" {
-			return usageErr("--scope values must not be empty")
+			return withNext(usageErr("--scope values must not be empty"), "prep guide "+id)
 		}
 	}
 	workScopes := mdstore.ResolutionReviewWorkScopes(issue.Resolution)
@@ -133,17 +150,17 @@ func cmdReviewApprove(a *app, args []string) error {
 	workScopes = slices.Compact(workScopes)
 	configScopes := domain.ReviewConfigScopes(issue.Resolution)
 	if len(workScopes) == 0 {
-		return usageErr("this resolution has no recorded work scope; pass --scope <path> (repeatable) to identify what the human reviewed")
+		return withNext(usageErr("this resolution has no recorded work scope; pass --scope <path> (repeatable) to identify what the human reviewed"), "prep review approve "+id+" --reason <text> --scope <path> --by human:<name>")
 	}
 	paths := append(slices.Clone(workScopes), configScopes...)
 	fingerprint, err := worktree.Fingerprint(a.store.Root, paths)
 	if err != nil {
-		return usageErr("cannot fingerprint review scopes: %v", err)
+		return withNext(usageErr("cannot fingerprint review scopes: %v", err), "prep guide "+id)
 	}
 	in := domain.Input{Actor: a.actor, Now: a.now(), Reason: *reason, Scopes: workScopes, ConfigScopes: configScopes, Snapshot: fingerprint}
 	c, err := t.Plan(id, domain.OpResolutionReview, in)
 	if err != nil {
-		return err
+		return withNext(err, reviewNext(t.ResolutionReviewStatus(id), id, len(workScopes) > 0))
 	}
 	if err := t.CheckWrite(c); err != nil {
 		return err
@@ -154,6 +171,6 @@ func cmdReviewApprove(a *app, args []string) error {
 	}
 	a.afterWrite(files)
 	a.note(issueEvent(t, string(domain.OpResolutionReview), id, opVerbs[domain.OpResolutionReview]))
-	a.reportWrite(writeResult{OK: true, Op: "review-approve", ID: id, State: t.Apply(c).State(id), Files: files})
+	a.reportWrite(writeResult{OK: true, Op: "review-approve", ID: id, State: t.Apply(c).State(id), Files: files, Next: "prep guide " + id})
 	return nil
 }

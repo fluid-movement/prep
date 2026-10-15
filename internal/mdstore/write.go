@@ -282,6 +282,24 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 			return nil, nil, err
 		}
 	}
+	if c.Artifacts != nil {
+		rel := dir + "/issue.md"
+		if err := s.cas(rel); err != nil {
+			return nil, nil, err
+		}
+		raw, _, err := s.read(rel)
+		if err != nil {
+			return nil, nil, err
+		}
+		var i domain.Issue
+		if err := parseIssue(raw, &i); err != nil {
+			return nil, nil, fmt.Errorf("%s: %w", rel, err)
+		}
+		i.Artifacts = *c.Artifacts
+		if err := w("issue.md", renderIssue(&i)); err != nil {
+			return nil, nil, err
+		}
+	}
 	if c.Baseline != nil {
 		if err := w("baselines/"+c.Baseline.Name+".md", renderBaseline(c.Baseline)); err != nil {
 			return nil, nil, err

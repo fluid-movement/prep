@@ -39,7 +39,7 @@ func cmdPolicy(a *app, args []string) error {
 		if args[0] == "adopt" {
 			c, err := t.PlanAdoptPolicy(id, domain.Input{Actor: a.actor, Now: a.now()})
 			if err != nil {
-				return err
+				return withNext(err, "prep guide "+id)
 			}
 			if err := t.CheckWrite(c); err != nil {
 				return err
@@ -49,7 +49,7 @@ func cmdPolicy(a *app, args []string) error {
 				return err
 			}
 			a.afterWrite(files)
-			a.reportWrite(writeResult{OK: true, Op: "policy-adopt", ID: id, Files: files})
+			a.reportWrite(writeResult{OK: true, Op: "policy-adopt", ID: id, Files: files, Next: "prep guide " + id})
 			return nil
 		}
 		if args[0] == "retain" {
@@ -65,7 +65,7 @@ func cmdPolicy(a *app, args []string) error {
 		}
 		current := t.Contract(id)
 		if a.json {
-			a.emit(map[string]any{"id": id, "bound": bound, "current": current, "changed": t.PolicyChanged(id), "review_required": t.PolicyReviewRequired(id), "retained": t.RetentionApproval(id) != nil, "retention_approval": t.RetentionApproval(id), "legacy": bound == nil})
+			a.emit(map[string]any{"ok": true, "id": id, "bound": bound, "current": current, "changed": t.PolicyChanged(id), "review_required": t.PolicyReviewRequired(id), "retained": t.RetentionApproval(id) != nil, "retention_approval": t.RetentionApproval(id), "legacy": bound == nil, "next": "prep guide " + id})
 		} else {
 			if bound == nil {
 				a.printf("No bound completion contract (legacy or not ready).\n")
@@ -95,12 +95,18 @@ func cmdPolicy(a *app, args []string) error {
 	}
 	if args[0] == "show" {
 		if a.json {
-			a.emit(struct {
+			result := struct {
+				OK         bool                      `json:"ok"`
 				Configured bool                      `json:"configured"`
 				Policy     *domain.CompletionPolicy  `json:"policy"`
 				DoD        []string                  `json:"dod"`
 				History    []domain.CompletionPolicy `json:"history,omitempty"`
-			}{t.Project.Policy.Valid(), t.Project.Policy, t.Project.DoD, t.Project.PolicyHistory})
+				Next       string                    `json:"next,omitempty"`
+			}{true, t.Project.Policy.Valid(), t.Project.Policy, t.Project.DoD, t.Project.PolicyHistory, ""}
+			if !result.Configured {
+				result.Next = "prep policy set --verification <method> --documentation <method>"
+			}
+			a.emit(result)
 		} else if t.Project.Policy == nil {
 			a.printf("No explicit completion policy. Set one with prep policy set --verification <method> --documentation <method> before marking work ready.\n")
 		} else {
@@ -125,6 +131,6 @@ func cmdPolicy(a *app, args []string) error {
 		return err
 	}
 	a.afterWrite(files)
-	a.reportWrite(writeResult{OK: true, Op: "policy", Files: files})
+	a.reportWrite(writeResult{OK: true, Op: "policy", Files: files, Next: "prep policy show"})
 	return nil
 }

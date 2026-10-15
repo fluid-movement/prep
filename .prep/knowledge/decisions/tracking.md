@@ -10,7 +10,7 @@ scope:
   - internal/cli/skill.md
   - internal/cli/similar.go
   - eval/cases/natural
-confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
+confirmed_commit: bacc2245668c64831389dced173514b2db6000df
 ---
 
 # Tracking implementation work

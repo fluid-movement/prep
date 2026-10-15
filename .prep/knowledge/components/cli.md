@@ -39,10 +39,12 @@ confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
 
 - `prep tui` requires a terminal; `--agent` opens the Agent screen and `--gallery` shows the [design system](/components/tui-design-system.md) with project themes. `prep theme list|new` lists or creates/selects themes; see [Palette](/components/palette.md). `prep flags` lists query values/counts, including saved views and tree mode; `prep views` lists saved views in config order.
 - `prep skill` prints the embedded `internal/cli/skill.md`; `.claude/skills/prep/SKILL.md` must stay identical (tested).
-- **Completion evidence**: a code issue completed without `--commit` has no evidence in `resolution.md`; `resolveEvidence` (used by `prep show` and the guide's touched files) fills it in memory with the commit that added `resolution.md` (`gitx.AddedIn`), and `prep show` marks it pending (`evidence_pending` in JSON) until that commit exists. A given `--commit` is validated as a hash and remains optional. Policy-bound issues also require passing applicable reports under `G_EVIDENCE`, independently of Git references. `prep evidence record/show` records results and inspects applicability; `prep policy show/set/adopt/retain` manages completion methods and bindings; `prep exception approve/show` and `prep dod approve` record explicit human approval.  See [Completion policy](/features/completion-policy.md).
+- **Completion evidence**: optional Git provenance is separate from applicable policy-bound verification and knowledge reports. See [Completion policy](/features/completion-policy.md) and [CLI contracts](/features/cli-contracts.md).
 - **Eval**: test seams `PREP_TEST_NOW`, `PREP_TEST_SEED` (`testSeams`); [prep eval](/components/eval.md).
 `prep new` returns bounded advisory `similar_issues` candidates when titles overlap unresolved records; terminal/self records are omitted. Hints never prevent creation or choose a match. See [Tracking](/decisions/tracking.md).
 
 - `prep knowledge review record/show` records scoped assessments for policy-bound completion; `prep review approve/show` and `prep reopen` manage versioned resolution review/history. Approval-dependent local or cross-project prerequisites use `edit --depends-on-approval`. See [Knowledge lifecycle](/features/knowledge-lifecycle.md) and [Resolution review](/features/resolution-review.md).
 `tui_review.go` supplies fresh, captured Inbox review/approval callbacks through the serialized writer. See [TUI Inbox](/components/tui-inbox.md).
 `prep dependency show|override`: [source observations and scoped human overrides](/features/cross-project.md).
+
+Artifact metadata and additive lifecycle JSON/error guidance: [CLI contracts](/features/cli-contracts.md).

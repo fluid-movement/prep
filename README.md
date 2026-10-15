@@ -63,6 +63,8 @@ Every read command (`prime`, `guide`, `list`, `next`, `show`, `check`, `views`) 
 
 ## Lifecycle
 
+Link external workflow documents with `prep artifact add <id> --source <identity> --location <URI-or-path>`. `prep show` displays them as references; they do not import requirements or satisfy verification. Lifecycle JSON responses preserve their existing fields and add success markers and actionable next commands where applicable.
+
 State is derived from which records exist in `.prep/issues/<id>/`, never stored:
 
 | State | Record | Written by |

@@ -85,7 +85,7 @@ func knowledgeReview(a *app, args []string) error {
 			rows = append(rows, result{Review: *r, Applicable: problem == "", Problem: problem})
 		}
 		if a.json {
-			a.emit(map[string]any{"id": id, "reviews": rows})
+			a.emit(map[string]any{"ok": true, "id": id, "reviews": rows, "next": "prep guide " + id})
 			return nil
 		}
 		if len(rows) == 0 {
@@ -116,7 +116,7 @@ func knowledgeReview(a *app, args []string) error {
 	r.By, r.At = a.actor, a.now()
 	c, err := t.PlanKnowledgeReview(id, r)
 	if err != nil {
-		return err
+		return withNext(err, "prep guide "+id)
 	}
 	if err := t.CheckWrite(c); err != nil {
 		return err
@@ -127,7 +127,7 @@ func knowledgeReview(a *app, args []string) error {
 	}
 	a.afterWrite(files)
 	a.note(activity.Event{Op: "knowledge review", Verb: "recorded knowledge review", Target: id, Area: activity.AreaKnowledge})
-	a.reportWrite(writeResult{OK: true, Op: "knowledge review", ID: id, Files: files})
+	a.reportWrite(writeResult{OK: true, Op: "knowledge review", ID: id, Files: files, Next: "prep knowledge review show " + id})
 	return nil
 }
 

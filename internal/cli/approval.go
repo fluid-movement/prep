@@ -16,7 +16,7 @@ func writeApproval(a *app, t *domain.Tree, c *domain.Change, op string) error {
 		return err
 	}
 	a.afterWrite(files)
-	a.reportWrite(writeResult{OK: true, Op: op, ID: c.IssueID, Files: files})
+	a.reportWrite(writeResult{OK: true, Op: op, ID: c.IssueID, Files: files, Next: "prep guide " + c.IssueID})
 	return nil
 }
 

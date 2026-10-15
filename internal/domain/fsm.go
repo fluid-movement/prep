@@ -90,6 +90,7 @@ type Change struct {
 	ResolutionHistory   *[]Resolution           `json:"-"`
 	ResolutionReviews   *[]ResolutionReview     `json:"-"`
 	DependencyOverrides *[]DependencyOverride   `json:"-"`
+	Artifacts           *[]ArtifactReference    `json:"-"`
 	Verification        *[]VerificationEvidence `json:"-"`
 	Approvals           *[]CompletionApproval   `json:"-"`
 	KnowledgeReviews    *[]KnowledgeReview      `json:"-"`
@@ -302,7 +303,7 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 						add(GateEvidence, "commit reference %q is not a hex commit hash", in.Commit)
 					}
 					if strings.HasPrefix(in.Actor, "human:") {
-						add(GateActor, "code issues are completed by an agent, with commit evidence")
+						add(GateActor, "code issues are completed by an agent; use the agent's --by identity (commit provenance is optional)")
 					}
 				}
 			case KindResearch:
@@ -329,7 +330,7 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 			}
 			for _, d := range in.Docs {
 				if t.Knowledge[NormalizeEntryPath(d)] == nil {
-					add(GateDocEntry, "knowledge entry %s does not exist", NormalizeEntryPath(d))
+					add(GateDocEntry, "knowledge entry %s does not exist; run prep knowledge list and choose an existing --docs entry, or create it with prep knowledge new", NormalizeEntryPath(d))
 				}
 			}
 			if i.Ready != nil && i.Ready.Contract != nil && (len(in.Docs) > 0) != (strings.TrimSpace(in.NoImpact) != "") {
@@ -358,7 +359,11 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 			needs = append(needs, "--reason <text>", "--by human:<name>", "--scope <path>...")
 		} else {
 			if !humanActor(in.Actor) {
-				add(GateActor, "resolution review requires an explicit human:<name> actor")
+				next := "a human should run prep review approve " + id + " --reason <text> --by human:<name>"
+				if len(ReviewWorkScopes(i.Resolution)) == 0 {
+					next += " --scope <work-path>"
+				}
+				add(GateActor, "resolution review requires an explicit human:<name> actor; %s", next)
 			}
 			if strings.TrimSpace(in.Reason) == "" {
 				add(GateReason, "resolution review requires --reason")
@@ -460,7 +465,7 @@ func nextStamp(now time.Time, taken func(string) bool) string {
 // Plan checks the gates for a transition and returns the records to write.
 func (t *Tree) Plan(id string, op Op, in Input) (*Change, error) {
 	if unmet, _ := t.Gates(id, op, &in); len(unmet) > 0 {
-		return nil, &Error{Code: ErrGate, Message: fmt.Sprintf("cannot %s %s", op, id), Unmet: unmet}
+		return nil, &Error{Code: ErrGate, Message: fmt.Sprintf("cannot %s %s", op, id), Unmet: unmet, Next: "prep guide " + id}
 	}
 	i := t.Issues[id]
 	now := in.Now.UTC().Truncate(time.Second)
@@ -717,6 +722,9 @@ func (t *Tree) Apply(c *Change) *Tree {
 		i := t.Issues[id]
 		if id == c.IssueID {
 			cp := *i
+			if c.Artifacts != nil {
+				cp.Artifacts = append([]ArtifactReference(nil), (*c.Artifacts)...)
+			}
 			cp.Baselines = append([]Baseline(nil), i.Baselines...)
 			if c.Baseline != nil {
 				cp.Baselines = append(cp.Baselines, *c.Baseline)

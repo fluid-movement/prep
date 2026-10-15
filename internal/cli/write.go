@@ -274,7 +274,7 @@ func cmdNew(a *app, args []string) error {
 		return err
 	}
 	a.note(activity.Event{Op: "new", Issue: c.IssueID, Verb: "created a " + string(in.Kind) + " issue", Target: in.Title, Area: activity.AreaIssue})
-	a.reportWrite(writeResult{OK: true, Op: "new", ID: c.IssueID, State: domain.StateOpen, Files: files, Similar: similarIssues(t, in.Title)})
+	a.reportWrite(writeResult{OK: true, Op: "new", ID: c.IssueID, State: domain.StateOpen, Files: files, Similar: similarIssues(t, in.Title), Next: "prep guide " + c.IssueID})
 	return nil
 }
 
@@ -435,7 +435,7 @@ func cmdEdit(a *app, args []string) error {
 		return err
 	}
 	a.note(issueEvent(after, "edit", id, "edited the issue"))
-	a.reportWrite(writeResult{OK: true, Op: "edit", ID: id, State: after.State(id), Stale: after.Stale(id), Files: files})
+	a.reportWrite(writeResult{OK: true, Op: "edit", ID: id, State: after.State(id), Stale: after.Stale(id), Files: files, Next: "prep guide " + id})
 	return nil
 }
 
@@ -492,7 +492,7 @@ func opCmd(op domain.Op) func(*app, []string) error {
 		}
 		a.afterWrite(files)
 		a.note(issueEvent(t, string(op), id, opVerbs[op]))
-		a.reportWrite(writeResult{OK: true, Op: string(op), ID: id, State: t.Apply(c).State(id), Files: files})
+		a.reportWrite(writeResult{OK: true, Op: string(op), ID: id, State: t.Apply(c).State(id), Files: files, Next: "prep guide " + id})
 		return nil
 	}
 }
@@ -745,7 +745,7 @@ func recordCmd(op domain.Op) func(*app, []string) error {
 		}
 		a.afterWrite(files)
 		a.note(issueEvent(t, string(op), id, recordVerb(op, in, c)))
-		a.reportWrite(writeResult{OK: true, Op: string(op), ID: id, Files: files})
+		a.reportWrite(writeResult{OK: true, Op: string(op), ID: id, Files: files, Next: "prep guide " + id})
 		return nil
 	}
 }

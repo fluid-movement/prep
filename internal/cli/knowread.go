@@ -14,18 +14,19 @@ import (
 // files, so a read can be one section or an outline.
 
 type entryLine struct {
-	Path        string           `json:"path"`
-	Type        string           `json:"type"`
-	Title       string           `json:"title"`
-	Description string           `json:"description"`
-	Status      string           `json:"status,omitempty"`
-	Scope       []string         `json:"scope,omitempty"`
-	Size        int              `json:"size"`
-	Sections    []domain.Section `json:"sections"`
+	Path            string           `json:"path"`
+	Type            string           `json:"type"`
+	Title           string           `json:"title"`
+	Description     string           `json:"description"`
+	Status          string           `json:"status,omitempty"`
+	Scope           []string         `json:"scope,omitempty"`
+	ConfirmedCommit string           `json:"confirmed_commit,omitempty"`
+	Size            int              `json:"size"`
+	Sections        []domain.Section `json:"sections"`
 }
 
 func describeEntry(e *domain.Entry) entryLine {
-	return entryLine{Path: e.Path, Type: e.Type, Title: e.Title, Description: e.Description, Status: e.Status, Scope: e.Scope, Size: len(e.Body), Sections: domain.Sections(e.Body)}
+	return entryLine{Path: e.Path, Type: e.Type, Title: e.Title, Description: e.Description, Status: e.Status, Scope: e.Scope, ConfirmedCommit: e.ConfirmedCommit, Size: len(e.Body), Sections: domain.Sections(e.Body)}
 }
 
 // tokens renders a byte count as approximate tokens.
@@ -185,6 +186,9 @@ func knowledgeShow(a *app, args []string) error {
 			a.printf("%s: %s\n", s.Type, s.Description)
 			if len(s.Scope) > 0 {
 				a.printf("scope: %s\n", strings.Join(s.Scope, ", "))
+			}
+			if s.ConfirmedCommit != "" {
+				a.printf("last explicit review: %s (provenance, not semantic proof)\n", s.ConfirmedCommit)
 			}
 			for _, x := range s.Sections {
 				if x.Anchor == "" {

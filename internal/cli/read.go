@@ -435,6 +435,13 @@ func cmdShow(a *app, args []string) error {
 	for _, k := range xknow {
 		a.printf("knows: %s:%s (%s)\n", k["link"], k["path"], k["command"])
 	}
+	for _, ref := range i.Artifacts {
+		a.printf("artifact (reference only): %s — %s", ref.Source, ref.Location)
+		if ref.Title != "" {
+			a.printf(" (%s)", ref.Title)
+		}
+		a.printf("\n")
+	}
 	if *dependents && len(deps) == 0 {
 		a.printf("no issue in another project here depends on this one\n")
 	}

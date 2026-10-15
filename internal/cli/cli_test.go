@@ -689,6 +689,18 @@ func TestKnowledgeCommands(t *testing.T) {
 	if !strings.Contains(entry("components/export.md"), "confirmed_commit: ") {
 		t.Fatal("confirm did not set confirmed_commit")
 	}
+	var reviewed struct {
+		Entries []struct {
+			ConfirmedCommit string `json:"confirmed_commit"`
+		} `json:"entries"`
+	}
+	h.jsonOf(&reviewed, "knowledge", "show", "components/export.md", "--outline")
+	if len(reviewed.Entries) != 1 || len(reviewed.Entries[0].ConfirmedCommit) != 40 {
+		t.Fatalf("knowledge read omitted review provenance: %+v", reviewed)
+	}
+	if out := h.ok("knowledge", "show", "components/export.md", "--outline"); !strings.Contains(out, "last explicit review: "+reviewed.Entries[0].ConfirmedCommit+" (provenance, not semantic proof)") {
+		t.Fatalf("outline omitted qualified review provenance: %s", out)
+	}
 	git("commit", "-qam", "confirm")
 	if err := os.MkdirAll(filepath.Join(h.dir, "internal", "export"), 0o755); err != nil {
 		t.Fatal(err)
