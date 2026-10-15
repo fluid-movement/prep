@@ -9,6 +9,7 @@
 * [Explicit project completion policy](/features/completion-policy.md) - Project verification and documentation methods, configured through policy set and required for new readiness transitions.
 * [Cross-project work](/features/cross-project.md) - How a command reaches another prep project on the machine (--project), how that shows in output and activity, and how agents learn about other projects.
 * [Knowledge review in the issue lifecycle](/features/knowledge-lifecycle.md) - Bounded knowledge guidance and explicit, scoped reviews required for policy-bound completion.
+* [Lean knowledge policy](/features/knowledge-policy.md) - Decisions, constraints and navigation first; incremental maintenance and bounded comparative knowledge experiments.
 * [Issue lifecycle](/features/lifecycle.md) - States derived from records, transitions with their gates per kind, stale drift handling, parents, dependencies and Definition of Done.
 * [Local record write safety](/features/local-write-safety.md) - Checkout-local locks, stale-plan rejection and roll-forward recovery for interrupted Markdown record transactions.
 * [Resolution review and reopening](/features/resolution-review.md) - Human approvals bound to completed resolution history and scoped snapshots.

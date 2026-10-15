@@ -1,0 +1,1624 @@
+{
+  "protocol": "12 completed matched sessions; n=3 per condition; differently-manifested preflight excluded",
+  "metadata": {
+    "source_commit": "bacc2245668c64831389dced173514b2db6000df",
+    "codex_cli_version": "codex-cli 0.162.1",
+    "model_requested": "gpt-6.1-sol",
+    "skill_revision": "65067e922a4962c7a8d44863843c1ac8a62e43ff",
+    "skill_sha256": "85f9cfca3ae57c7c4b67dfc59d44af41bc64eba86120e814b0816829519f0fbd"
+  },
+  "run_count": 12,
+  "aggregate_by_condition": {
+    "code-only": {
+      "n": 3,
+      "issue_done": 3,
+      "nonstale": 3,
+      "node_check_invocations": 3,
+      "node_check_outer_shell_successes": 3,
+      "node_check_runs_with_at_least_one_success": 3,
+      "sqlite_python_check_invocations": 1,
+      "explicit_test_script_invocations": 0,
+      "explicit_test_script_results": [],
+      "prep_check_invocations": 6,
+      "prep_check_outputs_report_zero_errors_warnings": 6,
+      "elapsed_mean_seconds": 104.92,
+      "usage_totals_reported_by_CLI": {
+        "input_tokens": 734172,
+        "cached_input_tokens": 654720,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 10042,
+        "reasoning_output_tokens": 1009
+      },
+      "reported_applicable_pass_evidence_count": 12,
+      "applicable_knowledge_review_kinds": {
+        "unchanged": 3
+      },
+      "obsolete_static_proxy_passes_untrusted": 3
+    },
+    "current": {
+      "n": 3,
+      "issue_done": 3,
+      "nonstale": 3,
+      "node_check_invocations": 4,
+      "node_check_outer_shell_successes": 4,
+      "node_check_runs_with_at_least_one_success": 3,
+      "sqlite_python_check_invocations": 0,
+      "explicit_test_script_invocations": 0,
+      "explicit_test_script_results": [],
+      "prep_check_invocations": 5,
+      "prep_check_outputs_report_zero_errors_warnings": 3,
+      "elapsed_mean_seconds": 137.38,
+      "usage_totals_reported_by_CLI": {
+        "input_tokens": 1188636,
+        "cached_input_tokens": 1080448,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 13959,
+        "reasoning_output_tokens": 1386
+      },
+      "reported_applicable_pass_evidence_count": 12,
+      "applicable_knowledge_review_kinds": {
+        "updated": 6,
+        "unchanged": 1
+      },
+      "obsolete_static_proxy_passes_untrusted": 3
+    },
+    "lean": {
+      "n": 3,
+      "issue_done": 3,
+      "nonstale": 3,
+      "node_check_invocations": 3,
+      "node_check_outer_shell_successes": 3,
+      "node_check_runs_with_at_least_one_success": 3,
+      "sqlite_python_check_invocations": 1,
+      "explicit_test_script_invocations": 1,
+      "explicit_test_script_results": [
+        {
+          "run_id": "lean-2",
+          "command": "sh test.sh",
+          "outer_shell_exit_code": 1,
+          "output_excerpt": "FAIL: totals are rounded down, expected nearest cent\n"
+        }
+      ],
+      "prep_check_invocations": 4,
+      "prep_check_outputs_report_zero_errors_warnings": 4,
+      "elapsed_mean_seconds": 118.47,
+      "usage_totals_reported_by_CLI": {
+        "input_tokens": 850847,
+        "cached_input_tokens": 746752,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 10996,
+        "reasoning_output_tokens": 963
+      },
+      "reported_applicable_pass_evidence_count": 12,
+      "applicable_knowledge_review_kinds": {
+        "updated": 3
+      },
+      "obsolete_static_proxy_passes_untrusted": 1
+    },
+    "stale": {
+      "n": 3,
+      "issue_done": 3,
+      "nonstale": 3,
+      "node_check_invocations": 3,
+      "node_check_outer_shell_successes": 3,
+      "node_check_runs_with_at_least_one_success": 3,
+      "sqlite_python_check_invocations": 0,
+      "explicit_test_script_invocations": 0,
+      "explicit_test_script_results": [],
+      "prep_check_invocations": 5,
+      "prep_check_outputs_report_zero_errors_warnings": 5,
+      "elapsed_mean_seconds": 97.44,
+      "usage_totals_reported_by_CLI": {
+        "input_tokens": 733790,
+        "cached_input_tokens": 630272,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 9434,
+        "reasoning_output_tokens": 901
+      },
+      "reported_applicable_pass_evidence_count": 12,
+      "applicable_knowledge_review_kinds": {
+        "unchanged": 3
+      },
+      "obsolete_static_proxy_passes_untrusted": 3
+    }
+  },
+  "runtime_validation": {
+    "node_version": "v24.22.0",
+    "run_count": 12,
+    "result": "post-hoc actual profileHeadline helper returned 200-character input unchanged in all workspaces",
+    "negative_control": "original fixture helper truncated the same input",
+    "scope": "helper-level only; no browser render or live database claim"
+  },
+  "sqlite_note": "SQLite accepts over-width VARCHAR(n) values; insert/select does not establish declared-width capacity semantics.",
+  "command_status_note": "Rows retain actual outer shell command text and aggregated output excerpt. The recorded exit code belongs to the outer command_execution event. Compound shell commands are excluded from direct check counts; no inner-command exit status is inferred.",
+  "runs": [
+    {
+      "run_id": "code-only-1",
+      "original_run_id": "code-only-1",
+      "source_stream": "code-only",
+      "condition": "code-only",
+      "repetition": 1,
+      "issue_id": "01M4ZCMNCGTDQDYH1PSTS70B5H",
+      "codex_exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 112.04,
+      "model_requested": "gpt-6.1-sol",
+      "model_reported": null,
+      "usage_reported": {
+        "input_tokens": 248445,
+        "cached_input_tokens": 226816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3458,
+        "reasoning_output_tokens": 360
+      },
+      "initial_knowledge": [
+        {
+          "path": "/overview.md",
+          "sha256_of_cli_show": "5bfc7e7c21db406564755cc59358723169092081c3827498c87e46901f5c94ba",
+          "bytes": 205,
+          "read_ok": true
+        }
+      ],
+      "actual_prep_command_counts": {
+        "knowledge_show:0": 1,
+        "claim:0": 1,
+        "sqlite_check:0": 1,
+        "node_test:0": 1,
+        "knowledge_review_record:0": 1,
+        "prep_check:0": 2,
+        "evidence_record:0": 4,
+        "complete:0": 1
+      },
+      "knowledge_show_paths_observed": [
+        "/overview.md"
+      ],
+      "observed_check_commands": [
+        {
+          "kind": "sqlite_check",
+          "command": "sqlite3 :memory: <<'SQL'\n.read db/schema.sql\nINSERT INTO players (id, name, headline) VALUES ('headline-test', 'Test player', replace(hex(zeroblob(100)), '0', 'A'));\nSELECT CASE WHEN length(headline) = 200 AND headline = replace(hex(zeroblob(100)), '0', 'A') THEN 'PASS: schema stores all 200 headline characters' ELSE 'FAIL: headline round trip' END FROM players WHERE id = 'headline-test';\nSELECT CASE WHEN type = 'TEXT' THEN 'PASS: headline column has no declared length limit' ELSE 'FAIL: headline column type' END FROM pragma_table_info('players') WHERE name = 'headline';\nSQL",
+          "shell_command": "/bin/zsh -lc \"sqlite3 :memory: <<'SQL'\n.read db/schema.sql\nINSERT INTO players (id, name, headline) VALUES ('headline-test', 'Test player', replace(hex(zeroblob(100)), '0', 'A'));\nSELECT CASE WHEN length(headline) = 200 AND headline = replace(hex(zeroblob(100)), '0', 'A') THEN 'PASS: schema stores all 200 headline characters' ELSE 'FAIL: headline round trip' END FROM players WHERE id = 'headline-test';\nSELECT CASE WHEN type = 'TEXT' THEN 'PASS: headline column has no declared length limit' ELSE 'FAIL: headline column type' END FROM pragma_table_info('players') WHERE name = 'headline';\nSQL\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "PASS: schema stores all 200 headline characters\nPASS: headline column has no declared length limit\n"
+        },
+        {
+          "kind": "node_test",
+          "command": "node --test tests/profile.test.mjs",
+          "shell_command": "/bin/zsh -lc 'node --test tests/profile.test.mjs'",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "\u2714 preserves headlines across the former 80-character boundary (0.450125ms)\n\u2714 defaults a missing headline to an empty string (0.072792ms)\n\u2139 tests 2\n\u2139 suites 0\n\u2139 pass 2\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 75.124084\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 1 knowledge entries: 0 errors, 0 warnings\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 1 knowledge entries: 0 errors, 0 warnings\n"
+        }
+      ],
+      "issue_state": "done",
+      "stale": false,
+      "evidence_pending": true,
+      "resolution_review_status": "pending",
+      "knowledge_reviews": [
+        {
+          "entry": "/overview.md",
+          "kind": "unchanged",
+          "applicable": true
+        }
+      ],
+      "evidence_reports": [
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        }
+      ],
+      "evidence_report_query_ok": true,
+      "obsolete_static_proxy": true,
+      "changed_paths": [
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/acceptance.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/history.md",
+        "db/schema.sql",
+        "src/lib/profile.ts",
+        ".agents/",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/claim.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/knowledge-reviews.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/resolution.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/verification.md",
+        ".trial-bin/",
+        "tests/"
+      ]
+    },
+    {
+      "run_id": "code-only-2",
+      "original_run_id": "code-only-2",
+      "source_stream": "code-only",
+      "condition": "code-only",
+      "repetition": 2,
+      "issue_id": "01M4ZCMNCGTDQDYH1PSTS70B5H",
+      "codex_exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 102.81,
+      "model_requested": "gpt-6.1-sol",
+      "model_reported": null,
+      "usage_reported": {
+        "input_tokens": 273577,
+        "cached_input_tokens": 235520,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3153,
+        "reasoning_output_tokens": 229
+      },
+      "initial_knowledge": [
+        {
+          "path": "/overview.md",
+          "sha256_of_cli_show": "5bfc7e7c21db406564755cc59358723169092081c3827498c87e46901f5c94ba",
+          "bytes": 205,
+          "read_ok": true
+        }
+      ],
+      "actual_prep_command_counts": {
+        "knowledge_show:0": 1,
+        "claim:0": 1,
+        "node_test:0": 1,
+        "knowledge_review_record:0": 1,
+        "prep_check:0": 2,
+        "evidence_record:0": 4,
+        "complete:0": 1
+      },
+      "knowledge_show_paths_observed": [
+        "/overview.md"
+      ],
+      "observed_check_commands": [
+        {
+          "kind": "node_test",
+          "command": "node tests/profile-headline.mjs",
+          "shell_command": "/bin/zsh -lc 'node tests/profile-headline.mjs'",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "ok: headline schema round-trip, full display value, boundaries, Unicode, and missing value\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 1 knowledge entries: 0 errors, 0 warnings\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 1 knowledge entries: 0 errors, 0 warnings\n"
+        }
+      ],
+      "issue_state": "done",
+      "stale": false,
+      "evidence_pending": true,
+      "resolution_review_status": "pending",
+      "knowledge_reviews": [
+        {
+          "entry": "/overview.md",
+          "kind": "unchanged",
+          "applicable": true
+        }
+      ],
+      "evidence_reports": [
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        }
+      ],
+      "evidence_report_query_ok": true,
+      "obsolete_static_proxy": true,
+      "changed_paths": [
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/acceptance.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/history.md",
+        "db/schema.sql",
+        "src/lib/profile.ts",
+        ".agents/",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/claim.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/knowledge-reviews.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/resolution.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/verification.md",
+        ".trial-bin/",
+        "tests/"
+      ]
+    },
+    {
+      "run_id": "code-only-3",
+      "original_run_id": "code-only-3",
+      "source_stream": "code-only",
+      "condition": "code-only",
+      "repetition": 3,
+      "issue_id": "01M4ZCMNCGTDQDYH1PSTS70B5H",
+      "codex_exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 99.91,
+      "model_requested": "gpt-6.1-sol",
+      "model_reported": null,
+      "usage_reported": {
+        "input_tokens": 212150,
+        "cached_input_tokens": 192384,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3431,
+        "reasoning_output_tokens": 420
+      },
+      "initial_knowledge": [
+        {
+          "path": "/overview.md",
+          "sha256_of_cli_show": "5bfc7e7c21db406564755cc59358723169092081c3827498c87e46901f5c94ba",
+          "bytes": 205,
+          "read_ok": true
+        }
+      ],
+      "actual_prep_command_counts": {
+        "knowledge_find:0": 1,
+        "knowledge_show:0": 1,
+        "claim:0": 1,
+        "node_runtime_check:0": 1,
+        "knowledge_review_record:0": 1,
+        "prep_check:0": 2,
+        "evidence_record:0": 4,
+        "complete:0": 1
+      },
+      "knowledge_show_paths_observed": [
+        "/overview.md"
+      ],
+      "observed_check_commands": [
+        {
+          "kind": "node_runtime_check",
+          "command": "node --input-type=module <<'JS'\nimport assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';\nconst source = readFileSync('src/lib/profile.ts', 'utf8').replace('p: { headline?: string }', 'p');\nconst { profileHeadline } = await import(`data:text/javascript,${encodeURIComponent(source)}`);\nfor (const headline of ['A'.repeat(200), 'A'.repeat(500), 'Player \ud83c\udfc6 '.repeat(30), 'first line\\nsecond line', '']) {\n  assert.equal(profileHeadline({ headline }), headline);\n}\nassert.equal(profileHeadline({}), '');\nconsole.log('PASS: actual headline helper preserves 200-character, longer, Unicode, multiline, empty and missing headlines (TypeScript parameter annotation removed for Node 20).');\nJS\npython3 <<'PY'\nimport sqlite3\nfrom pathlib import Path\nconnection = sqlite3.connect(':memory:')\nconnection.executescript(Path('db/schema.sql').read_text())\nfor headline in ['A' * 200, 'A' * 500, 'Player \ud83c\udfc6 ' * 30]:\n    connection.execute('INSERT OR REPLACE INTO players (id, name, headline) VALUES (?, ?, ?)', ('1', 'Player', headline))\n    assert connection.execute('SELECT headline FROM players').fetchone()[0] == headline\nassert next(row for row in connection.execute('PRAGMA table_info(players)') if row[1] == 'headline')[2] == 'TEXT'\nprint('PASS: schema uses TEXT; SQLite round trip preserves 200-character, longer and Unicode headlines.')\nPY",
+          "shell_command": "/bin/zsh -lc \"node --input-type=module <<'JS'\nimport assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';\nconst source = readFileSync('src/lib/profile.ts', 'utf8').replace('p: { headline?: string }', 'p');\nconst { profileHeadline } = await import(\"'`data:text/javascript,${encodeURIComponent(source)}`);\nfor (const headline of ['\"'A'.repeat(200), 'A'.repeat(500), 'Player \ud83c\udfc6 '.repeat(30), 'first line\\\\nsecond line', '']) {\n  assert.equal(profileHeadline({ headline }), headline);\n}\nassert.equal(profileHeadline({}), '');\nconsole.log('PASS: actual headline helper preserves 200-character, longer, Unicode, multiline, empty and missing headlines (TypeScript parameter annotation removed for Node 20).');\nJS\npython3 <<'PY'\nimport sqlite3\nfrom pathlib import Path\nconnection = sqlite3.connect(':memory:')\nconnection.executescript(Path('db/schema.sql').read_text())\nfor headline in ['A' * 200, 'A' * 500, 'Player \ud83c\udfc6 ' * 30]:\n    connection.execute('INSERT OR REPLACE INTO players (id, name, headline) VALUES (?, ?, ?)', ('1', 'Player', headline))\n    assert connection.execute('SELECT headline FROM players').fetchone()[0] == headline\nassert next(row for row in connection.execute('PRAGMA table_info(players)') if row[1] == 'headline')[2] == 'TEXT'\nprint('PASS: schema uses TEXT; SQLite round trip preserves 200-character, longer and Unicode headlines.')\nPY\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "PASS: actual headline helper preserves 200-character, longer, Unicode, multiline, empty and missing headlines (TypeScript parameter annotation removed for Node 20).\nPASS: schema uses TEXT; SQLite round trip preserves 200-character, longer and Unicode headlines.\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 1 knowledge entries: 0 errors, 0 warnings\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 1 knowledge entries: 0 errors, 0 warnings\n"
+        }
+      ],
+      "issue_state": "done",
+      "stale": false,
+      "evidence_pending": true,
+      "resolution_review_status": "pending",
+      "knowledge_reviews": [
+        {
+          "entry": "/overview.md",
+          "kind": "unchanged",
+          "applicable": true
+        }
+      ],
+      "evidence_reports": [
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        }
+      ],
+      "evidence_report_query_ok": true,
+      "obsolete_static_proxy": true,
+      "changed_paths": [
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/acceptance.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/history.md",
+        "db/schema.sql",
+        "src/lib/profile.ts",
+        "src/routes/players/+page.svelte",
+        ".agents/",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/claim.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/knowledge-reviews.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/resolution.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/verification.md",
+        ".trial-bin/"
+      ]
+    },
+    {
+      "run_id": "current-1",
+      "original_run_id": "current-1",
+      "source_stream": "current",
+      "condition": "current",
+      "repetition": 1,
+      "issue_id": "01M4ZCMNCGTDQDYH1PSTS70B5H",
+      "codex_exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 137.39,
+      "model_requested": "gpt-6.1-sol",
+      "model_reported": null,
+      "usage_reported": {
+        "input_tokens": 377387,
+        "cached_input_tokens": 323200,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4808,
+        "reasoning_output_tokens": 684
+      },
+      "initial_knowledge": [
+        {
+          "path": "/components/player-list.md",
+          "sha256_of_cli_show": "8625f1af66477b837d71864e97f15baf7a4b9b05692ec263c0dcf9aef7a881b4",
+          "bytes": 137,
+          "read_ok": true
+        },
+        {
+          "path": "/components/profile-fields.md",
+          "sha256_of_cli_show": "7ea5d635524a153e9abc5ed780d4e44892b941e892b168502d57f2f945e42617",
+          "bytes": 169,
+          "read_ok": true
+        },
+        {
+          "path": "/components/sync.md",
+          "sha256_of_cli_show": "ad2a03b0017f4f1644499e84257b81682161a75b27abcab6b5c16ffcc9306008",
+          "bytes": 160,
+          "read_ok": true
+        },
+        {
+          "path": "/conventions/testing.md",
+          "sha256_of_cli_show": "5a27ecae66a3d17ec679a37fd9e9d9acf9a3c2823e6c0cab13304d975ca11879",
+          "bytes": 95,
+          "read_ok": true
+        },
+        {
+          "path": "/overview.md",
+          "sha256_of_cli_show": "5bfc7e7c21db406564755cc59358723169092081c3827498c87e46901f5c94ba",
+          "bytes": 205,
+          "read_ok": true
+        }
+      ],
+      "actual_prep_command_counts": {
+        "knowledge_show:0": 2,
+        "claim:0": 1,
+        "node_runtime_check:0": 1,
+        "knowledge_review_record:0": 2,
+        "prep_check:0": 3,
+        "evidence_record:0": 4,
+        "complete:0": 1
+      },
+      "knowledge_show_paths_observed": [
+        "/components/player-list.md",
+        "/components/profile-fields.md"
+      ],
+      "observed_check_commands": [
+        {
+          "kind": "node_runtime_check",
+          "command": "node --input-type=module <<'JS'\nimport assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';\nconst source = readFileSync('src/lib/profile.ts', 'utf8');\n// Node 20 cannot import TypeScript; erase only the parameter type for execution.\nconst js = source.replace('p: { headline?: string }', 'p');\nconst { profileHeadline } = await import(`data:text/javascript,${encodeURIComponent(js)}`);\nfor (const headline of ['', 'a'.repeat(80), 'a'.repeat(81), 'a'.repeat(200), 'a'.repeat(1000), '\ud83c\udfae'.repeat(200)]) {\n  assert.equal(profileHeadline({ headline }), headline);\n}\nassert.equal(profileHeadline({}), '');\nassert.equal(profileHeadline({ headline: undefined }), '');\nassert.match(readFileSync('db/schema.sql', 'utf8'), /headline\\s+TEXT\\s*,/i);\nconst page = readFileSync('src/routes/players/+page.svelte', 'utf8');\nassert.match(page, /import\\s*\\{\\s*profileHeadline\\s*\\}\\s*from\\s*['\"]\\$lib\\/profile['\"]/);\nassert.match(page, /<p class=\"headline\">\\{profileHeadline\\(p\\)\\}<\\/p>/);\nconsole.log('PASS: headline helper preserves 80, 81, 200, 1000 characters and Unicode; missing values are empty. Schema uses TEXT; page wiring inspected by source assertions. No Svelte compilation or browser rendering performed.');\nJS",
+          "shell_command": "/bin/zsh -lc \"node --input-type=module <<'JS'\nimport assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';\nconst source = readFileSync('src/lib/profile.ts', 'utf8');\n// Node 20 cannot import TypeScript; erase only the parameter type for execution.\nconst js = source.replace('p: { headline?: string }', 'p');\nconst { profileHeadline } = await import(\"'`data:text/javascript,${encodeURIComponent(js)}`);\nfor (const headline of ['\"'', 'a'.repeat(80), 'a'.repeat(81), 'a'.repeat(200), 'a'.repeat(1000), '\ud83c\udfae'.repeat(200)]) {\n  assert.equal(profileHeadline({ headline }), headline);\n}\nassert.equal(profileHeadline({}), '');\nassert.equal(profileHeadline({ headline: undefined }), '');\nassert.match(readFileSync('db/schema.sql', 'utf8'), /headline\\\\s+TEXT\\\\s*,/i);\nconst page = readFileSync('src/routes/players/+page.svelte', 'utf8');\nassert.match(page, /import\\\\s*\\\\{\\\\s*profileHeadline\\\\s*\\\\}\\\\s*from\\\\s*['\\\"]\\\\\"'$lib'\"\\\\/profile['\\\"]/);\nassert.match(page, /<p class=\\\"headline\\\">\\\\{profileHeadline\\\\(p\\\\)\\\\}<\\\\/p>/);\nconsole.log('PASS: headline helper preserves 80, 81, 200, 1000 characters and Unicode; missing values are empty. Schema uses TEXT; page wiring inspected by source assertions. No Svelte compilation or browser rendering performed.');\nJS\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "PASS: headline helper preserves 80, 81, 200, 1000 characters and Unicode; missing values are empty. Schema uses TEXT; page wiring inspected by source assertions. No Svelte compilation or browser rendering performed.\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc 'PREP_ACTOR=codex PREP_SESSION=[redacted] prep check'",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "warning K005 .prep/knowledge/components/player-list.md: scoped paths changed since 3d474b02eaf26341ab36f55f7ac696310df20012: src/routes/players/+page.svelte (guided; fix: re-check the entry against the code, update it and confirmed_commit)\n13 issues, 5 knowledge entries: 0 errors, 1 warnings\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc 'PREP_ACTOR=codex PREP_SESSION=[redacted] prep check'",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 5 knowledge entries: 0 errors, 0 warnings\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc 'PREP_ACTOR=codex PREP_SESSION=[redacted] prep check'",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 5 knowledge entries: 0 errors, 0 warnings\n"
+        }
+      ],
+      "issue_state": "done",
+      "stale": false,
+      "evidence_pending": true,
+      "resolution_review_status": "pending",
+      "knowledge_reviews": [
+        {
+          "entry": "/components/profile-fields.md",
+          "kind": "updated",
+          "applicable": true
+        },
+        {
+          "entry": "/components/player-list.md",
+          "kind": "updated",
+          "applicable": true
+        }
+      ],
+      "evidence_reports": [
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        }
+      ],
+      "evidence_report_query_ok": true,
+      "obsolete_static_proxy": true,
+      "changed_paths": [
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/acceptance.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/history.md",
+        ".prep/knowledge/components/player-list.md",
+        ".prep/knowledge/components/profile-fields.md",
+        "db/schema.sql",
+        "src/lib/profile.ts",
+        "src/routes/players/+page.svelte",
+        ".agents/",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/claim.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/knowledge-reviews.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/resolution.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/verification.md",
+        ".trial-bin/"
+      ]
+    },
+    {
+      "run_id": "current-2",
+      "original_run_id": "current-2",
+      "source_stream": "current",
+      "condition": "current",
+      "repetition": 2,
+      "issue_id": "01M4ZCMNCGTDQDYH1PSTS70B5H",
+      "codex_exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 141.62,
+      "model_requested": "gpt-6.1-sol",
+      "model_reported": null,
+      "usage_reported": {
+        "input_tokens": 432530,
+        "cached_input_tokens": 406528,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4685,
+        "reasoning_output_tokens": 366
+      },
+      "initial_knowledge": [
+        {
+          "path": "/components/player-list.md",
+          "sha256_of_cli_show": "8625f1af66477b837d71864e97f15baf7a4b9b05692ec263c0dcf9aef7a881b4",
+          "bytes": 137,
+          "read_ok": true
+        },
+        {
+          "path": "/components/profile-fields.md",
+          "sha256_of_cli_show": "7ea5d635524a153e9abc5ed780d4e44892b941e892b168502d57f2f945e42617",
+          "bytes": 169,
+          "read_ok": true
+        },
+        {
+          "path": "/components/sync.md",
+          "sha256_of_cli_show": "ad2a03b0017f4f1644499e84257b81682161a75b27abcab6b5c16ffcc9306008",
+          "bytes": 160,
+          "read_ok": true
+        },
+        {
+          "path": "/conventions/testing.md",
+          "sha256_of_cli_show": "5a27ecae66a3d17ec679a37fd9e9d9acf9a3c2823e6c0cab13304d975ca11879",
+          "bytes": 95,
+          "read_ok": true
+        },
+        {
+          "path": "/overview.md",
+          "sha256_of_cli_show": "5bfc7e7c21db406564755cc59358723169092081c3827498c87e46901f5c94ba",
+          "bytes": 205,
+          "read_ok": true
+        }
+      ],
+      "actual_prep_command_counts": {
+        "claim:0": 1,
+        "knowledge_show:0": 2,
+        "node_test:0": 1,
+        "knowledge_review_record:0": 3,
+        "prep_check:0": 2,
+        "diff_check:0": 1,
+        "evidence_record:0": 4,
+        "complete:0": 1
+      },
+      "knowledge_show_paths_observed": [
+        "/components/player-list.md",
+        "/components/profile-fields.md"
+      ],
+      "observed_check_commands": [
+        {
+          "kind": "node_test",
+          "command": "node --test tests/profile.test.mjs",
+          "shell_command": "/bin/zsh -lc 'node --test tests/profile.test.mjs'",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "\u2714 a 200 character headline survives storage and display formatting (6.306ms)\n\u2714 a missing headline displays as an empty string (0.086833ms)\n\u2139 tests 2\n\u2139 suites 0\n\u2139 pass 2\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 114.09325\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "warning K005 .prep/knowledge/components/player-list.md: scoped paths changed since 3d474b02eaf26341ab36f55f7ac696310df20012: src/routes/players/+page.svelte (guided; fix: re-check the entry against the code, update it and confirmed_commit)\n13 issues, 5 knowledge entries: 0 errors, 1 warnings\n"
+        },
+        {
+          "kind": "diff_check",
+          "command": "git diff --check",
+          "shell_command": "/bin/zsh -lc 'git diff --check'",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": ""
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 5 knowledge entries: 0 errors, 0 warnings\n"
+        }
+      ],
+      "issue_state": "done",
+      "stale": false,
+      "evidence_pending": true,
+      "resolution_review_status": "pending",
+      "knowledge_reviews": [
+        {
+          "entry": "/components/profile-fields.md",
+          "kind": "updated",
+          "applicable": true
+        },
+        {
+          "entry": "/overview.md",
+          "kind": "unchanged",
+          "applicable": true
+        },
+        {
+          "entry": "/components/player-list.md",
+          "kind": "updated",
+          "applicable": true
+        }
+      ],
+      "evidence_reports": [
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        }
+      ],
+      "evidence_report_query_ok": true,
+      "obsolete_static_proxy": true,
+      "changed_paths": [
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/acceptance.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/history.md",
+        ".prep/knowledge/components/player-list.md",
+        ".prep/knowledge/components/profile-fields.md",
+        "db/schema.sql",
+        "src/lib/profile.ts",
+        "src/routes/players/+page.svelte",
+        ".agents/",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/claim.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/knowledge-reviews.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/resolution.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/verification.md",
+        ".trial-bin/",
+        "tests/"
+      ]
+    },
+    {
+      "run_id": "current-3",
+      "original_run_id": "current-1",
+      "source_stream": "current-extra",
+      "condition": "current",
+      "repetition": 3,
+      "issue_id": "01M4ZCMNCGTDQDYH1PSTS70B5H",
+      "codex_exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 133.14,
+      "model_requested": "gpt-6.1-sol",
+      "model_reported": null,
+      "usage_reported": {
+        "input_tokens": 378719,
+        "cached_input_tokens": 350720,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4466,
+        "reasoning_output_tokens": 336
+      },
+      "initial_knowledge": [
+        {
+          "path": "/components/player-list.md",
+          "sha256_of_cli_show": "8625f1af66477b837d71864e97f15baf7a4b9b05692ec263c0dcf9aef7a881b4",
+          "bytes": 137,
+          "read_ok": true
+        },
+        {
+          "path": "/components/profile-fields.md",
+          "sha256_of_cli_show": "7ea5d635524a153e9abc5ed780d4e44892b941e892b168502d57f2f945e42617",
+          "bytes": 169,
+          "read_ok": true
+        },
+        {
+          "path": "/components/sync.md",
+          "sha256_of_cli_show": "ad2a03b0017f4f1644499e84257b81682161a75b27abcab6b5c16ffcc9306008",
+          "bytes": 160,
+          "read_ok": true
+        },
+        {
+          "path": "/conventions/testing.md",
+          "sha256_of_cli_show": "5a27ecae66a3d17ec679a37fd9e9d9acf9a3c2823e6c0cab13304d975ca11879",
+          "bytes": 95,
+          "read_ok": true
+        },
+        {
+          "path": "/overview.md",
+          "sha256_of_cli_show": "5bfc7e7c21db406564755cc59358723169092081c3827498c87e46901f5c94ba",
+          "bytes": 205,
+          "read_ok": true
+        }
+      ],
+      "actual_prep_command_counts": {
+        "knowledge_show:0": 1,
+        "claim:0": 1,
+        "node_runtime_check:0": 1,
+        "node_test:0": 1,
+        "evidence_record:0": 3,
+        "complete:0": 1
+      },
+      "knowledge_show_paths_observed": [
+        "/components/profile-fields.md"
+      ],
+      "observed_check_commands": [
+        {
+          "kind": "node_runtime_check",
+          "command": "node --input-type=module <<'EOF'\nimport assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';\nimport { spawnSync } from 'node:child_process';\nimport { profileHeadline } from './src/lib/profile.ts';\nfor (const headline of ['', 'Short headline', 'x'.repeat(80), 'x'.repeat(81), 'x'.repeat(200), '\u26bd'.repeat(200)]) {\n  assert.equal(profileHeadline({ headline }), headline);\n}\nassert.equal(profileHeadline({}), '');\nconst headline = 'A player headline. '.repeat(12).slice(0, 200);\nassert.equal(headline.length, 200);\nconst schema = readFileSync('db/schema.sql', 'utf8');\nconst sql = `${schema}\\nINSERT INTO players (id, name, headline) VALUES ('test', 'Player', '${headline}');\\nSELECT headline FROM players WHERE id = 'test';`;\nconst result = spawnSync('sqlite3', [':memory:'], { input: sql, encoding: 'utf8' });\nassert.equal(result.status, 0, result.stderr);\nassert.equal(profileHeadline({ headline: result.stdout.trimEnd() }), headline);\nassert.match(schema, /headline\\s+TEXT\\b/);\nconsole.log('PASS: full 200-character database round-trip and helper output; 80/81/200-character, Unicode, empty and missing helper cases.');\nEOF",
+          "shell_command": "/bin/zsh -lc \"node --input-type=module <<'EOF'\nimport assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';\nimport { spawnSync } from 'node:child_process';\nimport { profileHeadline } from './src/lib/profile.ts';\nfor (const headline of ['', 'Short headline', 'x'.repeat(80), 'x'.repeat(81), 'x'.repeat(200), '\u26bd'.repeat(200)]) {\n  assert.equal(profileHeadline({ headline }), headline);\n}\nassert.equal(profileHeadline({}), '');\nconst headline = 'A player headline. '.repeat(12).slice(0, 200);\nassert.equal(headline.length, 200);\nconst schema = readFileSync('db/schema.sql', 'utf8');\nconst sql = \"'`${schema}'\"\\\\nINSERT INTO players (id, name, headline) VALUES ('test', 'Player', '\"'${headline}'\"');\\\\nSELECT headline FROM players WHERE id = 'test';\"'`;\nconst result = spawnSync('\"'sqlite3', [':memory:'], { input: sql, encoding: 'utf8' });\nassert.equal(result.status, 0, result.stderr);\nassert.equal(profileHeadline({ headline: result.stdout.trimEnd() }), headline);\nassert.match(schema, /headline\\\\s+TEXT\\\\b/);\nconsole.log('PASS: full 200-character database round-trip and helper output; 80/81/200-character, Unicode, empty and missing helper cases.');\nEOF\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "PASS: full 200-character database round-trip and helper output; 80/81/200-character, Unicode, empty and missing helper cases.\n"
+        },
+        {
+          "kind": "node_test",
+          "command": "node --test profile.test.mjs",
+          "shell_command": "/bin/zsh -lc 'node --test profile.test.mjs'",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "\u2714 headlines are returned in full, including beyond 80 characters (0.588542ms)\n\u2714 a 200-character headline survives database storage and display formatting (5.751375ms)\n\u2139 tests 2\n\u2139 suites 0\n\u2139 pass 2\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 81.906125\n"
+        }
+      ],
+      "issue_state": "done",
+      "stale": false,
+      "evidence_pending": true,
+      "resolution_review_status": "pending",
+      "knowledge_reviews": [
+        {
+          "entry": "/components/profile-fields.md",
+          "kind": "updated",
+          "applicable": true
+        },
+        {
+          "entry": "/components/player-list.md",
+          "kind": "updated",
+          "applicable": true
+        }
+      ],
+      "evidence_reports": [
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        }
+      ],
+      "evidence_report_query_ok": true,
+      "obsolete_static_proxy": true,
+      "changed_paths": [
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/acceptance.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/history.md",
+        ".prep/knowledge/components/player-list.md",
+        ".prep/knowledge/components/profile-fields.md",
+        "db/schema.sql",
+        "src/lib/profile.ts",
+        "src/routes/players/+page.svelte",
+        ".agents/",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/claim.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/knowledge-reviews.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/resolution.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/verification.md",
+        ".trial-bin/",
+        "profile.test.mjs"
+      ]
+    },
+    {
+      "run_id": "lean-1",
+      "original_run_id": "lean-1",
+      "source_stream": "lean",
+      "condition": "lean",
+      "repetition": 1,
+      "issue_id": "01M4ZCMNCGTDQDYH1PSTS70B5H",
+      "codex_exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 99.3,
+      "model_requested": "gpt-6.1-sol",
+      "model_reported": null,
+      "usage_reported": {
+        "input_tokens": 213343,
+        "cached_input_tokens": 194432,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2984,
+        "reasoning_output_tokens": 267
+      },
+      "initial_knowledge": [
+        {
+          "path": "/components/profile-fields.md",
+          "sha256_of_cli_show": "12c27a0dc9d1f15abd5ad7aa2d46d1c2d741ae8fe76fa6f22c8fa0a3ae0e1d02",
+          "bytes": 232,
+          "read_ok": true
+        },
+        {
+          "path": "/overview.md",
+          "sha256_of_cli_show": "5bfc7e7c21db406564755cc59358723169092081c3827498c87e46901f5c94ba",
+          "bytes": 205,
+          "read_ok": true
+        }
+      ],
+      "actual_prep_command_counts": {
+        "claim:0": 1,
+        "knowledge_show:0": 1,
+        "node_runtime_check:0": 1,
+        "knowledge_review_record:0": 1,
+        "evidence_record:0": 4,
+        "prep_check:0": 2,
+        "complete:0": 1
+      },
+      "knowledge_show_paths_observed": [
+        "/components/profile-fields.md"
+      ],
+      "observed_check_commands": [
+        {
+          "kind": "node_runtime_check",
+          "command": "node --input-type=module -e 'import assert from \"node:assert/strict\"; import {readFileSync} from \"node:fs\"; import {profileHeadline} from \"./src/lib/profile.ts\"; const headline = \"A\".repeat(200); assert.equal(profileHeadline({headline}), headline); assert.equal(profileHeadline({headline: \"Short headline\"}), \"Short headline\"); assert.equal(profileHeadline({}), \"\"); assert.equal(profileHeadline({headline: \"A\".repeat(201)}), headline); assert.match(readFileSync(\"db/schema.sql\", \"utf8\"), /headline\\s+VARCHAR\\(200\\)/); console.log(\"PASS: 200-character headline preserved; short, missing, and over-limit values checked; schema declares VARCHAR(200)\");'",
+          "shell_command": "/bin/zsh -lc \"node --input-type=module -e 'import assert from \\\"node:assert/strict\\\"; import {readFileSync} from \\\"node:fs\\\"; import {profileHeadline} from \\\"./src/lib/profile.ts\\\"; const headline = \\\"A\\\".repeat(200); assert.equal(profileHeadline({headline}), headline); assert.equal(profileHeadline({headline: \\\"Short headline\\\"}), \\\"Short headline\\\"); assert.equal(profileHeadline({}), \\\"\\\"); assert.equal(profileHeadline({headline: \\\"A\\\".repeat(201)}), headline); assert.match(readFileSync(\\\"db/schema.sql\\\", \\\"utf8\\\"), /headline\\\\s+VARCHAR\\\\(200\\\\)/); console.log(\\\"PASS: 200-character headline preserved; short, missing, and over-limit values checked; schema declares VARCHAR(200)\\\");'\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "PASS: 200-character headline preserved; short, missing, and over-limit values checked; schema declares VARCHAR(200)\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 2 knowledge entries: 0 errors, 0 warnings\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 2 knowledge entries: 0 errors, 0 warnings\n"
+        }
+      ],
+      "issue_state": "done",
+      "stale": false,
+      "evidence_pending": true,
+      "resolution_review_status": "pending",
+      "knowledge_reviews": [
+        {
+          "entry": "/components/profile-fields.md",
+          "kind": "updated",
+          "applicable": true
+        }
+      ],
+      "evidence_reports": [
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        }
+      ],
+      "evidence_report_query_ok": true,
+      "obsolete_static_proxy": false,
+      "changed_paths": [
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/acceptance.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/history.md",
+        ".prep/knowledge/components/profile-fields.md",
+        "db/schema.sql",
+        "src/lib/profile.ts",
+        ".agents/",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/claim.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/knowledge-reviews.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/resolution.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/verification.md",
+        ".trial-bin/"
+      ]
+    },
+    {
+      "run_id": "lean-2",
+      "original_run_id": "lean-2",
+      "source_stream": "lean",
+      "condition": "lean",
+      "repetition": 2,
+      "issue_id": "01M4ZCMNCGTDQDYH1PSTS70B5H",
+      "codex_exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 143.55,
+      "model_requested": "gpt-6.1-sol",
+      "model_reported": null,
+      "usage_reported": {
+        "input_tokens": 356261,
+        "cached_input_tokens": 312320,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4451,
+        "reasoning_output_tokens": 441
+      },
+      "initial_knowledge": [
+        {
+          "path": "/components/profile-fields.md",
+          "sha256_of_cli_show": "12c27a0dc9d1f15abd5ad7aa2d46d1c2d741ae8fe76fa6f22c8fa0a3ae0e1d02",
+          "bytes": 232,
+          "read_ok": true
+        },
+        {
+          "path": "/overview.md",
+          "sha256_of_cli_show": "5bfc7e7c21db406564755cc59358723169092081c3827498c87e46901f5c94ba",
+          "bytes": 205,
+          "read_ok": true
+        }
+      ],
+      "actual_prep_command_counts": {
+        "knowledge_find:0": 1,
+        "claim:0": 1,
+        "node_runtime_check:0": 1,
+        "python_check:0": 1,
+        "test_script:1": 1,
+        "knowledge_show:0": 1,
+        "knowledge_review_record:0": 1,
+        "evidence_record:0": 4,
+        "prep_check:0": 1,
+        "complete:0": 1
+      },
+      "knowledge_show_paths_observed": [
+        "/components/profile-fields.md"
+      ],
+      "observed_check_commands": [
+        {
+          "kind": "node_runtime_check",
+          "command": "node --input-type=module <<'JS'\nimport assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';\n// Erase the helper's TypeScript parameter annotation for this Node 20 check.\nconst source = readFileSync('src/lib/profile.ts', 'utf8').replace('p: { headline?: string }', 'p');\nconst { profileHeadline } = await import(`data:text/javascript,${encodeURIComponent(source)}`);\nfor (const headline of ['', 'short', 'x'.repeat(80), 'x'.repeat(81), 'x'.repeat(200), 'x'.repeat(500), '\u26bd'.repeat(200)]) {\n  assert.equal(profileHeadline({ headline }), headline);\n}\nassert.equal(profileHeadline({}), '');\nconsole.log('PASS: headline helper preserves full text at 80, 81, 200, 500 characters and Unicode; missing value stays empty');\nJS",
+          "shell_command": "/bin/zsh -lc \"node --input-type=module <<'JS'\nimport assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';\n// Erase the helper's TypeScript parameter annotation for this Node 20 check.\nconst source = readFileSync('src/lib/profile.ts', 'utf8').replace('p: { headline?: string }', 'p');\nconst { profileHeadline } = await import(\"'`data:text/javascript,${encodeURIComponent(source)}`);\nfor (const headline of ['\"'', 'short', 'x'.repeat(80), 'x'.repeat(81), 'x'.repeat(200), 'x'.repeat(500), '\u26bd'.repeat(200)]) {\n  assert.equal(profileHeadline({ headline }), headline);\n}\nassert.equal(profileHeadline({}), '');\nconsole.log('PASS: headline helper preserves full text at 80, 81, 200, 500 characters and Unicode; missing value stays empty');\nJS\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "PASS: headline helper preserves full text at 80, 81, 200, 500 characters and Unicode; missing value stays empty\n"
+        },
+        {
+          "kind": "python_check",
+          "command": "python3 <<'PY'\nimport sqlite3\nfrom pathlib import Path\nconnection = sqlite3.connect(':memory:')\nconnection.executescript(Path('db/schema.sql').read_text())\ncolumns = {row[1]: row[2] for row in connection.execute('PRAGMA table_info(players)')}\nassert columns['headline'] == 'TEXT', columns\nfor index, headline in enumerate(['x' * 200, 'x' * 500, '\u26bd' * 200]):\n    connection.execute('INSERT INTO players (id, name, headline) VALUES (?, ?, ?)', (str(index), 'Test player', headline))\n    actual = connection.execute('SELECT headline FROM players WHERE id = ?', (str(index),)).fetchone()[0]\n    assert actual == headline\nprint('PASS: schema declares TEXT and SQLite round trips 200/500-character and Unicode headlines exactly')\nPY",
+          "shell_command": "/bin/zsh -lc \"python3 <<'PY'\nimport sqlite3\nfrom pathlib import Path\nconnection = sqlite3.connect(':memory:')\nconnection.executescript(Path('db/schema.sql').read_text())\ncolumns = {row[1]: row[2] for row in connection.execute('PRAGMA table_info(players)')}\nassert columns['headline'] == 'TEXT', columns\nfor index, headline in enumerate(['x' * 200, 'x' * 500, '\u26bd' * 200]):\n    connection.execute('INSERT INTO players (id, name, headline) VALUES (?, ?, ?)', (str(index), 'Test player', headline))\n    actual = connection.execute('SELECT headline FROM players WHERE id = ?', (str(index),)).fetchone()[0]\n    assert actual == headline\nprint('PASS: schema declares TEXT and SQLite round trips 200/500-character and Unicode headlines exactly')\nPY\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "PASS: schema declares TEXT and SQLite round trips 200/500-character and Unicode headlines exactly\n"
+        },
+        {
+          "kind": "test_script",
+          "command": "sh test.sh",
+          "shell_command": "/bin/zsh -lc 'sh test.sh'",
+          "outer_shell_exit_code": 1,
+          "output_excerpt": "FAIL: totals are rounded down, expected nearest cent\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 2 knowledge entries: 0 errors, 0 warnings\n"
+        }
+      ],
+      "issue_state": "done",
+      "stale": false,
+      "evidence_pending": true,
+      "resolution_review_status": "pending",
+      "knowledge_reviews": [
+        {
+          "entry": "/components/profile-fields.md",
+          "kind": "updated",
+          "applicable": true
+        }
+      ],
+      "evidence_reports": [
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        }
+      ],
+      "evidence_report_query_ok": true,
+      "obsolete_static_proxy": true,
+      "changed_paths": [
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/acceptance.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/history.md",
+        ".prep/knowledge/components/profile-fields.md",
+        "db/schema.sql",
+        "src/lib/profile.ts",
+        ".agents/",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/claim.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/knowledge-reviews.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/resolution.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/verification.md",
+        ".trial-bin/"
+      ]
+    },
+    {
+      "run_id": "lean-3",
+      "original_run_id": "lean-3",
+      "source_stream": "lean",
+      "condition": "lean",
+      "repetition": 3,
+      "issue_id": "01M4ZCMNCGTDQDYH1PSTS70B5H",
+      "codex_exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 112.56,
+      "model_requested": "gpt-6.1-sol",
+      "model_reported": null,
+      "usage_reported": {
+        "input_tokens": 281243,
+        "cached_input_tokens": 240000,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3561,
+        "reasoning_output_tokens": 255
+      },
+      "initial_knowledge": [
+        {
+          "path": "/components/profile-fields.md",
+          "sha256_of_cli_show": "12c27a0dc9d1f15abd5ad7aa2d46d1c2d741ae8fe76fa6f22c8fa0a3ae0e1d02",
+          "bytes": 232,
+          "read_ok": true
+        },
+        {
+          "path": "/overview.md",
+          "sha256_of_cli_show": "5bfc7e7c21db406564755cc59358723169092081c3827498c87e46901f5c94ba",
+          "bytes": 205,
+          "read_ok": true
+        }
+      ],
+      "actual_prep_command_counts": {
+        "knowledge_show:0": 1,
+        "claim:0": 1,
+        "node_runtime_check:0": 1,
+        "knowledge_review_record:0": 1,
+        "evidence_record:0": 4,
+        "prep_check:0": 1,
+        "complete:0": 1
+      },
+      "knowledge_show_paths_observed": [
+        "/components/profile-fields.md"
+      ],
+      "observed_check_commands": [
+        {
+          "kind": "node_runtime_check",
+          "command": "node --input-type=module <<'JS'\nimport assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';\nimport { profileHeadline } from './src/lib/profile.ts';\nconst schema = readFileSync('db/schema.sql', 'utf8');\nassert.match(schema, /headline\\s+VARCHAR\\(200\\)/i);\nfor (const length of [0, 80, 81, 200]) {\n  const headline = 'x'.repeat(length);\n  assert.equal(profileHeadline({ headline }), headline);\n}\nassert.equal(profileHeadline({}), '');\nassert.equal(profileHeadline({ headline: 'x'.repeat(201) }), 'x'.repeat(200));\nconsole.log('PASS: schema capacity 200; headline formatter preserves 0, 80, 81, and 200 characters, handles missing values, and caps at 200.');\nJS",
+          "shell_command": "/bin/zsh -lc \"node --input-type=module <<'JS'\nimport assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';\nimport { profileHeadline } from './src/lib/profile.ts';\nconst schema = readFileSync('db/schema.sql', 'utf8');\nassert.match(schema, /headline\\\\s+VARCHAR\\\\(200\\\\)/i);\nfor (const length of [0, 80, 81, 200]) {\n  const headline = 'x'.repeat(length);\n  assert.equal(profileHeadline({ headline }), headline);\n}\nassert.equal(profileHeadline({}), '');\nassert.equal(profileHeadline({ headline: 'x'.repeat(201) }), 'x'.repeat(200));\nconsole.log('PASS: schema capacity 200; headline formatter preserves 0, 80, 81, and 200 characters, handles missing values, and caps at 200.');\nJS\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "PASS: schema capacity 200; headline formatter preserves 0, 80, 81, and 200 characters, handles missing values, and caps at 200.\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 2 knowledge entries: 0 errors, 0 warnings\n"
+        }
+      ],
+      "issue_state": "done",
+      "stale": false,
+      "evidence_pending": true,
+      "resolution_review_status": "pending",
+      "knowledge_reviews": [
+        {
+          "entry": "/components/profile-fields.md",
+          "kind": "updated",
+          "applicable": true
+        }
+      ],
+      "evidence_reports": [
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        }
+      ],
+      "evidence_report_query_ok": true,
+      "obsolete_static_proxy": false,
+      "changed_paths": [
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/acceptance.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/history.md",
+        ".prep/knowledge/components/profile-fields.md",
+        "db/schema.sql",
+        "src/lib/profile.ts",
+        ".agents/",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/claim.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/knowledge-reviews.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/resolution.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/verification.md",
+        ".trial-bin/"
+      ]
+    },
+    {
+      "run_id": "stale-1",
+      "original_run_id": "stale-1",
+      "source_stream": "stale",
+      "condition": "stale",
+      "repetition": 1,
+      "issue_id": "01M4ZCMNCGTDQDYH1PSTS70B5H",
+      "codex_exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 110.88,
+      "model_requested": "gpt-6.1-sol",
+      "model_reported": null,
+      "usage_reported": {
+        "input_tokens": 252932,
+        "cached_input_tokens": 220544,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3389,
+        "reasoning_output_tokens": 272
+      },
+      "initial_knowledge": [
+        {
+          "path": "/components/profile-fields.md",
+          "sha256_of_cli_show": "96bdaf738a4bd436db3faacc78f7b229c6379525e31ecfa03e18a7a93836984f",
+          "bytes": 132,
+          "read_ok": true
+        },
+        {
+          "path": "/overview.md",
+          "sha256_of_cli_show": "5bfc7e7c21db406564755cc59358723169092081c3827498c87e46901f5c94ba",
+          "bytes": 205,
+          "read_ok": true
+        }
+      ],
+      "actual_prep_command_counts": {
+        "knowledge_find:0": 1,
+        "knowledge_show:0": 1,
+        "claim:0": 1,
+        "node_test:0": 1,
+        "knowledge_review_record:0": 1,
+        "prep_check:0": 2,
+        "evidence_record:0": 4,
+        "complete:0": 1
+      },
+      "knowledge_show_paths_observed": [
+        "/components/profile-fields.md"
+      ],
+      "observed_check_commands": [
+        {
+          "kind": "node_test",
+          "command": "node --test test/profile.test.mjs",
+          "shell_command": "/bin/zsh -lc 'node --test test/profile.test.mjs'",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "\u2714 preserves a complete 200-character headline (0.760875ms)\n\u2714 uses an empty string when the headline is absent (0.079167ms)\n\u2714 declares storage capacity for a 200-character headline (1.100333ms)\n\u2139 tests 3\n\u2139 suites 0\n\u2139 pass 3\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 150.368334\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 2 knowledge entries: 0 errors, 0 warnings\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 2 knowledge entries: 0 errors, 0 warnings\n"
+        }
+      ],
+      "issue_state": "done",
+      "stale": false,
+      "evidence_pending": true,
+      "resolution_review_status": "pending",
+      "knowledge_reviews": [
+        {
+          "entry": "/components/profile-fields.md",
+          "kind": "unchanged",
+          "applicable": true
+        }
+      ],
+      "evidence_reports": [
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        }
+      ],
+      "evidence_report_query_ok": true,
+      "obsolete_static_proxy": true,
+      "changed_paths": [
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/acceptance.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/history.md",
+        ".prep/knowledge/components/profile-fields.md",
+        "db/schema.sql",
+        "src/lib/profile.ts",
+        ".agents/",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/claim.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/knowledge-reviews.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/resolution.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/verification.md",
+        ".trial-bin/",
+        "test/"
+      ]
+    },
+    {
+      "run_id": "stale-2",
+      "original_run_id": "stale-2",
+      "source_stream": "stale",
+      "condition": "stale",
+      "repetition": 2,
+      "issue_id": "01M4ZCMNCGTDQDYH1PSTS70B5H",
+      "codex_exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 95.83,
+      "model_requested": "gpt-6.1-sol",
+      "model_reported": null,
+      "usage_reported": {
+        "input_tokens": 260104,
+        "cached_input_tokens": 237184,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3097,
+        "reasoning_output_tokens": 325
+      },
+      "initial_knowledge": [
+        {
+          "path": "/components/profile-fields.md",
+          "sha256_of_cli_show": "96bdaf738a4bd436db3faacc78f7b229c6379525e31ecfa03e18a7a93836984f",
+          "bytes": 132,
+          "read_ok": true
+        },
+        {
+          "path": "/overview.md",
+          "sha256_of_cli_show": "5bfc7e7c21db406564755cc59358723169092081c3827498c87e46901f5c94ba",
+          "bytes": 205,
+          "read_ok": true
+        }
+      ],
+      "actual_prep_command_counts": {
+        "knowledge_find:0": 1,
+        "knowledge_show:0": 1,
+        "claim:0": 1,
+        "node_runtime_check:0": 1,
+        "knowledge_review_record:0": 1,
+        "prep_check:0": 2,
+        "evidence_record:0": 4,
+        "complete:0": 1
+      },
+      "knowledge_show_paths_observed": [
+        "/components/profile-fields.md"
+      ],
+      "observed_check_commands": [
+        {
+          "kind": "node_runtime_check",
+          "command": "node profile-headline.test.cjs",
+          "shell_command": "/bin/zsh -lc 'node profile-headline.test.cjs'",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "ok: headline helper preserves 0, 80, 81 and 200 characters; missing headline is empty; schema declares VARCHAR(200)\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 2 knowledge entries: 0 errors, 0 warnings\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc \"PREP_ACTOR=codex PREP_SESSION=[redacted] prep check\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 2 knowledge entries: 0 errors, 0 warnings\n"
+        }
+      ],
+      "issue_state": "done",
+      "stale": false,
+      "evidence_pending": true,
+      "resolution_review_status": "pending",
+      "knowledge_reviews": [
+        {
+          "entry": "/components/profile-fields.md",
+          "kind": "unchanged",
+          "applicable": true
+        }
+      ],
+      "evidence_reports": [
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        }
+      ],
+      "evidence_report_query_ok": true,
+      "obsolete_static_proxy": true,
+      "changed_paths": [
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/acceptance.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/history.md",
+        ".prep/knowledge/components/profile-fields.md",
+        "db/schema.sql",
+        "src/lib/profile.ts",
+        ".agents/",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/claim.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/knowledge-reviews.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/resolution.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/verification.md",
+        ".trial-bin/",
+        "profile-headline.test.cjs"
+      ]
+    },
+    {
+      "run_id": "stale-3",
+      "original_run_id": "stale-3",
+      "source_stream": "stale",
+      "condition": "stale",
+      "repetition": 3,
+      "issue_id": "01M4ZCMNCGTDQDYH1PSTS70B5H",
+      "codex_exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 85.61,
+      "model_requested": "gpt-6.1-sol",
+      "model_reported": null,
+      "usage_reported": {
+        "input_tokens": 220754,
+        "cached_input_tokens": 172544,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2948,
+        "reasoning_output_tokens": 304
+      },
+      "initial_knowledge": [
+        {
+          "path": "/components/profile-fields.md",
+          "sha256_of_cli_show": "96bdaf738a4bd436db3faacc78f7b229c6379525e31ecfa03e18a7a93836984f",
+          "bytes": 132,
+          "read_ok": true
+        },
+        {
+          "path": "/overview.md",
+          "sha256_of_cli_show": "5bfc7e7c21db406564755cc59358723169092081c3827498c87e46901f5c94ba",
+          "bytes": 205,
+          "read_ok": true
+        }
+      ],
+      "actual_prep_command_counts": {
+        "knowledge_find:0": 1,
+        "knowledge_show:0": 1,
+        "claim:0": 1,
+        "node_runtime_check:0": 1,
+        "knowledge_review_record:0": 1,
+        "evidence_record:0": 4,
+        "prep_check:0": 1,
+        "complete:0": 1
+      },
+      "knowledge_show_paths_observed": [
+        "/components/profile-fields.md"
+      ],
+      "observed_check_commands": [
+        {
+          "kind": "node_runtime_check",
+          "command": "node <<'NODE'\nconst assert = require('node:assert/strict');\nconst fs = require('node:fs');\nconst vm = require('node:vm');\nconst source = fs.readFileSync('src/lib/profile.ts', 'utf8');\nconst executable = source.replace('export function', 'function').replace('p: { headline?: string }', 'p');\nconst context = {};\nvm.runInNewContext(executable, context);\nfor (const size of [0, 80, 81, 200]) {\n  const headline = 'x'.repeat(size);\n  assert.equal(context.profileHeadline({ headline }), headline);\n}\nconst unicode = '\u00e9'.repeat(200);\nassert.equal(context.profileHeadline({ headline: unicode }), unicode);\nassert.equal(context.profileHeadline({}), '');\nassert.match(fs.readFileSync('db/schema.sql', 'utf8'), /headline\\s+VARCHAR\\(200\\)/i);\nconsole.log('PASS: full headlines at 0/80/81/200 characters, 200-character Unicode, missing value fallback, and VARCHAR(200) schema declaration');\nNODE",
+          "shell_command": "/bin/zsh -lc \"node <<'NODE'\nconst assert = require('node:assert/strict');\nconst fs = require('node:fs');\nconst vm = require('node:vm');\nconst source = fs.readFileSync('src/lib/profile.ts', 'utf8');\nconst executable = source.replace('export function', 'function').replace('p: { headline?: string }', 'p');\nconst context = {};\nvm.runInNewContext(executable, context);\nfor (const size of [0, 80, 81, 200]) {\n  const headline = 'x'.repeat(size);\n  assert.equal(context.profileHeadline({ headline }), headline);\n}\nconst unicode = '\u00e9'.repeat(200);\nassert.equal(context.profileHeadline({ headline: unicode }), unicode);\nassert.equal(context.profileHeadline({}), '');\nassert.match(fs.readFileSync('db/schema.sql', 'utf8'), /headline\\\\s+VARCHAR\\\\(200\\\\)/i);\nconsole.log('PASS: full headlines at 0/80/81/200 characters, 200-character Unicode, missing value fallback, and VARCHAR(200) schema declaration');\nNODE\"",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "PASS: full headlines at 0/80/81/200 characters, 200-character Unicode, missing value fallback, and VARCHAR(200) schema declaration\n"
+        },
+        {
+          "kind": "prep_check",
+          "command": "prep check",
+          "shell_command": "/bin/zsh -lc 'PREP_ACTOR=codex PREP_SESSION=[redacted] prep check'",
+          "outer_shell_exit_code": 0,
+          "output_excerpt": "13 issues, 2 knowledge entries: 0 errors, 0 warnings\n"
+        }
+      ],
+      "issue_state": "done",
+      "stale": false,
+      "evidence_pending": true,
+      "resolution_review_status": "pending",
+      "knowledge_reviews": [
+        {
+          "entry": "/components/profile-fields.md",
+          "kind": "unchanged",
+          "applicable": true
+        }
+      ],
+      "evidence_reports": [
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "manual",
+          "applicable": true
+        },
+        {
+          "result": "pass",
+          "method": "automated",
+          "applicable": true
+        }
+      ],
+      "evidence_report_query_ok": true,
+      "obsolete_static_proxy": true,
+      "changed_paths": [
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/acceptance.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/history.md",
+        ".prep/knowledge/components/profile-fields.md",
+        "db/schema.sql",
+        "src/lib/profile.ts",
+        ".agents/",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/claim.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/knowledge-reviews.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/resolution.md",
+        ".prep/issues/01M4ZCMNCGTDQDYH1PSTS70B5H/verification.md",
+        ".trial-bin/"
+      ]
+    }
+  ],
+  "measurement_note": "Only recognized standalone shell checks are counted; compound or multiline shell statuses are not assigned to individual commands. The static source proxy is obsolete; Node helper checks are the independent behavior evidence."
+}

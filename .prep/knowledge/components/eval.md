@@ -31,3 +31,5 @@ Layout: code in `internal/eval/*`, content in `eval/` (`cases/<area>/*.yaml`, `f
 - **Not covered yet**: other harnesses (a follow-up issue in release 0.4.0), and the first live baseline run (it needs a token).
 
 Fixture completion setup records explicit manual observations for each bound requirement before completing an issue. It also records a matching no-impact knowledge review report, so bound-contract completion setup satisfies the completion contract. These are reports about fixture construction, not independently verified implementation checks; live agent evaluation must supply its own reports. See [Completion policy](/features/completion-policy.md).
+
+The task-specific [knowledge usefulness pilot](/features/knowledge-policy.md#comparing-usefulness) reuses the fixture builder with isolated Codex sessions. Its scripts and sanitized results live under `eval/experiments/knowledge-policy`; it is separate from the Claude-backed `prep eval` runner and does not authorize live Claude runs or add hard usefulness gates.
