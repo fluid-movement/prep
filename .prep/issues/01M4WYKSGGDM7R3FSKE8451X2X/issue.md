@@ -1,7 +1,7 @@
 ---
 title: Investigate TUI live refresh missing external issue completion until restart
 kind: research
-parent: 01M498VPZAAQJKHXGZZ3PWJH2F
+parent: 01M52ZNHXFXHNDATT9WWQ3C87E
 tags:
   - tui
   - watch
