@@ -2,3 +2,4 @@
 - [ ] prep check groups repeated warnings with counts and a way to see them all
 - [ ] prep help is a short page, with details per command
 - [ ] A test pins the sizes on the large fixture, and the scale cases' token use is recorded before and after in the resolution
+- [ ] prep knowledge find returns the best matches within a fixed budget, with a footer saying how to see more

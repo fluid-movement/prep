@@ -1,3 +1,2 @@
-- [ ] Haiku and sonnet ran over the whole suite with at least 5 runs per cell and the table is stored in eval/models.md
-- [ ] The table names, per area, the cheapest sufficient model or says there is not enough data and how many runs are missing
+- [ ] The handoff cases ran locally on haiku and sonnet with the fewest runs that separate them; the result names the cheapest model that implements handed-off issues reliably, with cost per passing run
 - [ ] Failures that look like case faults were checked against the transcripts before being counted against a model
