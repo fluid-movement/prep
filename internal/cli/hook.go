@@ -221,15 +221,12 @@ func hookRedirect(e hookEvent, root string) string {
 	if e.Tool == "Bash" {
 		// Check each segment: a prep call must not exempt a later direct read
 		// or write (the earlier Python integration did exempt the whole call).
-		for _, segment := range strings.FieldsFunc(command, func(r rune) bool { return r == ';' || r == '|' || r == '&' || r == '\n' }) {
-			found := hookArea(segment, cwd, root)
-			if found == "" {
-				continue
-			}
-			if hookWrite.MatchString(segment) {
+		for _, segment := range hookShellSegments(command) {
+			found, writes := hookShellArea(segment, cwd, root)
+			if writes {
 				return "Use prep CLI write commands (prep edit, context, criterion, knowledge update, etc.) to change .prep records; direct edits bypass validation."
 			}
-			if hookRead.MatchString(segment) {
+			if found != "" {
 				area = found
 			}
 		}
