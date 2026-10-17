@@ -59,11 +59,13 @@ git commit                                   # code and the staged .prep records
 
 prep stages the files it writes and never commits; you (or your agent) commit them with the code they describe. A code issue completed without `--commit` takes as its evidence the commit that adds its `resolution.md`, so code, records and knowledge updates land in one commit; `--commit <hash>` names work committed earlier. A knowledge entry counts as current as of the last commit that changed it (or its `confirmed_commit`, if later), so updating or confirming it in the same commit as the code keeps it from drifting.
 
+The project Definition of Done is guidance shown by `prep prime` and `prep guide` at the check step. Edit it with `prep dod --add "<item>"` or `prep dod --remove "<item>"`. Completion checks the issue’s state, requirement freshness, checked criteria, kind-specific result, and documentation decision (`--docs` or `--no-impact`).
+
 Every read command (`prime`, `guide`, `list`, `next`, `show`, `check`, `views`) accepts `--json`; errors are JSON with stable codes under `--json`. Write commands (`new`, `import`, `define`, `ack`, `ready`, `claim`, `release`, `complete`, `drop`, `fmt`, `fix`, `migrate`) perform one transition each, so harness permission rules can allow reads and ask before writes. IDs accept any unique suffix. Name the actor with `--by` or `PREP_ACTOR` (`<producer>/<version>` for agents, `human:<id>` for people).
 
 ## Lifecycle
 
-Link external workflow documents with `prep artifact add <id> --source <identity> --location <URI-or-path>`. `prep show` displays them as references; they do not import requirements or satisfy verification. Lifecycle JSON responses preserve their existing fields and add success markers and actionable next commands where applicable.
+Link external workflow documents with `prep artifact add <id> --source <identity> --location <URI-or-path>`. `prep show` displays them as references; they do not import requirements or satisfy acceptance criteria. Lifecycle JSON responses preserve their existing fields and add success markers and actionable next commands where applicable.
 
 State is derived from which records exist in `.prep/issues/<id>/`, never stored:
 

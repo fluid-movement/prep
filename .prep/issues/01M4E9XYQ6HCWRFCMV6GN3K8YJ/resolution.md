@@ -6,9 +6,4 @@ documentation:
   entries:
     - /components/watch.md
     - /components/git.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

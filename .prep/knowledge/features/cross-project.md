@@ -17,7 +17,7 @@ scope:
   - internal/mdstore/store.go
   - internal/mdstore/write.go
   - internal/tui/projects.go
-confirmed_commit: 4541c73c6ef36049ec9e24fed182569e0eaa717a
+confirmed_commit: 58a1a906584b83d5380db9aefa0c83740ed4a6df
 ---
 
 # Cross-project work

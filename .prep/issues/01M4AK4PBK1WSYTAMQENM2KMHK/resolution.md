@@ -6,9 +6,4 @@ evidence: f99448c473031bdb5855c29c9d5116ab252f5572
 documentation:
   entries:
     - /components/release.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

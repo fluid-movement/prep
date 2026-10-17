@@ -217,7 +217,7 @@ func (m *Model) gateCompletionForm(id string) string {
 	in := domain.Input{Actor: m.opts.Actor, Reason: "-"}
 	if unmet, _ := m.tree.Gates(id, domain.OpComplete, &in); len(unmet) > 0 {
 		for _, gate := range unmet {
-			if gate.Code != domain.GateDocs && gate.Code != domain.GateKnowledge {
+			if gate.Code != domain.GateDocs {
 				return gate.Message
 			}
 		}

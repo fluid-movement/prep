@@ -304,11 +304,6 @@ func (p *Project) build(seed int64) error {
 	if _, err := run(initArgs...); err != nil {
 		return err
 	}
-	// Fixture setup is explicit about completion methods; init itself must not
-	// silently choose a policy for real projects.
-	if _, err := run("policy", "set", "--verification", "Verify each acceptance criterion and record results.", "--documentation", "Update affected knowledge or explain no impact."); err != nil {
-		return err
-	}
 	if _, err := w.prep(p.Dir, seed, "projects", "add", p.Dir); err != nil {
 		return err
 	}
@@ -610,32 +605,6 @@ func (p *Project) reach(run func(...string) (string, error), is IssueSpec, id, s
 			if _, err := run("decide", id, "--title", "Fixture decision", "--body", "Decided for the fixture.", "--outcome"); err != nil {
 				return err
 			}
-		}
-		// Completed fixture issues need explicit setup reports too. These are
-		// manual fixture observations, not evidence of a tested implementation.
-		policy, err := run("policy", "show", id, "--json")
-		if err != nil {
-			return err
-		}
-		var report struct {
-			Bound struct {
-				Requirements []struct {
-					ID string `json:"id"`
-				} `json:"requirements"`
-			} `json:"bound"`
-		}
-		if err := json.Unmarshal([]byte(policy), &report); err != nil {
-			return err
-		}
-		for _, r := range report.Bound.Requirements {
-			if _, err := run("evidence", "record", id, "--requirement", r.ID,
-				"--result", "pass", "--method", "manual", "--observation", "Fixture setup inspected.",
-				"--scope", ".prep/knowledge"); err != nil {
-				return err
-			}
-		}
-		if _, err := run("knowledge", "review", "record", id, "--no-impact", "--reason", "fixture", "--scope", ".prep/knowledge"); err != nil {
-			return err
 		}
 		if _, err := run("complete", id, "--no-impact", "fixture"); err != nil {
 			return err

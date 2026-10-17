@@ -5,9 +5,4 @@ at: 2026-10-08T18:05:39Z
 documentation:
   entries:
     - /components/tui-agent.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

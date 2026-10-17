@@ -8,7 +8,6 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -22,7 +21,6 @@ import (
 	"github.com/fluid-movement/prep/internal/mdstore"
 	"github.com/fluid-movement/prep/internal/okf"
 	"github.com/fluid-movement/prep/internal/tui/theme"
-	"github.com/fluid-movement/prep/internal/worktree"
 )
 
 var update = flag.Bool("update", false, "rewrite golden files")
@@ -41,18 +39,6 @@ type project struct {
 func newProject(t *testing.T) *project {
 	p := &project{t: t, dir: t.TempDir(), now: time.Date(2026, 1, 2, 9, 0, 0, 0, time.UTC), rand: rand.NewChaCha8([32]byte{})}
 	if _, err := mdstore.Open(p.dir).Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
-		t.Fatal(err)
-	}
-	st := mdstore.Open(p.dir)
-	project, _, _, err := st.Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	c, err := domain.NewTree(project, nil, nil, nil).PlanPolicy(domain.CompletionPolicy{Verification: "Verify acceptance criteria.", Documentation: "Review knowledge impact.", By: "test/1", At: p.now})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := st.Apply(c); err != nil {
 		t.Fatal(err)
 	}
 	return p
@@ -98,73 +84,6 @@ func (p *project) record(id string, op domain.Op, in domain.RecordInput) {
 		in.Actor, in.Now = "test/1", now
 		return t.PlanRecord(id, op, in)
 	})
-}
-
-// verify records manual fixture observations without advancing the sample's
-// clock, so evidence does not change unrelated snapshot dates or issue IDs.
-func (p *project) verify(id string, noImpact ...string) {
-	p.t.Helper()
-	tr, err := p.load()
-	if err != nil {
-		p.t.Fatal(err)
-	}
-	contract := tr.Issues[id].Ready.Contract
-	// The fixture reports describe a stable worktree input. Scoping them to
-	// .prep/knowledge would fingerprint the append-only review log itself and
-	// make each report stale as soon as it was written.
-	snapshot, err := worktree.Fingerprint(p.dir, []string{"go.mod"})
-	if err != nil {
-		p.t.Fatal(err)
-	}
-	for _, r := range contract.Requirements {
-		st := mdstore.Open(p.dir)
-		tr, err = domain.Load(st, &okf.Store{Root: p.dir}, false)
-		if err != nil {
-			p.t.Fatal(err)
-		}
-		c, err := tr.PlanEvidence(id, domain.VerificationEvidence{Requirement: r.ID, Result: "pass",
-			Method: "manual", Observation: "Fixture setup inspected.", By: "test/1", At: p.now,
-			Scopes: []string{"go.mod"}, Snapshot: snapshot})
-		if err != nil {
-			p.t.Fatal(err)
-		}
-		if _, err := st.Apply(c); err != nil {
-			p.t.Fatal(err)
-		}
-	}
-	st := mdstore.Open(p.dir)
-	tr, err = domain.Load(st, &okf.Store{Root: p.dir}, false)
-	if err != nil {
-		p.t.Fatal(err)
-	}
-	entries := make([]string, 0, len(tr.Knowledge))
-	for path := range tr.Knowledge {
-		entries = append(entries, path)
-	}
-	sort.Strings(entries)
-	for _, path := range entries {
-		c, err := tr.PlanKnowledgeReview(id, domain.KnowledgeReview{Kind: domain.KnowledgeUnchanged, Entry: path,
-			Observation: "Fixture setup reviewed this entry.", By: "test/1", At: p.now, Scopes: []string{"go.mod"}, Snapshot: snapshot})
-		if err != nil {
-			p.t.Fatal(err)
-		}
-		if _, err := st.Apply(c); err != nil {
-			p.t.Fatal(err)
-		}
-		tr = tr.Apply(c)
-	}
-	reason := "fixture"
-	if len(noImpact) > 0 {
-		reason = noImpact[0]
-	}
-	c, err := tr.PlanKnowledgeReview(id, domain.KnowledgeReview{Kind: domain.KnowledgeNoImpact,
-		Observation: reason, By: "test/1", At: p.now, Scopes: []string{"go.mod"}, Snapshot: snapshot})
-	if err != nil {
-		p.t.Fatal(err)
-	}
-	if _, err := st.Apply(c); err != nil {
-		p.t.Fatal(err)
-	}
 }
 
 // sampleViews are more views than prep init writes, so tests can switch,
@@ -225,7 +144,6 @@ func sample(t *testing.T) (*project, map[string]string) {
 	p.op(ids["format"], domain.OpClaim, domain.Input{})
 	p.record(ids["format"], domain.OpDecide, domain.RecordInput{Title: "CSV", Outcome: true})
 	p.record(ids["format"], domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "check", Index: 1}}})
-	p.verify(ids["format"])
 	p.op(ids["format"], domain.OpComplete, domain.Input{NoImpact: "fixture"})
 	return p, ids
 }
@@ -252,7 +170,6 @@ func knowledgeSample(t *testing.T) (*project, map[string]string) {
 	p.op(ids["doc"], domain.OpReady, domain.Input{})
 	p.op(ids["doc"], domain.OpClaim, domain.Input{})
 	p.record(ids["doc"], domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "check", Index: 1}}})
-	p.verify(ids["doc"])
 	p.op(ids["doc"], domain.OpComplete, domain.Input{Docs: []string{"/decisions/format.md"}})
 	return p, ids
 }
@@ -523,7 +440,7 @@ func TestDetailContent(t *testing.T) {
 		"# CSV writer", "**in progress** · code · `" + ids["csv"] + "`",
 		"## Requirement", "## Context", "see CLI (`/components/cli.md`)",
 		"### D1: Use encoding/csv", "- [x] **1.** writes a header", "- [ ] **2.** quotes fields",
-		"## Definition of Done", "## History", "test/1: header done",
+		"## History", "test/1: header done",
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("detail lacks %q:\n%s", want, doc)
@@ -1353,7 +1270,6 @@ func TestTransitionsFromTheTUI(t *testing.T) {
 	run(m, "v")
 	run(m, "space")
 	run(m, "enter")
-	p.verify(id, "announcement only")
 	m.Update(loadedMsg(func() loadedMsg { tr, err := p.load(); return loadedMsg{tr, err} }()))
 	run(m, "a")
 	run(m, "f")

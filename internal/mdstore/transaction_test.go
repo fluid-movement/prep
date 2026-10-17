@@ -230,48 +230,6 @@ func TestLoadOutsideProjectDoesNotCreatePrepOrLock(t *testing.T) {
 	}
 }
 
-func TestStaleClaimCannotIgnoreAppendedFailureEvidence(t *testing.T) {
-	root := t.TempDir()
-	id := transactionIssue(t, Open(root))
-	rel := IssueDir(id) + "/verification.md"
-	now := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
-	pass := domain.VerificationEvidence{Contract: "contract", Requirement: "check", Result: "pass", Method: "manual",
-		Observation: "Earlier check passed", Provenance: "reported", By: "agent/test", At: now, Scopes: []string{"src"}, Snapshot: strings.Repeat("a", 64)}
-	pass.ID = pass.ContentID()
-	if err := os.WriteFile(filepath.Join(root, rel), []byte(renderVerification([]domain.VerificationEvidence{pass})), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	stale := Open(root)
-	if _, _, _, err := stale.Load(); err != nil {
-		t.Fatal(err)
-	}
-	fail := pass
-	fail.Previous, fail.Result, fail.Observation = pass.ID, "fail", "A later check failed"
-	fail.ID = fail.ContentID()
-	if err := os.WriteFile(filepath.Join(root, rel), []byte(renderVerification([]domain.VerificationEvidence{pass, fail})), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	claim := &domain.Change{Op: domain.OpClaim, IssueID: id, Claim: &domain.Claim{By: "agent/test", At: now}}
-	if _, err := stale.Apply(claim); err == nil {
-		t.Fatal("stale claim succeeded after failure evidence was appended")
-	} else {
-		var de *domain.Error
-		if !errors.As(err, &de) || de.Code != domain.ErrConflict {
-			t.Fatalf("stale claim error = %v", err)
-		}
-	}
-	if _, err := os.Stat(filepath.Join(root, IssueDir(id), "claim.md")); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("stale claim record was written: %v", err)
-	}
-	current, err := os.ReadFile(filepath.Join(root, rel))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if parsed, err := parseVerification(string(current)); err != nil || len(parsed) != 2 || parsed[1].Result != "fail" {
-		t.Fatalf("failure evidence was not preserved: %#v, %v", parsed, err)
-	}
-}
-
 func TestApplyAllowsBaselinePath(t *testing.T) {
 	root := t.TempDir()
 	s := Open(root)
@@ -390,13 +348,6 @@ func TestStaleClaimCannotMissNewChildIssueDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	parentID := newParent.IssueID
-	policy, err := loadTree(setup).PlanPolicy(domain.CompletionPolicy{Verification: "Inspect", Documentation: "Review", By: "human:test", At: now})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := setup.Apply(policy); err != nil {
-		t.Fatal(err)
-	}
 	criteria, err := loadTree(setup).PlanRecord(parentID, domain.OpCriterion, domain.RecordInput{
 		Actor: "human:test", Now: now, Acceptance: []domain.AcceptanceOp{{Op: "add", Text: "Parent behavior is sound"}},
 	})

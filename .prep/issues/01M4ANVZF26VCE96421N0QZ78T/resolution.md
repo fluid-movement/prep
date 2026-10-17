@@ -6,9 +6,4 @@ evidence: 85b746eb2afffa2eb4b34739a91fd8893e61b40b
 documentation:
   entries:
     - /components/tui-filter.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

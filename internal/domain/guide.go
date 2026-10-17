@@ -215,33 +215,14 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 		}
 	}
 	g.Knowledge = t.Candidates(id, touched)
-	if s == StateInProgress || s == StateReady {
-		g.DoD, _ = t.EffectiveDoD(id)
-	}
 	for _, d := range Validate(t) {
 		if d.Issue == id {
 			g.Diagnostics = append(g.Diagnostics, d)
 		}
 	}
 	g.Step, g.Instructions, g.Outputs = stepContract(t, i, s, stale, parent, f)
-	if s == StateReady || s == StateInProgress {
-		if len(g.Knowledge) > 0 {
-			g.Instructions = append(g.Instructions, "Review up to five relevant knowledge candidates with prep knowledge show <entry>; report each affected entry before completion with prep knowledge review record "+id+" --entry <entry> --kind updated|unchanged --observation <what you checked> --scope <work-path> (repeat --scope and --config-scope as needed). Updated and unchanged are agent reports, not semantic proof.")
-		}
-		g.Outputs = append(g.Outputs, Pointer{path.Join(issueDir(id), "knowledge-reviews.md"), "append-only scoped knowledge review reports", "prep knowledge review record " + id + " ..."})
-		g.Instructions = append(g.Instructions, "Before completion, every --docs entry needs a current knowledge review report; alternatively record justified no-impact with prep knowledge review record "+id+" --no-impact --reason <reason> --scope <work-path>, then complete with the same --no-impact reason. Check applicability with prep knowledge review show "+id+".")
-	}
-	if t.PolicyReviewRequired(id) {
-		g.Instructions = append(g.Instructions, "Review changed completion requirements with prep policy show "+id+". Adopt them with prep policy adopt "+id+", or ask the human to approve retaining the bound policy with prep policy retain "+id+" --reason <reason> --by human:<name>. The agent must not invent human approval.")
-	}
-	if len(t.unapprovedOptOuts(id)) > 0 && !s.Terminal() {
-		g.Instructions = append(g.Instructions, "DoD opt-outs require an explicit human action on the issue that requested them: prep dod approve <id> --item <item> --reason <reason> --by human:<name>. An inherited approval applies to that exact item and requested reason; do not invent approval.")
-	}
-	if i.Ready != nil && i.Ready.Contract != nil && (s == StateReady || s == StateInProgress) {
-		g.Inputs = append(g.Inputs, Pointer{f("ready.md"), "bound completion requirements: prep policy show " + id, ""})
-		g.Instructions = append(g.Instructions, "Run the required checks yourself; prep never executes them. Use prep policy show "+id+" for requirement IDs, then prep evidence record "+id+" --requirement <id> --result pass|fail --method manual|automated --observation <text> --scope <work-path> (repeatable). Automated reports also need --command <command-run>; include check configuration with --config-scope <path>. Inspect applicability with prep evidence show "+id+"; changed scoped content invalidates earlier reports.")
-		g.Outputs = append(g.Outputs, Pointer{f("verification.md"), "versioned reported verification", "prep evidence record " + id + " --requirement <id> --result pass|fail --method manual|automated --observation <text> --scope <path>"})
-		g.Instructions = append(g.Instructions, "Missing or failed verification blocks completion unless the human explicitly approves a scoped exception: prep exception approve "+id+" --requirement <id> --reason <reason> --scope <path> --by human:<name>. Include check configuration with --config-scope <path>; inspect applicability with prep exception show "+id+". The agent must not invent approval.")
+	if g.Step == "check" {
+		g.DoD = append([]string(nil), t.Project.DoD...)
 	}
 	if a := t.BootstrapAlert(); a != "" {
 		g.Alerts = append(g.Alerts, a)
@@ -325,6 +306,9 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		}
 		ins = append(ins, "Stopping without finishing: prep release "+i.ID+" --reason <why>.")
 		outs = append(outs, Pointer{f("history.md"), "work log", "prep log " + i.ID + " <text>"}, Pointer{f("acceptance.md"), "checked criteria", "prep criterion " + i.ID + " --check <n>"}, Pointer{".prep/knowledge/", "knowledge entries changed by this issue", "prep knowledge update <entry> --body-file -"}, Pointer{f("resolution.md"), "written by prep complete", ""})
+		if CheckedAll(i.Criteria) {
+			return "check", ins, outs
+		}
 		return "implement", ins, outs
 	case StateDone, StateDropped:
 		return "resolved", []string{"The issue is resolved; its records are history. Create a new issue for further change."}, nil

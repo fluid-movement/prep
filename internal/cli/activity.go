@@ -108,7 +108,6 @@ var opVerbs = map[domain.Op]string{
 	domain.OpReopen:   "reopened the issue",
 	domain.OpContext:  "wrote the context",
 	domain.OpFindings: "wrote the findings",
-	domain.OpDoD:      "changed the Definition of Done",
 }
 
 // recordVerb says what a record write did.

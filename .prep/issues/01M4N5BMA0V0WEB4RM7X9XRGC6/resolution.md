@@ -9,9 +9,4 @@ documentation:
     - /components/tui-mouse.md
     - /features/cross-project.md
     - /components/domain.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

@@ -5,9 +5,4 @@ at: 2026-10-07T09:48:46Z
 documentation:
   entries:
     - /components/markdown-store.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

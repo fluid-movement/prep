@@ -1,6 +1,9 @@
 package domain
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
@@ -403,4 +406,10 @@ func (t *Tree) DepState(d string) (s State, known bool) {
 		return x.State, true
 	}
 	return "", false
+}
+
+func contentID(v any) string {
+	b, _ := json.Marshal(v)
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
 }

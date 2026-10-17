@@ -371,7 +371,6 @@ func cmdShow(a *app, args []string) error {
 		copyIssue.Resolution = &copyResolution
 		i = &copyIssue
 	}
-	dod, opt := t.EffectiveDoD(id)
 	s := summarize(t, id)
 	var deps []projects.Dependent
 	if *dependents {
@@ -391,8 +390,7 @@ func cmdShow(a *app, args []string) error {
 			"cross_deps": s.CrossDeps, "dependents": deps, "cross_knowledge": xknow,
 			"issue": i, "dir": mdstore.IssueDir(id), "priority": i.Priority.Effective(), "state": s.State, "stale": s.Stale, "blocked": s.Blocked,
 			"actionable": s.Actionable, "children": nonNil(t.Children(id)), "blocks": nonNil(t.Blocks(id)),
-			"progress": s.Progress, "definition_of_done": nonNil(dod), "dod_opt_outs": opt,
-			"context": i.Context, "findings": i.Findings, "history": i.History, "evidence_pending": pending,
+			"progress": s.Progress, "context": i.Context, "findings": i.Findings, "history": i.History, "evidence_pending": pending,
 		})
 		return nil
 	}
@@ -452,12 +450,6 @@ func cmdShow(a *app, args []string) error {
 				mark = "x"
 			}
 			a.printf("%d. [%s] %s\n", k+1, mark, c.Text)
-		}
-	}
-	if len(dod) > 0 {
-		a.printf("\n## Definition of Done (effective)\n\n")
-		for _, d := range dod {
-			a.printf("- %s\n", d)
 		}
 	}
 	if strings.TrimSpace(i.Context) != "" {
@@ -695,6 +687,7 @@ func (s silentErr) Error() string { return s.err.Message }
 
 // primeBrief is the capped session-start briefing.
 type primeBrief struct {
+	DoD          []string       `json:"definition_of_done,omitempty"`
 	Issues       int            `json:"issues"`
 	Actionable   int            `json:"actionable"`
 	Parents      []summary      `json:"parents"`
@@ -748,7 +741,7 @@ func cmdPrime(a *app, args []string) error {
 		}
 		return ss
 	}
-	b := primeBrief{Issues: len(t.Issues), Parents: []summary{}, Next: []summary{}, Blocked: []summary{}, Stale: []summary{}, Claims: []claimSummary{},
+	b := primeBrief{DoD: t.Project.DoD, Issues: len(t.Issues), Parents: []summary{}, Next: []summary{}, Blocked: []summary{}, Stale: []summary{}, Claims: []claimSummary{},
 		Hint: "Run prep guide <id> for the issue you work on; it lists what to read and where outputs go. Read knowledge with prep knowledge find <words> (instead of grep) or prep knowledge show <entry>[#section], never the files. Give knowledge lookups across several entries to a subagent on the smallest model and wide surveys to a smaller one, and pass these rules on to them unchanged. Keep command output short; never read back a saved output file."}
 	for _, id := range t.IDs() {
 		i := t.Issues[id]
@@ -825,6 +818,12 @@ func cmdPrime(a *app, args []string) error {
 				}
 			}
 			a.printf("  %s [%s] %s%s%s%s\n", s.ID, s.State, priorityMark(s.Priority), s.Title, extra, tagSuffix(s.Tags))
+		}
+	}
+	if len(b.DoD) > 0 {
+		a.printf("\nDefinition of Done (guidance):\n")
+		for _, item := range b.DoD {
+			a.printf("- %s\n", item)
 		}
 	}
 	section("Top-level parents", b.Parents)

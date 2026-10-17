@@ -133,12 +133,9 @@ type Project struct {
 	Name string
 	// Links are the other projects this one refers to, by local name
 	// (sorted).
-	Links []ProjectLink
-	DoD   []string
-	// Policy is explicitly configured; nil identifies a legacy or unconfigured project.
-	Policy        *CompletionPolicy
-	PolicyHistory []CompletionPolicy
-	Config        Config
+	Links  []ProjectLink
+	DoD    []string
+	Config Config
 }
 
 // Config is the project-level configuration.
@@ -154,13 +151,6 @@ type Config struct {
 type Criterion struct {
 	Text    string `json:"text"`
 	Checked bool   `json:"checked"`
-}
-
-// OptOut removes an inherited Definition of Done item for an issue subtree.
-type OptOut struct {
-	Item       string `json:"item"`
-	Reason     string `json:"reason"`
-	ApprovalID string `json:"approval_id,omitempty" yaml:"approval_id,omitempty"`
 }
 
 // Decision is one append-only entry in decisions.md.
@@ -185,12 +175,10 @@ type Baseline struct {
 
 // Ready is the enrichment sign-off.
 type Ready struct {
-	Contract          *CompletionContract  `json:"contract,omitempty"`
-	PreviousContracts []CompletionContract `json:"previous_contracts,omitempty"`
-	By                string               `json:"by"`
-	At                time.Time            `json:"at"`
-	Baseline          string               `json:"baseline"`
-	Note              string               `json:"note,omitempty"`
+	By       string    `json:"by"`
+	At       time.Time `json:"at"`
+	Baseline string    `json:"baseline"`
+	Note     string    `json:"note,omitempty"`
 }
 
 // Claim marks work in progress.
@@ -214,19 +202,13 @@ type Documentation struct {
 
 // Resolution closes an issue as done or dropped.
 type Resolution struct {
-	Contract         *CompletionContract    `json:"contract,omitempty"`
-	Verification     []VerificationEvidence `json:"verification,omitempty"`
-	Approvals        []CompletionApproval   `json:"approvals,omitempty"`
-	KnowledgeReviews []KnowledgeReview      `json:"knowledge_reviews,omitempty"`
-	Outcome          string                 `json:"outcome"`
-	By               string                 `json:"by"`
-	At               time.Time              `json:"at"`
-	Reason           string                 `json:"reason,omitempty"`
-	Evidence         string                 `json:"evidence,omitempty"`
-	Documentation    *Documentation         `json:"documentation,omitempty"`
-	DoD              []string               `json:"dod,omitempty"`
-	DoDOptOuts       []OptOut               `json:"dod_opt_outs,omitempty"`
-	Note             string                 `json:"note,omitempty"`
+	Outcome       string         `json:"outcome"`
+	By            string         `json:"by"`
+	At            time.Time      `json:"at"`
+	Reason        string         `json:"reason,omitempty"`
+	Evidence      string         `json:"evidence,omitempty"`
+	Documentation *Documentation `json:"documentation,omitempty"`
+	Note          string         `json:"note,omitempty"`
 }
 
 // Issue is one issue with all of its records, as parsed by a storage adapter.
@@ -249,9 +231,7 @@ type Issue struct {
 	// OpenQuestions is the content of the Open questions section.
 	OpenQuestions string `json:"open_questions,omitempty"`
 
-	Criteria   []Criterion `json:"criteria,omitempty"`
-	DoDAdd     []string    `json:"dod_add,omitempty"`
-	DoDOptOuts []OptOut    `json:"dod_opt_outs,omitempty"`
+	Criteria []Criterion `json:"criteria,omitempty"`
 
 	Context      string   `json:"-"`
 	ContextLinks []string `json:"context_links,omitempty"` // knowledge entries linked from context.md
@@ -261,19 +241,10 @@ type Issue struct {
 	History   string     `json:"-"` // the work log
 	Findings  *string    `json:"-"`
 
-	Baselines              []Baseline             `json:"baselines,omitempty"` // oldest first
-	Ready                  *Ready                 `json:"ready,omitempty"`
-	Claim                  *Claim                 `json:"claim,omitempty"`
-	Resolution             *Resolution            `json:"resolution,omitempty"`
-	Verification           []VerificationEvidence `json:"verification,omitempty"`
-	Approvals              []CompletionApproval   `json:"approvals,omitempty"`
-	KnowledgeReviews       []KnowledgeReview      `json:"knowledge_reviews,omitempty"`
-	KnowledgeReviewCurrent map[string]bool        `json:"-"`
-	DoDRevision            string                 `json:"dod_revision,omitempty"`
-	OptOutRevisions        map[string]string      `json:"opt_out_revisions,omitempty"`
-	ApprovalCurrent        map[string]bool        `json:"-"`
-	// EvidenceCurrent is adapter-computed applicability, never persisted.
-	EvidenceCurrent map[string]bool `json:"-"`
+	Baselines  []Baseline  `json:"baselines,omitempty"` // oldest first
+	Ready      *Ready      `json:"ready,omitempty"`
+	Claim      *Claim      `json:"claim,omitempty"`
+	Resolution *Resolution `json:"resolution,omitempty"`
 
 	// Files lists the top-level entries present in the issue directory.
 	Files []string `json:"files"`

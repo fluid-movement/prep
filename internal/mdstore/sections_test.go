@@ -117,7 +117,7 @@ func TestFixMergesDuplicateSections(t *testing.T) {
 		t.Fatal(err)
 	}
 	i := issues[0]
-	if i.OpenQuestions != "- Q?" || len(i.DoDAdd) != 1 || i.DoDAdd[0] != "docs" {
-		t.Fatalf("after fix: open questions %q, DoD %v", i.OpenQuestions, i.DoDAdd)
+	if i.OpenQuestions != "- Q?" {
+		t.Fatalf("after fix: open questions %q", i.OpenQuestions)
 	}
 }

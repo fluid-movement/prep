@@ -9,11 +9,6 @@ documentation:
     - /components/cli.md
     - /components/architecture.md
     - /components/tui.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---
 
 Tried live: pane at start, /prep:pane, following guide and writes, ignoring reads, live updates via prep watch

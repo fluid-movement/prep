@@ -9,9 +9,4 @@ documentation:
     - /components/release.md
     - /components/setup.md
     - /features/agent-context.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

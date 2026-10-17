@@ -13,16 +13,14 @@ import (
 const (
 	GateCriterion = "G_CRITERION"
 	GateDecision  = "G_DECISION"
-	GateDoD       = "G_DOD"
 )
 
-// AcceptanceOp is one change to acceptance criteria or Definition of Done
-// additions. Index is 1-based and refers to the criteria before the change.
+// AcceptanceOp is one change to acceptance criteria. Index is 1-based and
+// refers to the criteria before the change.
 type AcceptanceOp struct {
-	Op     string // check, uncheck, remove, add, dod-add, dod-opt-out, dod-remove
-	Index  int
-	Text   string
-	Reason string
+	Op    string // check, uncheck, remove, add
+	Index int
+	Text  string
 }
 
 // RecordInput carries the content of a record write.
@@ -36,7 +34,7 @@ type RecordInput struct {
 	Supersedes string
 	Outcome    bool
 
-	// criterion, dod
+	// criterion
 	Acceptance []AcceptanceOp
 }
 
@@ -46,7 +44,6 @@ const (
 	OpFindings  Op = "findings"
 	OpDecide    Op = "decide"
 	OpCriterion Op = "criterion"
-	OpDoD       Op = "dod"
 	OpLog       Op = "log"
 )
 
@@ -98,7 +95,7 @@ func (t *Tree) PlanRecord(id string, op Op, in RecordInput) (*Change, error) {
 		}
 		c.Decision = &Decision{ID: fmt.Sprintf("D%d", n+1), Title: strings.TrimSpace(in.Title), Date: now.Format("2006-01-02"),
 			Supersedes: in.Supersedes, Outcome: in.Outcome, Body: strings.TrimSpace(in.Text)}
-	case OpCriterion, OpDoD:
+	case OpCriterion:
 		if len(in.Acceptance) == 0 {
 			add(GateCriterion, "nothing to change")
 		}
@@ -108,21 +105,9 @@ func (t *Tree) PlanRecord(id string, op Op, in RecordInput) (*Change, error) {
 				if o.Index < 1 || o.Index > len(i.Criteria) {
 					add(GateCriterion, "no criterion %d; prep show %s numbers %d criteria", o.Index, id, len(i.Criteria))
 				}
-			case "add", "dod-add":
+			case "add":
 				if strings.TrimSpace(o.Text) == "" {
 					add(GateCriterion, "cannot add empty text")
-				}
-			case "dod-opt-out":
-				if strings.TrimSpace(o.Text) == "" || strings.TrimSpace(o.Reason) == "" {
-					add(GateDoD, "an opt-out needs the item and a --reason")
-				}
-			case "dod-remove":
-				found := contains(i.DoDAdd, o.Text)
-				for _, x := range i.DoDOptOuts {
-					found = found || x.Item == o.Text
-				}
-				if !found {
-					add(GateDoD, "%q is neither a Definition of Done addition nor an opt-out of this issue", o.Text)
 				}
 			}
 		}
@@ -137,23 +122,14 @@ func (t *Tree) PlanRecord(id string, op Op, in RecordInput) (*Change, error) {
 	if len(unmet) > 0 {
 		return nil, &Error{Code: ErrUsage, Message: fmt.Sprintf("cannot %s %s", op, id), Unmet: unmet}
 	}
-	if len(c.Acceptance) > 0 {
-		_, add, opts := ApplyAcceptance(i, c.Acceptance)
-		if revision, requests, changed := i.planDoDRevisions(add, opts); changed {
-			c.DoDRevision, c.OptOutRevisions = &revision, &requests
-			c.History = fmt.Sprintf("- %s %s: changed DoD policy revision %s", now.Format(time.RFC3339), in.Actor, revision)
-		}
-	}
 	return c, nil
 }
 
-// ApplyAcceptance returns the criteria and Definition of Done fields after
+// ApplyAcceptance returns the criteria after
 // the operations: index operations refer to the criteria before the change
 // and run first, additions follow in order.
-func ApplyAcceptance(i *Issue, ops []AcceptanceOp) ([]Criterion, []string, []OptOut) {
+func ApplyAcceptance(i *Issue, ops []AcceptanceOp) []Criterion {
 	crit := append([]Criterion(nil), i.Criteria...)
-	dodAdd := append([]string(nil), i.DoDAdd...)
-	optOuts := append([]OptOut(nil), i.DoDOptOuts...)
 	removed := map[int]bool{}
 	for _, o := range ops {
 		switch o.Op {
@@ -179,26 +155,8 @@ func ApplyAcceptance(i *Issue, ops []AcceptanceOp) ([]Criterion, []string, []Opt
 		switch o.Op {
 		case "add":
 			crit = append(crit, Criterion{Text: strings.TrimSpace(o.Text)})
-		case "dod-add":
-			dodAdd = append(dodAdd, strings.TrimSpace(o.Text))
-		case "dod-opt-out":
-			optOuts = append(optOuts, OptOut{Item: strings.TrimSpace(o.Text), Reason: strings.TrimSpace(o.Reason)})
-		case "dod-remove":
-			var keepAdd []string
-			for _, d := range dodAdd {
-				if d != o.Text {
-					keepAdd = append(keepAdd, d)
-				}
-			}
-			dodAdd = keepAdd
-			var keepOpt []OptOut
-			for _, x := range optOuts {
-				if x.Item != o.Text {
-					keepOpt = append(keepOpt, x)
-				}
-			}
-			optOuts = keepOpt
+
 		}
 	}
-	return crit, dodAdd, optOuts
+	return crit
 }

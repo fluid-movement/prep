@@ -6,11 +6,6 @@ documentation:
   entries:
     - /components/codex.md
     - /components/hooks.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---
 
 Trusted Codex live fixtures verified natural-work tracking, read-only knowledge use, and prompt-off Stop reconciliation respecting user scope; setup/launcher regressions and full Go suite pass. Claude live tests were not resumed.
