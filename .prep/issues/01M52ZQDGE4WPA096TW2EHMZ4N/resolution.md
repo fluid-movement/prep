@@ -372,7 +372,6 @@ knowledge_reviews:
       - internal/projects
       - internal/tui
     snapshot: 592afe749d9f8909d786e47c72e06b8ddb98ee5dec20d0c28dc24165a013bc3b
-generation: 1
 outcome: done
 by: claude-code/opus-5.5
 at: 2026-10-17T09:23:57Z
