@@ -1,0 +1,5 @@
+- [ ] prep help lists no theme command
+- [ ] internal/palette defines exactly two palettes, and prep check rejects a config with a themes key or theme: nord
+- [ ] The settings screen switches between the two themes without a preview; goldens are updated, and the preview golden and six theme gallery goldens are deleted
+- [ ] Knowledge describes two themes and no custom ones, and prep check reports no errors
+- [ ] go test and fmt pass, and GitHub CI on main is green

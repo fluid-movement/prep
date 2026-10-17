@@ -7,6 +7,6 @@ tags:
 priority: low
 ---
 
-Remove the other built-in themes, custom themes in config.yaml, prep theme new and list, and the theme preview. Decided in 01M4ZCMBPJ5FM06F9H70XMPE9H. Delete the code, its tests, fixtures, eval cases, record handling and knowledge text together; nothing stays behind for compatibility. Done when nothing references the removed feature and GitHub CI on main is green.
+Keep two built-in themes: the default dark one and light. Remove the other six palettes (high-contrast, monochrome, pastel, catppuccin, nord, gruvbox); custom themes (the themes key in config.yaml, inheritance through base, and the type behind them); prep theme list and new; and the theme preview in the TUI settings (its mode, keys and golden). The theme setting stays and chooses between the two; the automatic pick by terminal background stays. The color token system (internal/tui/theme) and the component gallery stay; the gallery switches between the two themes only. No compatibility: a removed theme name or a themes key in config is an error. Decided in 01M4ZCMBPJ5FM06F9H70XMPE9H.
 
 ## Open questions

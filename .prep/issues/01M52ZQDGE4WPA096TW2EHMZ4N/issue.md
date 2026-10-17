@@ -2,8 +2,6 @@
 title: Remove review approvals and the Inbox; keep a minimal reopen
 kind: code
 parent: 01M52ZNHXFXHNDATT9WWQ3C87E
-depends_on:
-  - 01M52ZQAGVQ5HX0GTBX7R2P47G
 tags:
   - workflow
   - tui

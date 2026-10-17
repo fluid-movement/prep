@@ -3,7 +3,7 @@ title: One lock per write command; state file written last
 kind: code
 parent: 01M52ZNHXFXHNDATT9WWQ3C87E
 depends_on:
-  - 01M52ZQDGE4WPA096TW2EHMZ4N
+  - 01M52ZQAGVQ5HX0GTBX7R2P47G
 tags:
   - storage
 ---

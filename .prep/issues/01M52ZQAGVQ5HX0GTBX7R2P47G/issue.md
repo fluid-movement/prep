@@ -2,6 +2,8 @@
 title: Remove the completion contract machinery
 kind: code
 parent: 01M52ZNHXFXHNDATT9WWQ3C87E
+depends_on:
+  - 01M52ZQDGE4WPA096TW2EHMZ4N
 tags:
   - workflow
 priority: high
