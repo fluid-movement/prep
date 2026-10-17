@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/fluid-movement/prep/internal/domain"
+	"github.com/fluid-movement/prep/internal/projects"
 )
 
 // TestMain points the project registry at a temporary state directory, so
@@ -52,6 +53,41 @@ func TestProjectsRecordsTheProjectsCommandsRunIn(t *testing.T) {
 	os.RemoveAll(filepath.Join(h.dir, ".prep"))
 	if text := h.ok("projects"); strings.Contains(text, abs) {
 		t.Fatalf("removed project still listed: %s", text)
+	}
+}
+
+func TestDeletedProjectDisappearsFromRegistryReads(t *testing.T) {
+	for _, command := range []string{"projects", "prime"} {
+		t.Run(command, func(t *testing.T) {
+			t.Setenv("XDG_STATE_HOME", t.TempDir())
+			home, gone := newHarness(t), newHarness(t)
+			if err := os.RemoveAll(gone.dir); err != nil {
+				t.Fatal(err)
+			}
+			var got struct {
+				Projects []projects.Project
+			}
+			home.jsonOf(&got, command)
+			for _, p := range got.Projects {
+				if p.Root == gone.dir {
+					t.Fatalf("deleted project still in %s: %+v", command, got.Projects)
+				}
+			}
+			path, err := projects.Path()
+			if err != nil {
+				t.Fatal(err)
+			}
+			b, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal(b, &got); err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Projects) != 1 || got.Projects[0].Root != home.dir {
+				t.Fatalf("saved registry: %+v", got.Projects)
+			}
+		})
 	}
 }
 

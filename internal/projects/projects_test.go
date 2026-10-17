@@ -1,12 +1,68 @@
 package projects
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestLoadPrunesDeletedRoots(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	live, gone := project(t), project(t)
+	// An existing root without .prep is still kept by the loader.
+	plain := t.TempDir()
+	if err := save([]Project{{Root: gone}, {Root: live}, {Root: plain}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(gone); err != nil {
+		t.Fatal(err)
+	}
+	ps, err := load()
+	if err != nil || len(ps) != 2 || ps[0].Root != live || ps[1].Root != plain {
+		t.Fatalf("load: %+v %v", ps, err)
+	}
+	path, err := Path()
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stored file
+	if err := json.Unmarshal(b, &stored); err != nil {
+		t.Fatal(err)
+	}
+	if len(stored.Projects) != 2 || stored.Projects[0].Root != live || stored.Projects[1].Root != plain {
+		t.Fatalf("saved registry: %+v", stored.Projects)
+	}
+}
+
+func TestRegistryKeepsRootsWithOtherStatErrors(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	root := filepath.Join(t.TempDir(), "loop")
+	if err := os.Symlink(root, root); err != nil {
+		t.Fatal(err)
+	}
+	// A symlink loop reliably produces an error other than not-exist,
+	// including when tests run as root.
+	if _, err := os.Stat(root); err == nil || os.IsNotExist(err) {
+		t.Fatalf("expected a stat error other than not-exist: %v", err)
+	}
+	want := Project{Root: root, ID: "01M4AAAAAAAAAAAAAAAAAAAP11", Name: "api"}
+	if err := save([]Project{want}); err != nil {
+		t.Fatal(err)
+	}
+	for name, read := range map[string]func() ([]Project, error){"load": load, "list": List} {
+		ps, err := read()
+		if err != nil || len(ps) != 1 || ps[0] != want {
+			t.Fatalf("%s: %+v %v", name, ps, err)
+		}
+	}
+}
 
 func project(t *testing.T) string {
 	t.Helper()

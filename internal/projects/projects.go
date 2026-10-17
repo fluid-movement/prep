@@ -177,8 +177,13 @@ func List() ([]Project, error) {
 	changed := false
 	var kept []Project
 	for _, p := range ps {
-		if fi, err := os.Stat(filepath.Join(p.Root, mdstore.Dir)); err != nil || !fi.IsDir() {
+		fi, err := os.Stat(filepath.Join(p.Root, mdstore.Dir))
+		if errors.Is(err, fs.ErrNotExist) || (err == nil && !fi.IsDir()) {
 			changed = true
+			continue
+		}
+		if err != nil {
+			kept = append(kept, p)
 			continue
 		}
 		d := Describe(p.Root)
@@ -415,7 +420,19 @@ func load() ([]Project, error) {
 		// A damaged registry is rebuilt from the next touches.
 		return nil, nil
 	}
-	return f.Projects, nil
+	kept := f.Projects[:0]
+	for _, project := range f.Projects {
+		if _, err := os.Stat(project.Root); errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		kept = append(kept, project)
+	}
+	if len(kept) != len(f.Projects) {
+		if err := save(kept); err != nil {
+			return nil, err
+		}
+	}
+	return kept, nil
 }
 
 // save writes the registry atomically, creating its directory.
