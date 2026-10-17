@@ -1,0 +1,3 @@
+- [ ] Every approved row of batches 1 to 4 exists as one decision record with its title, one-line description, why and scopes
+- [ ] AGENTS.md exists at the repository root from the batch 4 draft, and design principle 9 reads 'issues are the work; knowledge is what was decided and learned'
+- [ ] The old descriptive entries and overview.md are removed, prep check reports no errors, and GitHub CI on main is green

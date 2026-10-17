@@ -1,3 +1,10 @@
+How to apply (written 2026-10-17 after the knowledge model landed):
+- Write each approved row as one record with `prep decide --title <Title> --description <one-line description> --body-file <file>` (body: the why, written as a short paragraph; 'implied' reasons say so; for constraints state the rule and why), with `--scope <glob>` for each scope given. Rows are not linked to an issue unless the row names one (then pass the issue ID). Do not write design principle 8 ('no index or cache'): the storage decision D1 of 01M4ZCMFJ5P67XNSMKX1NPANDF (already a record, find it with `prep knowledge find SQLite index`) replaced it, and a record cannot be superseded by an older one.
+- Merged rows ("= merged", "= batch 1", "= approved") are written once.
+- Write AGENTS.md at the repository root from the draft in batch 4.
+- Do not delete or edit the old descriptive entries or overview.md: the checker removes them with a script stage after checking the records. List in the prep log every entry path that is fully converted.
+- Checks: `go test ./...` is not needed for records but run it anyway; `prep check` (0 errors), `prep fmt --check`, and `prep knowledge list | wc -l` before and after. Do not run `prep eval run`.
+
 The 162 issue decisions and the findings.md files are converted mechanically by the knowledge stage of 01M52ZRB3VY0MSZ0HZWJ2SEC24, in every prep project; this issue converts only this repository's 43 descriptive entries, moves the overview to AGENTS.md and rewrites principle 9.
 
 Approved conversion tables, filled in batch by batch as the user reviews them. Apply only the rows listed here; every other statement of the entries in a reviewed batch is deleted. All 43 entries are reviewed (batches 1 to 4, 121 records). From batch 3 on, the user delegated the review to the main session (2026-10-17): it decides, records the result here, and brings only real questions to the user.
