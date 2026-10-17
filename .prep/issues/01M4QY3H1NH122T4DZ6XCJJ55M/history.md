@@ -39,3 +39,7 @@
 - 2026-10-17T18:22:17Z claude-code: Handoff record: claude haiku subagent | prompt hook dedupe (small) from the guide brief alone | no fixes; 79k tokens, 38 tool uses, 3.9 min
 
 - 2026-10-17T18:26:11Z claude-code: Handoff record: codex | bound output (medium) | no fixes
+
+- 2026-10-17T18:35:50Z claude-code: Handoff record: claude sonnet subagent | dynamic TUI columns (small, UI) from the guide brief | no fixes; 64k tokens, 20 tool uses, 6.2 min
+
+- 2026-10-17T18:35:50Z claude-code: Handoff record: codex | eval cases for the new workflow (medium) | no fixes

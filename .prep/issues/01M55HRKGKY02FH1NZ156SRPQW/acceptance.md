@@ -1,4 +1,4 @@
-- [ ] A list whose titles fit keeps every column, even in a narrow pane, covered by a test
-- [ ] When the visible rows' cut-off title characters (each counted up to 10) exceed 30, the list drops the ID, then the state label, then the kind, one at a time, covered by a test
-- [ ] All rows of a list keep the same columns; goldens and the gallery show the rule
-- [ ] prep check reports no errors and GitHub CI on main is green
+- [x] A list whose titles fit keeps every column, even in a narrow pane, covered by a test
+- [x] When the visible rows' cut-off title characters (each counted up to 10) exceed 30, the list drops the ID, then the state label, then the kind, one at a time, covered by a test
+- [x] All rows of a list keep the same columns; goldens and the gallery show the rule
+- [x] prep check reports no errors and GitHub CI on main is green
