@@ -92,6 +92,9 @@ func cmdHook(a *app, args []string) error {
 	switch mode {
 	case "session-start":
 		hookMarkTurn(a, e)
+		// The briefing is restored in full here (for example after compaction),
+		// so the next prompt must send its text again.
+		hookForgetSent(a, e)
 		message := hookCapture(a, func(c *app) error { return cmdPrime(c, []string{"--hook", "--max", "5", "--plugin", *plugin}) })
 		if message == "" {
 			return nil
@@ -119,7 +122,10 @@ func cmdHook(a *app, args []string) error {
 				}
 			}
 		}
-		hookContext(a, name, hookBound(message, 10000))
+		message = hookBound(message, 10000)
+		if hookSendPrompt(a, e, message) {
+			hookContext(a, name, message)
+		}
 	case "before-tool":
 		if reason := hookRedirect(e, a.store.Root); reason != "" {
 			a.emit(map[string]any{"hookSpecificOutput": map[string]any{"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": reason}})
@@ -140,6 +146,29 @@ func hookCapture(a *app, run func(*app) error) string {
 		return ""
 	}
 	return strings.TrimSpace(buf.String())
+}
+
+// hookSendPrompt reports whether the prompt text differs from what this session
+// last received, and records it when it does. Without a session nothing can be
+// keyed, so the text is always sent. A missing or unreadable record means send.
+func hookSendPrompt(a *app, e hookEvent, message string) bool {
+	if e.Session == "" || message == "" {
+		return true
+	}
+	path := hookStatePath(a, e, ".sent")
+	if last, err := os.ReadFile(path); err == nil && string(last) == message {
+		return false
+	}
+	if os.MkdirAll(filepath.Dir(path), 0o755) == nil {
+		_ = os.WriteFile(path, []byte(message), 0o644)
+	}
+	return true
+}
+
+func hookForgetSent(a *app, e hookEvent) {
+	if e.Session != "" {
+		_ = os.Remove(hookStatePath(a, e, ".sent"))
+	}
 }
 
 func hookContext(a *app, event, message string) {
