@@ -1,7 +1,6 @@
 package fixture
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -15,9 +14,8 @@ projects:
     knowledge:
       - {path: /components/auth.md, type: component, title: Auth, description: Auth service, body: Tokens.}
   web:
-    links: [api]
     issues:
-      - {alias: login, title: Login page, state: ready, depends_on: [api/auth], body: 'Needs [auth](api:/components/auth.md) and {{api/auth}}.'}
+      - {alias: login, title: Login page, state: ready, body: 'Build the login page.'}
 `
 
 func buildWS(t *testing.T, src string) *Workspace {
@@ -33,33 +31,13 @@ func buildWS(t *testing.T, src string) *Workspace {
 	return w
 }
 
-func TestWorkspaceCrossProject(t *testing.T) {
+func TestWorkspaceProjectSelection(t *testing.T) {
 	w := buildWS(t, twoProjects)
 	if w.Primary != "web" || strings.Join(w.Order, ",") != "api,web" {
 		t.Fatalf("primary %q order %v", w.Primary, w.Order)
 	}
 	web, api := w.Projects["web"], w.Projects["api"]
-	out, err := web.Prep("list", "--json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var list struct {
-		Issues []struct {
-			ID        string `json:"id"`
-			Blocked   bool   `json:"blocked"`
-			CrossDeps []any  `json:"cross_deps"`
-		} `json:"issues"`
-	}
-	if err := json.Unmarshal([]byte(out), &list); err != nil {
-		t.Fatalf("%v\n%.300s", err, out)
-	}
-	if len(list.Issues) != 1 || !list.Issues[0].Blocked || len(list.Issues[0].CrossDeps) != 1 {
-		t.Errorf("web list: %.600s", out)
-	}
-	if out, _ := web.Prep("show", web.IDs["login"]); !strings.Contains(out, api.IDs["auth"]) {
-		t.Errorf("cross dependency or expanded alias missing:\n%s", out)
-	}
-	out, _ = web.Prep("projects")
+	out, _ := web.Prep("projects")
 	if !strings.Contains(out, "api") || !strings.Contains(out, "web") {
 		t.Errorf("projects:\n%s", out)
 	}
@@ -88,11 +66,10 @@ func TestWorkspaceDeterministicAndIsolated(t *testing.T) {
 
 func TestWorkspaceErrors(t *testing.T) {
 	for name, src := range map[string]string{
-		"cycle":           "projects:\n  a: {links: [b]}\n  b: {links: [a]}\n",
-		"unknown link":    "projects:\n  a: {links: [zzz]}\n",
-		"unknown project": "projects:\n  a:\n    issues: [{title: x, depends_on: [zzz/y]}]\n",
-		"unknown alias":   "projects:\n  a:\n    issues: [{title: x, depends_on: [b/y]}]\n  b: {}\n",
-		"bad primary":     "primary: q\nprojects:\n  a: {}\n",
+		"removed links field": "projects:\n  a: {links: [zzz]}\n",
+		"unknown project":     "projects:\n  a:\n    issues: [{title: x, depends_on: [zzz/y]}]\n",
+		"unknown alias":       "projects:\n  a:\n    issues: [{title: x, depends_on: [b/y]}]\n  b: {}\n",
+		"bad primary":         "primary: q\nprojects:\n  a: {}\n",
 	} {
 		if _, err := LoadWorkspace(strings.NewReader(src)); err == nil {
 			t.Errorf("%s: no error", name)

@@ -8,7 +8,7 @@ generated:
 scope:
   - internal/cli/hook*.go
   - internal/userconfig
-confirmed_commit: 54e8a28a1b0c5a0588d2c4face4c41b3e1f76986
+confirmed_commit: 28f150511800c7e93ff7bcd5e1ed4f499c1f8651
 ---
 
 # Shared lifecycle hooks

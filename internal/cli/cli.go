@@ -99,12 +99,10 @@ func init() {
 		{"activity", false, "activity [--max N] [--actor a]  what agents did with prep, newest last (local, per machine); activity add: harness events as JSON lines on stdin", cmdActivity},
 		{"flags", false, "flags                      every query flag with the values it accepts now and their issue counts", cmdFlags},
 		{"knowledge", false, "knowledge list|find|show  read knowledge entries", cmdKnowledge},
-		{"dependency", false, "dependency show <id>         show external dependency observations", cmdDependency},
 		{"views", false, "views                      saved views from config.yaml (else config.yaml.dist)", cmdViews},
 		{"projects", false, "projects [add <dir> | remove <dir|name|id>]  prep projects on this machine, most recently used first (recorded by every command run in one): name, ID suffix, last use, root, remote", cmdProjects},
-		{"links", false, "links                      this project's links to other projects and where each is checked out here", cmdLinks},
-		{"new", true, "new --title T --kind K     create an issue [--parent id] [--depends-on id|project:id]... [--tag t]... [--priority p] [--body text | --body-file path|-]", cmdNew},
-		{"edit", true, "edit <id>                  change [--title T] [--kind K] [--parent id|''] [--depends-on id|project:id|'']... [--tag t|'']... [--priority p] [--body text | --body-file path|-]", cmdEdit},
+		{"new", true, "new --title T --kind K     create an issue [--parent id] [--depends-on id]... [--tag t]... [--priority p] [--body text | --body-file path|-]", cmdNew},
+		{"edit", true, "edit <id>                  change [--title T] [--kind K] [--parent id|''] [--depends-on id|'']... [--tag t|'']... [--priority p] [--body text | --body-file path|-]", cmdEdit},
 		{"context", true, "context <id>               replace the implementation context: --body text | --body-file path|-", recordCmd(domain.OpContext)},
 		{"decide", true, "decide <id> --title T      append a decision [--body text | --body-file path|-] [--supersedes D<n>] [--outcome]", recordCmd(domain.OpDecide)},
 		{"criterion", true, "criterion <id>             acceptance criteria: --add text, --check n, --uncheck n, --remove n (repeatable)", recordCmd(domain.OpCriterion)},
@@ -114,7 +112,6 @@ func init() {
 		{"focus", true, "focus <id> | --clear        set or clear the issue you work on, for prep tui's Agent view (local; writes no records)", cmdFocus},
 		{"import", true, "import                     create the issue that guides importing existing work items (TODOs, GitHub issues, other trackers)", cmdImport},
 		{"knowledge", true, "knowledge new|update|confirm|bootstrap  update knowledge entries; confirm <entry>... | --drifted", cmdKnowledge},
-		{"link", true, "link add <project> [--as name] | rename <old> <new> | remove <name>  links to other projects (rename rewrites every reference)", cmdLink},
 		{"define", true, "define <id>                write a requirement baseline (open questions must be empty)", opCmd(domain.OpDefine)},
 		{"ack", true, "ack <id>                   acknowledge a trivial requirement change: new baseline, enrichment stays valid", opCmd(domain.OpAck)},
 		{"ready", true, "ready <id> [--note]        sign off enrichment against the newest baseline", opCmd(domain.OpReady)},
@@ -223,7 +220,7 @@ func (a *app) resolveProject() error {
 	if h, err := mdstore.Find(start); err == nil {
 		home, _ = filepath.Abs(h)
 	}
-	p, err := a.projectNamed(home, a.project)
+	p, err := projects.Resolve(a.project)
 	if err != nil {
 		return err
 	}
@@ -232,30 +229,6 @@ func (a *app) resolveProject() error {
 	}
 	a.root, a.target = p.Root, &p
 	return nil
-}
-
-// projectNamed resolves --project: a link name of the home project first
-// (so a reference's name works as written), else the registry's rules.
-func (a *app) projectNamed(home, query string) (projects.Project, error) {
-	if home != "" {
-		if hp, err := mdstore.ReadProject(home); err == nil {
-			if l, ok := hp.Link(query); ok {
-				p, found, err := projects.ByID(l.ID)
-				if err != nil {
-					return p, err
-				}
-				if !found {
-					hint := ""
-					if l.Remote != "" {
-						hint = "; clone " + l.Remote + " and run prep there once (or prep projects add <dir>)"
-					}
-					return p, &domain.Error{Code: domain.ErrNotFound, Message: fmt.Sprintf("linked project %s is not checked out here%s", query, hint)}
-				}
-				return p, nil
-			}
-		}
-	}
-	return projects.Resolve(query)
 }
 
 // globalFlags strips --json, --root, --project and --by from anywhere in args before
@@ -390,11 +363,7 @@ func (a *app) load(drift bool) (*domain.Tree, error) {
 	if err := a.open(); err != nil {
 		return nil, err
 	}
-	t, err := domain.Load(a.store, a.kstore, drift)
-	if err == nil {
-		projects.ResolveExternal(t)
-	}
-	return t, err
+	return domain.Load(a.store, a.kstore, drift)
 }
 
 // parse runs a flag set allowing flags and positionals in any order.

@@ -77,8 +77,8 @@ func Build(spec *Spec, dir string, opts Options) (*Project, error) {
 	return w.Projects[spec.Name], nil
 }
 
-// BuildWorkspace builds every project of ws in dir/<name>, linked as the
-// specs say, with a registry of its own so cross-project commands work.
+// BuildWorkspace builds every project of ws in dir/<name> with a registry
+// of its own so --project commands work.
 func BuildWorkspace(ws *WorkspaceSpec, dir string, opts Options) (*Workspace, error) {
 	if opts.Binary == "" {
 		return nil, fmt.Errorf("fixture: no prep binary given")
@@ -316,11 +316,6 @@ func (p *Project) build(seed int64) error {
 			return err
 		}
 	}
-	for _, l := range s.Links {
-		if _, err := run("link", "add", l); err != nil {
-			return err
-		}
-	}
 	if err := p.buildIssues(run); err != nil {
 		return err
 	}
@@ -431,9 +426,7 @@ func (p *Project) buildIssues(run func(...string) (string, error)) error {
 			r = append(r, idx[issues[i].Parent])
 		}
 		for _, d := range issues[i].DependsOn {
-			if !strings.Contains(d, "/") {
-				r = append(r, idx[d])
-			}
+			r = append(r, idx[d])
 		}
 		return r
 	})
@@ -452,15 +445,7 @@ func (p *Project) buildIssues(run func(...string) (string, error)) error {
 			args = append(args, "--parent", ids[idx[is.Parent]])
 		}
 		for _, d := range is.DependsOn {
-			if j := strings.Index(d, "/"); j >= 0 {
-				id, err := p.lookup(d)
-				if err != nil {
-					return err
-				}
-				args = append(args, "--depends-on", d[:j]+":"+id)
-			} else {
-				args = append(args, "--depends-on", ids[idx[d]])
-			}
+			args = append(args, "--depends-on", ids[idx[d]])
 		}
 		for _, t := range is.Tags {
 			args = append(args, "--tag", t)
@@ -504,9 +489,7 @@ func (p *Project) buildIssues(run func(...string) (string, error)) error {
 	trans, err := topo(len(issues), func(i int) []int {
 		var r []int
 		for _, d := range issues[i].DependsOn {
-			if !strings.Contains(d, "/") {
-				r = append(r, idx[d])
-			}
+			r = append(r, idx[d])
 		}
 		if issues[i].Alias != "" {
 			r = append(r, children[issues[i].Alias]...)

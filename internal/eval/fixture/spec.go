@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -21,8 +20,6 @@ type Spec struct {
 	Name      string          `yaml:"name"`
 	Issues    []IssueSpec     `yaml:"issues"`
 	Knowledge []KnowledgeSpec `yaml:"knowledge"`
-	// Links lists the workspace projects this one links to.
-	Links []string `yaml:"links"`
 	// Config is written as .prep/config.yaml (views, theme); the CLI has no
 	// command for it.
 	Config map[string]any `yaml:"config"`
@@ -52,7 +49,7 @@ type IssueSpec struct {
 	Kind      string   `yaml:"kind"`  // default code
 	State     string   `yaml:"state"` // open (default), defined, ready, in-progress, done, dropped
 	Parent    string   `yaml:"parent"`
-	DependsOn []string `yaml:"depends_on"` // alias, or project/alias in a workspace
+	DependsOn []string `yaml:"depends_on"` // alias in this project
 	Tags      []string `yaml:"tags"`
 	Priority  string   `yaml:"priority"`
 	Body      string   `yaml:"body"`
@@ -146,7 +143,7 @@ func (s *Spec) Validate() error {
 			return fmt.Errorf("issue %q: parent %q is not an alias in this project", is.Title, is.Parent)
 		}
 		for _, d := range is.DependsOn {
-			if !strings.Contains(d, "/") && !seen[d] {
+			if !seen[d] {
 				return fmt.Errorf("issue %q: depends_on %q is not an alias in this project", is.Title, d)
 			}
 		}
@@ -154,7 +151,7 @@ func (s *Spec) Validate() error {
 	return nil
 }
 
-// Validate checks every project and the links between them.
+// Validate checks every project in the workspace.
 func (w *WorkspaceSpec) Validate() error {
 	if len(w.Projects) == 0 {
 		return fmt.Errorf("workspace has no projects")
@@ -171,25 +168,6 @@ func (w *WorkspaceSpec) Validate() error {
 		if err := s.Validate(); err != nil {
 			return fmt.Errorf("project %s: %w", name, err)
 		}
-		for _, l := range s.Links {
-			if _, ok := w.Projects[l]; !ok {
-				return fmt.Errorf("project %s links to %q, which is not in the workspace", name, l)
-			}
-		}
-		for _, is := range s.Issues {
-			for _, d := range is.DependsOn {
-				if i := strings.Index(d, "/"); i >= 0 {
-					p, a := d[:i], d[i+1:]
-					t, ok := w.Projects[p]
-					if !ok {
-						return fmt.Errorf("project %s: %q depends on project %q, which is not in the workspace", name, is.Title, p)
-					}
-					if !t.hasAlias(a) {
-						return fmt.Errorf("project %s: %q depends on %s/%s, which has no such alias", name, is.Title, p, a)
-					}
-				}
-			}
-		}
 	}
 	if w.Primary != "" {
 		if _, ok := w.Projects[w.Primary]; !ok {
@@ -200,15 +178,6 @@ func (w *WorkspaceSpec) Validate() error {
 		return err
 	}
 	return nil
-}
-
-func (s *Spec) hasAlias(a string) bool {
-	for _, is := range s.Issues {
-		if is.Alias == a {
-			return true
-		}
-	}
-	return false
 }
 
 // primary returns the name of the primary project.
@@ -229,55 +198,7 @@ func (w *WorkspaceSpec) names() []string {
 	return n
 }
 
-// order returns the project names so every project comes after the ones it
-// links to or depends on; a cycle is an error.
+// order returns project names in deterministic order.
 func (w *WorkspaceSpec) order() ([]string, error) {
-	deps := map[string]map[string]bool{}
-	for name, s := range w.Projects {
-		deps[name] = map[string]bool{}
-		for _, l := range s.Links {
-			deps[name][l] = true
-		}
-		for _, is := range s.Issues {
-			for _, d := range is.DependsOn {
-				if i := strings.Index(d, "/"); i >= 0 {
-					deps[name][d[:i]] = true
-				}
-			}
-		}
-	}
-	var out []string
-	state := map[string]int{}
-	var visit func(n string, path []string) error
-	visit = func(n string, path []string) error {
-		switch state[n] {
-		case 2:
-			return nil
-		case 1:
-			return fmt.Errorf("projects form a cycle: %s", strings.Join(append(path, n), " -> "))
-		}
-		state[n] = 1
-		var ds []string
-		for d := range deps[n] {
-			ds = append(ds, d)
-		}
-		sort.Strings(ds)
-		for _, d := range ds {
-			if d == n {
-				continue
-			}
-			if err := visit(d, append(path, n)); err != nil {
-				return err
-			}
-		}
-		state[n] = 2
-		out = append(out, n)
-		return nil
-	}
-	for _, n := range w.names() {
-		if err := visit(n, nil); err != nil {
-			return nil, err
-		}
-	}
-	return out, nil
+	return w.names(), nil
 }

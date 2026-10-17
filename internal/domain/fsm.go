@@ -93,12 +93,8 @@ type Change struct {
 	// DoD is the project Definition of Done guidance.
 	DoD *[]string `json:"-"`
 	// Config is a new project configuration (settings).
-	Config *Config `json:"-"`
-	// Links is project.md's new link list; LinkRename (old, new) also
-	// rewrites every reference to old.
-	Links      *[]ProjectLink `json:"-"`
-	LinkRename *[2]string     `json:"-"`
-	History    string         `json:"-"`
+	Config  *Config `json:"-"`
+	History string  `json:"-"`
 }
 
 // IssueEdit is the new content of an issue's requirement record after
@@ -465,7 +461,7 @@ func (t *Tree) PlanNew(in NewIssueInput, now time.Time) (*Change, error) {
 		if contains(deps, d) {
 			continue
 		}
-		if s, _ := t.DepState(d); s == StateDropped {
+		if t.State(d) == StateDropped {
 			return nil, &Error{Code: ErrUsage, Message: "cannot create issue", Unmet: []Unmet{{GateDeps, fmt.Sprintf("cannot depend on dropped issue %s", d)}}}
 		}
 		deps = append(deps, d)
@@ -524,7 +520,7 @@ func (t *Tree) PlanEdit(id string, in EditInput) (*Change, error) {
 			if contains(e.DependsOn, d) {
 				continue
 			}
-			if s, _ := t.DepState(d); s == StateDropped {
+			if t.State(d) == StateDropped {
 				unmet = append(unmet, Unmet{GateDeps, fmt.Sprintf("cannot depend on dropped issue %s", d)})
 			}
 			e.DependsOn = append(e.DependsOn, d)
@@ -621,9 +617,6 @@ func (t *Tree) Apply(c *Change) *Tree {
 			}
 			i = &cp
 		}
-		if r := c.LinkRename; r != nil {
-			i = applyLinkRename(i, r[0], r[1])
-		}
 		issues = append(issues, i)
 	}
 	if c.NewIssue != nil {
@@ -633,11 +626,6 @@ func (t *Tree) Apply(c *Change) *Tree {
 	for p, e := range t.Knowledge {
 		if c.KnowledgeEntry != nil && p == c.KnowledgeEntry.Path {
 			continue
-		}
-		if r := c.LinkRename; r != nil {
-			cp := *e
-			cp.Body = RenameLinkInText(e.Body, r[0], r[1])
-			e = &cp
 		}
 		entries = append(entries, e)
 	}
@@ -651,11 +639,7 @@ func (t *Tree) Apply(c *Change) *Tree {
 	if c.Config != nil {
 		p.Config = *c.Config
 	}
-	if c.Links != nil {
-		p.Links = *c.Links
-	}
 	nt := NewTree(p, issues, entries, nil)
-	nt.External = t.External
 	return nt
 }
 

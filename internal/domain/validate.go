@@ -35,8 +35,6 @@ func Validate(t *Tree) []Diagnostic {
 		}
 	}
 
-	validateLinks(t, add)
-
 	for _, id := range t.IDs() {
 		i := t.Issues[id]
 		e := func(code string, class Class, file, fix, format string, a ...any) {
@@ -86,9 +84,6 @@ func Validate(t *Tree) []Diagnostic {
 				continue
 			}
 			seen[d] = true
-			if _, _, ok := SplitRef(d); ok {
-				continue // cross-project: validateLinks and the registry check it
-			}
 			switch {
 			case d == id:
 				e(CodeSelfDependency, ClassManual, "issue.md", "remove the issue's own ID from depends_on", "issue depends on itself")

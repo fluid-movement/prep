@@ -65,9 +65,6 @@ type Options struct {
 	// Previous is the project backspace returns to once nothing else is
 	// back (the one switched from).
 	Previous string
-	// Select opens on this issue; Entry opens the knowledge screen on this
-	// entry.
-	Select, Entry string
 }
 
 // Run starts the issue views. It returns where to go when the person
@@ -219,12 +216,6 @@ func NewModel(th *theme.Theme, opts Options) *Model {
 		m.screen = screenAgent
 	}
 	m.apply(opts.Load())
-	if opts.Select != "" && m.tree != nil && m.tree.Issues[opts.Select] != nil {
-		m.jump(opts.Select, false)
-	}
-	if opts.Entry != "" && m.tree != nil && m.tree.Knowledge[opts.Entry] != nil {
-		m.openKnowledge(opts.Entry)
-	}
 	return m
 }
 
@@ -1126,8 +1117,6 @@ func (m *Model) relations(id string) []relation {
 	for _, d := range i.DependsOn {
 		if m.tree.Issues[d] != nil {
 			out = append(out, relation{"depends on", d})
-		} else if _, _, ok := domain.SplitRef(d); ok {
-			out = append(out, relation{"depends on", d})
 		}
 	}
 	for _, b := range m.tree.Blocks(id) {
@@ -1135,9 +1124,6 @@ func (m *Model) relations(id string) []relation {
 	}
 	for _, p := range m.tree.IssueEntries(id) {
 		out = append(out, relation{"knowledge", p})
-	}
-	for _, l := range domain.XKnowledgeLinks(i.Context) {
-		out = append(out, relation{"knowledge", l[0] + ":" + l[1]})
 	}
 	return out
 }
@@ -1616,10 +1602,6 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) (out []stri
 	for k, r := range rels {
 		switch r.label {
 		case "depends on":
-			if _, _, ok := domain.SplitRef(r.id); ok {
-				lines = append(lines, line{m.xDepLine(r.id, k, k == selected, keyOf[k], inner), k})
-				continue
-			}
 			lead := sub.Render("← needs ")
 			if !m.tree.State(r.id).Terminal() {
 				lead = lipgloss.NewStyle().Foreground(m.th.C.Warning).Render("← needs ")
@@ -1628,10 +1610,6 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) (out []stri
 		case "blocks":
 			lines = append(lines, link(k, sub.Render("→ unblocks ")))
 		case "knowledge":
-			if name, path, ok := domain.SplitRef(r.id); ok {
-				lines = append(lines, line{mark(k, "  "+sub.Render("≡ knows ")+m.th.S.Muted.Render(name+" › ")+m.th.S.Body.Render(path)), k})
-				continue
-			}
 			e := m.tree.Knowledge[r.id]
 			lines = append(lines, line{mark(k, "  "+sub.Render("≡ knows ")+m.th.S.Muted.Render(fmt.Sprintf("%-10s", e.Type))+m.th.S.Body.Render(e.Title)), k})
 		}

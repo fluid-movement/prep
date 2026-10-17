@@ -106,7 +106,6 @@ workspace_spec:
     api:
       issues: [{alias: auth, title: Auth}]
     web:
-      links: [api]
       issues: [{alias: login, title: Login}]
 `
 	if _, err := Parse(strings.NewReader(src), "ws.yaml", ""); err != nil {

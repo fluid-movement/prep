@@ -245,7 +245,7 @@ func hookRedirect(e hookEvent, root string) string {
 	if area == activity.AreaKnowledge {
 		return "Read knowledge with prep knowledge find <words> or prep knowledge show <entry>[#section], never the files. Use --outline first for long entries."
 	}
-	return "Read issue records with prep show <id> and prep guide <id>; search with prep list --text <words>. Use prep links or prep views for project configuration."
+	return "Read issue records with prep show <id> and prep guide <id>; search with prep list --text <words>. Use prep projects or prep views for project configuration."
 }
 
 func hookActivity(a *app, e hookEvent) {
