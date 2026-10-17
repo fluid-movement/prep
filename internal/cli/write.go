@@ -12,7 +12,6 @@ import (
 
 	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
-	"github.com/fluid-movement/prep/internal/gitx"
 	"github.com/fluid-movement/prep/internal/mdstore"
 	"github.com/fluid-movement/prep/internal/projects"
 )
@@ -55,7 +54,7 @@ func (a *app) reportWrite(r writeResult) {
 	}
 	switch {
 	case r.ID != "" && r.State != "" && r.Stale:
-		a.printf("%s %s: now %s, stale: the requirement or kind differs from the newest baseline; run prep define (re-enrich) or prep ack (trivial change)\n", r.Op, r.ID, r.State)
+		a.printf("%s %s: now %s, stale: the requirement or kind differs from the newest baseline; run prep define (re-enrich) or prep define --trivial (trivial change)\n", r.Op, r.ID, r.State)
 	case r.ID != "" && r.State != "":
 		a.printf("%s %s: now %s\n", r.Op, r.ID, r.State)
 	case r.ID != "":
@@ -198,35 +197,6 @@ func (a *app) applyAll(t *domain.Tree, cs []*domain.Change) ([]string, error) {
 	}
 	a.afterWrite(files)
 	return files, nil
-}
-
-// cmdImport creates the issue that guides an agent through importing the
-// project's existing work items.
-func cmdImport(a *app, args []string) error {
-	fs := flag.NewFlagSet("import", flag.ContinueOnError)
-	if _, err := parse(fs, args); err != nil {
-		return err
-	}
-	unlock, err := a.lockWrite()
-	if err != nil {
-		return err
-	}
-	defer unlock()
-	t, err := a.load(false)
-	if err != nil {
-		return err
-	}
-	cs, err := t.PlanImport(a.actor, a.now(), a.entropy)
-	if err != nil {
-		return err
-	}
-	files, err := a.applyAll(t, cs)
-	if err != nil {
-		return err
-	}
-	id := cs[0].IssueID
-	a.reportWrite(writeResult{OK: true, Op: "import", ID: id, State: domain.StateOpen, Files: files, Next: "prep guide " + id})
-	return nil
 }
 
 func cmdNew(a *app, args []string) error {
@@ -414,7 +384,10 @@ func opCmd(op domain.Op) func(*app, []string) error {
 		fs := flag.NewFlagSet(string(op), flag.ContinueOnError)
 		in := domain.Input{}
 		var docs multi
+		var trivial bool
 		switch op {
+		case domain.OpDefine:
+			fs.BoolVar(&trivial, "trivial", false, "re-baseline a stale issue whose requirement change is trivial; the ready sign-off and claim stay")
 		case domain.OpReady, domain.OpClaim:
 			fs.StringVar(&in.Note, "note", "", "note recorded with the sign-off")
 		case domain.OpRelease:
@@ -437,6 +410,10 @@ func opCmd(op domain.Op) func(*app, []string) error {
 		ref, err := one(string(op), pos)
 		if err != nil {
 			return err
+		}
+		op := op
+		if trivial {
+			op = domain.OpTrivial
 		}
 		in.Docs = docs
 		unlock, err := a.lockWrite()
@@ -524,60 +501,13 @@ func cmdFix(a *app, args []string) error {
 		return err
 	}
 	files = append(files, ident...)
-	// The personal config is ignored now; a 0.1.0 project still has it in
-	// git's index, and committing the fix removes it there (config.yaml.dist
-	// takes its place).
-	own := mdstore.Dir + "/" + mdstore.ConfigOwn
-	untracked := false
-	if gitx.IsRepo(a.store.Root) && gitx.IsTracked(a.store.Root, own) && a.store.IgnoresOwnConfig() {
-		if err := gitx.Untrack(a.store.Root, own); err != nil {
-			return err
-		}
-		untracked = true
-	}
 	idx, err := a.kstore.WriteIndexes(false)
 	if err != nil {
 		return err
 	}
 	files = append(files, idx...)
 	a.afterWrite(files)
-	if untracked {
-		files = append(files, own+" (removed from git's index; your copy stays)")
-	}
 	a.reportWrite(writeResult{OK: true, Op: "fix", Files: files})
-	return nil
-}
-
-// migrations upgrade the storage schema one version at a time. Index k
-// migrates from schema k+1 to k+2.
-var migrations []func(a *app) ([]string, error)
-
-func cmdMigrate(a *app, args []string) error {
-	t, err := a.load(false)
-	if err != nil {
-		return err
-	}
-	from := t.Project.Schema
-	switch {
-	case from == 0:
-		return &domain.Error{Code: domain.ErrSchema, Message: "project.md has no schema version"}
-	case from > domain.SchemaVersion:
-		return &domain.Error{Code: domain.ErrSchema, Message: fmt.Sprintf("project uses schema %d; this prep supports %d — update prep", from, domain.SchemaVersion)}
-	}
-	var files []string
-	for v := from; v < domain.SchemaVersion; v++ {
-		changed, err := migrations[v-1](a)
-		if err != nil {
-			return err
-		}
-		files = append(files, changed...)
-		if err := a.store.SetSchema(v + 1); err != nil {
-			return err
-		}
-		files = append(files, ".prep/project.md")
-	}
-	a.afterWrite(files)
-	a.reportWrite(writeResult{OK: true, Op: "migrate", Files: files})
 	return nil
 }
 

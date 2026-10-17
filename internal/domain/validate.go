@@ -17,7 +17,7 @@ func Validate(t *Tree) []Diagnostic {
 	if t.Project.Schema != SchemaVersion && t.Project.Schema != 0 {
 		add(Diagnostic{Code: CodeSchemaMismatch, Severity: SevError, Class: ClassGuided, File: "project.md",
 			Message: fmt.Sprintf("schema %d, this binary uses %d", t.Project.Schema, SchemaVersion),
-			Fix:     "run prep migrate, or update prep if the project is newer"})
+			Fix:     "update prep"})
 	}
 	if t.Project.Schema != 0 {
 		p := t.Project
@@ -43,10 +43,6 @@ func Validate(t *Tree) []Diagnostic {
 		w := func(code string, class Class, file, fix, format string, a ...any) {
 			add(Diagnostic{Code: code, Severity: SevWarning, Class: class, Issue: id, File: file, Message: fmt.Sprintf(format, a...), Fix: fix})
 		}
-		if err := ValidateArtifactReferences(i.Artifacts); err != nil {
-			e(CodeRecordInvalid, ClassManual, "issue.md", "use prep artifact add/remove to reconcile references", "invalid artifact references: %v", err)
-		}
-
 		if strings.TrimSpace(i.Title) == "" {
 			e(CodeTitleMissing, ClassManual, "issue.md", "add a title to the frontmatter", "title is missing")
 		}
@@ -106,7 +102,7 @@ func Validate(t *Tree) []Diagnostic {
 
 		// Records.
 		if i.Ready != nil && !t.ReadyValid(i) && i.Resolution == nil {
-			w(CodeReadyOutdated, ClassGuided, "ready.md", "enrich against the current requirement and run prep ready, or prep ack if the change was trivial", "ready.md references baseline %s, not the newest", i.Ready.Baseline)
+			w(CodeReadyOutdated, ClassGuided, "ready.md", "enrich against the current requirement and run prep ready, or prep define --trivial if the change was trivial", "ready.md references baseline %s, not the newest", i.Ready.Baseline)
 		}
 		if i.Claim != nil && !t.ReadyValid(i) && i.Resolution == nil {
 			e(CodeOrphanClaim, ClassGuided, "claim.md", "delete claim.md, or restore a valid ready sign-off", "claim.md exists without a valid ready sign-off")
@@ -149,7 +145,7 @@ func Validate(t *Tree) []Diagnostic {
 			}
 		}
 		if t.State(id) == StateInProgress && t.Drifted(i) {
-			w(CodeStaleInProgress, ClassGuided, "issue.md", "prep ack for a trivial change; otherwise prep release, then prep define and re-enrich", "requirement changed while in progress")
+			w(CodeStaleInProgress, ClassGuided, "issue.md", "prep define --trivial for a trivial change; otherwise prep release, then prep define and re-enrich", "requirement changed while in progress")
 		}
 
 		// Decisions.

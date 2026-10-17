@@ -162,7 +162,7 @@ type Decision struct {
 	Body       string `json:"body,omitempty"`
 }
 
-// Baseline is a requirement snapshot written by define or ack.
+// Baseline is a requirement snapshot written by define (Ack marks define --trivial).
 type Baseline struct {
 	Name        string    `json:"name"` // timestamp, also the file name
 	By          string    `json:"by"`
@@ -218,8 +218,6 @@ type Issue struct {
 	Parent    string   `json:"parent,omitempty"`
 	DependsOn []string `json:"depends_on,omitempty"`
 	Tags      []string `json:"tags,omitempty"`
-	// Artifacts are reference-only metadata, never imported requirements or evidence.
-	Artifacts []ArtifactReference `json:"artifacts,omitempty"`
 	// Priority as stored: empty means medium. Output carries Effective().
 	Priority Priority `json:"-"`
 

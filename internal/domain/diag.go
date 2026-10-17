@@ -37,7 +37,6 @@ const (
 	CodeSchemaMismatch = "P002" // schema version differs from the binary
 	CodeConfigInvalid  = "P003" // config.yaml or config.yaml.dist invalid
 	CodeProjectUnknown = "P004" // unknown file in .prep
-	CodeConfigLegacy   = "P006" // config in the prep 0.1.0 layout; prep fix converts it
 	CodeLocalTracked   = "P007" // .prep/.gitignore does not ignore local/; prep fix adds it
 	CodeProjectNoID    = "P008" // project.md has no id; prep fix writes one
 	CodeProjectInvalid = "P009" // project.md has an invalid id or name

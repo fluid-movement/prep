@@ -28,8 +28,7 @@ confirmed_commit: aadff54b67ebacbab09a384376eaadba0ab45808
 - Priority: new/edit accept critical, high, medium or low; medium unsets. Priority-only edits work on resolved issues. list/next/prime order by priority then ID; JSON includes effective priority and text marks non-medium values.
 - Tags: `prep new --tag` and `prep edit --tag` (repeatable or comma-separated; edit replaces the list, `--tag ''` clears it, and a tag-only edit also works on resolved issues); `prep list --tag` filters; `prep list` shows tags as `#tag` after the title and `prep show` as a `tags:` line.
 - `prep init [--no-bootstrap]` creates `.prep` (no placeholder overview) and, unless skipped, the bootstrap issues via `Tree.PlanBootstrap`, written change by change; `prep knowledge bootstrap` does the same later when the knowledge base is not bootstrapped and no bootstrap issue is open. `prep prime` (JSON `bootstrap`) and `prep guide` (`alerts`) print the bootstrap alert first.
-- `prep import` creates the "Import existing work" research issue via `Tree.PlanImport`, written change by change like the bootstrap (`applyAll`), and reports it as open with `next: prep guide <id>` (text: a `Next:` line); while an import issue is unresolved it fails with `E_INVALID` naming that issue. Sources are project-specific, so there are no per-source importers: the issue's context guides the agent (decided in 01M47YPC2G69C52S5FWP6H42PH).
-- `prep list --text` (and `--text` in views and the TUI filter) matches a case-insensitive substring of the title or the requirement, so an imported issue is found by its `Source:` line.
+- `prep list --text` (and `--text` in views and the TUI filter) matches a case-insensitive substring of the title or the requirement.
 - `prep setup [--harness h,...|--remove h|--refresh]` installs harness integrations; see [Harness setup](/components/setup.md).
 - `prep activity`, `activity add` and `prep focus`: [Agent activity](/features/agent-activity.md); commands note their event when they succeed and `Main` appends it.
 - `prep update [--check]` replaces the binary with the latest release; see [Release, install and update](/components/release.md).
@@ -44,4 +43,4 @@ confirmed_commit: aadff54b67ebacbab09a384376eaadba0ab45808
 
 - `prep reopen <id> --reason` moves a done resolution into the work log. See [Issue lifecycle](/features/lifecycle.md).
 
-Artifact metadata and additive lifecycle JSON/error guidance: [CLI contracts](/features/cli-contracts.md).
+Additive lifecycle JSON/error guidance: [CLI contracts](/features/cli-contracts.md).

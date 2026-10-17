@@ -148,19 +148,19 @@ func TestPlanNewDependencies(t *testing.T) {
 	}
 }
 
-func TestAckAfterKindChangeNeedsContext(t *testing.T) {
+func TestTrivialDefineAfterKindChangeNeedsContext(t *testing.T) {
 	i := &Issue{ID: idA, Title: "A", Kind: KindCode, Prose: "Do it.", Criteria: []Criterion{{Text: "x"}},
 		Baselines: []Baseline{{Name: "20261005-120000", Kind: KindManual, Requirement: "Do it."}}, Ready: &Ready{Baseline: "20261005-120000"}}
 	tree := NewTree(Project{}, []*Issue{i}, nil, nil)
 	if !tree.Stale(idA) {
 		t.Fatal("a kind change should make the issue stale")
 	}
-	unmet, _ := tree.Gates(idA, OpAck, nil)
+	unmet, _ := tree.Gates(idA, OpTrivial, nil)
 	if len(unmet) != 1 || unmet[0].Code != GateContext {
 		t.Fatalf("unmet = %+v", unmet)
 	}
 	i.Context = "Where."
-	if unmet, _ := NewTree(Project{}, []*Issue{i}, nil, nil).Gates(idA, OpAck, nil); len(unmet) != 0 {
+	if unmet, _ := NewTree(Project{}, []*Issue{i}, nil, nil).Gates(idA, OpTrivial, nil); len(unmet) != 0 {
 		t.Fatalf("with context: unmet = %+v", unmet)
 	}
 }

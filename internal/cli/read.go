@@ -395,13 +395,6 @@ func cmdShow(a *app, args []string) error {
 	for _, b := range t.Blocks(id) {
 		a.printf("blocks: %s [%s] %s\n", b, t.State(b), titleOf(t, b))
 	}
-	for _, ref := range i.Artifacts {
-		a.printf("artifact (reference only): %s — %s", ref.Source, ref.Location)
-		if ref.Title != "" {
-			a.printf(" (%s)", ref.Title)
-		}
-		a.printf("\n")
-	}
 	a.printf("\n## Requirement\n\n%s\n", orNone(i.Prose))
 	if strings.TrimSpace(i.OpenQuestions) != "" {
 		a.printf("\n## Open questions\n\n%s\n", i.OpenQuestions)
@@ -439,7 +432,7 @@ func cmdShow(a *app, args []string) error {
 	for _, b := range i.Baselines {
 		kind := "defined"
 		if b.Ack {
-			kind = "acknowledged"
+			kind = "defined --trivial"
 		}
 		a.printf("- baseline %s: %s by %s\n", b.Name, kind, b.By)
 	}

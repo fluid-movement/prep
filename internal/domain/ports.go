@@ -1,5 +1,7 @@
 package domain
 
+import "fmt"
+
 // IssueStore is the port for transactional issue records. The markdown
 // adapter is the first implementation.
 type IssueStore interface {
@@ -23,11 +25,15 @@ type KnowledgeStore interface {
 	Apply(*KnowledgeEdit) ([]string, error)
 }
 
-// Load builds a tree from both stores.
+// Load builds a tree from both stores. A project written by a newer schema
+// is refused: this binary cannot read it.
 func Load(is IssueStore, ks KnowledgeStore, drift bool) (*Tree, error) {
 	p, issues, diags, err := is.Load()
 	if err != nil {
 		return nil, err
+	}
+	if p.Schema > SchemaVersion {
+		return nil, &Error{Code: ErrSchema, Message: fmt.Sprintf("project uses schema %d; this prep supports %d — update prep", p.Schema, SchemaVersion)}
 	}
 	entries, kd, err := ks.Load(drift)
 	if err != nil {

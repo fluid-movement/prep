@@ -8,7 +8,7 @@ generated:
 scope:
   - internal/activity
   - internal/cli/activity.go
-confirmed_commit: 58a1a906584b83d5380db9aefa0c83740ed4a6df
+confirmed_commit: b5239826093409fdd1b095d4b70a807d84db8687
 ---
 
 # Agent activity

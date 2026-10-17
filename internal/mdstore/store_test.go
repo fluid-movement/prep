@@ -263,18 +263,6 @@ func TestLocalDirMustBeIgnored(t *testing.T) {
 	}
 }
 
-func TestLegacyConfigConvertsOnlyStateValues(t *testing.T) {
-	in := "views:\n  Busy: --state ready,not-in_progress\n  Mine: --tag in_progress\n  Odd: --state=!in_progress --text in_progress_x\n"
-	want := "views:\n  Busy: --state ready,not-in-progress\n  Mine: --tag in_progress\n  Odd: --state=!in-progress --text in_progress_x\n"
-	got, changed := convertLegacyConfig(in)
-	if got != want || !changed {
-		t.Fatalf("converted =\n%s\nwant\n%s", got, want)
-	}
-	if _, changed := convertLegacyConfig(want); changed {
-		t.Fatal("a converted config converts again")
-	}
-}
-
 func TestLoadSkipsTempFiles(t *testing.T) {
 	root := t.TempDir()
 	s := Open(root)

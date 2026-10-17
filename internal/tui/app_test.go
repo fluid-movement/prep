@@ -1287,7 +1287,7 @@ func TestTransitionsFromTheTUI(t *testing.T) {
 		t.Fatalf("completed by %q", r.By)
 	}
 
-	// Acknowledge a stale change, then drop with a reason.
+	// Take a stale change over as trivial, then drop with a reason.
 	p.do(func(tr *domain.Tree, now time.Time) (*domain.Change, error) {
 		body := "Write rows as JSON, one object per row."
 		return tr.PlanEdit(ids["json"], domain.EditInput{Actor: "test/1", Now: now, Body: &body})
