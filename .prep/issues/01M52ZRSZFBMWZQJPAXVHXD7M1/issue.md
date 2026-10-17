@@ -1,5 +1,5 @@
 ---
-title: Finish hook asks for decisions; redirects match paths
+title: Finish hook asks whether a decision was made
 kind: code
 parent: 01M52ZNHXFXHNDATT9WWQ3C87E
 depends_on:
@@ -8,6 +8,6 @@ tags:
   - integration
 ---
 
-After a turn that changed code, the finish hook asks once whether a decision was made and should be recorded; nothing else. The record redirect hook matches the paths a tool touches, not words in command text (it blocked a prep log whose text named the records directory). Needs an eval case. Decided in 01M4ZCM7TTPASZ2EN8MQN6EPVZ and 01M4ZCM5XQ3J6TM1N4AZ330ZH7.
+After a turn that changed code, the finish hook asks once whether a decision was made and should be recorded; nothing else. Needs an eval case. Decided in 01M4ZCM7TTPASZ2EN8MQN6EPVZ and 01M4ZCM5XQ3J6TM1N4AZ330ZH7. The redirect part was split into its own issue on 2026-10-17.
 
 ## Open questions
