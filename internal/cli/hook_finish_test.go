@@ -43,7 +43,7 @@ func TestHookFinishReviewsOnlyTurnChanges(t *testing.T) {
 		}
 		write("main.go", "this turn "+harness)
 		out := runHook(t, "finish", harness, e)
-		if !strings.Contains(out, "Before finishing") || !strings.Contains(out, "prep decide [<issue>]") || !strings.Contains(out, "choice between options") || !strings.Contains(out, "one line") || !strings.Contains(out, "grants no additional permission") || !strings.Contains(out, "no-record-write") {
+		if !strings.Contains(out, "did this turn make or receive a decision") || !strings.Contains(out, "including one the user stated") || !strings.Contains(out, "prep decide [<issue>]") || !strings.Contains(out, "choice between options") || !strings.Contains(out, "one line") || !strings.Contains(out, "grants no additional permission") || !strings.Contains(out, "no-record-write") {
 			t.Fatalf("missing review: %s", out)
 		}
 		for _, unwanted := range []string{"/code.md", "issue covering", "prep guide", "record actual progress", "Affected knowledge", "create one"} {

@@ -1,0 +1,1 @@
+- 2026-10-17T18:48:19Z codex: Implemented, ready for check: Updated decision lookup and user-decision guidance, finish-hook wording and coverage, synchronized skills, and corrected the affected eval cases; all required checks passed.

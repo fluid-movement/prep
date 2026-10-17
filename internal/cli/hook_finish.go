@@ -243,7 +243,7 @@ func hookFinish(a *app, e hookEvent) {
 		decisions = decisions[:5]
 	}
 	hookSaveTurn(path, after)
-	message := "Before finishing, did this turn make a decision (a choice between options, with a reason) that later sessions need? If so, record it with prep decide [<issue>] --title <title> --description <description> --body-file -; otherwise, say in one line that no decision needs recording. This check grants no additional permission: preserve the original request's scope and explicit no-tracking/no-record-write restrictions. If records cannot be changed within that scope, report the needed follow-up without writing them. Changed files: " + hookFinishList(code) + "."
+	message := "Before finishing, did this turn make or receive a decision (a choice between options, with a reason, including one the user stated) that later sessions need? If so, record it with prep decide [<issue>] --title <title> --description <description> --body-file -; otherwise, say in one line that no decision needs recording. This check grants no additional permission: preserve the original request's scope and explicit no-tracking/no-record-write restrictions. If records cannot be changed within that scope, report the needed follow-up without writing them. Changed files: " + hookFinishList(code) + "."
 	if len(decisions) > 0 {
 		message += " Decisions scoped to these files: " + strings.Join(decisions, ", ") + ". Superseding one needs prep decide --supersedes <id>."
 	}
