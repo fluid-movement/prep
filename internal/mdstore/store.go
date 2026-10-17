@@ -77,7 +77,6 @@ func (s *Store) read(rel string) (string, bool, error) {
 var (
 	issueFiles   = map[string]bool{"issue.md": true, "acceptance.md": true, "context.md": true, "decisions.md": true, "history.md": true, "findings.md": true, "ready.md": true, "claim.md": true, "resolution.md": true}
 	issueDirs    = map[string]bool{"baselines": true, "attachments": true}
-	schemaFiles  = []string{"acceptance.md", "context.md", "decisions.md", "history.md"}
 	projectFiles = map[string]bool{"project.md": true, "config.yaml": true, "config.yaml.dist": true, "issues": true, "knowledge": true, ".gitignore": true, activity.Dir: true}
 )
 
@@ -223,12 +222,6 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 		}
 	}
 	dupes("issue.md", i.Body)
-
-	for _, n := range schemaFiles {
-		if !i.HasFile(n) {
-			diag(domain.CodeSchemaFileMissing, domain.SevWarning, domain.ClassFixable, n, "run prep fix to create it", "%s is missing", n)
-		}
-	}
 
 	plain := func(name string, canon func(string) string) (string, bool, error) {
 		raw, ok, err := s.read(dir + "/" + name)
@@ -542,5 +535,34 @@ func (s *Store) Init(id, name string) ([]string, error) {
 		}
 		written = append(written, f.rel)
 	}
-	return written, nil
+	changed, err := ensureHistoryMerge(s)
+	if err != nil {
+		return written, err
+	}
+	return append(written, changed...), nil
+}
+
+// historyMerge makes parallel appends to a work log merge without conflict.
+const historyMerge = ".prep/**/history.md merge=union"
+
+// ensureHistoryMerge appends historyMerge to the repository's .gitattributes
+// unless it is already there, and reports the file when it writes it.
+func ensureHistoryMerge(s *Store) ([]string, error) {
+	const rel = ".gitattributes"
+	raw, _, err := s.read(rel)
+	if err != nil {
+		return nil, err
+	}
+	for _, line := range strings.Split(raw, "\n") {
+		if strings.TrimSpace(line) == historyMerge {
+			return nil, nil
+		}
+	}
+	if raw != "" && !strings.HasSuffix(raw, "\n") {
+		raw += "\n"
+	}
+	if err := s.write(rel, raw+historyMerge+"\n"); err != nil {
+		return nil, err
+	}
+	return []string{rel}, nil
 }

@@ -93,17 +93,26 @@ func (s *Store) Apply(c *domain.Change) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	var done []string
 	for k, rel := range touched {
-		if contents[k] == nil {
+		if contents[k] == nil || *contents[k] == "" {
+			// A record file exists only while it has content; an empty
+			// body removes it, and a missing file reads as empty. Removing a
+			// file that never existed touches nothing, so it is not reported
+			// (staging a path git has never seen fails).
+			if _, statErr := os.Stat(s.abs(rel)); errors.Is(statErr, fs.ErrNotExist) {
+				continue
+			}
 			err = s.removeFile(rel)
 		} else {
 			err = s.writeFile(rel, []byte(*contents[k]))
 		}
 		if err != nil {
-			return touched, err
+			return done, err
 		}
+		done = append(done, rel)
 	}
-	return touched, nil
+	return done, nil
 }
 
 // writeRank orders a change's files: supporting records first, then the
@@ -130,7 +139,7 @@ func orderForWrite(touched []string, contents []*string) {
 		idx[i] = i
 	}
 	rank := func(k int) int {
-		if contents[k] == nil {
+		if contents[k] == nil || *contents[k] == "" {
 			return 3
 		}
 		return writeRank(touched[k])
@@ -205,11 +214,6 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 		i.Body = requirementBody(i.Prose)
 		if err := w("issue.md", renderIssue(&i)); err != nil {
 			return nil, nil, err
-		}
-		for _, n := range schemaFiles {
-			if err := w(n, ""); err != nil {
-				return nil, nil, err
-			}
 		}
 	}
 	if e := c.Edit; e != nil {
@@ -339,6 +343,9 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 		if dryRun {
 			return nil
 		}
+		if c == "" {
+			return s.remove(rel)
+		}
 		return s.write(rel, c)
 	}
 	always := func(f func(string) string) func(string) (string, bool) {
@@ -429,8 +436,7 @@ func (s *Store) addIgnore(line string) error {
 	return s.write(rel, ign+line+"\n")
 }
 
-// Fix applies safe automatic repairs: canonical format, missing empty schema
-// files, duplicate dependencies and repeated section headings whose copies
+// Fix applies safe automatic repairs: canonical format, duplicate dependencies and repeated section headings whose copies
 // hold content at most once.
 func (s *Store) Fix() ([]string, error) {
 	release, err := s.Hold()
@@ -456,15 +462,6 @@ func (s *Store) Fix() ([]string, error) {
 		dir := IssueDir(id)
 		if _, err := os.Stat(s.abs(dir + "/issue.md")); err != nil {
 			continue
-		}
-		for _, n := range schemaFiles {
-			rel := dir + "/" + n
-			if _, err := os.Stat(s.abs(rel)); errors.Is(err, fs.ErrNotExist) {
-				if err := s.write(rel, ""); err != nil {
-					return changed, err
-				}
-				changed = append(changed, rel)
-			}
 		}
 		rel := dir + "/issue.md"
 		raw, _, err := s.read(rel)

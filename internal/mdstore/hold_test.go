@@ -63,6 +63,9 @@ func TestApplyWritesStateDefiningFileLast(t *testing.T) {
 	id := transactionIssue(t, s)
 	ctx := "Done."
 	at := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
+	if _, err := s.Apply(&domain.Change{IssueID: id, Claim: &domain.Claim{By: "agent/test", At: at}}); err != nil {
+		t.Fatal(err)
+	}
 	touched, err := s.Apply(&domain.Change{
 		IssueID:     id,
 		Resolution:  &domain.Resolution{Outcome: "done", By: "human:test", At: at, Note: "ok"},

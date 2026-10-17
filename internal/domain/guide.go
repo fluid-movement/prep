@@ -188,7 +188,7 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 		}
 	}
 	for _, a := range t.Ancestors(id) {
-		if ai := t.Issues[a]; ai != nil && ai.HasFile("context.md") && strings.TrimSpace(ai.Context) != "" {
+		if ai := t.Issues[a]; ai != nil && strings.TrimSpace(ai.Context) != "" {
 			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(a), "context.md"), "parent context: " + ai.Title, ""})
 		}
 	}

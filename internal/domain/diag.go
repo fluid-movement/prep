@@ -59,7 +59,6 @@ const (
 	CodeRecordInvalid      = "I015" // baseline/ready/claim/resolution malformed
 	CodeDepDropped         = "I016"
 	CodeNotCanonical       = "I017"
-	CodeSchemaFileMissing  = "I018"
 	CodeDecisionInvalid    = "I019"
 	CodeSelfDependency     = "I021"
 	CodeDuplicateDep       = "I022"
