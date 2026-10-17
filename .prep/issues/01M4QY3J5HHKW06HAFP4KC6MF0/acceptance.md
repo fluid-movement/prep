@@ -1,3 +1,3 @@
-- [ ] prep eval prune removes the kept workspaces of the runs it removes
-- [ ] A way to remove all leftover workspaces exists and is documented
-- [ ] Tested with a failing fake run
+- [x] prep eval prune removes the kept workspaces of the runs it removes
+- [x] A way to remove all leftover workspaces exists and is documented
+- [x] Tested with a failing fake run
