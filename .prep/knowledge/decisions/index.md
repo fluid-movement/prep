@@ -176,6 +176,7 @@
 * [Gates keep what an agent needs and a check catches; decision and research complete from defined](/decisions/01M54VQCGFB4NRKKH4ZT4PQKW7.md) - Gates keep what an agent needs and a check catches; decision and research complete from defined
 * [Prep's part in a handoff is prep guide; the rest is harness and git](/decisions/01M54VQCGG9212J72216RJ1J8V.md) - Prep's part in a handoff is prep guide; the rest is harness and git
 * [D1 stands: prep guide is prep's whole part in a handoff](/decisions/01M54VQCGH5PXE6D91TKRTQJYM.md) - D1 stands: prep guide is prep's whole part in a handoff
+* [Skill carries rules.md verbatim, kept in sync by a test](/decisions/01M553Q3RG9SGHQSXR064R05FQ.md) - skill.md is a hand-kept short intro plus rules.md, and a test fails when it drifts.
 * [Design principles](/decisions/design-principles.md) - The nine principles prep is built on; check changes against them.
 * [Out of scope](/decisions/out-of-scope.md) - Topics deliberately left out of prep; each can be added later without changing the model.
 * [Prior art](/decisions/prior-art.md) - What prep took from and avoided in Backlog.md and Beads, and why spec-driven tools are a different category.

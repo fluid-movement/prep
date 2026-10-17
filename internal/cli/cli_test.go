@@ -347,14 +347,22 @@ func TestGuideJSONAndPrime(t *testing.T) {
 	if pr.Issues != 2 || len(pr.Parents) != 1 || pr.Parents[0].ID != p {
 		t.Fatalf("prime = %+v", pr)
 	}
-	// The briefing reaches every session, unlike the skill, so it carries the knowledge-read rule.
-	for _, want := range []string{"prep knowledge find", "instead of grep", "never the files", "smallest model", "wide surveys to a smaller one", "unchanged", "never read back a saved output file"} {
-		if !strings.Contains(pr.Hint, want) {
-			t.Fatalf("prime hint lacks %q: %q", want, pr.Hint)
-		}
+	// The briefing reaches every session, so it carries the workflow rules from rules.md.
+	if pr.Rules != rulesText {
+		t.Fatalf("prime rules = %q", pr.Rules)
 	}
-	if out := h.ok("prime"); !strings.Contains(out, "never read back a saved output file.") {
-		t.Fatalf("prime text lacks the hint:\n%s", out)
+	if out := h.ok("prime"); !strings.HasSuffix(out, "\nWorkflow rules:\n"+rulesText) {
+		t.Fatalf("prime text lacks the workflow rules:\n%s", out)
+	}
+}
+
+// The skill is a short intro plus the rules text, so it cannot drift from rules.md.
+func TestSkillContainsRules(t *testing.T) {
+	if !strings.HasSuffix(skillText, "\nWorkflow rules:\n"+rulesText) {
+		t.Fatal("internal/cli/skill.md must end with 'Workflow rules:' and the text of internal/cli/rules.md")
+	}
+	if strings.Contains(skillText, "`prep edit") || len(skillText) > 2500 {
+		t.Fatal("the skill is a short intro and the rules, with no command reference")
 	}
 }
 

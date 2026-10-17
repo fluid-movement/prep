@@ -141,7 +141,7 @@ func TestHookSessionAndActivity(t *testing.T) {
 	for _, harness := range []string{"claude-code", "codex"} {
 		e := hookEvent{Cwd: h.dir, Session: "session-1"}
 		out := runHook(t, "session-start", harness, e)
-		if !strings.Contains(out, "SessionStart") || !strings.Contains(out, "prep guide") {
+		if !strings.Contains(out, "SessionStart") || !strings.Contains(out, "Workflow rules:") {
 			t.Fatalf("session: %s", out)
 		}
 		e.Tool = "Bash"
