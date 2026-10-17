@@ -1,0 +1,1 @@
+- [x] Every area has a recorded verdict, and the verdicts are carried into release 0.3.0 (01M52ZNHXFXHNDATT9WWQ3C87E)

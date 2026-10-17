@@ -12,3 +12,9 @@ User decisions, 2026-10-16. TUI only: delete the desktop app (about 6,600 lines 
 date: 2026-10-16
 
 Agreed with the area, 2026-10-16. Evals measure agent behavior, so the stream needs no long history: keep the current retention and drop 01M4J8JVQ7TVGMEF0BB2AZRFG8 when actionable work is created. prep focus stays (sets the agent's current issue). prep watch stays only if something outside the TUI still uses it.
+
+## D4: Verdicts carried into release 0.3.0
+date: 2026-10-17
+outcome: true
+
+Verdicts recorded in this issue's decisions, 2026-10-16/17, are carried into release 0.3.0 (01M52ZNHXFXHNDATT9WWQ3C87E) by 01M52ZQ7J4SGWXY2W9X8EPEJV1, 01M52ZQPFMW4CHE24H7BFWHSTD, 01M52ZRH1Q2ZW3QC5KQ6A12BPC. Open questions raised here were settled by the release's decision issues.

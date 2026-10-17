@@ -22,3 +22,9 @@ Agent's choice at the user's request, 2026-10-16. For a gate: it forces a moment
 date: 2026-10-16
 
 User proposal with agent agreement, 2026-10-16. Issues hold the work: requirement, how, criteria, log and state; they change until done. Knowledge holds what was decided and what was learned: decision records and findings, dated and never changed, only superseded by newer records. Research findings move from findings.md in the issue to finding records in the knowledge base, linked to the issue. Kind outcomes follow: a decision issue produces a decision record, a research issue produces a finding record, which makes their completion gates checkable (a linked record exists).
+
+## D6: Verdicts carried into release 0.3.0
+date: 2026-10-17
+outcome: true
+
+Verdicts recorded in this issue's decisions, 2026-10-16/17, are carried into release 0.3.0 (01M52ZNHXFXHNDATT9WWQ3C87E) by 01M52ZR294ZMVPKF7N2KPPKD9Q, 01M52ZRB3VY0MSZ0HZWJ2SEC24, 01M52ZRE24EMGBHX3SKV62436G, 01M52ZRSZFBMWZQJPAXVHXD7M1. Open questions raised here were settled by the release's decision issues.

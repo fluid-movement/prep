@@ -12,3 +12,9 @@ User decision, 2026-10-16. Done is settled in the session between agent and huma
 date: 2026-10-16
 
 User agreed with the recommendation, 2026-10-16. Reopen when the requirement still holds but the result is wrong, for example when the checking agent sends a subagent's work back: criteria, context and decisions stay valid. File a follow-up issue when the requirement changes or the work is new. Minimal means: reopen moves the old resolution into the issue's history and returns the issue to ready; no resolution generations, fingerprints or review binding. Reopen was used twice since it was added.
+
+## D4: Verdicts carried into release 0.3.0
+date: 2026-10-17
+outcome: true
+
+Verdicts recorded in this issue's decisions, 2026-10-16/17, are carried into release 0.3.0 (01M52ZNHXFXHNDATT9WWQ3C87E) by 01M52ZQDGE4WPA096TW2EHMZ4N. Open questions raised here were settled by the release's decision issues.

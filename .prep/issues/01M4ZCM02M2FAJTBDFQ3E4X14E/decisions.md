@@ -17,3 +17,9 @@ User direction, 2026-10-16, restating design principle 1. Prep defines what must
 date: 2026-10-16
 
 User agreed, 2026-10-16. Implementers do not complete; they log that the work is implemented and ready for checking, and stop. Whoever checks (main agent, with the user when needed) completes. The claim and log show work waiting for a check. Promote to a recorded state only if work gets lost in practice.
+
+## D5: Verdicts carried into release 0.3.0
+date: 2026-10-17
+outcome: true
+
+Verdicts recorded in this issue's decisions, 2026-10-16/17, are carried into release 0.3.0 (01M52ZNHXFXHNDATT9WWQ3C87E) by 01M52ZR56WW8WDH9QGKJFN32FP. Open questions raised here were settled by the release's decision issues.

@@ -17,3 +17,9 @@ User decision, 2026-10-16. Hooks plus the CLI are good enough; no MCP server for
 date: 2026-10-16
 
 User agreed, 2026-10-16. The prompt hook crafts its text as now but sends it only when it differs from what it last sent in the session; session start re-fires after compaction and restores the briefing. The workflow rules (about 1.5 KB) are injected at session start; the skill is a short copy of them for setups without hooks.
+
+## D5: Verdicts carried into release 0.3.0
+date: 2026-10-17
+outcome: true
+
+Verdicts recorded in this issue's decisions, 2026-10-16/17, are carried into release 0.3.0 (01M52ZNHXFXHNDATT9WWQ3C87E) by 01M52ZR8564ECW8GP3ZHSXEM0A, 01M52ZRM0R2QPKK4HZE6PV62CE, 01M52ZRPZXEJDACVHTHEPX77MY, 01M52ZRSZFBMWZQJPAXVHXD7M1, 01M52ZRX0B8831K07HHVAQ6S5F. Open questions raised here were settled by the release's decision issues.

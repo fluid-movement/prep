@@ -1,3 +1,5 @@
 - 2026-10-16T14:06:13Z claude-code: Eval bug found 2026-10-16 in run 20261016-101957-23ca: 57 of 100 sessions ended with the harness error 'You've hit your session limit' (result is_error true), yet were recorded with status completed and scored as failed assertions. The eval design says a harness failure is an error status, never a failed assertion; the report's pass rates were meaningless until recomputed by hand.
 
 - 2026-10-16T16:38:19Z claude-code: Measured 2026-10-16: eval is about 9,600 lines (internal/eval 8,325 plus CLI 1,282; largest parts fixture 1,032, results 854, outcome assertions 729, tool assertions 675, mutate 649, models 600, matrix 594), 29 cases, 6 fixtures, a calibrated judge. Subcommand use in transcripts: run 25, report 11, list 6, doctor 6, errors 3, judge-check 3, check 2, compare, prune, mutate and models 1 each. The weekly CI eval workflow has never run (no credential secret). The knowledge-policy pilot built a separate Python runner for Codex instead of prep eval.
+
+- 2026-10-17T10:39:09Z edited by claude-code: requirement

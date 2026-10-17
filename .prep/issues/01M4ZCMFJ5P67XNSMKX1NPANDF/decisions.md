@@ -22,3 +22,9 @@ User agreed, 2026-10-16, following the rule of no compatibility before outside u
 date: 2026-10-16
 
 User direction, 2026-10-16. OKF is still beta; staying in the format is preferred, and a break is acceptable if documented and reconciled later. Known tension: OKF requires a generated index.md per directory listing every entry, so new decision records on parallel branches all change the same index and conflict on merge, defeating one-file-per-record. Since the index is derived, first try resolving conflicts by regenerating it (prep fix, or a git merge driver); if that is too clumsy, it is the first candidate for a documented break.
+
+## D6: Verdicts carried into release 0.3.0
+date: 2026-10-17
+outcome: true
+
+Verdicts recorded in this issue's decisions, 2026-10-16/17, are carried into release 0.3.0 (01M52ZNHXFXHNDATT9WWQ3C87E) by 01M52ZQKG3PZZ6YS5P4Z81FKGC, 01M52ZQSEP2EKTYKYFC79EGFS6, 01M52ZQZBAS48ZK64MW7H85QJ4, 01M52ZRB3VY0MSZ0HZWJ2SEC24. Open questions raised here were settled by the release's decision issues.
