@@ -367,7 +367,8 @@ func (p *Project) buildKnowledge(run func(...string) (string, error)) error {
 		}
 	}
 	for _, k := range entries {
-		if k.Path == "" || k.Title == "" {
+		record := k.Type == "decision" || k.Type == "finding"
+		if k.Title == "" || (!record && k.Path == "") {
 			return fmt.Errorf("knowledge entry needs a path and a title")
 		}
 		typ, desc := k.Type, k.Description
@@ -383,6 +384,27 @@ func (p *Project) buildKnowledge(run func(...string) (string, error)) error {
 		}
 		if body == "" {
 			body = k.Title + "."
+		}
+		if record {
+			command := "decide"
+			if typ == "finding" {
+				command = "finding"
+			}
+			args := []string{command}
+			if k.Issue != "" {
+				args = append(args, p.IDs[k.Issue])
+			}
+			args = append(args, "--title", k.Title, "--description", desc, "--body", body)
+			for _, scope := range k.Scope {
+				args = append(args, "--scope", scope)
+			}
+			if k.Outcome {
+				args = append(args, "--outcome")
+			}
+			if _, err := run(args...); err != nil {
+				return err
+			}
+			continue
 		}
 
 		data, err := yaml.Marshal(map[string]any{"type": typ, "title": k.Title, "description": desc, "scope": k.Scope})
@@ -514,6 +536,15 @@ func (p *Project) buildIssues(run func(...string) (string, error)) error {
 	for _, i := range trans {
 		if err := p.reach(run, issues[i], ids[i], stateOf(i)); err != nil {
 			return fmt.Errorf("issue %q: %w", issues[i].Title, err)
+		}
+		for _, entry := range issues[i].Log {
+			text, err := p.Expand(entry)
+			if err != nil {
+				return err
+			}
+			if _, err := run("log", ids[i], text); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

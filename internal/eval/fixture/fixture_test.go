@@ -209,12 +209,15 @@ issues:
 
 func TestSpecErrors(t *testing.T) {
 	for name, src := range map[string]string{
-		"unknown key":    "name: x\nbogus: 1\n",
-		"no title":       "issues: [{kind: code}]\n",
-		"bad state":      "issues: [{title: a, state: finished}]\n",
-		"bad parent":     "issues: [{title: a, parent: nope}]\n",
-		"duplicate":      "issues: [{alias: a, title: a}, {alias: a, title: b}]\n",
-		"bad dependency": "issues: [{title: a, depends_on: [nope]}]\n",
+		"unknown key":     "name: x\nbogus: 1\n",
+		"no title":        "issues: [{kind: code}]\n",
+		"bad state":       "issues: [{title: a, state: finished}]\n",
+		"bad parent":      "issues: [{title: a, parent: nope}]\n",
+		"duplicate":       "issues: [{alias: a, title: a}, {alias: a, title: b}]\n",
+		"bad dependency":  "issues: [{title: a, depends_on: [nope]}]\n",
+		"record issue":    "knowledge: [{type: decision, title: Choice, issue: missing}]\n",
+		"finding outcome": "knowledge: [{type: finding, title: Result, outcome: true}]\n",
+		"entry issue":     "issues: [{alias: a, title: A}]\nknowledge: [{type: component, title: A, issue: a}]\n",
 	} {
 		if _, err := LoadSpec(strings.NewReader(src)); err == nil {
 			t.Errorf("%s: no error", name)
@@ -231,6 +234,106 @@ func TestSpecErrors(t *testing.T) {
 	_, err = Build(load(t, "issues: [{alias: a, title: a, parent: b}, {alias: b, title: b, parent: a}]\n"), t.TempDir(), Options{Binary: prepBin})
 	if err == nil || !strings.Contains(err.Error(), "cycle") {
 		t.Errorf("cycle: %v", err)
+	}
+}
+
+func TestKnowledgeRecords(t *testing.T) {
+	const src = `
+issues:
+  - {alias: choice, title: Choose totals policy, kind: decision, state: defined}
+  - {alias: research, title: Measure cart sizes, kind: research, state: defined}
+knowledge:
+  - type: decision
+    title: Recompute totals
+    description: Avoid stale totals.
+    body: 'Small carts measured in {{research}} do not justify caching.'
+    scope: [src/cart.go, src/checkout/**]
+    issue: choice
+    outcome: true
+  - type: finding
+    title: Small carts
+    description: Most carts have fewer than ten items.
+    body: Measured production cart sizes.
+    scope: [src/cart.go]
+    issue: research
+  - type: decision
+    title: Standalone choice
+    description: A project-wide decision.
+`
+	p, q := build(t, load(t, src)), build(t, load(t, src))
+	if treeHash(t, p.Dir) != treeHash(t, q.Dir) {
+		t.Fatal("record fixtures are not deterministic")
+	}
+	out, err := p.Query("knowledge", "list", "--json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var listed struct {
+		Entries []struct {
+			ID, Path, Type, Title, Description, Date, Issue string
+			Scope                                           []string
+			Outcome                                         bool
+		}
+	}
+	if err := json.Unmarshal([]byte(out), &listed); err != nil {
+		t.Fatal(err)
+	}
+	records := 0
+	for _, e := range listed.Entries {
+		if e.Type != "decision" && e.Type != "finding" {
+			continue
+		}
+		records++
+		if len(e.ID) != 26 || e.Path != "/"+e.Type+"s/"+e.ID+".md" || e.Date != "2026-01-05" || e.Description == "" {
+			t.Errorf("invalid record metadata: %+v", e)
+		}
+		switch e.Title {
+		case "Recompute totals":
+			if e.Issue != p.IDs["choice"] || !e.Outcome || len(e.Scope) != 2 {
+				t.Errorf("decision metadata: %+v", e)
+			}
+			if body, err := p.Query("knowledge", "show", e.Path); err != nil || !strings.Contains(body, p.IDs["research"]) {
+				t.Errorf("decision body alias: %v %s", err, body)
+			}
+		case "Small carts":
+			if e.Issue != p.IDs["research"] || e.Outcome || len(e.Scope) != 1 {
+				t.Errorf("finding metadata: %+v", e)
+			}
+		case "Standalone choice":
+			if e.Issue != "" || len(e.Scope) != 0 {
+				t.Errorf("standalone metadata: %+v", e)
+			}
+		}
+	}
+	if records != 3 {
+		t.Errorf("got %d records, want 3", records)
+	}
+	for _, args := range [][]string{{"check"}, {"fmt", "--check"}} {
+		if out, err := p.Query(args...); err != nil {
+			t.Errorf("%v: %v %s", args, err, out)
+		}
+	}
+}
+
+func TestCheckerFixture(t *testing.T) {
+	f, err := os.Open("../../../eval/fixtures/order-emails-check.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	s, err := LoadSpec(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := build(t, s)
+	out, err := p.Query("show", p.IDs["emails"], "--json")
+	if err != nil || !strings.Contains(out, "Implemented, ready for check") || !strings.Contains(out, "in-progress") {
+		t.Fatalf("checker handoff: %v %s", err, out)
+	}
+	cmd := exec.Command("go", "test", "./...")
+	cmd.Dir = p.Dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("fixture code: %v %s", err, out)
 	}
 }
 

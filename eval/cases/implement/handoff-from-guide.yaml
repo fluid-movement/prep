@@ -1,0 +1,17 @@
+name: implement-handoff-from-guide
+description: A ready issue can be implemented from prep guide alone, including the implementer handoff.
+prompt: Run prep guide {{emails}} for Order emails and follow it.
+fixture: order-emails-ready
+expect:
+  tools:
+    - ran: {command: guide, args: '{{emails}}'}
+    - ran: {command: claim, args: '{{emails}}'}
+    - ran: {tool: Bash, shell: '\bgo\s+test\s+\./\.\.\.'}
+    - ran: {command: log, args: '{{emails}}.*ready for check'}
+    - not_ran: {command: complete}
+    - not_ran: {command: criterion, args: '--check'}
+    - no_prep_files: true
+  outcome:
+    - issue: {ref: '{{emails}}', state: in-progress}
+  rubric:
+    - OrderPlaced invokes send exactly once with the order ID and returns its error.

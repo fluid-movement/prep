@@ -1,0 +1,38 @@
+name: shop
+repo:
+  files:
+    go.mod: "module shop\n\ngo 1.22\n"
+    src/emails.go: |
+      package shop
+
+      func OrderPlaced(orderID string, send func(string) error) error {
+          return nil
+      }
+    src/emails_test.go: |
+      package shop
+
+      import (
+          "errors"
+          "testing"
+      )
+
+      func TestOrderPlaced(t *testing.T) {
+          want := errors.New("delivery failed")
+          calls := 0
+          err := OrderPlaced("order-42", func(id string) error {
+              calls++
+              if id != "order-42" { t.Errorf("order ID = %q", id) }
+              return want
+          })
+          if calls != 1 || err != want { t.Fatalf("calls = %d, error = %v", calls, err) }
+      }
+issues:
+  - alias: emails
+    title: Order emails
+    state: ready
+    body: Send an email when an order is placed.
+    context: >-
+      Implement OrderPlaced in src/emails.go by calling the supplied send callback
+      exactly once with the order ID and returning its error. Run `go test ./...`.
+      Another agent checks the work after you log Implemented, ready for check.
+    criteria: [OrderPlaced sends the order ID exactly once and propagates the delivery error]
