@@ -10,11 +10,12 @@ import (
 // a field OR. The CLI and the TUI share it, so both agree on what each derived
 // state means.
 type Filter struct {
-	States     []State
-	Kinds      []Kind
-	Tags       []string
-	Priorities []Priority // effective levels; medium matches unset
-	Under      []string
+	StateSpecified bool // an explicit --state, including all
+	States         []State
+	Kinds          []Kind
+	Tags           []string
+	Priorities     []Priority // effective levels; medium matches unset
+	Under          []string
 	// Excluded values: a leading not- or ! in a list flag's value
 	// (--state not-open).
 	// An issue matches a flag when it has one of the plain values (or there
@@ -68,9 +69,13 @@ func ParseFilter(args []string) (Filter, error) {
 		var err error
 		switch name {
 		case "state":
+			f.StateSpecified = true
 			var v string
 			if v, err = takeVal(); err == nil {
 				for _, s := range strings.Split(v, ",") {
+					if s == "all" {
+						continue
+					}
 					s, neg := negated(s)
 					st := State(s)
 					if !hasState(States, st) {

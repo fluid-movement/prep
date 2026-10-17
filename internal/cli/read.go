@@ -170,6 +170,19 @@ func cmdList(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	hidden := 0
+	defaultState := !a.json && view == "" && !f.StateSpecified
+	if defaultState {
+		visible := make([]string, 0, len(ids))
+		for _, id := range ids {
+			if t.State(id).Terminal() {
+				hidden++
+			} else {
+				visible = append(visible, id)
+			}
+		}
+		ids = visible
+	}
 	matched := len(ids)
 	if max > 0 && !tree && len(ids) > max {
 		ids = ids[:max]
@@ -181,6 +194,9 @@ func cmdList(a *app, args []string) error {
 			matched[id] = true
 		}
 		all := t.TreeOrder(t.WithAncestors(ids))
+		if defaultState {
+			all = slices.DeleteFunc(all, func(id string) bool { return t.State(id).Terminal() })
+		}
 		set := map[string]bool{}
 		for _, id := range all {
 			set[id] = true
@@ -213,6 +229,9 @@ func cmdList(a *app, args []string) error {
 	a.printSummaries(out)
 	if matched > len(out) && !tree {
 		a.printf("(%d of %d shown; --max N changes that)\n", len(out), matched)
+	}
+	if hidden > 0 {
+		a.printf("%d resolved issues hidden; --state all shows them\n", hidden)
 	}
 	return nil
 }
@@ -380,8 +399,17 @@ func cmdShow(a *app, args []string) error {
 	if i.Parent != "" {
 		a.printf("parent: %s %s\n", i.Parent, titleOf(t, i.Parent))
 	}
-	for _, c := range t.Children(id) {
+	children := t.Children(id)
+	hiddenChildren := 0
+	for _, c := range children {
+		if len(children) > 30 && t.State(c).Terminal() {
+			hiddenChildren++
+			continue
+		}
 		a.printf("child: %s [%s] %s\n", c, t.State(c), titleOf(t, c))
+	}
+	if hiddenChildren > 0 {
+		a.printf("%d resolved children hidden; prep list --under %s --state all\n", hiddenChildren, id)
 	}
 	if len(i.Tags) > 0 {
 		a.printf("tags: %s\n", strings.Join(i.Tags, ", "))

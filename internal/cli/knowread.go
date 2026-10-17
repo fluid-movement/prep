@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/fluid-movement/prep/internal/activity"
@@ -44,7 +45,36 @@ func tokens(bytes int) string {
 }
 
 func knowledgeList(a *app, args []string) error {
-	f, err := domain.ParseKnowledgeFilter(args)
+	limit, all := 30, false
+	var query []string
+	for k := 0; k < len(args); k++ {
+		arg := args[k]
+		switch {
+		case arg == "--all":
+			all = true
+		case arg == "--max" || strings.HasPrefix(arg, "--max="):
+			value := strings.TrimPrefix(arg, "--max=")
+			if arg == "--max" {
+				k++
+				if k == len(args) {
+					return usageErr("--max needs a number")
+				}
+				value = args[k]
+			}
+			n, err := strconv.Atoi(value)
+			if err != nil || n < 1 {
+				return usageErr("--max needs a positive number")
+			}
+			limit = n
+		default:
+			query = append(query, arg)
+			if strings.HasPrefix(arg, "--") && !strings.Contains(arg, "=") && k+1 < len(args) {
+				k++
+				query = append(query, args[k])
+			}
+		}
+	}
+	f, err := domain.ParseKnowledgeFilter(query)
 	if err != nil {
 		return usageErr("knowledge list: %v", err)
 	}
@@ -62,9 +92,32 @@ func knowledgeList(a *app, args []string) error {
 		a.emit(map[string]any{"entries": out})
 		return nil
 	}
+	slices.SortFunc(paths, func(a, b string) int {
+		x, y := t.Knowledge[a], t.Knowledge[b]
+		if x.Superseded != y.Superseded {
+			if x.Superseded {
+				return 1
+			}
+			return -1
+		}
+		if c := strings.Compare(y.Date, x.Date); c != 0 {
+			return c
+		}
+		if c := strings.Compare(y.ID, x.ID); c != 0 {
+			return c
+		}
+		return strings.Compare(a, b)
+	})
+	total := len(paths)
+	if !all && len(paths) > limit {
+		paths = paths[:limit]
+	}
 	for _, p := range paths {
 		e := t.Knowledge[p]
 		a.printf("%s  %s  %s — %s (%s)\n", p, e.Type, recordTitle(e.Title, e.Superseded), e.Description, tokens(len(e.Body)))
+	}
+	if total > len(paths) {
+		a.printf("%d more; --max %d or --all\n", total-len(paths), total)
 	}
 	if len(paths) == 0 {
 		a.printf("no knowledge entries match\n")
@@ -74,7 +127,7 @@ func knowledgeList(a *app, args []string) error {
 
 func knowledgeFind(a *app, args []string) error {
 	fs := flag.NewFlagSet("knowledge find", flag.ContinueOnError)
-	limit := fs.Int("max", 8, "most blocks to print (0: all)")
+	limit := fs.Int("max", 5, "most blocks to print (0: all; explicit --max bypasses the default text budget)")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -87,7 +140,19 @@ func knowledgeFind(a *app, args []string) error {
 		return err
 	}
 	a.noteRead(activity.Event{Op: "knowledge find", Verb: "searched knowledge", Target: strings.Join(pos, " "), Area: activity.AreaKnowledge})
-	hits := t.FindKnowledge(strings.Join(pos, " "), *limit)
+	explicit := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "max" {
+			explicit = true
+		}
+	})
+	if *limit < 0 {
+		return usageErr("--max must not be negative")
+	}
+	hits := t.FindKnowledge(strings.Join(pos, " "), 0)
+	if a.json && explicit && *limit > 0 && len(hits) > *limit {
+		hits = hits[:*limit]
+	}
 	if a.json {
 		if hits == nil {
 			hits = []domain.KnowledgeHit{}
@@ -99,6 +164,10 @@ func knowledgeFind(a *app, args []string) error {
 		a.printf("nothing matches; prep knowledge list shows every entry\n")
 		return nil
 	}
+	total := len(hits)
+	if *limit > 0 && len(hits) > *limit {
+		hits = hits[:*limit]
+	}
 	// Grouped by entry, entries in the order of their best block.
 	var order []string
 	by := map[string][]domain.KnowledgeHit{}
@@ -108,21 +177,49 @@ func knowledgeFind(a *app, args []string) error {
 		}
 		by[h.Path] = append(by[h.Path], h)
 	}
+	var output strings.Builder
+	var blockEnds []int
 	for k, p := range order {
 		if k > 0 {
-			a.printf("\n")
+			fmt.Fprintf(&output, "\n")
 		}
-		a.printf("== %s — %s (whole entry %s)\n", p, recordTitle(by[p][0].Title, by[p][0].Superseded), tokens(len(t.Knowledge[p].Body)))
+		fmt.Fprintf(&output, "== %s — %s (whole entry %s)\n", p, recordTitle(by[p][0].Title, by[p][0].Superseded), tokens(len(t.Knowledge[p].Body)))
 		section := ""
 		for _, h := range by[p] {
 			// Label the section when it changes, unless it is the entry's own title heading.
 			if h.Anchor != section && h.Heading != h.Title {
-				a.printf("[#%s %s]\n", h.Anchor, h.Heading)
+				fmt.Fprintf(&output, "[#%s %s]\n", h.Anchor, h.Heading)
 			}
 			section = h.Anchor
-			a.printf("%s\n", h.Text)
+			fmt.Fprintf(&output, "%s\n", h.Text)
+			blockEnds = append(blockEnds, len([]rune(output.String())))
 		}
 	}
+	text := output.String()
+	shown := len(hits)
+	cut := total > shown
+	if !explicit {
+		const budget = 3000
+		footer := fmt.Sprintf("%d more matches; --max %d\n", total, total)
+		room := budget - len([]rune(footer)) - 2
+		if runes := []rune(text); len(runes) > room {
+			text = string(runes[:room]) + "…\n"
+			cut = true
+			// Count a partially printed block as omitted so --max recovers it too.
+			printed := 0
+			for _, end := range blockEnds {
+				if end <= room {
+					printed++
+				}
+			}
+			shown = printed
+		}
+	}
+	a.printf("%s", text)
+	if cut {
+		a.printf("%d more matches; --max %d\n", total-shown, total)
+	}
+
 	return nil
 }
 
