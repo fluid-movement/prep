@@ -232,3 +232,20 @@ func TestGatesForDefineAndComplete(t *testing.T) {
 }
 
 func must(unmet []Unmet, _ []string) []Unmet { return unmet }
+
+// A resolved issue's references to knowledge are history: removing an entry
+// later is no error or warning there, while an open issue's link still warns.
+func TestRemovedEntryIsHistoryForResolvedIssues(t *testing.T) {
+	done := &Issue{ID: "01KDYYYSM08C9CDRA20DXH61HN", Title: "A", Kind: KindCode, ContextLinks: []string{"/components/gone.md"},
+		Resolution: &Resolution{Outcome: "done", Documentation: &Documentation{Entries: []string{"/components/gone.md"}}}}
+	open := &Issue{ID: "01KDZ2CN80NAXMQZ9SREPYAMQQ", Title: "B", Kind: KindCode, ContextLinks: []string{"/components/gone.md"}}
+	var got []string
+	for _, d := range Validate(NewTree(Project{}, []*Issue{done, open}, nil, nil)) {
+		if d.Code == CodeContextLinkMissing || strings.Contains(d.Message, "/components/gone.md") {
+			got = append(got, d.Issue+" "+d.Code)
+		}
+	}
+	if want := open.ID + " " + CodeContextLinkMissing; strings.Join(got, ",") != want {
+		t.Fatalf("diagnostics about the removed entry = %v, want only %q", got, want)
+	}
+}

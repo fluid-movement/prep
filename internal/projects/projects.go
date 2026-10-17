@@ -2,7 +2,7 @@
 // project root a prep command ran in, with the time it was last used. It is
 // state, not a choice, so it lives in $XDG_STATE_HOME/prep/projects.json
 // (default ~/.local/state/prep/projects.json), not in the user configuration.
-// Clients such as the desktop app and the TUI list it to switch between
+// Clients such as the TUI list it to switch between
 // projects, and the CLI resolves --project and cross-project links through it.
 //
 // A project's identity is the permanent ID in its project.md, shared by every

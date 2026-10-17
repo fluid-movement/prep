@@ -99,34 +99,6 @@ release version:
     git tag -a "{{version}}" -m "prep {{version}}"
     echo "tagged {{version}}; publish it with: git push origin main {{version}}"
 
-# Build the macOS desktop app into desktop/build/Prep.app (ad-hoc signed)
-desktop:
-    #!/usr/bin/env sh
-    set -eu
-    cd desktop
-    swift build -c release --product PrepDesktop
-    app=build/Prep.app
-    rm -rf "$app"
-    mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-    cp "$(swift build -c release --show-bin-path)/PrepDesktop" "$app/Contents/MacOS/"
-    v='{{version}}'; v="${v#v}"; case "$v" in [0-9]*) ;; *) v=0.0.0 ;; esac
-    sed "s/VERSION/${v%%-*}/g" Resources/Info.plist > "$app/Contents/Info.plist"
-    rm -rf build/AppIcon.iconset
-    "$app/Contents/MacOS/PrepDesktop" --render-icon build/AppIcon.iconset >/dev/null
-    iconutil -c icns build/AppIcon.iconset -o "$app/Contents/Resources/AppIcon.icns"
-    codesign --force --sign - "$app"
-    echo "built desktop/$app; open it with: open desktop/$app --args <project dir>"
-
-# Test the desktop app's PrepKit (against ./prep, built first)
-desktop-test: build
-    cd desktop && PREP_BIN='{{justfile_directory()}}/prep' swift test
-
-# Render the desktop app offscreen to a PNG: just desktop-snapshot out.png --select <id>
-desktop-snapshot out *args: build
-    cd desktop && swift build --product PrepDesktop
-    PREP_BIN='{{justfile_directory()}}/prep' desktop/.build/debug/PrepDesktop '{{justfile_directory()}}' --snapshot '{{absolute_path(out)}}' {{args}}
-
 # Remove build output
 clean:
     rm -f prep
-    rm -rf desktop/build desktop/.build

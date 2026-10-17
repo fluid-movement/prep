@@ -24,7 +24,7 @@ internal/mdstore    issue store adapter: .prep/issues as markdown
 internal/okf        knowledge store adapter: .prep/knowledge as an OKF v0.2 bundle
 internal/gitx       the few git calls (staging, drift, commit evidence)
 internal/activity   the local activity stream under .prep/local: append, prune, read, derive each actor's current issue (no store imports)
-internal/watch      fsnotify watcher over .prep (recursive, debounced), shared by prep watch and the TUI
+internal/watch      fsnotify watcher over .prep (recursive, debounced), used by the TUI
 internal/palette    TUI color tokens, built-in themes, custom theme resolution, derived state colors (no TUI imports)
 internal/tui        human interface: screens (Bubble Tea) loading through an injected loader; theme and ui hold the design system
 internal/setup      harness integrations installed, refreshed and removed by prep setup
@@ -32,7 +32,6 @@ internal/userconfig the user's choices in ~/.config/prep/config.yaml (harnesses,
 internal/projects   the machine-local registry of project roots ($XDG_STATE_HOME/prep/projects.json), project identity and resolution (--project)
 internal/update     prep update: download, checksum check and replacement of the binary
 internal/eval       agent behavior tests: fixtures, isolated runs of Claude Code, transcripts, assertions, judge, matrix, results, variants, mutation (no imports of cli)
-desktop/            the macOS app (Swift), a client of the CLI's JSON and prep watch
 ```
 
 - Ports are defined in `internal/domain/ports.go`: `IssueStore` (checked record writes: `Load`, `Apply`) and `KnowledgeStore` (retrieval: `Load`; writes: `Render` then `Apply`). They are separate because access patterns differ.
@@ -42,5 +41,5 @@ desktop/            the macOS app (Swift), a client of the CLI's JSON and prep w
 
 Lifecycle hook behavior is shared in `internal/cli/hook.go` and `hook_finish.go`; harnesses provide event adapters, not workflow logic. See [Shared lifecycle hooks](/components/hooks.md).
 
-Details: [domain](/components/domain.md), [markdown store](/components/markdown-store.md), [OKF store](/components/okf-store.md), [CLI](/components/cli.md), [TUI design system](/components/tui-design-system.md), [setup and user configuration](/components/setup.md), [release, install and update](/components/release.md), [desktop app](/components/desktop.md), [agent behavior tests](/components/eval.md).
+Details: [domain](/components/domain.md), [markdown store](/components/markdown-store.md), [OKF store](/components/okf-store.md), [CLI](/components/cli.md), [TUI design system](/components/tui-design-system.md), [setup and user configuration](/components/setup.md), [release, install and update](/components/release.md), [agent behavior tests](/components/eval.md).
 Scoped completion applicability uses the adapter-side `internal/worktree` fingerprint helper: mdstore loads current applicability and includes selected knowledge entry files in resolution review fingerprints; CLI records the work/configuration snapshot, while domain validates results and contracts without filesystem access. See [Completion policy](/features/completion-policy.md).

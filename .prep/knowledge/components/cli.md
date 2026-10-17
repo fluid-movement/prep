@@ -33,7 +33,6 @@ confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
 - `prep setup [--harness h,...|--remove h|--refresh]` installs harness integrations; see [Harness setup](/components/setup.md).
 - `prep activity`, `activity add` and `prep focus`: [Agent activity](/features/agent-activity.md); commands note their event when they succeed and `Main` appends it.
 - `prep update [--check]` replaces the binary with the latest release; see [Release, install and update](/components/release.md).
-- `prep watch` (`watch.go`, read, for harnesses and the [desktop app](/components/desktop.md)) watches `.prep` with `internal/watch` and prints one line per debounced project change (`changed`, `{"event":"changed"}` with `--json`; not the activity stream under `.prep/local`) until SIGINT/SIGTERM, its output closes, or its parent process is gone (`endWithParent`); tests replace `watchContext`.
 - `prep show --json` carries the issue's fields plus `history` (the work log text), `context`, `findings`, derived state, relations, progress and the effective Definition of Done.
 - `prep projects`, `init`'s identity and `--new-id`: [project registry](/components/projects.md); `prep links`, `prep link`, `validate` (check plus registry checks): [Cross-project work](/features/cross-project.md).
 

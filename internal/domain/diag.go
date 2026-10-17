@@ -65,7 +65,6 @@ const (
 	CodeNotCanonical       = "I017"
 	CodeSchemaFileMissing  = "I018"
 	CodeDecisionInvalid    = "I019"
-	CodeDocEntryMissing    = "I020" // resolution references a missing knowledge entry
 	CodeSelfDependency     = "I021"
 	CodeDuplicateDep       = "I022"
 	CodeResolvedChildOpen  = "I023" // resolved parent with unresolved children

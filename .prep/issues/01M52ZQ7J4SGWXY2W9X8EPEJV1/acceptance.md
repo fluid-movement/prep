@@ -1,0 +1,5 @@
+- [x] git ls-files desktop is empty and the local build output is gone
+- [x] git grep -i desktop outside issue records finds nothing
+- [ ] CI has no desktop job and GitHub CI on main is green after the push
+- [x] just --list shows no desktop recipes
+- [x] The desktop knowledge entry is deleted, no other entry mentions the app, and prep check reports no errors

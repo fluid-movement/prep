@@ -7,7 +7,6 @@
 * [Claude Code integration](/components/claude-code.md) - The prep plugin for Claude Code: skill, SessionStart briefing and the activity bridge to prep tui's Agent screen, served from this repository as its own marketplace and installed per user by prep setup.
 * [CLI](/components/cli.md) - internal/cli — command table, global flags, JSON output and errors, write pipeline and git staging.
 * [Codex integration](/components/codex.md) - Codex CLI plugin: setup installation and lifecycle hooks for prep briefing, task steering, record safety and activity reporting.
-* [Desktop app](/components/desktop.md) - desktop/: the macOS app (Swift, SwiftUI) over the prep CLI's JSON — PrepKit, the window model, project switching, building with just desktop, and how agents see it with snapshots.
 * [Domain package](/components/domain.md) - internal/domain — issue model, state derivation, FSM gates, validation codes, query engine, guide and knowledge retrieval.
 * [Agent behavior test cases](/components/eval-cases.md) - What the eval cases ask and why: built from real session shapes, which cases were dropped, the variants that split the plugin.
 * [Agent behavior tests (prep eval)](/components/eval.md) - Fake eval setup records explicitly reported fixture observations and uses a synthetic stable work scope; those reports are not independent implementation checks.
@@ -29,4 +28,4 @@
 * [TUI mouse](/components/tui-mouse.md) - How the TUI takes clicks and the wheel: elements marked as Lip Gloss layers while rendering, hit-testing, click semantics, and the per-user mouse capture setting.
 * [TUI navigation](/components/tui-navigation.md) - prep tui navigation: Inbox, Issues, Agent and Knowledge screens, view keys, clicks, back stack and short layout.
 * [TUI](/components/tui.md) - prep tui screens in internal/tui — the issue views (tabs, list, detail and its links), loader injection, live reload with fsnotify, navigation keys, and how screens are tested; editing is in TUI editing and keys.
-* [Watcher](/components/watch.md) - internal/watch — reports changes under .prep, debounced and merged, split into project and local changes; used by prep tui's live reload and prep watch.
+* [Watcher](/components/watch.md) - internal/watch — reports changes under .prep, debounced and merged, split into project and local changes; used by prep tui's live reload.

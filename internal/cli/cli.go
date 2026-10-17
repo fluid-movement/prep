@@ -97,7 +97,6 @@ func init() {
 		{"show", false, "show <id>                  read one issue with its derived state", cmdShow},
 		{"check", false, "check [--no-drift]         validate the whole tree", cmdCheck},
 		{"activity", false, "activity [--max N] [--actor a]  what agents did with prep, newest last (local, per machine); activity add: harness events as JSON lines on stdin", cmdActivity},
-		{"watch", false, "watch                      stream a line per change under .prep until killed (for harness integrations)", cmdWatch},
 		{"flags", false, "flags                      every query flag with the values it accepts now and their issue counts", cmdFlags},
 		{"knowledge", false, "knowledge list|find|show|review  read entries; review show <id> reports review applicability", cmdKnowledge},
 		{"evidence", false, "evidence show <id>         inspect reported verification and current applicability", cmdEvidence},

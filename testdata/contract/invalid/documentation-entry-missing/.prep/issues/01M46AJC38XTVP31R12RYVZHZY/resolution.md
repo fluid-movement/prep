@@ -1,9 +1,0 @@
----
-outcome: done
-by: agent/contract
-at: 2026-10-05T12:00:00Z
-evidence: abc1234
-documentation:
-  entries:
-    - /components/gone.md
----

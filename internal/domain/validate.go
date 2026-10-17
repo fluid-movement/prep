@@ -176,13 +176,6 @@ func Validate(t *Tree) []Diagnostic {
 				if r.Documentation == nil || (len(r.Documentation.Entries) == 0 && strings.TrimSpace(r.Documentation.NoImpact) == "") {
 					e(CodeRecordInvalid, ClassManual, "resolution.md", "add documentation entries or a no_impact reason", "resolution has no documentation decision")
 				}
-				if r.Documentation != nil {
-					for _, p := range r.Documentation.Entries {
-						if t.Knowledge[p] == nil {
-							e(CodeDocEntryMissing, ClassManual, "resolution.md", "restore the entry or fix the reference", "documentation entry %s does not exist", p)
-						}
-					}
-				}
 				if t.IsParent(id) {
 					for _, c := range t.Children(id) {
 						if !t.State(c).Terminal() {
@@ -219,8 +212,12 @@ func Validate(t *Tree) []Diagnostic {
 			ids[d.ID] = true
 		}
 
-		// Context links into the knowledge base.
+		// Context links into the knowledge base. A resolved issue's links are
+		// history: the entry may since have been removed.
 		for _, l := range i.ContextLinks {
+			if t.State(id).Terminal() {
+				break
+			}
 			if t.Knowledge[l] == nil {
 				w(CodeContextLinkMissing, ClassManual, "context.md", "fix the link or create the entry", "linked knowledge entry %s does not exist", l)
 			}
