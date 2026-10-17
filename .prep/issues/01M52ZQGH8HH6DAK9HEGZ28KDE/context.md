@@ -1,0 +1,13 @@
+Removal of project links and everything built on them. The project registry (`internal/projects` minus links), `prep projects` and `--project` stay. No prep project on this machine has links, so no records need converting; if prep check reports a record that only made sense with links, list it exactly in the prep log.
+
+Where things are:
+- Commands: `internal/cli/links.go` (prep link add|rename|remove, prep links) and `internal/cli/dependency.go` (prep dependency show), registered in `internal/cli/cli.go`; `--depends-on project:id` parsing in `internal/cli/write.go`; cross-project output (`cross_deps`, `cross_knowledge`) in `internal/cli/read.go`.
+- Domain: `internal/domain/links.go` (ProjectLink, link validation, XIssue, DepState; `contentID` there is also used by remaining code, move it if its file goes), `internal/domain/dependency.go`, cross-project dependency gates and states in `fsm.go`, `validate.go` (the cross-project skip near line 90 and validateLinks), types in `types.go`.
+- Registry: `internal/projects/links.go` (ResolveLinks, Check, FixRemotes, ResolveExternal, ResolveDep, Dependents); keep whatever `prep projects` and `--project` need.
+- Storage: the links section of project.md in `internal/mdstore/records.go` and `write.go`.
+- Knowledge links to other projects: cross-project link resolution in `internal/okf/okf.go`.
+- TUI: `xDepLine`, `followElsewhere`, `linkRoot` in `internal/tui/projects.go` and their callers in `app.go` and the detail links; the project switcher stays. Regenerate goldens with the tests' update flag and review the diff.
+- Evals and fixtures: `eval/cases/links/cross-dependency.yaml` (delete); `eval/cases/links/read-other-project.yaml` stays (it tests --project); links in `internal/eval/fixture/build.go` and `spec.go`; contract fixtures `testdata/contract/*/{knowledge-broken-link,link-invalid,link-undefined,link-duplicate,links}` where they test project links (knowledge-broken-link may test in-bundle links: keep it if so).
+- Docs: `README.md`, the skill (`internal/cli/skill.md` and copies under `plugins/` and `.claude/skills/prep/`), and knowledge: [Cross-project work](/features/cross-project.md) (keep only --project and the registry), [Project registry](/components/projects.md), [TUI detail links](/components/tui-detail.md), [CLI](/components/cli.md), [Domain](/components/domain.md), [Storage format](/conventions/storage-format.md). Update through `prep knowledge update`.
+
+Checks before stopping: `go test ./...`, `go build -o prep ./cmd/prep && ./prep check` (0 errors), `./prep fmt --check`. Also `git grep -n -E 'ProjectLink|XIssue|DepState|ResolveLinks|cross_deps|cross_knowledge|prep link'` finds nothing outside issue records.
