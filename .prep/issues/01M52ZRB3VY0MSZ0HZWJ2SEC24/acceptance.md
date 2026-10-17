@@ -1,6 +1,6 @@
-- [ ] prep decide and prep finding write a new record file under knowledge/decisions or knowledge/findings, with or without an issue, and never overwrite one, covered by tests
-- [ ] A record listed in a newer record's supersedes shows as superseded in show, find and list, covered by a test
-- [ ] A decision issue completes only with a linked decision record with outcome, a research issue only with a linked finding record, and complete takes no --docs or --no-impact, covered by tests
-- [ ] knowledge new, update, confirm and bootstrap, drift and confirmation, and G_BOOTSTRAP and G_DOCS are gone from help and code; existing descriptive entries stay readable
-- [ ] prep init writes merge=union for history.md and knowledge index.md, and prep fmt repairs a union-merged index, covered by a test
-- [ ] All prep projects here are converted with the knowledge stage, prep check reports no errors, and GitHub CI on main is green
+- [x] prep decide and prep finding write a new record file under knowledge/decisions or knowledge/findings, with or without an issue, and never overwrite one, covered by tests
+- [x] A record listed in a newer record's supersedes shows as superseded in show, find and list, covered by a test
+- [x] A decision issue completes only with a linked decision record with outcome, a research issue only with a linked finding record, and complete takes no --docs or --no-impact, covered by tests
+- [x] knowledge new, update, confirm and bootstrap, drift and confirmation, and G_BOOTSTRAP and G_DOCS are gone from help and code; existing descriptive entries stay readable
+- [x] prep init writes merge=union for history.md and knowledge index.md, and prep fmt repairs a union-merged index, covered by a test
+- [x] All prep projects here are converted with the knowledge stage, prep check reports no errors, and GitHub CI on main is green
