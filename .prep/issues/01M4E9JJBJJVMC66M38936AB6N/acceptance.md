@@ -1,5 +1,5 @@
-- [ ] prep activity add accepts session events with started or ended and an optional previous session, and rejects malformed ones, covered by tests
-- [ ] Agents leaves out ended sessions and sessions quiet for 30 minutes, and counts a chain of linked session IDs as one agent, covered by tests
-- [ ] Recently worked on follows linked session IDs, so a resumed session sees its predecessor's issue, covered by a test
-- [ ] The Claude Code bridge sends started, ended, and ended plus started-with-previous on an ID change at turn.start
-- [ ] The Agent view's count and tab cycling show only live agents, knowledge describes the lifecycle events, prep check reports no errors, and GitHub CI on main is green
+- [x] prep activity add accepts session events with started or ended and an optional previous session, and rejects malformed ones, covered by tests
+- [x] Agents leaves out ended sessions and sessions quiet for 30 minutes, and counts a chain of linked session IDs as one agent, covered by tests
+- [x] Recently worked on follows linked session IDs, so a resumed session sees its predecessor's issue, covered by a test
+- [x] The Claude Code bridge sends started, ended, and ended plus started-with-previous on an ID change at turn.start
+- [x] The Agent view's count and tab cycling show only live agents, knowledge describes the lifecycle events, prep check reports no errors, and GitHub CI on main is green
