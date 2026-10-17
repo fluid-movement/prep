@@ -195,11 +195,7 @@ func hookFinish(a *app, e hookEvent) {
 	}
 
 	var code []string
-	issueUpdated := false
 	for p := range changed {
-		if strings.HasPrefix(p, mdstore.Dir+"/issues/") {
-			issueUpdated = true
-		}
 		if p != mdstore.Dir && !strings.HasPrefix(p, mdstore.Dir+"/") {
 			code = append(code, p)
 		}
@@ -213,9 +209,14 @@ func hookFinish(a *app, e hookEvent) {
 	if err != nil {
 		return
 	}
-	var knowledge []string
+	tree := &domain.Tree{Knowledge: map[string]*domain.Entry{}}
 	for _, entry := range entries {
-		if changed[mdstore.Dir+"/knowledge"+entry.Path] {
+		tree.Knowledge[entry.Path] = entry
+	}
+	tree.DeriveSuperseded()
+	var decisions []string
+	for _, entry := range entries {
+		if entry.Type != "decision" || entry.Superseded {
 			continue
 		}
 		matched := false
@@ -228,24 +229,18 @@ func hookFinish(a *app, e hookEvent) {
 			}
 		}
 		if matched {
-			knowledge = append(knowledge, entry.Path)
+			decisions = append(decisions, fmt.Sprintf("%s (%s)", entry.Title, entry.ID))
 		}
 	}
-	sort.Strings(knowledge)
+	sort.Strings(decisions)
+	if len(decisions) > 5 {
+		decisions = decisions[:5]
+	}
 	hookSaveTurn(path, after)
-	if issueUpdated && len(knowledge) == 0 {
-		return
+	message := "Before finishing, did this turn make a decision (a choice between options, with a reason) that later sessions need? If so, record it with prep decide [<issue>] --title <title> --description <description> --body-file -; otherwise, say in one line that no decision needs recording. This check grants no additional permission: preserve the original request's scope and explicit no-tracking/no-record-write restrictions. If records cannot be changed within that scope, report the needed follow-up without writing them. Changed files: " + hookFinishList(code) + "."
+	if len(decisions) > 0 {
+		message += " Decisions scoped to these files: " + strings.Join(decisions, ", ") + ". Superseding one needs prep decide --supersedes <id>."
 	}
-	message := "Before finishing, review this turn's changes with prep. This automatic review grants no additional permission: preserve the original request's scope and explicit no-tracking/no-record-write restrictions. If records cannot be changed within that scope, report the needed follow-up without writing them. Changed files: " + hookFinishList(code) + ". "
-	if !issueUpdated {
-		message += "Within the authorized scope, search for the issue covering this implementation (create one if none matches unless tracking was explicitly waived), run prep guide <id>, and record actual progress with prep commands. A requirement-only request does not authorize implementation or completion; do not invent completed work. "
-	}
-	if len(knowledge) > 0 {
-		message += "Affected knowledge to review: " + hookFinishList(knowledge) + ". Read it through prep knowledge show/find; record any new decisions or findings. "
-	} else {
-		message += "Check whether the changed behavior yielded a decision or finding. "
-	}
-	message += "If records already reflect the changes or the work has no documentation impact, explain that briefly. This check does not require asking the user for approval."
 	if a.actor == "claude-code" {
 		hookContext(a, "Stop", message)
 	} else {
