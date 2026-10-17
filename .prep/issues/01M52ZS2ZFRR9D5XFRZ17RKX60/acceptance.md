@@ -1,0 +1,4 @@
+- [ ] Cases for handoff from prep guide alone, checker completes, and respect or supersede a recorded decision exist and load with prep eval list
+- [ ] Fixtures can declare decision and finding records in the binary's record format, covered by a fixture test
+- [ ] One run of the new and changed cases is proposed to the user with models, N and cost; the run happens only with their OK
+- [ ] prep check reports no errors and GitHub CI on main is green

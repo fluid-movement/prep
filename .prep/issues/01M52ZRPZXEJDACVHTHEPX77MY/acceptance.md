@@ -1,3 +1,3 @@
-- [ ] The prompt hook sends its text only when it differs from what it last sent in the session, and session start resets that, covered by tests
-- [ ] The turn snapshot is still written on every prompt, covered by a test
-- [ ] The eval cases that show tracking behavior holds are named for a run the user approves; prep check reports no errors and GitHub CI on main is green
+- [x] The prompt hook sends its text only when it differs from what it last sent in the session, and session start resets that, covered by tests
+- [x] The turn snapshot is still written on every prompt, covered by a test
+- [x] The eval cases that show tracking behavior holds are named for a run the user approves; prep check reports no errors and GitHub CI on main is green
