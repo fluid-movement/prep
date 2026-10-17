@@ -16,5 +16,3 @@ Keep one project-level Definition of Done, shown as guidance in the briefing and
 This repository's records and the other prep projects on this machine are converted once with a contract stage in prep-wt/convert-records.py, run with the user's go-ahead after the new binary is installed; no compatibility code. Delete the code, its tests, fixtures, eval cases and knowledge text together. Done when nothing references the removed parts and GitHub CI on main is green.
 
 ## Open questions
-
-- User's OK of this requirement (drafted 2026-10-17, agreed in direction: conversion option a, a script the user lets run).

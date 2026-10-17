@@ -1,0 +1,5 @@
+- [ ] prep help lists no policy, evidence, exception, dod approve or knowledge review command, and git grep finds none of the removed types, gates, I029 or internal/worktree outside issue records
+- [ ] Completing an issue requires only state, staleness, checked criteria, the kind's result and --docs or --no-impact; a test completes a ready-to-complete code issue with no contract, evidence or review records
+- [ ] prep dod --add and --remove edit the project Definition of Done in project.md, covered by a test
+- [ ] The session briefing and prep guide at the check step show the project Definition of Done, covered by tests
+- [ ] Knowledge describing the removed parts is deleted or updated, this repository's records are converted, prep check reports no errors, and GitHub CI on main is green
