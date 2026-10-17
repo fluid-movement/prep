@@ -249,14 +249,28 @@ func classify(ctx context.Context, runErr error, tr *transcript.Transcript, stde
 		return Turns, "turn limit reached"
 	case strings.Contains(status, "budget") || strings.Contains(tr.Final.Terminal, "budget"):
 		return Budget, "budget limit reached"
+	case tr.Final.IsError:
+		// The harness reports a failure of its own (a session limit, an
+		// auth error) even when the subtype says success.
+		msg := strings.TrimSpace(tr.Final.Text)
+		if msg == "" {
+			msg = harnessMessage(stderr, tr.Final.Text, runErr)
+		}
+		return Errored, clip(msg)
 	case status == "success":
 		return Completed, ""
 	case status == "" && runErr == nil && len(tr.Steps) > 0:
 		return Completed, ""
 	}
+	return Errored, clip(harnessMessage(stderr, tr.Final.Text, runErr))
+}
+
+// harnessMessage says why the harness produced no usable result: its stderr,
+// else its result text, else the process error.
+func harnessMessage(stderr, text string, runErr error) string {
 	msg := strings.TrimSpace(stderr)
 	if msg == "" {
-		msg = tr.Final.Text
+		msg = text
 	}
 	if msg == "" && runErr != nil {
 		msg = runErr.Error()
@@ -264,10 +278,14 @@ func classify(ctx context.Context, runErr error, tr *transcript.Transcript, stde
 	if msg == "" {
 		msg = "the harness produced no result"
 	}
+	return msg
+}
+
+func clip(msg string) string {
 	if len(msg) > 500 {
-		msg = msg[:500] + "…"
+		return msg[:500] + "…"
 	}
-	return Errored, msg
+	return msg
 }
 
 // write stores transcript.json and record.json.

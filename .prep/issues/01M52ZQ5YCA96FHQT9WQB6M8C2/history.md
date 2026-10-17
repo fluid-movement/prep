@@ -7,3 +7,5 @@
 - 2026-10-17T12:40:36Z edited by claude-code: depends_on
 
 - 2026-10-17T12:40:37Z claude-code: Ordering dependency on 01M52ZQSEP2EKTYKYFC79EGFS6 and 01M52ZRB3VY0MSZ0HZWJ2SEC24 dropped: the fix is independent and lets later eval runs score harness errors correctly.
+
+- 2026-10-17T12:45:24Z claude-code: Implemented, ready for check: classify returns Errored when the result has is_error true (session limit text as message), the report shows the errored count, and the eval knowledge describes it.
