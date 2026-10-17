@@ -13,4 +13,4 @@ expect:
     - issue: {ref: '{{headline}}', state: 'in-progress|done'}
     - check: {warnings: 0}
   rubric:
-    - The knowledge entry about profile fields no longer says the headline is stored as VARCHAR(80) and cut to 80 characters; it was updated or the change is recorded in it.
+    - The changed headline limit is recorded as a decision with prep decide, or the agent explains why no decision needs recording.
