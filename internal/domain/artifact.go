@@ -42,8 +42,7 @@ type ArtifactInput struct {
 	Now       time.Time
 }
 
-// PlanArtifact changes metadata only. A reference cannot satisfy a lifecycle,
-// verification, knowledge review or human approval requirement.
+// PlanArtifact changes reference metadata only; lifecycle gates still apply.
 func (t *Tree) PlanArtifact(id string, in ArtifactInput) (*Change, error) {
 	i := t.Issues[id]
 	if i == nil {

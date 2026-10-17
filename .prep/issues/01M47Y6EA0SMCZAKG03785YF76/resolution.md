@@ -10,11 +10,6 @@ documentation:
     - /components/domain.md
     - /components/markdown-store.md
     - /conventions/storage-format.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---
 
 Tried live by the user over several rounds

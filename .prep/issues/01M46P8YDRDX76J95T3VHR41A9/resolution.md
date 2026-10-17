@@ -9,9 +9,4 @@ documentation:
     - /components/domain.md
     - /components/markdown-store.md
     - /features/lifecycle.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

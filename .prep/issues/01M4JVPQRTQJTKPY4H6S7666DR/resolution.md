@@ -6,9 +6,4 @@ documentation:
   entries:
     - /components/cli.md
     - /components/architecture.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

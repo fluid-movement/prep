@@ -61,7 +61,7 @@ var flagTakesValue = map[string]bool{
 	"body": true, "body-file": true, "state": true, "under": true, "text": true, "max": true, "actor": true,
 	"add": true, "check": true, "uncheck": true, "remove": true, "reason": true, "note": true, "commit": true,
 	"docs": true, "no-impact": true, "type": true, "description": true, "supersedes": true, "as": true,
-	"opt-out": true, "view": true, "scope": true, "status": true, "harness": true, "by": true,
+	"view": true, "scope": true, "status": true, "harness": true, "by": true,
 	"project": true, "root": true,
 }
 

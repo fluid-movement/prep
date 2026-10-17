@@ -45,22 +45,6 @@ func TestParseFilter(t *testing.T) {
 	}
 }
 
-func TestEffectiveDoDCascades(t *testing.T) {
-	p := &Issue{ID: "01M45YYRG0AP2P2A41FRCHGR0Q", Title: "P", Kind: KindCode, DoDAdd: []string{"changelog"}}
-	c := &Issue{ID: "01M45YYSF8MH8F910XSA7Q366A", Title: "C", Kind: KindCode, Parent: p.ID, DoDOptOuts: []OptOut{{Item: "tests pass", Reason: "docs only"}}, DoDAdd: []string{"screenshots"}}
-	tr := NewTree(Project{DoD: []string{"tests pass", "lint clean"}}, []*Issue{p, c}, nil, nil)
-	items, opt := tr.EffectiveDoD(c.ID)
-	want := []string{"lint clean", "changelog", "screenshots"}
-	if len(items) != len(want) || len(opt) != 1 {
-		t.Fatalf("dod = %v, opt-outs %v", items, opt)
-	}
-	for k := range want {
-		if items[k] != want[k] {
-			t.Fatalf("dod = %v", items)
-		}
-	}
-}
-
 func TestPlanConfigValidates(t *testing.T) {
 	tree := NewTree(Project{}, nil, nil, nil)
 	bad := []Config{

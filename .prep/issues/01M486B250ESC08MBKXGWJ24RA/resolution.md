@@ -7,9 +7,4 @@ documentation:
   entries:
     - /components/domain.md
     - /components/release.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

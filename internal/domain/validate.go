@@ -35,17 +35,6 @@ func Validate(t *Tree) []Diagnostic {
 		}
 	}
 
-	if p := t.Project.Policy; p != nil && !p.Valid() {
-		add(Diagnostic{Code: CodePolicyInvalid, Severity: SevError, Class: ClassGuided, File: "project.md",
-			Message: "completion policy needs verification, documentation, actor and timestamp",
-			Fix:     "run prep policy set --verification <method> --documentation <method>"})
-	}
-	for _, p := range t.Project.PolicyHistory {
-		if !p.Valid() {
-			add(Diagnostic{Code: CodePolicyInvalid, Severity: SevError, Class: ClassManual, File: "project.md", Message: "historical completion policy is incomplete", Fix: "restore the original policy history"})
-		}
-	}
-
 	validateLinks(t, add)
 
 	for _, id := range t.IDs() {
@@ -121,26 +110,6 @@ func Validate(t *Tree) []Diagnostic {
 		}
 
 		// Records.
-		previous := ""
-		for _, a := range i.Approvals {
-			if a.Validate() != nil || a.ID != a.ContentID() || a.Previous != previous {
-				e(CodeRecordInvalid, ClassManual, "approvals.md", "restore the original approval history", "invalid completion approval or history chain")
-			}
-			previous = a.ID
-		}
-		if i.Ready != nil && i.Ready.Contract != nil && i.Ready.Contract.ID != i.Ready.Contract.ContentID() {
-			e(CodeRecordInvalid, ClassManual, "ready.md", "restore the original contract or explicitly adopt the current policy", "completion contract content does not match its ID")
-		}
-		if t.PolicyReviewRequired(id) && i.Resolution == nil {
-			w(CodePolicyChanged, ClassGuided, "ready.md", "review prep policy show <id>, then adopt it or obtain explicit human approval to retain the bound policy", "effective completion policy changed since readiness")
-		}
-		if i.Ready != nil {
-			for _, c := range i.Ready.PreviousContracts {
-				if c.ID != c.ContentID() {
-					e(CodeRecordInvalid, ClassManual, "ready.md", "restore contract history", "previous completion contract content does not match its ID")
-				}
-			}
-		}
 		if i.Ready != nil && !t.ReadyValid(i) && i.Resolution == nil {
 			w(CodeReadyOutdated, ClassGuided, "ready.md", "enrich against the current requirement and run prep ready, or prep ack if the change was trivial", "ready.md references baseline %s, not the newest", i.Ready.Baseline)
 		}
@@ -208,31 +177,6 @@ func Validate(t *Tree) []Diagnostic {
 			}
 			if t.Knowledge[l] == nil {
 				w(CodeContextLinkMissing, ClassManual, "context.md", "fix the link or create the entry", "linked knowledge entry %s does not exist", l)
-			}
-		}
-	}
-
-	// Opt-outs that match no inherited item.
-	for _, id := range t.IDs() {
-		i := t.Issues[id]
-		if len(i.DoDOptOuts) == 0 {
-			continue
-		}
-		inherited := map[string]bool{}
-		for _, it := range t.Project.DoD {
-			inherited[it] = true
-		}
-		for _, a := range t.Ancestors(id) {
-			if ai := t.Issues[a]; ai != nil {
-				for _, it := range ai.DoDAdd {
-					inherited[it] = true
-				}
-			}
-		}
-		for _, o := range i.DoDOptOuts {
-			if !inherited[o.Item] {
-				add(Diagnostic{Code: CodeDoDOptOutUnused, Severity: SevWarning, Class: ClassManual, Issue: id, File: "acceptance.md",
-					Message: fmt.Sprintf("opt-out %q matches no inherited Definition of Done item", o.Item), Fix: "use the exact item text, or remove the opt-out"})
 			}
 		}
 	}

@@ -7,9 +7,4 @@ documentation:
     - /components/tui.md
     - /components/setup.md
     - /components/tui-agent.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

@@ -33,16 +33,14 @@ type Diagnostic struct {
 // Diagnostic codes. They are stable: never reuse or renumber.
 const (
 	// Project level.
-	CodeProjectMissing  = "P001" // project.md missing or unreadable
-	CodeSchemaMismatch  = "P002" // schema version differs from the binary
-	CodeConfigInvalid   = "P003" // config.yaml or config.yaml.dist invalid
-	CodeProjectUnknown  = "P004" // unknown file in .prep
-	CodeDoDOptOutUnused = "P005"
-	CodeConfigLegacy    = "P006" // config in the prep 0.1.0 layout; prep fix converts it
-	CodeLocalTracked    = "P007" // .prep/.gitignore does not ignore local/; prep fix adds it
-	CodeProjectNoID     = "P008" // project.md has no id; prep fix writes one
-	CodeProjectInvalid  = "P009" // project.md has an invalid id or name
-	CodePolicyInvalid   = "P010" // configured completion policy is incomplete
+	CodeProjectMissing = "P001" // project.md missing or unreadable
+	CodeSchemaMismatch = "P002" // schema version differs from the binary
+	CodeConfigInvalid  = "P003" // config.yaml or config.yaml.dist invalid
+	CodeProjectUnknown = "P004" // unknown file in .prep
+	CodeConfigLegacy   = "P006" // config in the prep 0.1.0 layout; prep fix converts it
+	CodeLocalTracked   = "P007" // .prep/.gitignore does not ignore local/; prep fix adds it
+	CodeProjectNoID    = "P008" // project.md has no id; prep fix writes one
+	CodeProjectInvalid = "P009" // project.md has an invalid id or name
 
 	// Issue structure.
 	CodeBadID              = "I001" // directory name is not a valid ID
@@ -59,7 +57,6 @@ const (
 	CodeFindingsKind       = "I012" // findings.md on a non-research issue
 	CodeReadyOutdated      = "I013" // ready.md references an older baseline
 	CodeOrphanClaim        = "I014" // claim.md without valid ready sign-off
-	CodePolicyChanged      = "I029" // effective completion policy differs from ready contract
 	CodeRecordInvalid      = "I015" // baseline/ready/claim/resolution malformed
 	CodeDepDropped         = "I016"
 	CodeNotCanonical       = "I017"

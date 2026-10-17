@@ -9,9 +9,4 @@ documentation:
     - /decisions/out-of-scope.md
     - /components/cli.md
     - /components/release.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

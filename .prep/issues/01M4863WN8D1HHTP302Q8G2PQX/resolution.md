@@ -10,9 +10,4 @@ documentation:
     - /components/tui-editing.md
     - /components/setup.md
     - /components/tui-design-system.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

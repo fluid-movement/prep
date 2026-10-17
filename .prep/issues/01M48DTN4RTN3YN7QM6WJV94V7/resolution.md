@@ -6,11 +6,6 @@ evidence: 01e2b97
 documentation:
   entries:
     - /components/claude-code.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---
 
 Tried live by the user

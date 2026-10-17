@@ -22,10 +22,10 @@ States (never stored): resolution.md → done/dropped; claim.md with valid ready
 | --- | --- | --- |
 | define | open, or defined/ready when stale | title, valid kind, non-empty prose, empty Open questions |
 | ack | defined, ready, in progress when stale | empty Open questions; after a kind change on a signed-off issue, the context ready would require; rewrites ready.md to the new baseline |
-| ready | defined, not stale | explicit project completion policy; human-approved inherited DoD opt-outs; at least one criterion; context.md non-empty unless manual or parent |
+| ready | defined, not stale | at least one criterion; context.md non-empty unless manual or parent |
 | claim | ready, not stale | not a parent; dependencies done |
 | release | in progress | records the release in history.md |
-| complete | in progress (parents: ready or in progress) | not stale; criteria checked or explicitly waived; applicable reports or approved exceptions; documentation decision; parents: children resolved; code: non-human actor, and a given --commit must be a hex hash; research: findings.md; decision: an outcome: true entry |
+| complete | in progress (parents: ready or in progress) | not stale; criteria checked; documentation decision; parents: children resolved; code: non-human actor, and a given --commit must be a hex hash; research: findings.md; decision: an outcome: true entry |
 | reopen | done | reason; appends the removed resolution.md to history.md and returns the issue to ready |
 | drop | any unresolved state | reason; a dropped (like a done) parent with unresolved children is warning I023 |
 
@@ -36,10 +36,7 @@ States (never stored): resolution.md → done/dropped; claim.md with valid ready
 - **Actionable**: ready, not stale, dependencies satisfied, unclaimed, not a parent. **Blocked**: unresolved dependencies, including unknown cross-project observations. Missing/unavailable sources cannot imply completion. See [Cross-project work](/features/cross-project.md).
 - **Completion evidence** for code issues is informational: without `--commit` it is the commit that adds `resolution.md`, so code and records land in one commit (01M4AVPH9A56WJ4JFMYZT476H0); `prep complete --commit` and `prep check` validate a given hash's format only, so evidence stays valid after a squash merge removes the branch commit (decided in 01M46ARQ78P8M40K4FSPVNK531).
 - **Claims across branches**: prep never pushes. A claim made on a branch is visible elsewhere once the branch merges; working on main has no lag (decided in 01M46ARR6G4K7NZBYZQJZGBCR0).
-- **Definition of Done** cascades project → ancestors → issue with opt-outs and is snapshotted into resolution.md.
+- **Definition of Done** is a project-level list shown as guidance in the briefing and at the check step of `prep guide`; it is not a completion gate. `prep dod --add <item>` and `--remove <item>` edit that list.
 - Parents are never claimed; their kind is ignored while they have children.
 
 Format of each record: [Storage format](/conventions/storage-format.md).
-Policy-bound issues require passing applicable reports or explicit human-approved exceptions for each requirement, and explicit reconciliation when the contract changes. A waived acceptance criterion remains unchecked with its approval preserved. Human-approved policy retention keeps the bound requirements for one reviewed policy change; another change requires renewed review. The informational Git commit reference above is separate from these reports; commits remain optional. Legacy records are not assigned fabricated contracts or reports. See [Completion policy and verification](/features/completion-policy.md).
-
-Policy-bound documentation decisions require current per-entry knowledge review reports for named docs or a report matching the no-impact reason; a reference or prose alone is insufficient. See [Knowledge lifecycle](/features/knowledge-lifecycle.md).

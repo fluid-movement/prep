@@ -15,9 +15,4 @@ documentation:
     - /components/cli.md
     - /components/claude-code.md
     - /decisions/out-of-scope.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

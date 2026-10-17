@@ -211,7 +211,7 @@ func (t *Tree) Blocked(id string) bool {
 // Actionable = ready, not stale, dependencies done, unclaimed, and a leaf
 // (parents are not implemented themselves).
 func (t *Tree) Actionable(id string) bool {
-	return t.State(id) == StateReady && !t.Stale(id) && !t.PolicyReviewRequired(id) && len(t.UnresolvedDeps(id)) == 0 && !t.IsParent(id)
+	return t.State(id) == StateReady && !t.Stale(id) && len(t.UnresolvedDeps(id)) == 0 && !t.IsParent(id)
 }
 
 // Progress counts resolved direct children of a parent.
@@ -234,37 +234,6 @@ func (t *Tree) ChildProgress(id string) Progress {
 		}
 	}
 	return p
-}
-
-// EffectiveDoD cascades the Definition of Done project → ancestors → issue,
-// applying opt-outs. It returns the remaining items and the opt-outs applied.
-func (t *Tree) EffectiveDoD(id string) ([]string, []OptOut) {
-	chain := []*Issue{}
-	anc := t.Ancestors(id)
-	for k := len(anc) - 1; k >= 0; k-- {
-		if a := t.Issues[anc[k]]; a != nil {
-			chain = append(chain, a)
-		}
-	}
-	if i := t.Issues[id]; i != nil {
-		chain = append(chain, i)
-	}
-	items := append([]string(nil), t.Project.DoD...)
-	var applied []OptOut
-	for _, i := range chain {
-		for _, o := range i.DoDOptOuts {
-			for k, it := range items {
-				if it == o.Item {
-					items = append(items[:k], items[k+1:]...)
-					o.ApprovalID = approvedOptOut(i, o)
-					applied = append(applied, o)
-					break
-				}
-			}
-		}
-		items = append(items, i.DoDAdd...)
-	}
-	return items, applied
 }
 
 // CheckedAll reports whether every acceptance criterion is checked.

@@ -9,7 +9,7 @@ scope:
   - internal/tui/actions.go
   - internal/tui/editing.go
   - internal/tui/ui/modal.go
-confirmed_commit: 3a9c5801f8e077e2e96c5f82abe24bce2025705a
+confirmed_commit: 58a1a906584b83d5380db9aefa0c83740ed4a6df
 ---
 
 Applies when changing how people write from the TUI or which keys do what. Screens and navigation are in [TUI](/components/tui.md); looks come from the [TUI design system](/components/tui-design-system.md).

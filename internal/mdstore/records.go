@@ -33,11 +33,9 @@ type baselineFM struct {
 }
 
 type readyFM struct {
-	Contract          *domain.CompletionContract  `yaml:"contract,omitempty"`
-	PreviousContracts []domain.CompletionContract `yaml:"previous_contracts,omitempty"`
-	By                string                      `yaml:"by"`
-	At                time.Time                   `yaml:"at"`
-	Baseline          string                      `yaml:"baseline"`
+	By       string    `yaml:"by"`
+	At       time.Time `yaml:"at"`
+	Baseline string    `yaml:"baseline"`
 }
 
 type claimFM struct {
@@ -50,34 +48,20 @@ type docFM struct {
 	NoImpact string   `yaml:"no_impact,omitempty"`
 }
 
-type optOutFM struct {
-	Item       string `yaml:"item"`
-	Reason     string `yaml:"reason,omitempty"`
-	ApprovalID string `yaml:"approval_id,omitempty"`
-}
-
 type resolutionFM struct {
-	Contract         *domain.CompletionContract    `yaml:"contract,omitempty"`
-	Verification     []domain.VerificationEvidence `yaml:"verification,omitempty"`
-	Approvals        []domain.CompletionApproval   `yaml:"approvals,omitempty"`
-	KnowledgeReviews []domain.KnowledgeReview      `yaml:"knowledge_reviews,omitempty"`
-	Outcome          string                        `yaml:"outcome"`
-	By               string                        `yaml:"by"`
-	At               time.Time                     `yaml:"at"`
-	Reason           string                        `yaml:"reason,omitempty"`
-	Evidence         string                        `yaml:"evidence,omitempty"`
-	Documentation    *docFM                        `yaml:"documentation,omitempty"`
-	DoD              []string                      `yaml:"dod,omitempty"`
-	DoDOptOuts       []optOutFM                    `yaml:"dod_opt_outs,omitempty"`
+	Outcome       string    `yaml:"outcome"`
+	By            string    `yaml:"by"`
+	At            time.Time `yaml:"at"`
+	Reason        string    `yaml:"reason,omitempty"`
+	Evidence      string    `yaml:"evidence,omitempty"`
+	Documentation *docFM    `yaml:"documentation,omitempty"`
 }
 
 type projectFM struct {
-	Schema        int                       `yaml:"schema"`
-	ID            string                    `yaml:"id,omitempty"`
-	Name          string                    `yaml:"name,omitempty"`
-	Links         map[string]linkFM         `yaml:"links,omitempty"`
-	Policy        *domain.CompletionPolicy  `yaml:"completion_policy,omitempty"`
-	PolicyHistory []domain.CompletionPolicy `yaml:"completion_policy_history,omitempty"`
+	Schema int               `yaml:"schema"`
+	ID     string            `yaml:"id,omitempty"`
+	Name   string            `yaml:"name,omitempty"`
+	Links  map[string]linkFM `yaml:"links,omitempty"`
 }
 
 // linkFM is one link under its local name; yaml writes the names sorted.
@@ -88,7 +72,7 @@ type linkFM struct {
 
 // project returns the frontmatter's facts.
 func (f projectFM) project() domain.Project {
-	p := domain.Project{Schema: f.Schema, ID: f.ID, Name: f.Name, Policy: f.Policy, PolicyHistory: f.PolicyHistory}
+	p := domain.Project{Schema: f.Schema, ID: f.ID, Name: f.Name}
 	for name, l := range f.Links {
 		p.Links = append(p.Links, domain.ProjectLink{Name: name, ID: l.ID, Remote: l.Remote})
 	}
@@ -97,7 +81,7 @@ func (f projectFM) project() domain.Project {
 }
 
 func projectFMOf(p domain.Project) projectFM {
-	f := projectFM{Schema: p.Schema, ID: p.ID, Name: p.Name, Policy: p.Policy, PolicyHistory: p.PolicyHistory}
+	f := projectFM{Schema: p.Schema, ID: p.ID, Name: p.Name}
 	if len(p.Links) > 0 {
 		f.Links = map[string]linkFM{}
 		for _, l := range p.Links {
@@ -211,43 +195,21 @@ func requirementBody(text string) string {
 var dodHeadingRe = regexp.MustCompile(`(?i)^##\s+definition of done\s*$`)
 var h2Re = regexp.MustCompile(`^##\s`)
 var bulletRe = regexp.MustCompile(`^\s*[-*+]\s+(?:\[[ xX]\]\s+)?(.*)$`)
-var optOutRe = regexp.MustCompile(`(?i)^opt-out:\s*(.+?)(?:\s+(?:—|--)\s+(.*))?$`)
 
+// parseAcceptance reads checkable criteria.
 func parseAcceptance(raw string, i *domain.Issue) {
-	inDoD := false
 	for _, l := range strings.Split(normalize(raw), "\n") {
-		if h2Re.MatchString(l) {
-			inDoD = dodHeadingRe.MatchString(l)
-			continue
-		}
-		if !inDoD {
-			if m := checkboxRe.FindStringSubmatch(l); m != nil {
-				i.Criteria = append(i.Criteria, domain.Criterion{Text: strings.TrimSpace(m[3]), Checked: m[2] != " "})
-			}
-			continue
-		}
-		m := bulletRe.FindStringSubmatch(l)
-		if m == nil {
-			continue
-		}
-		item := strings.TrimSpace(m[1])
-		if o := optOutRe.FindStringSubmatch(item); o != nil {
-			i.DoDOptOuts = append(i.DoDOptOuts, domain.OptOut{Item: strings.TrimSpace(o[1]), Reason: strings.TrimSpace(o[2])})
-		} else if item != "" {
-			i.DoDAdd = append(i.DoDAdd, item)
+		if m := checkboxRe.FindStringSubmatch(l); m != nil {
+			i.Criteria = append(i.Criteria, domain.Criterion{Text: strings.TrimSpace(m[3]), Checked: m[2] != " "})
 		}
 	}
 }
 
-// applyAcceptance applies criterion and Definition of Done operations to
-// acceptance.md line by line, keeping every other line as written. It uses
-// the same rules as parseAcceptance: criteria are checkboxes outside the
-// Definition of Done section.
+// applyAcceptance changes criteria while preserving surrounding prose.
 func applyAcceptance(raw string, ops []domain.AcceptanceOp) string {
 	set := map[int]string{}
 	removed := map[int]bool{}
-	dodRemove := map[string]bool{}
-	var adds, dodLines []string
+	var adds []string
 	for _, o := range ops {
 		switch o.Op {
 		case "check":
@@ -258,87 +220,31 @@ func applyAcceptance(raw string, ops []domain.AcceptanceOp) string {
 			removed[o.Index] = true
 		case "add":
 			adds = append(adds, "- [ ] "+strings.TrimSpace(o.Text))
-		case "dod-add":
-			dodLines = append(dodLines, "- "+strings.TrimSpace(o.Text))
-		case "dod-opt-out":
-			dodLines = append(dodLines, "- opt-out: "+strings.TrimSpace(o.Text)+" — "+strings.TrimSpace(o.Reason))
-		case "dod-remove":
-			dodRemove[o.Text] = true
 		}
-	}
-	lines := strings.Split(normalize(raw), "\n")
-	if len(lines) == 1 && lines[0] == "" {
-		lines = nil
 	}
 	var out []string
-	inDoD, sawDoD := false, false
-	n := 0
-	addAt, dodEnd := -1, -1
-	for _, l := range lines {
-		if h2Re.MatchString(l) {
-			if inDoD {
-				dodEnd = len(out)
-			}
-			inDoD = dodHeadingRe.MatchString(l)
-			if inDoD {
-				sawDoD = true
-				if addAt < 0 {
-					addAt = len(out)
-				}
-			}
-			out = append(out, l)
-			continue
-		}
-		if !inDoD {
-			if m := checkboxRe.FindStringSubmatch(l); m != nil {
-				n++
-				if removed[n] {
-					addAt = len(out)
-					continue
-				}
-				if mark, ok := set[n]; ok {
-					l = m[1] + "- [" + mark + "] " + m[3]
-				}
-				out = append(out, l)
+	n, addAt := 0, -1
+	for _, l := range strings.Split(normalize(raw), "\n") {
+		if m := checkboxRe.FindStringSubmatch(l); m != nil {
+			n++
+			if removed[n] {
 				addAt = len(out)
 				continue
 			}
+			if mark, ok := set[n]; ok {
+				l = m[1] + "- [" + mark + "] " + m[3]
+			}
 			out = append(out, l)
-			continue
+			addAt = len(out)
+		} else {
+			out = append(out, l)
 		}
-		if m := bulletRe.FindStringSubmatch(l); m != nil {
-			item := strings.TrimSpace(m[1])
-			if o := optOutRe.FindStringSubmatch(item); o != nil {
-				item = strings.TrimSpace(o[1])
-			}
-			if dodRemove[item] {
-				continue
-			}
-		}
-		out = append(out, l)
 	}
-	if inDoD {
-		dodEnd = len(out)
-	}
-	// Criteria go in before Definition of Done lines, which always sit at
-	// or after the DoD heading, so inserting them first keeps dodEnd valid
-	// only when it lies before addAt; otherwise shift it.
 	if len(adds) > 0 {
 		if addAt < 0 {
 			addAt = len(out)
 		}
-		before := len(out)
 		out = insertLines(out, addAt, adds)
-		if dodEnd >= addAt {
-			dodEnd += len(out) - before
-		}
-	}
-	if len(dodLines) > 0 {
-		if !sawDoD {
-			out = append(out, "", "## Definition of Done")
-			dodEnd = len(out)
-		}
-		out = insertLines(out, dodEnd, dodLines)
 	}
 	return normalize(strings.Join(out, "\n"))
 }
@@ -544,11 +450,11 @@ func parseReady(raw string) (*domain.Ready, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &domain.Ready{By: f.By, At: at, Baseline: f.Baseline, Note: normalize(body), Contract: f.Contract, PreviousContracts: f.PreviousContracts}, nil
+	return &domain.Ready{By: f.By, At: at, Baseline: f.Baseline, Note: normalize(body)}, nil
 }
 
 func renderReady(r *domain.Ready) string {
-	return withFrontmatter(encodeYAML(readyFM{By: r.By, At: fmtTime(r.At), Baseline: r.Baseline, Contract: r.Contract, PreviousContracts: r.PreviousContracts}), r.Note)
+	return withFrontmatter(encodeYAML(readyFM{By: r.By, At: fmtTime(r.At), Baseline: r.Baseline}), r.Note)
 }
 
 func parseClaim(raw string) (*domain.Claim, error) {
@@ -594,87 +500,12 @@ func resolutionFromFM(f resolutionFM, body string) (*domain.Resolution, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &domain.Resolution{Outcome: f.Outcome, By: f.By, At: at, Reason: f.Reason, Evidence: f.Evidence, DoD: f.DoD, Note: normalize(body), Contract: f.Contract, Verification: f.Verification, Approvals: f.Approvals, KnowledgeReviews: f.KnowledgeReviews}
-	if r.Contract != nil && r.Contract.ID != r.Contract.ContentID() {
-		return nil, fmt.Errorf("resolution completion contract content does not match its ID")
-	}
-	for _, e := range r.Verification {
-		if r.Contract == nil || e.Contract != r.Contract.ID || e.ID != e.ContentID() {
-			return nil, fmt.Errorf("resolution verification does not match its contract or content ID")
-		}
-		if err := e.ValidateReport(); err != nil {
-			return nil, err
-		}
-		found := false
-		for _, requirement := range r.Contract.Requirements {
-			if requirement.ID == e.Requirement {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return nil, fmt.Errorf("resolution verification names an unknown requirement")
-		}
-	}
-	for _, a := range r.Approvals {
-		if a.ID != a.ContentID() {
-			return nil, fmt.Errorf("resolution approval content does not match its ID")
-		}
-		if err := a.Validate(); err != nil {
-			return nil, err
-		}
-		if r.Contract == nil || a.Kind != domain.ApprovalOptOut && a.Contract != r.Contract.ID {
-			return nil, fmt.Errorf("resolution approval does not match its bound contract")
-		}
-		if a.Kind == domain.ApprovalException {
-			found := false
-			for _, requirement := range r.Contract.Requirements {
-				if requirement.ID == a.Requirement {
-					found = true
-				}
-			}
-			if !found {
-				return nil, fmt.Errorf("resolution exception names an unknown requirement")
-			}
-		}
-	}
-	for _, review := range r.KnowledgeReviews {
-		if review.ID != review.ContentID() || review.Validate() != nil || r.Contract == nil || review.Contract != r.Contract.ID {
-			return nil, fmt.Errorf("resolution knowledge review does not match its contract or content ID")
-		}
-	}
+	r := &domain.Resolution{Outcome: f.Outcome, By: f.By, At: at, Reason: f.Reason, Evidence: f.Evidence, Note: normalize(body)}
 	if f.Documentation != nil {
 		r.Documentation = &domain.Documentation{NoImpact: f.Documentation.NoImpact}
 		for _, e := range f.Documentation.Entries {
 			r.Documentation.Entries = append(r.Documentation.Entries, domain.NormalizeEntryPath(e))
 		}
-	}
-	if len(r.KnowledgeReviews) > 0 {
-		if r.Documentation == nil || r.Contract == nil {
-			return nil, fmt.Errorf("resolution knowledge reviews need documentation and a bound contract")
-		}
-		if len(r.Documentation.Entries) > 0 {
-			if strings.TrimSpace(r.Documentation.NoImpact) != "" || len(r.KnowledgeReviews) != len(r.Documentation.Entries) {
-				return nil, fmt.Errorf("resolution knowledge review snapshot does not match its documentation entries")
-			}
-			for _, entry := range r.Documentation.Entries {
-				found := false
-				for _, review := range r.KnowledgeReviews {
-					if review.Entry == entry && (review.Kind == domain.KnowledgeUpdated || review.Kind == domain.KnowledgeUnchanged) {
-						found = true
-						break
-					}
-				}
-				if !found {
-					return nil, fmt.Errorf("resolution is missing the selected review for knowledge entry %s", entry)
-				}
-			}
-		} else if len(r.KnowledgeReviews) != 1 || r.KnowledgeReviews[0].Kind != domain.KnowledgeNoImpact || r.KnowledgeReviews[0].Observation != strings.TrimSpace(r.Documentation.NoImpact) {
-			return nil, fmt.Errorf("resolution no-impact review does not match its documentation reason")
-		}
-	}
-	for _, o := range f.DoDOptOuts {
-		r.DoDOptOuts = append(r.DoDOptOuts, domain.OptOut{Item: o.Item, Reason: o.Reason, ApprovalID: o.ApprovalID})
 	}
 	return r, nil
 }
@@ -684,12 +515,9 @@ func renderResolution(r *domain.Resolution) string {
 }
 
 func resolutionToFM(r *domain.Resolution) resolutionFM {
-	f := resolutionFM{Outcome: r.Outcome, By: r.By, At: fmtTime(r.At), Reason: r.Reason, Evidence: r.Evidence, DoD: r.DoD, Contract: r.Contract, Verification: r.Verification, Approvals: r.Approvals, KnowledgeReviews: r.KnowledgeReviews}
+	f := resolutionFM{Outcome: r.Outcome, By: r.By, At: fmtTime(r.At), Reason: r.Reason, Evidence: r.Evidence}
 	if r.Documentation != nil {
 		f.Documentation = &docFM{Entries: r.Documentation.Entries, NoImpact: r.Documentation.NoImpact}
-	}
-	for _, o := range r.DoDOptOuts {
-		f.DoDOptOuts = append(f.DoDOptOuts, optOutFM{Item: o.Item, Reason: o.Reason, ApprovalID: o.ApprovalID})
 	}
 	return f
 }
@@ -741,4 +569,37 @@ func ReadProject(root string) (domain.Project, error) {
 		return domain.Project{}, err
 	}
 	return parseProject(string(b))
+}
+
+// replaceProjectDoD preserves all project prose outside the guidance section.
+func replaceProjectDoD(body string, items []string) string {
+	var out []string
+	inDoD, found := false, false
+	section := func() {
+		out = append(out, "## Definition of Done", "")
+		for _, item := range items {
+			out = append(out, "- "+item)
+		}
+		out = append(out, "")
+	}
+	for _, line := range strings.Split(normalize(body), "\n") {
+		if h2Re.MatchString(line) {
+			inDoD = dodHeadingRe.MatchString(line)
+			if inDoD {
+				if !found {
+					section()
+					found = true
+				}
+				continue
+			}
+		}
+		if !inDoD {
+			out = append(out, line)
+		}
+	}
+	if !found {
+		out = append(out, "")
+		section()
+	}
+	return normalize(strings.Join(out, "\n"))
 }

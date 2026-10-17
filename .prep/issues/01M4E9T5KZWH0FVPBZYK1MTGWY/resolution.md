@@ -8,9 +8,4 @@ documentation:
     - /components/claude-code.md
     - /components/release.md
     - /features/agent-activity.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---

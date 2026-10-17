@@ -611,13 +611,10 @@ func (l *intList) Set(v string) error {
 // the pipeline of every write and never change the issue's state.
 func recordCmd(op domain.Op) func(*app, []string) error {
 	return func(a *app, args []string) error {
-		if op == domain.OpDoD && len(args) > 0 && args[0] == "approve" {
-			return cmdApproveOptOut(a, args[1:])
-		}
 		fs := flag.NewFlagSet(string(op), flag.ContinueOnError)
 		in := domain.RecordInput{}
-		var body, bodyFile, reason string
-		var adds, dodAdds, optOuts, dodRemoves multi
+		var body, bodyFile string
+		var adds multi
 		var checks, unchecks, removes intList
 		switch op {
 		case domain.OpContext, domain.OpFindings, domain.OpDecide:
@@ -634,11 +631,7 @@ func recordCmd(op domain.Op) func(*app, []string) error {
 			fs.Var(&checks, "check", "check criterion n (repeatable)")
 			fs.Var(&unchecks, "uncheck", "uncheck criterion n (repeatable)")
 			fs.Var(&removes, "remove", "remove criterion n (repeatable)")
-		case domain.OpDoD:
-			fs.Var(&dodAdds, "add", "add a Definition of Done item (repeatable)")
-			fs.Var(&optOuts, "opt-out", "opt out of an inherited item; needs --reason")
-			fs.StringVar(&reason, "reason", "", "why the opt-out applies")
-			fs.Var(&dodRemoves, "remove", "remove an addition or opt-out by its item (repeatable)")
+
 		}
 		pos, err := parse(fs, args)
 		if err != nil {
@@ -677,18 +670,6 @@ func recordCmd(op domain.Op) func(*app, []string) error {
 		}
 		for _, s := range adds {
 			in.Acceptance = append(in.Acceptance, domain.AcceptanceOp{Op: "add", Text: s})
-		}
-		for _, s := range dodAdds {
-			in.Acceptance = append(in.Acceptance, domain.AcceptanceOp{Op: "dod-add", Text: s})
-		}
-		for _, s := range optOuts {
-			in.Acceptance = append(in.Acceptance, domain.AcceptanceOp{Op: "dod-opt-out", Text: s, Reason: reason})
-		}
-		for _, s := range dodRemoves {
-			in.Acceptance = append(in.Acceptance, domain.AcceptanceOp{Op: "dod-remove", Text: s})
-		}
-		if reason != "" && len(optOuts) == 0 {
-			return usageErr("--reason only applies to --opt-out")
 		}
 		t, err := a.load(false)
 		if err != nil {

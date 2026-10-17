@@ -46,7 +46,7 @@ const (
 	GateDeps          = "G_DEPS"
 	GateUnchecked     = "G_UNCHECKED"
 	GateChildren      = "G_CHILDREN"
-	GateEvidence      = "G_EVIDENCE"
+	GateCommit        = "G_COMMIT"
 	GateFindings      = "G_FINDINGS"
 	GateOutcome       = "G_OUTCOME"
 	GateDocs          = "G_DOCS"
@@ -72,34 +72,29 @@ type Input struct {
 
 // Change is the set of records a transition writes. Storage adapters render it.
 type Change struct {
-	Op               Op                      `json:"op"`
-	IssueID          string                  `json:"id"`
-	NewIssue         *Issue                  `json:"-"`
-	Baseline         *Baseline               `json:"-"`
-	Ready            *Ready                  `json:"-"`
-	Claim            *Claim                  `json:"-"`
-	RemoveClaim      bool                    `json:"-"`
-	Resolution       *Resolution             `json:"-"`
-	RemoveResolution bool                    `json:"-"`
-	Artifacts        *[]ArtifactReference    `json:"-"`
-	Verification     *[]VerificationEvidence `json:"-"`
-	Approvals        *[]CompletionApproval   `json:"-"`
-	KnowledgeReviews *[]KnowledgeReview      `json:"-"`
-	DoDRevision      *string                 `json:"-"`
-	OptOutRevisions  *map[string]string      `json:"-"`
-	Edit             *IssueEdit              `json:"-"`
-	Context          *string                 `json:"-"`
-	Findings         *string                 `json:"-"`
-	Decision         *Decision               `json:"-"`
-	Acceptance       []AcceptanceOp          `json:"-"`
+	Op               Op                   `json:"op"`
+	IssueID          string               `json:"id"`
+	NewIssue         *Issue               `json:"-"`
+	Baseline         *Baseline            `json:"-"`
+	Ready            *Ready               `json:"-"`
+	Claim            *Claim               `json:"-"`
+	RemoveClaim      bool                 `json:"-"`
+	Resolution       *Resolution          `json:"-"`
+	RemoveResolution bool                 `json:"-"`
+	Artifacts        *[]ArtifactReference `json:"-"`
+	Edit             *IssueEdit           `json:"-"`
+	Context          *string              `json:"-"`
+	Findings         *string              `json:"-"`
+	Decision         *Decision            `json:"-"`
+	Acceptance       []AcceptanceOp       `json:"-"`
 	// Knowledge is a knowledge write; KnowledgeEntry is the entry the
 	// adapter rendered from it, used to validate before writing.
 	Knowledge      *KnowledgeEdit `json:"-"`
 	KnowledgeEntry *Entry         `json:"-"`
+	// DoD is the project Definition of Done guidance.
+	DoD *[]string `json:"-"`
 	// Config is a new project configuration (settings).
-	Config        *Config             `json:"-"`
-	Policy        *CompletionPolicy   `json:"-"`
-	PolicyHistory *[]CompletionPolicy `json:"-"`
+	Config *Config `json:"-"`
 	// Links is project.md's new link list; LinkRename (old, new) also
 	// rewrites every reference to old.
 	Links      *[]ProjectLink `json:"-"`
@@ -191,14 +186,6 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 		}
 		add(GateState, "%s requires state %s, issue is %s", op, joinStates(from), s)
 	}
-	if (op == OpClaim || op == OpComplete) && t.PolicyReviewRequired(id) {
-		add(GatePolicy, "effective completion policy changed; review prep policy show %s, then adopt it with prep policy adopt %s or obtain human approval with prep policy retain %s --reason <reason>", id, id, id)
-	}
-	if (op == OpClaim || op == OpComplete) && i.Ready != nil && i.Ready.Contract != nil {
-		for _, o := range t.unapprovedOptOuts(id) {
-			add(GateApproval, "DoD opt-out %q needs explicit human approval before proceeding", o.Item)
-		}
-	}
 	switch op {
 	case OpDefine:
 		if (s == StateDefined || s == StateReady) && !stale {
@@ -232,12 +219,6 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 			add(GateOpenQuestions, "the Open questions section in issue.md is not empty")
 		}
 	case OpReady:
-		if !t.Project.Policy.Valid() {
-			unmet = append(unmet, policyRequired())
-		}
-		for _, o := range t.unapprovedOptOuts(id) {
-			add(GateApproval, "inherited DoD opt-out %q needs explicit human approval on the issue that requested it; use prep dod approve <id> --item <item> --reason <reason> --by human:<name>", o.Item)
-		}
 		if stale {
 			add(GateStale, "the requirement changed since the newest baseline; run prep define (re-enrich) or prep ack (trivial change)")
 		}
@@ -264,7 +245,7 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 		}
 		n := 0
 		for _, c := range i.Criteria {
-			if !c.Checked && t.ExceptionApproval(id, requirementID("acceptance", c.Text)) == nil {
+			if !c.Checked {
 				n++
 			}
 		}
@@ -290,7 +271,7 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 					// A commit is optional provenance; completion does not
 					// orchestrate or require one.
 					if in.Commit != "" && !commitPattern.MatchString(in.Commit) {
-						add(GateEvidence, "commit reference %q is not a hex commit hash", in.Commit)
+						add(GateCommit, "commit reference %q is not a hex commit hash", in.Commit)
 					}
 					if strings.HasPrefix(in.Actor, "human:") {
 						add(GateActor, "code issues are completed by an agent; use the agent's --by identity (commit provenance is optional)")
@@ -308,9 +289,6 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 		}
 		if in == nil {
 			needs = append(needs, "--docs <entry>... or --no-impact <reason>")
-			if i.Ready != nil && i.Ready.Contract != nil {
-				needs = append(needs, "prep knowledge review record <id> --entry <entry> --kind updated|unchanged --observation <text> --scope <work-path> (or --no-impact --reason <reason>)")
-			}
 		} else {
 			switch {
 			case len(in.Docs) == 0 && strings.TrimSpace(in.NoImpact) == "":
@@ -321,20 +299,6 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 			for _, d := range in.Docs {
 				if t.Knowledge[NormalizeEntryPath(d)] == nil {
 					add(GateDocEntry, "knowledge entry %s does not exist; run prep knowledge list and choose an existing --docs entry, or create it with prep knowledge new", NormalizeEntryPath(d))
-				}
-			}
-			if i.Ready != nil && i.Ready.Contract != nil && (len(in.Docs) > 0) != (strings.TrimSpace(in.NoImpact) != "") {
-				_, problems := t.KnowledgeReviewsForCompletion(id, in.Docs, in.NoImpact)
-				for _, problem := range problems {
-					add(GateKnowledge, "%s", problem)
-				}
-			}
-		}
-		if i.Ready != nil && i.Ready.Contract != nil {
-			for _, r := range i.Ready.Contract.Requirements {
-				e := LatestEvidence(i, r.ID)
-				if (e == nil || e.ValidateReport() != nil || e.ID != e.ContentID() || e.Result != "pass" || !i.EvidenceCurrent[e.ID]) && t.ExceptionApproval(id, r.ID) == nil {
-					add(GateEvidence, "passing applicable report required for %s; use prep evidence record %s --requirement %s", r.Text, id, r.ID)
 				}
 			}
 		}
@@ -419,8 +383,7 @@ func (t *Tree) Plan(id string, op Op, in Input) (*Change, error) {
 			c.Ready = &r
 		}
 	case OpReady:
-		contract := t.Contract(id)
-		c.Ready = &Ready{By: in.Actor, At: now, Baseline: i.LatestBaseline().Name, Note: in.Note, Contract: contract, PreviousContracts: previousContracts(i.Ready, contract)}
+		c.Ready = &Ready{By: in.Actor, At: now, Baseline: i.LatestBaseline().Name, Note: in.Note}
 	case OpClaim:
 		c.Claim = &Claim{By: in.Actor, At: now, Note: in.Note}
 	case OpRelease:
@@ -431,23 +394,7 @@ func (t *Tree) Plan(id string, op Op, in Input) (*Change, error) {
 		}
 		c.History = line
 	case OpComplete:
-		dod, opt := t.EffectiveDoD(id)
-		res := &Resolution{Outcome: OutcomeDone, By: in.Actor, At: now, DoD: dod, DoDOptOuts: opt, Note: in.Note}
-		if i.Ready != nil && i.Ready.Contract != nil {
-			res.Contract = i.Ready.Contract
-			res.Approvals = t.CompletionApprovals(id)
-			res.DoD, res.DoDOptOuts = nil, append([]OptOut(nil), i.Ready.Contract.OptOuts...)
-			for _, r := range i.Ready.Contract.Requirements {
-				if r.Kind == "dod" {
-					res.DoD = append(res.DoD, r.Text)
-				}
-			}
-			for _, r := range i.Ready.Contract.Requirements {
-				if e := LatestEvidence(i, r.ID); e != nil {
-					res.Verification = append(res.Verification, *e)
-				}
-			}
-		}
+		res := &Resolution{Outcome: OutcomeDone, By: in.Actor, At: now, Note: in.Note}
 		if !t.IsParent(id) && i.Kind == KindCode {
 			res.Evidence = strings.ToLower(in.Commit)
 		}
@@ -456,9 +403,6 @@ func (t *Tree) Plan(id string, op Op, in Input) (*Change, error) {
 			doc.Entries = append(doc.Entries, NormalizeEntryPath(d))
 		}
 		res.Documentation = doc
-		if i.Ready != nil && i.Ready.Contract != nil {
-			res.KnowledgeReviews, _ = t.KnowledgeReviewsForCompletion(id, in.Docs, in.NoImpact)
-		}
 		c.Resolution = res
 	case OpReopen:
 		// The adapter appends the removed resolution's text after this line.
@@ -638,24 +582,6 @@ func (t *Tree) Apply(c *Change) *Tree {
 			if c.RemoveClaim {
 				cp.Claim = nil
 			}
-			if c.Verification != nil {
-				cp.Verification = append([]VerificationEvidence(nil), (*c.Verification)...)
-			}
-			if c.Approvals != nil {
-				cp.Approvals = append([]CompletionApproval(nil), (*c.Approvals)...)
-			}
-			if c.KnowledgeReviews != nil {
-				cp.KnowledgeReviews = append([]KnowledgeReview(nil), (*c.KnowledgeReviews)...)
-			}
-			if c.DoDRevision != nil {
-				cp.DoDRevision = *c.DoDRevision
-			}
-			if c.OptOutRevisions != nil {
-				cp.OptOutRevisions = make(map[string]string, len(*c.OptOutRevisions))
-				for item, revision := range *c.OptOutRevisions {
-					cp.OptOutRevisions[item] = revision
-				}
-			}
 			if c.Resolution != nil {
 				r := *c.Resolution
 				cp.Resolution = &r
@@ -683,7 +609,7 @@ func (t *Tree) Apply(c *Change) *Tree {
 				cp.Decisions = append(append([]Decision(nil), i.Decisions...), *c.Decision)
 			}
 			if len(c.Acceptance) > 0 {
-				cp.Criteria, cp.DoDAdd, cp.DoDOptOuts = ApplyAcceptance(i, c.Acceptance)
+				cp.Criteria = ApplyAcceptance(i, c.Acceptance)
 			}
 			i = &cp
 		}
@@ -711,12 +637,8 @@ func (t *Tree) Apply(c *Change) *Tree {
 		entries = append(entries, c.KnowledgeEntry)
 	}
 	p := t.Project
-	if c.Policy != nil {
-		policy := *c.Policy
-		p.Policy = &policy
-	}
-	if c.PolicyHistory != nil {
-		p.PolicyHistory = append([]CompletionPolicy(nil), (*c.PolicyHistory)...)
+	if c.DoD != nil {
+		p.DoD = append([]string(nil), (*c.DoD)...)
 	}
 	if c.Config != nil {
 		p.Config = *c.Config

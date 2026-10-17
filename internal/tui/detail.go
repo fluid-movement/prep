@@ -95,16 +95,6 @@ func detailSections(t *domain.Tree, id string) string {
 		}
 		section("Acceptance", c.String())
 	}
-	if dod, opt := t.EffectiveDoD(id); len(dod) > 0 || len(opt) > 0 {
-		var c strings.Builder
-		for _, d := range dod {
-			c.WriteString("- " + d + "\n")
-		}
-		for _, o := range opt {
-			c.WriteString("- ~~" + o.Item + "~~ (opted out: " + o.Reason + ")\n")
-		}
-		section("Definition of Done", c.String())
-	}
 	if i.Findings != nil {
 		section("Findings", *i.Findings)
 	}

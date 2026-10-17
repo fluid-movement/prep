@@ -38,15 +38,15 @@ func TestArtifactChangeDoesNotSatisfyCompletionGates(t *testing.T) {
 	baseline := Baseline{Name: "20261015-120000", By: "human:test", At: now, Kind: KindManual, Requirement: "Inspect the behavior."}
 	i := &Issue{ID: artifactIssueID, Title: "Inspect behavior", Kind: KindManual, Body: baseline.Requirement,
 		Prose: baseline.Requirement, Criteria: []Criterion{{Text: "Behavior is understood", Checked: true}}, Baselines: []Baseline{baseline}}
-	policy := &CompletionPolicy{Verification: "Inspect the behavior.", Documentation: "Review affected knowledge.", By: "human:test", At: now}
-	tree := NewTree(Project{Policy: policy}, []*Issue{i}, nil, nil)
-	i.Ready = &Ready{By: "human:test", At: now, Baseline: baseline.Name, Contract: tree.Contract(i.ID)}
+	tree := NewTree(Project{}, []*Issue{i}, nil, nil)
+	i.Ready = &Ready{By: "human:test", At: now, Baseline: baseline.Name}
 	i.Claim = &Claim{By: "agent:test", At: now}
+	i.Criteria[0].Checked = false
 	beforeState, beforeStale := tree.State(i.ID), tree.Stale(i.ID)
-	in := Input{Actor: "agent:test", Now: now, NoImpact: "Reference only; no knowledge review was performed."}
+	in := Input{Actor: "agent:test", Now: now, NoImpact: "Reference metadata only."}
 	before, _ := tree.Gates(i.ID, OpComplete, &in)
-	if !hasGate(before, GateEvidence) || !hasGate(before, GateKnowledge) {
-		t.Fatalf("fixture should require evidence and knowledge review: %#v", before)
+	if !hasGate(before, GateUnchecked) {
+		t.Fatalf("fixture should require checked criteria: %#v", before)
 	}
 
 	change, err := tree.PlanArtifact(i.ID, ArtifactInput{Reference: ArtifactReference{
@@ -55,8 +55,8 @@ func TestArtifactChangeDoesNotSatisfyCompletionGates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if change.Verification != nil || change.KnowledgeReviews != nil || change.Approvals != nil || change.Resolution != nil {
-		t.Fatalf("artifact change contains evidence or approval records: %#v", change)
+	if change.Resolution != nil {
+		t.Fatalf("artifact change contains a resolution: %#v", change)
 	}
 	afterTree := tree.Apply(change)
 	after, _ := afterTree.Gates(i.ID, OpComplete, &in)

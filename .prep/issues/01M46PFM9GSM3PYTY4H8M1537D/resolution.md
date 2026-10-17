@@ -10,9 +10,4 @@ documentation:
     - /components/domain.md
     - /components/architecture.md
     - /conventions/knowledge-base.md
-dod:
-  - go test ./... passes
-  - prep check reports no errors
-  - prep fmt --check passes
-  - knowledge entries describing changed behavior are updated
 ---
