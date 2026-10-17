@@ -1,0 +1,25 @@
+name: implement-record-code-decision
+description: A choice made while changing code is recorded as a decision with its reason.
+prompt: >-
+  Implement the ready issue Cache report totals. Use a 10-minute in-memory cache
+  instead of recomputing on every request: we chose this because reports tolerate
+  ten minutes of staleness and repeated computation is expensive.
+spec:
+  issues:
+    - alias: cache
+      title: Cache report totals
+      state: ready
+      body: Cache report totals in memory for ten minutes to avoid repeated expensive computation.
+      context: Update report.py. The totals function currently recomputes on every call.
+  repo:
+    files:
+      report.py: |
+        def totals(rows):
+            return sum(row["amount"] for row in rows)
+expect:
+  tools:
+    - ran: decide
+    - no_prep_files: true
+  rubric:
+    - report.py caches totals in memory for ten minutes rather than recomputing on every call.
+    - A decision record captures the choice of caching over recomputation and the reason that reports tolerate ten minutes of staleness while repeated computation is expensive.

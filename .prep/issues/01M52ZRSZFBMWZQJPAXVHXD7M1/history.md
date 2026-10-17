@@ -3,3 +3,5 @@
 - 2026-10-17T13:24:53Z edited by claude-code: requirement
 
 - 2026-10-17T13:24:55Z edited by claude-code: title
+
+- 2026-10-17T14:23:41Z codex: Implemented, ready for check: The finish hook asks once about recording a decision after code changes, lists up to five matching active decisions, and includes regression tests and a loadable eval case.
