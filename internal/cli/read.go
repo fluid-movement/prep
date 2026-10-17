@@ -539,7 +539,36 @@ func cmdGuide(a *app, args []string) error {
 	if g.Parent {
 		a.printf("   (parent)")
 	}
-	a.printf("\nstep: %s\n\n", g.Step)
+	a.printf("\nstep: %s\n", g.Step)
+	if g.Requirement != "" {
+		a.printf("\nRequirement:\n%s\n", strings.TrimSpace(g.Requirement))
+	}
+	if len(g.Criteria) > 0 {
+		a.printf("\nAcceptance criteria:\n")
+		for n, c := range g.Criteria {
+			box := " "
+			if c.Checked {
+				box = "x"
+			}
+			a.printf("  %d. [%s] %s\n", n+1, box, c.Text)
+		}
+	}
+	if strings.TrimSpace(g.Context) != "" {
+		a.printf("\nContext:\n%s\n", strings.TrimSpace(g.Context))
+	}
+	if len(g.Decisions) > 0 {
+		a.printf("\nDecisions:\n")
+		for _, d := range g.Decisions {
+			a.printf("  %s — %s\n", d.Path, d.Title)
+		}
+	}
+	if len(g.DoD) > 0 {
+		a.printf("\nDefinition of Done:\n")
+		for _, d := range g.DoD {
+			a.printf("  - %s\n", d)
+		}
+	}
+	a.printf("\n")
 	for _, s := range g.Instructions {
 		a.printf("- %s\n", s)
 	}
@@ -576,10 +605,10 @@ func cmdGuide(a *app, args []string) error {
 			}
 		}
 	}
-	if len(g.DoD) > 0 {
-		a.printf("\nDefinition of Done:\n")
-		for _, d := range g.DoD {
-			a.printf("  - %s\n", d)
+	if len(g.Checker) > 0 {
+		a.printf("\nChecker (a different agent, after the implementer stops):\n")
+		for _, c := range g.Checker {
+			a.printf("  - %s\n", c)
 		}
 	}
 	if len(g.Diagnostics) > 0 {

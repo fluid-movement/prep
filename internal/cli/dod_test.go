@@ -62,8 +62,8 @@ func TestProjectDoDIsEditableGuidance(t *testing.T) {
 	h.ok("claim", id)
 	var guide domain.Guide
 	h.jsonOf(&guide, "guide", id)
-	if len(guide.DoD) != 0 {
-		t.Fatalf("guidance shown before check step: %+v", guide)
+	if !reflect.DeepEqual(guide.DoD, want) {
+		t.Fatalf("brief lacks guidance: %+v", guide)
 	}
 	h.ok("criterion", id, "--check", "1")
 	h.jsonOf(&guide, "guide", id)
@@ -97,6 +97,37 @@ func TestHelpOmitsRemovedCommands(t *testing.T) {
 	for _, text := range []string{"policy ", "evidence ", "exception ", "dod approve", "knowledge review", "--opt-out"} {
 		if strings.Contains(help, text) {
 			t.Fatalf("help contains %q: %s", text, help)
+		}
+	}
+}
+
+func TestGuideIsImplementerBrief(t *testing.T) {
+	h := newHarness(t)
+	h.ok("dod", "--add", "Run the full suite")
+	id := h.newIssue("--title", "Brief", "--kind", "code", "--body", "Unique requirement prose.")
+	h.ok("criterion", id, "--add", "Unique criterion")
+	h.ok("context", id, "--body", "Unique context text.")
+	h.ok("define", id)
+	h.ok("decide", id, "--title", "Unique decision", "--description", "d", "--body", "b")
+	h.ok("ready", id)
+	for _, step := range []string{"ready", "claimed"} {
+		if step == "claimed" {
+			h.ok("claim", id)
+		}
+		out := h.ok("guide", id)
+		for _, want := range []string{"Unique requirement prose.", "1. [ ] Unique criterion", "Unique context text.", "Unique decision", "Run the full suite", "ready for check", "log the conflict", "Checker", "prep complete " + id + " [--commit <hash>]"} {
+			if !strings.Contains(out, want) {
+				t.Fatalf("%s guide lacks %q:\n%s", step, want, out)
+			}
+		}
+		implementer := out[:strings.Index(out, "Transitions:")]
+		if strings.Contains(strings.ReplaceAll(implementer, "Never run prep complete", ""), "prep complete") {
+			t.Fatalf("%s implementer is told to complete:\n%s", step, implementer)
+		}
+		var g domain.Guide
+		h.jsonOf(&g, "guide", id)
+		if g.Requirement == "" || len(g.Criteria) != 1 || g.Context == "" || len(g.Decisions) != 1 || len(g.DoD) == 0 || len(g.Checker) == 0 {
+			t.Fatalf("%s json guide = %+v", step, g)
 		}
 	}
 }

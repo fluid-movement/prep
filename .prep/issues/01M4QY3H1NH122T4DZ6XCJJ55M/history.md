@@ -31,3 +31,5 @@
 - 2026-10-17T14:26:37Z claude-code: Handoff record: claude sonnet subagent | session-start rules and short skill (medium, text plus test) | checker restored 2 dropped rules; otherwise clean. 57k tokens, 28 tool uses, 4.2 min
 
 - 2026-10-17T14:33:59Z claude-code: Handoff record: codex | finish hook asks for decisions (small-medium) | no fixes
+
+- 2026-10-17T18:12:48Z claude-code: Handoff record: claude sonnet subagent | guide as implementer brief (medium) | no fixes; 80k tokens, 50 tool uses (wall time inflated by a machine sleep)
