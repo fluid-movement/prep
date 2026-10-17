@@ -1,0 +1,13 @@
+The contract machinery is gone (01M52ZQAGVQ5HX0GTBX7R2P47G); this changes only which states complete accepts and one gate.
+
+Where things are:
+- Allowed source states: `fromStates` in `internal/domain/fsm.go`. OpComplete accepts StateDefined as well as StateInProgress, but only for non-parent decision and research issues; code and manual issues and parents keep in progress only. `fromStates` takes only the op today, so the kind check belongs in `Gates` (G_STATE with a message naming the kinds) or `fromStates` gains the issue.
+- Complete's gates: the OpComplete case in `Gates` (`fsm.go`). Unchanged for these kinds: not stale, checked criteria if any, findings (research) or an outcome entry (decision), and the documentation decision. Remove G_ACTOR (the `strings.HasPrefix(in.Actor, "human:")` check) and its constant.
+- Applying a completion from defined: the OpComplete case of the planner further down `fsm.go` must not assume a claim exists (no claim to remove, history line without a claimer).
+- Guide: `stepContract` in `internal/domain/guide.go`. For a defined, non-parent decision or research issue, the step tells the agent to record the outcome (prep decide <id> --outcome ...) or findings (prep findings <id> ...) and then run prep complete; ready and claim stay available when the issue is handed off. Its transitions list shows complete as ok once its gates pass.
+- TUI: the completion action in `internal/tui/actions.go` (`gateCompletionForm`) and any state check that offers complete only for in-progress issues.
+- Tests: domain tests for complete from defined (decision with outcome passes, decision without outcome fails G_OUTCOME, research without findings fails, code from defined fails G_STATE), the G_ACTOR test in `internal/cli/cli_test.go` (invert it: a human identity can complete a code issue), and a guide test for the defined decision step.
+- Eval: add a case under `eval/cases/` (see `eval/cases/implement/complete.yaml` for the shape) where a defined decision issue with a settled choice is to be closed; it passes when the agent records an outcome and completes without readying or claiming, which fails on today's binary.
+- Docs: the skill (`internal/cli/skill.md` and copies under `plugins/` and `.claude/skills/prep/`), [Issue lifecycle](/features/lifecycle.md), [Completion requirements](/features/completion-policy.md), [Domain](/components/domain.md). Update through `prep knowledge update`.
+
+Checks before stopping: `go test ./...`, `go build -o prep ./cmd/prep && ./prep check` (0 errors), `./prep fmt --check`, and `./prep eval run` for the new case if the eval harness runs here (otherwise say so in the log).

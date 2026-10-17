@@ -1,0 +1,5 @@
+- [ ] A defined decision issue with an outcome entry and a defined research issue with findings complete without ready or claim; without them complete fails with G_OUTCOME or G_FINDINGS, covered by tests
+- [ ] Code and manual issues and parents still complete only from in progress, covered by a test
+- [ ] G_ACTOR is gone and a human identity can complete a code issue, covered by a test
+- [ ] prep guide for a defined decision or research issue names recording the outcome or findings and prep complete as the next step, covered by a test
+- [ ] An eval case for closing a defined decision issue passes and fails on the previous binary; the skill and knowledge describe the new path, prep check reports no errors, and GitHub CI on main is green
