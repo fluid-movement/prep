@@ -176,12 +176,6 @@
 * [Gates keep what an agent needs and a check catches; decision and research complete from defined](/decisions/01M54VQCGFB4NRKKH4ZT4PQKW7.md) - Gates keep what an agent needs and a check catches; decision and research complete from defined
 * [Prep's part in a handoff is prep guide; the rest is harness and git](/decisions/01M54VQCGG9212J72216RJ1J8V.md) - Prep's part in a handoff is prep guide; the rest is harness and git
 * [D1 stands: prep guide is prep's whole part in a handoff](/decisions/01M54VQCGH5PXE6D91TKRTQJYM.md) - D1 stands: prep guide is prep's whole part in a handoff
-* [Skill carries rules.md verbatim, kept in sync by a test](/decisions/01M553Q3RG9SGHQSXR064R05FQ.md) - skill.md is a hand-kept short intro plus rules.md, and a test fails when it drifts.
-* [Design principles](/decisions/design-principles.md) - The nine principles prep is built on; check changes against them.
-* [Out of scope](/decisions/out-of-scope.md) - Topics deliberately left out of prep; each can be added later without changing the model.
-* [Prior art](/decisions/prior-art.md) - What prep took from and avoided in Backlog.md and Beads, and why spec-driven tools are a different category.
-* [Stack](/decisions/stack.md) - Go single binary; Charm v2 (Bubble Tea, Bubbles, Lip Gloss, Glamour under charm.land) for the TUI; JSON-RPC over stdio for third-party storage adapters.
-* [Tracking implementation work](/decisions/tracking.md) - User-approved tracking policy: search before implementation, reuse clear matches, file unmatched work, honor opt-outs and preserve scope through finish reviews.
 * [Domain owns lifecycle rules](/decisions/01M553GCE2DPCBX7W1MVHAZHSK.md) - CLI and TUI share one domain model and transition planners; storage adapters load and persist but never implement lifecycle rules.
 * [Separate issue and knowledge stores](/decisions/01M553GCKG77G90ANX961EEGH5.md) - IssueStore (checked record writes) and KnowledgeStore (retrieval, Render then Apply) are separate ports.
 * [Writes are planned, then checked, then applied](/decisions/01M553GCS1BKBBQ9MEQ7G864ZR.md) - Every write is a domain.Change; Tree.CheckWrite validates it in memory and rejects writes that add errors before the adapter renders and writes.
@@ -303,3 +297,4 @@
 * [Third-party storage adapters speak JSON-RPC over stdio](/decisions/01M553HEB0ZTFQ4E4GPTAAR2QZ.md) - External adapters use JSON-RPC over stdio, like LSP and MCP.
 * [Harness adapters are thin TypeScript only where required](/decisions/01M553HEKXE9H6K0N40V7AA919.md) - TypeScript only where a harness requires it (Claude Code mod, Pi extension).
 * [Track implementation work in issues](/decisions/01M553MC6A94WGF0S1M2KM5MSA.md) - Search before implementing, reuse a clear match, file unmatched work of any size, honor opt-outs, keep the request's scope
+* [Skill carries rules.md verbatim, kept in sync by a test](/decisions/01M553Q3RG9SGHQSXR064R05FQ.md) - skill.md is a hand-kept short intro plus rules.md, and a test fails when it drifts.
