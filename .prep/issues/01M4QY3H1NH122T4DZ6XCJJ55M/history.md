@@ -35,3 +35,5 @@
 - 2026-10-17T18:12:48Z claude-code: Handoff record: claude sonnet subagent | guide as implementer brief (medium) | no fixes; 80k tokens, 50 tool uses (wall time inflated by a machine sleep)
 
 - 2026-10-17T18:16:28Z claude-code: Handoff record: codex | TUI Knowledge screen (medium, UI) | no fixes
+
+- 2026-10-17T18:22:17Z claude-code: Handoff record: claude haiku subagent | prompt hook dedupe (small) from the guide brief alone | no fixes; 79k tokens, 38 tool uses, 3.9 min
