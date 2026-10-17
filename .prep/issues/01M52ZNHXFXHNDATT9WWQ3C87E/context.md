@@ -12,6 +12,8 @@ Completion: check the criteria, then prep complete <id> --docs <entry>... (or --
 
 Records of removed features: no prep command deletes them and the record hook blocks agents. `python3 -I /Users/azaharias/coding/prep-wt/convert-records.py <stage> <root>... [--dry-run]` converts them, run only with the user's go-ahead, after the new binary is installed, in this repository and the other prep projects (prep projects lists them). Stages review and contract have run everywhere. In other projects, commit only the files a conversion touches (the user has unrelated work pending there) and never push.
 
+Live eval runs (prep eval run) need the user's OK every time: propose cases, models, N and cost, then wait. Implementers never run them. Writing eval cases needs no OK.
+
 Known: a hook false positive blocks commands whose text contains the records directory path, even reads or prep writes; rephrase. Flaky tests: TestLiveRunner, TestStatuses/timeout and TestEvalMutate under load (logged on 01M52ZQ5YCA96FHQT9WQB6M8C2).
 
-Next: a Sonnet subagent implements the lock (01M52ZQKG3PZZ6YS5P4Z81FKGC); check it. Then the import/migrate removal (01M52ZQSEP2EKTYKYFC79EGFS6, ready, waits on the lock), then enrich the record layout (01M52ZQZBAS48ZK64MW7H85QJ4). The eval harness errors fix is merged; complete it once CI on main is green. Codex usage resets at 15:08 on 2026-10-17. Live eval runs: the user has been asked whether they need clearing first.
+Next: a Sonnet subagent implements the lock (01M52ZQKG3PZZ6YS5P4Z81FKGC); check it. Then the import/migrate removal (01M52ZQSEP2EKTYKYFC79EGFS6, ready, waits on the lock), then enrich the record layout (01M52ZQZBAS48ZK64MW7H85QJ4). The eval harness errors fix is merged; complete it once CI on main is green. Codex usage resets at 15:08 on 2026-10-17.
