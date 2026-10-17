@@ -1,0 +1,3 @@
+- [ ] The --tags aliases, the attachments allowance, the listed dead and test-only functions with their tests, and testdata/contract are gone, and nothing references them
+- [ ] deadcode reports nothing unreachable; its output is in the log
+- [ ] go test, go vet and prep check pass with 0 errors, and GitHub CI on main is green
