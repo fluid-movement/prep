@@ -2,9 +2,6 @@
 title: Eval records harness errors as errors, not failed assertions
 kind: code
 parent: 01M52ZNHXFXHNDATT9WWQ3C87E
-depends_on:
-  - 01M52ZQSEP2EKTYKYFC79EGFS6
-  - 01M52ZRB3VY0MSZ0HZWJ2SEC24
 tags:
   - eval
 priority: high
