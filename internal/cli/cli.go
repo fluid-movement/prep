@@ -69,6 +69,9 @@ type app struct {
 
 	store  *mdstore.Store
 	kstore *okf.Store
+	// holding is set while lockWrite holds the checkout lock: load keeps the
+	// store that holds it instead of opening another.
+	holding bool
 
 	// event is what the command records in the activity stream when it
 	// succeeds; eventReads adds the size of its output.
@@ -359,9 +362,29 @@ func (a *app) open() error {
 	return nil
 }
 
-func (a *app) load(drift bool) (*domain.Tree, error) {
+// lockWrite takes the checkout lock for a whole write command, from its load
+// to its last write, so a concurrent writer plans on this one's result. The
+// caller defers the returned function. Nested calls are no-ops.
+func (a *app) lockWrite() (func(), error) {
+	if a.holding {
+		return func() {}, nil
+	}
 	if err := a.open(); err != nil {
 		return nil, err
+	}
+	release, err := a.store.Hold()
+	if err != nil {
+		return nil, err
+	}
+	a.holding = true
+	return func() { a.holding = false; release() }, nil
+}
+
+func (a *app) load(drift bool) (*domain.Tree, error) {
+	if !a.holding {
+		if err := a.open(); err != nil {
+			return nil, err
+		}
 	}
 	return domain.Load(a.store, a.kstore, drift)
 }

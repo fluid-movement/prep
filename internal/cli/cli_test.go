@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -1430,5 +1431,22 @@ func TestListSummaryCarriesOpenQuestionsAndResolution(t *testing.T) {
 				t.Fatalf("dropped issue: %+v", s)
 			}
 		}
+	}
+}
+
+// An edit that changes nothing leaves no temporary file behind (the old
+// journaled writer left one per unchanged edit, which staging committed).
+func TestUnchangedEditLeavesNoTempFile(t *testing.T) {
+	h := newHarness(t)
+	id := h.newIssue("--title", "Same", "--kind", "decision", "--body", "Same body.")
+	h.ok("edit", id, "--body", "Same body.")
+	err := filepath.WalkDir(filepath.Join(h.dir, ".prep"), func(p string, d fs.DirEntry, err error) error {
+		if err == nil && strings.HasPrefix(d.Name(), ".prep-tmp-") {
+			t.Errorf("leftover temp file %s", p)
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }

@@ -21,6 +21,11 @@ func cmdDoD(a *app, args []string) error {
 	if len(pos) != 0 || len(adds)+len(removes) == 0 {
 		return usageErr("dod needs --add <item> or --remove <item>, without an issue ID")
 	}
+	unlock, err := a.lockWrite()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	t, err := a.load(false)
 	if err != nil {
 		return err

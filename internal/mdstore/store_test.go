@@ -11,51 +11,6 @@ import (
 	"github.com/fluid-movement/prep/internal/domain"
 )
 
-func TestCompareAndSwapRejectsConcurrentEdit(t *testing.T) {
-	root := t.TempDir()
-	s := Open(root)
-	if _, err := s.Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
-		t.Fatal(err)
-	}
-	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
-	tree := domain.NewTree(domain.Project{}, nil, nil, nil)
-	c, err := tree.PlanNew(domain.NewIssueInput{Title: "A", Kind: domain.KindCode, Body: "A."}, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.Apply(c); err != nil {
-		t.Fatal(err)
-	}
-
-	// Two writers load the same state.
-	w1, w2 := Open(root), Open(root)
-	for _, w := range []*Store{w1, w2} {
-		if _, _, _, err := w.Load(); err != nil {
-			t.Fatal(err)
-		}
-	}
-	rel := IssueDir(c.IssueID) + "/history.md"
-	if err := w1.write(rel, "first\n"); err != nil {
-		t.Fatal(err)
-	}
-	err = w2.write(rel, "second\n")
-	var de *domain.Error
-	if !errors.As(err, &de) || de.Code != domain.ErrConflict {
-		t.Fatalf("expected conflict, got %v", err)
-	}
-	b, _ := os.ReadFile(filepath.Join(root, rel))
-	if string(b) != "first\n" {
-		t.Fatalf("history.md = %q", b)
-	}
-	// No temp files are left behind.
-	entries, _ := os.ReadDir(filepath.Join(root, IssueDir(c.IssueID)))
-	for _, e := range entries {
-		if filepath.Ext(e.Name()) != ".md" {
-			t.Fatalf("leftover file %s", e.Name())
-		}
-	}
-}
-
 func TestRoundTripIsCanonical(t *testing.T) {
 	raw := "---\ntitle: X\nkind: code\nparent: 01M45YYRG0AP2P2A41FRCHGR0Q\ndepends_on:\n  - 01M45YYSF8MH8F910XSA7Q366A\n---\n\nProse line.\n\n## Open questions\n\n- why?\n"
 	i := &domain.Issue{}
@@ -350,39 +305,6 @@ func TestLoadSkipsTempFiles(t *testing.T) {
 	}
 	if len(issues) != 1 || issues[0].HasFile(tempPrefix+"123") {
 		t.Fatalf("issues = %+v", issues)
-	}
-}
-
-func TestApplyWritesNothingOnConflict(t *testing.T) {
-	root := t.TempDir()
-	s := Open(root)
-	if _, err := s.Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
-		t.Fatal(err)
-	}
-	tree := domain.NewTree(domain.Project{}, nil, nil, nil)
-	c, err := tree.PlanNew(domain.NewIssueInput{Title: "A", Kind: domain.KindCode, Body: "A."}, time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.Apply(c); err != nil {
-		t.Fatal(err)
-	}
-	w := Open(root)
-	if _, _, _, err := w.Load(); err != nil {
-		t.Fatal(err)
-	}
-	dir := filepath.Join(root, IssueDir(c.IssueID))
-	if err := os.WriteFile(filepath.Join(dir, "history.md"), []byte("someone else\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	ctx := "New context."
-	_, err = w.Apply(&domain.Change{IssueID: c.IssueID, Context: &ctx, History: "- line"})
-	var de *domain.Error
-	if !errors.As(err, &de) || de.Code != domain.ErrConflict {
-		t.Fatalf("expected conflict, got %v", err)
-	}
-	if b, _ := os.ReadFile(filepath.Join(dir, "context.md")); strings.Contains(string(b), ctx) {
-		t.Fatal("context.md was written before the conflict on history.md")
 	}
 }
 

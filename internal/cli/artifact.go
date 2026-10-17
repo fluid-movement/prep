@@ -24,6 +24,11 @@ func cmdArtifact(a *app, args []string) error {
 	if len(pos) != 1 {
 		return usageErr("artifact needs one issue ID, --source and --location")
 	}
+	unlock, err := a.lockWrite()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	t, err := a.load(false)
 	if err != nil {
 		return err

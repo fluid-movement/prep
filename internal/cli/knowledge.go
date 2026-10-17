@@ -120,6 +120,12 @@ func knowledgeConfirm(a *app, args []string) error {
 	if *drifted == (len(pos) > 0) {
 		return usageErr("pass entries to confirm or --drifted, not both")
 	}
+	// The drift check and the writes it plans happen under one lock.
+	unlock, err := a.lockWrite()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	t, err := a.load(*drifted)
 	if err != nil {
 		return err
@@ -183,6 +189,11 @@ func knowledgeConfirm(a *app, args []string) error {
 // writeKnowledge runs a knowledge write through the pipeline: plan in the
 // domain, render through the adapter, validate the tree, write, stage.
 func (a *app) writeKnowledge(e domain.KnowledgeEdit) ([]string, string, error) {
+	unlock, err := a.lockWrite()
+	if err != nil {
+		return nil, "", err
+	}
+	defer unlock()
 	t, err := a.load(false)
 	if err != nil {
 		return nil, "", err
@@ -214,6 +225,11 @@ func knowledgeBootstrap(a *app, args []string) error {
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
+	unlock, err := a.lockWrite()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	t, err := a.load(false)
 	if err != nil {
 		return err

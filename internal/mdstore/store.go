@@ -3,8 +3,6 @@
 package mdstore
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -25,15 +23,12 @@ const Dir = ".prep"
 
 // Store reads and writes a .prep tree rooted at Root (the repository root).
 type Store struct {
-	Root        string
-	hashes      map[string]string                   // relative path -> sha256 of content at load; "" = absent
-	loadedDirs  map[string]string                   // relevant directory entry manifests observed at load
-	hasSnapshot bool                                // distinguishes an empty snapshot from no Load
-	txHook      func(stage string, index int) error // deterministic failure injection for transaction tests
+	Root string
+	held bool // Hold has the exclusive checkout lock; Load and Apply must not lock again
 }
 
 // Open returns a store for the repository root.
-func Open(root string) *Store { return &Store{Root: root, hashes: map[string]string{}} }
+func Open(root string) *Store { return &Store{Root: root} }
 
 // Find walks up from dir to the directory containing .prep.
 func Find(dir string) (string, error) {
@@ -67,22 +62,15 @@ func (s *Store) abs(rel string) string { return filepath.Join(s.Root, filepath.F
 // IssueDir returns the repository-relative directory of an issue.
 func IssueDir(id string) string { return Dir + "/issues/" + id }
 
-func hashOf(b []byte) string {
-	h := sha256.Sum256(b)
-	return hex.EncodeToString(h[:])
-}
-
-// read loads a file and records its hash for compare-and-swap.
+// read loads a file; the bool reports whether it exists.
 func (s *Store) read(rel string) (string, bool, error) {
 	b, err := os.ReadFile(s.abs(rel))
 	if errors.Is(err, fs.ErrNotExist) {
-		s.hashes[rel] = ""
 		return "", false, nil
 	}
 	if err != nil {
 		return "", false, err
 	}
-	s.hashes[rel] = hashOf(b)
 	return string(b), true, nil
 }
 
@@ -103,17 +91,11 @@ func (s *Store) Load() (domain.Project, []*domain.Issue, []domain.Diagnostic, er
 	if unlock != nil {
 		defer unlock()
 	}
-	if err := s.recoverTransaction(); err != nil {
-		return domain.Project{}, nil, nil, err
-	}
 	return s.loadUnlocked()
 }
 
 // loadUnlocked reads the project while the caller holds the checkout lock.
 func (s *Store) loadUnlocked() (domain.Project, []*domain.Issue, []domain.Diagnostic, error) {
-	s.hashes = make(map[string]string)
-	s.loadedDirs = make(map[string]string)
-	s.hasSnapshot = false
 	var diags []domain.Diagnostic
 	diag := func(code string, sev domain.Severity, class domain.Class, issue, file, fix, format string, a ...any) {
 		diags = append(diags, domain.Diagnostic{Code: code, Severity: sev, Class: class, Issue: issue, File: file, Message: fmt.Sprintf(format, a...), Fix: fix})
@@ -154,9 +136,6 @@ func (s *Store) loadUnlocked() (domain.Project, []*domain.Issue, []domain.Diagno
 	if err != nil {
 		return project, nil, nil, err
 	}
-	s.recordDirectoryEntries(Dir, entries, func(name string) bool {
-		return name != transactionFile[len(Dir)+1:] && name != activity.Dir && !strings.HasPrefix(name, tempPrefix)
-	})
 	for _, e := range entries {
 		if !projectFiles[e.Name()] && !strings.HasPrefix(e.Name(), tempPrefix) {
 			diag(domain.CodeProjectUnknown, domain.SevError, domain.ClassManual, "", e.Name(), "remove the file; schema files are fixed", "unknown entry in .prep: %s", e.Name())
@@ -165,16 +144,11 @@ func (s *Store) loadUnlocked() (domain.Project, []*domain.Issue, []domain.Diagno
 
 	dirs, err := os.ReadDir(s.abs(Dir + "/issues"))
 	if errors.Is(err, fs.ErrNotExist) {
-		s.loadedDirs[Dir+"/issues"] = absentDirectoryManifest
-		s.hasSnapshot = true
 		return project, nil, diags, nil
 	}
 	if err != nil {
 		return project, nil, nil, err
 	}
-	s.recordDirectoryEntries(Dir+"/issues", dirs, func(name string) bool {
-		return !strings.HasPrefix(name, tempPrefix) && !strings.HasPrefix(name, ".")
-	})
 	var issues []*domain.Issue
 	for _, d := range dirs {
 		if strings.HasPrefix(d.Name(), ".") {
@@ -193,7 +167,6 @@ func (s *Store) loadUnlocked() (domain.Project, []*domain.Issue, []domain.Diagno
 			issues = append(issues, i)
 		}
 	}
-	s.hasSnapshot = true
 	return project, issues, diags, nil
 }
 
@@ -208,7 +181,6 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 	if err != nil {
 		return nil, nil, err
 	}
-	s.recordDirectoryEntries(dir, entries, func(name string) bool { return !strings.HasPrefix(name, tempPrefix) })
 	for _, e := range entries {
 		n := e.Name()
 		if strings.HasPrefix(n, tempPrefix) {
@@ -319,7 +291,6 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 	}
 
 	if bs, err := os.ReadDir(s.abs(dir + "/baselines")); err == nil {
-		s.recordDirectoryEntries(dir+"/baselines", bs, nil)
 		for _, b := range bs {
 			n := b.Name()
 			name := strings.TrimSuffix(n, ".md")
@@ -336,9 +307,7 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 			}
 		}
 		i.SortBaselines()
-	} else if errors.Is(err, fs.ErrNotExist) {
-		s.loadedDirs[dir+"/baselines"] = absentDirectoryManifest
-	} else {
+	} else if !errors.Is(err, fs.ErrNotExist) {
 		return nil, nil, err
 	}
 	if err := record("ready.md", func(raw string) (err error) { i.Ready, err = parseReady(raw); return }, func() string { return renderReady(i.Ready) }); err != nil {
@@ -387,9 +356,6 @@ func (s *Store) LoadConfig() (domain.Config, error) {
 	}
 	if unlock != nil {
 		defer unlock()
-	}
-	if err := s.recoverTransaction(); err != nil {
-		return domain.Config{}, err
 	}
 	return s.loadConfigUnlocked()
 }
@@ -611,6 +577,11 @@ func (s *Store) Init(id, name string) ([]string, error) {
 	if _, err := os.Stat(s.abs(Dir + "/project.md")); err == nil {
 		return nil, &domain.Error{Code: domain.ErrUsage, Message: "already initialized: .prep/project.md exists"}
 	}
+	release, err := s.Hold()
+	if err != nil {
+		return nil, err
+	}
+	defer release()
 	var written []string
 	files := []struct{ rel, content string }{
 		{Dir + "/project.md", DefaultProject(id, name)},
@@ -623,7 +594,6 @@ func (s *Store) Init(id, name string) ([]string, error) {
 		if _, err := os.Stat(s.abs(f.rel)); err == nil {
 			continue
 		}
-		s.hashes[f.rel] = ""
 		if err := s.write(f.rel, f.content); err != nil {
 			return written, err
 		}

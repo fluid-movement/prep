@@ -5,35 +5,22 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/fluid-movement/prep/internal/domain"
 )
 
-// write stores content atomically (temp file plus rename) after a
-// compare-and-swap check against the hash seen at load time. Files never
-// read in this run must not exist yet.
+// write stores content atomically (temporary file plus rename) under the
+// checkout lock.
 func (s *Store) write(rel, content string) error {
 	unlock, err := s.lock(true)
 	if err != nil {
 		return err
 	}
 	defer unlock()
-	if err := s.recoverTransaction(); err != nil {
-		return err
-	}
-	if err := s.cas(rel); err != nil {
-		return err
-	}
-	before := s.hashes[rel]
-	if _, ok := s.hashes[rel]; !ok {
-		before = ""
-	}
-	if err := s.applyTransaction([]transactionEntry{{Path: rel, Before: before, After: hashOf([]byte(content))}}, map[string][]byte{rel: []byte(content)}); err != nil {
-		return err
-	}
-	s.hashes[rel] = hashOf([]byte(content))
-	return nil
+	return s.writeFile(rel, []byte(content))
 }
 
 func (s *Store) remove(rel string) error {
@@ -42,128 +29,120 @@ func (s *Store) remove(rel string) error {
 		return err
 	}
 	defer unlock()
-	if err := s.recoverTransaction(); err != nil {
-		return err
-	}
-	if err := s.cas(rel); err != nil {
-		return err
-	}
-	before := s.hashes[rel]
-	if _, ok := s.hashes[rel]; !ok {
-		before = ""
-	}
-	if err := s.applyTransaction([]transactionEntry{{Path: rel, Before: before, Remove: true}}, nil); err != nil {
-		return err
-	}
-	s.hashes[rel] = ""
-	return nil
+	return s.removeFile(rel)
 }
 
-func (s *Store) cas(rel string) error {
-	want, known := s.hashes[rel]
-	b, err := os.ReadFile(s.abs(rel))
-	cur := ""
-	switch {
-	case err == nil:
-		cur = hashOf(b)
-	case errors.Is(err, fs.ErrNotExist):
-	default:
+// writeFile replaces rel through a synced temporary file in the same
+// directory and a rename, so a reader sees the old or the new content.
+func (s *Store) writeFile(rel string, content []byte) error {
+	path := s.abs(rel)
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	if !known {
-		want = ""
+	f, err := os.CreateTemp(dir, tempPrefix+"*")
+	if err != nil {
+		return err
 	}
-	if cur != want {
-		return &domain.Error{Code: domain.ErrConflict, Message: fmt.Sprintf("%s changed since it was read; re-run the command", rel)}
+	tmp := f.Name()
+	fail := func(err error) error {
+		_ = f.Close()
+		_ = os.Remove(tmp)
+		return err
 	}
-	return nil
+	if _, err := f.Write(content); err != nil {
+		return fail(err)
+	}
+	if err := f.Sync(); err != nil {
+		return fail(err)
+	}
+	if err := f.Close(); err != nil {
+		return fail(err)
+	}
+	if err := os.Chmod(tmp, 0o644); err != nil {
+		return fail(err)
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return fail(err)
+	}
+	return syncDirectory(dir)
 }
 
-// Apply renders a change into files and writes them as a locked, recoverable
-// roll-forward transaction. It returns repository-relative touched paths.
+func (s *Store) removeFile(rel string) error {
+	path := s.abs(rel)
+	if err := os.Remove(path); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	return syncDirectory(filepath.Dir(path))
+}
+
+// Apply renders a change into files and writes them one at a time, the
+// state-defining file last, so an interrupted write leaves the previous state
+// plus harmless extra content. It takes the checkout lock unless the caller
+// holds it (Hold). It returns repository-relative touched paths in write order.
 func (s *Store) Apply(c *domain.Change) ([]string, error) {
 	unlock, err := s.lock(true)
 	if err != nil {
 		return nil, err
 	}
 	defer unlock()
-	if err := s.recoverTransaction(); err != nil {
-		return nil, err
-	}
-	if s.hasSnapshot {
-		if err := s.validateDirectorySnapshot(); err != nil {
-			return nil, err
-		}
-	}
-	loaded := cloneHashes(s.hashes)
 	touched, contents, err := s.render(c)
 	if err != nil {
 		return nil, err
 	}
-	// Validate the complete load read-set as well as any additional files
-	// consulted by render. This prevents a stale transition from using an old
-	// verification/ready record while changing a different file.
-	checks := cloneHashes(s.hashes)
-	for rel, before := range loaded {
-		checks[rel] = before
-	}
-	for rel, want := range checks {
-		if err := s.casExpected(rel, want); err != nil {
-			return nil, err
-		}
-	}
-	entries := make([]transactionEntry, 0, len(touched))
-	data := make(map[string][]byte, len(touched))
 	for k, rel := range touched {
-		before, ok := loaded[rel]
-		if !ok {
-			before, ok = s.hashes[rel]
-		}
-		if !ok {
-			before = ""
-		}
 		if contents[k] == nil {
-			entries = append(entries, transactionEntry{Path: rel, Before: before, Remove: true})
+			err = s.removeFile(rel)
 		} else {
-			body := []byte(*contents[k])
-			entries = append(entries, transactionEntry{Path: rel, Before: before, After: hashOf(body)})
-			data[rel] = body
+			err = s.writeFile(rel, []byte(*contents[k]))
 		}
-	}
-	if err := s.applyTransaction(entries, data); err != nil {
-		return touched, err
-	}
-	for _, e := range entries {
-		s.hashes[e.Path] = e.After
-	}
-	if s.hasSnapshot {
-		if err := s.refreshDirectorySnapshot(touched); err != nil {
+		if err != nil {
 			return touched, err
 		}
 	}
 	return touched, nil
 }
 
-func cloneHashes(in map[string]string) map[string]string {
-	out := make(map[string]string, len(in))
-	for k, v := range in {
-		out[k] = v
+// writeRank orders a change's files: supporting records first, then the
+// files that define the issue's state (baseline, ready, claim), then the
+// resolution.
+func writeRank(rel string) int {
+	switch {
+	case strings.HasSuffix(rel, "/resolution.md"):
+		return 2
+	case strings.HasSuffix(rel, "/ready.md"), strings.HasSuffix(rel, "/claim.md"), strings.Contains(rel, "/baselines/"):
+		return 1
 	}
-	return out
+	return 0
 }
 
-func (s *Store) casExpected(rel, want string) error {
-	b, err := os.ReadFile(s.abs(rel))
-	cur := ""
-	if err == nil {
-		cur = hashOf(b)
-	} else if !errors.Is(err, fs.ErrNotExist) {
-		return err
+// orderForWrite sorts touched files (and their contents) by writeRank,
+// keeping the render order within a rank. Removals come after every write:
+// complete writes resolution.md before it removes claim.md, so an
+// interruption leaves the issue done with a stale claim, never back in ready;
+// release and reopen remove their state file last.
+func orderForWrite(touched []string, contents []*string) {
+	idx := make([]int, len(touched))
+	for i := range idx {
+		idx[i] = i
 	}
-	if cur != want {
-		return &domain.Error{Code: domain.ErrConflict, Message: fmt.Sprintf("%s changed since it was read; re-run the command", rel)}
+	rank := func(k int) int {
+		if contents[k] == nil {
+			return 3
+		}
+		return writeRank(touched[k])
 	}
-	return nil
+	sort.SliceStable(idx, func(a, b int) bool { return rank(idx[a]) < rank(idx[b]) })
+	t := make([]string, len(touched))
+	c := make([]*string, len(contents))
+	for i, k := range idx {
+		t[i], c[i] = touched[k], contents[k]
+	}
+	copy(touched, t)
+	copy(contents, c)
 }
 
 // render turns a change into the files it writes, in order, with their
@@ -235,9 +214,6 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 	}
 	if e := c.Edit; e != nil {
 		rel := dir + "/issue.md"
-		if err := s.cas(rel); err != nil {
-			return nil, nil, err
-		}
 		raw, _, err := s.read(rel)
 		if err != nil {
 			return nil, nil, err
@@ -256,9 +232,6 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 	}
 	if c.Artifacts != nil {
 		rel := dir + "/issue.md"
-		if err := s.cas(rel); err != nil {
-			return nil, nil, err
-		}
 		raw, _, err := s.read(rel)
 		if err != nil {
 			return nil, nil, err
@@ -295,9 +268,6 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 	// on content that changed since load.
 	current := func(name string) (string, error) {
 		rel := dir + "/" + name
-		if err := s.cas(rel); err != nil {
-			return "", err
-		}
 		raw, _, err := s.read(rel)
 		return raw, err
 	}
@@ -356,12 +326,20 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 		touched = append(touched, dir+"/resolution.md")
 		contents = append(contents, nil)
 	}
+	orderForWrite(touched, contents)
 	return touched, contents, nil
 }
 
 // Fmt rewrites every file in canonical format. With dryRun it only reports
 // which files differ. Files that cannot be parsed are left alone.
 func (s *Store) Fmt(dryRun bool) ([]string, error) {
+	if !dryRun {
+		release, err := s.Hold()
+		if err != nil {
+			return nil, err
+		}
+		defer release()
+	}
 	var changed []string
 	try := func(rel string, canon func(string) (string, bool)) error {
 		raw, ok, err := s.read(rel)
@@ -515,6 +493,11 @@ func (s *Store) addIgnore(line string) error {
 // files, duplicate dependencies and repeated section headings whose copies
 // hold content at most once.
 func (s *Store) Fix() ([]string, error) {
+	release, err := s.Hold()
+	if err != nil {
+		return nil, err
+	}
+	defer release()
 	changed, err := s.Fmt(false)
 	if err != nil {
 		return changed, err
@@ -542,7 +525,6 @@ func (s *Store) Fix() ([]string, error) {
 		for _, n := range schemaFiles {
 			rel := dir + "/" + n
 			if _, err := os.Stat(s.abs(rel)); errors.Is(err, fs.ErrNotExist) {
-				s.hashes[rel] = ""
 				if err := s.write(rel, ""); err != nil {
 					return changed, err
 				}
@@ -622,6 +604,11 @@ func (s *Store) SetSchema(v int) error {
 // SetIdentity writes the project's ID and name into project.md, keeping the
 // rest; an empty value leaves that field as it is.
 func (s *Store) SetIdentity(id, name string) error {
+	release, err := s.Hold()
+	if err != nil {
+		return err
+	}
+	defer release()
 	return s.editProject(func(p *domain.Project) {
 		if id != "" {
 			p.ID = id
