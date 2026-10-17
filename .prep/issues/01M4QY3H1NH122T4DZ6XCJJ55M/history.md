@@ -17,3 +17,7 @@
 - 2026-10-17T12:59:14Z claude-code: Handoff record: claude sonnet subagent | one lock per write command (medium, subtle) | checker fixed 2: knowledge confirm loaded before taking the lock; complete removed claim.md before writing resolution.md (an interruption would drop a completed issue to ready). 124k tokens, 60 tool uses, 6.1 min
 
 - 2026-10-17T13:17:10Z claude-code: Handoff record: claude haiku subagent | import/artifact/migrate/legacy removal and ack -> define --trivial (medium, many files) | no fixes needed; 263k tokens, 187 tool uses, 13.5 min
+
+- 2026-10-17T13:31:33Z claude-code: Handoff record: codex | record redirect shell parsing (small-medium, security-relevant) | checker added command-wrapper unwrapping (sudo/env/timeout/xargs bypassed the redirect); otherwise clean
+
+- 2026-10-17T13:31:33Z claude-code: Handoff record: claude haiku subagent | record layout (medium) | checker fixed 1: emptying a never-existing file staged a missing path; 111k tokens, 57 tool uses, 5.2 min
