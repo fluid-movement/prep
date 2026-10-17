@@ -2,7 +2,8 @@
 - Ready means another agent without this conversation could do the work.
 - Implementers claim, implement exactly the issue, log "Implemented, ready for check" and stop; they never complete, commit or push.
 - Checkers verify each criterion and the Definition of Done themselves, say which commands they ran, then complete.
-- Record a decision with prep decide when it is made.
+- Before changing code, look for decisions about it with prep knowledge find <area>; follow them, or record a new decision with prep decide --supersedes <id> first.
+- Record a decision with prep decide when it is made, including one the user states, with the reason given; your own small implementation choices need no record.
 - Read and write records only through prep commands, never the files; search knowledge with prep knowledge find and read it with prep knowledge show.
 - Give parallel implementers separate git worktrees.
 - Run live evals only with the user's OK.
