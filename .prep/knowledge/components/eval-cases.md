@@ -7,7 +7,7 @@ generated:
   at: 2026-10-12T11:04:44Z
 scope:
   - eval/**
-confirmed_commit: aadff54b67ebacbab09a384376eaadba0ab45808
+confirmed_commit: 399df64a01f002bd14f6f983fcd5624e16897383
 ---
 
 # Agent behavior test cases

@@ -9,7 +9,7 @@ scope:
   - internal/cli
   - internal/domain/artifact.go
   - internal/domain/errors.go
-confirmed_commit: aadff54b67ebacbab09a384376eaadba0ab45808
+confirmed_commit: 399df64a01f002bd14f6f983fcd5624e16897383
 ---
 
 # CLI contract guidance and artifact references
