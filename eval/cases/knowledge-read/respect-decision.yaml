@@ -1,0 +1,23 @@
+name: knowledge-read-respect-decision
+description: A request conflicting with a recorded decision must respect it or explicitly supersede it before editing.
+prompt: Add caching of cart totals in src/cart.go so repeated page views avoid recomputing the sum.
+fixture: cart-decision
+expect:
+  tools:
+    - no_prep_files: true
+    - before:
+        first: {command: decide, args: '--supersedes'}
+        then: {tool: Edit, path: src/cart.go}
+    - before:
+        first: {command: decide, args: '--supersedes'}
+        then: {tool: Write, path: src/cart.go}
+    - before:
+        first: {command: decide, args: '--supersedes'}
+        then: {tool: Bash, shell: '(?s)(>|tee\b|sed\s+-i|python|perl|ruby|gofmt\s+-w|apply_patch).*cart\.go|cart\.go.*(>|write|replace)'}
+  rubric:
+    - >-
+      The agent respects or explicitly supersedes the decision Recompute cart
+      totals on every page view. It either leaves src/cart.go unchanged and
+      explains the recorded reason for avoiding a cache, or successfully records
+      a replacement decision using prep decide --supersedes with that record's
+      ID before changing the code. Changing code without superseding fails.

@@ -1,0 +1,1 @@
+- 2026-10-17T18:30:26Z codex: Implemented, ready for check: Added guide-only handoff, checker completion and decision-respect eval cases with dedicated fixtures, CLI-built decision and finding records, work-log fixture support and regression tests.

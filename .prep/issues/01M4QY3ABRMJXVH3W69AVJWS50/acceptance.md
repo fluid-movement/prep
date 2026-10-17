@@ -1,5 +1,5 @@
-- [ ] prep list text output is capped by default with a footer that says how to see all of it, and --json stays complete or has an explicit unlimited option
-- [ ] prep knowledge find returns the best matches within a fixed budget, with a footer saying how to see more
-- [ ] prep knowledge list shows the 30 newest records by default with a footer naming --max and --all
-- [ ] A test pins each bound and its footer; the measurements before and after are in the log, and an eval run of the scale cases waits for the user's approval
-- [ ] prep check reports no errors and GitHub CI on main is green
+- [x] prep list text output is capped by default with a footer that says how to see all of it, and --json stays complete or has an explicit unlimited option
+- [x] prep knowledge find returns the best matches within a fixed budget, with a footer saying how to see more
+- [x] prep knowledge list shows the 30 newest records by default with a footer naming --max and --all
+- [x] A test pins each bound and its footer; the measurements before and after are in the log, and an eval run of the scale cases waits for the user's approval
+- [x] prep check reports no errors and GitHub CI on main is green

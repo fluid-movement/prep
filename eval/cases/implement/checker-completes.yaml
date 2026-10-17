@@ -1,0 +1,14 @@
+name: implement-checker-completes
+description: A checker verifies implemented code and finishes the issue after the implementer has stopped.
+prompt: Order emails is implemented and ready for check. Check it and finish it.
+fixture: order-emails-check
+expect:
+  tools:
+    - ran: {tool: Bash, shell: '\bgo\s+test\s+\./\.\.\.'}
+    - ran: {command: criterion, args: '{{emails}}.*--check'}
+    - ran: {command: complete, args: '{{emails}}'}
+    - no_prep_files: true
+  outcome:
+    - issue: {ref: '{{emails}}', state: done, criteria: {checked: 1}}
+  rubric:
+    - The checker inspects the implementation and verifies the criterion before completing Order emails.

@@ -54,6 +54,7 @@ type IssueSpec struct {
 	Body      string   `yaml:"body"`
 	Context   string   `yaml:"context"`
 	Criteria  []string `yaml:"criteria"`
+	Log       []string `yaml:"log"` // work log entries appended after reaching the state
 }
 
 // KnowledgeSpec describes one knowledge entry.
@@ -66,6 +67,10 @@ type KnowledgeSpec struct {
 	// Scope lists the paths or globs the entry applies to, which prep uses to
 	// retrieve records relevant to these paths.
 	Scope []string `yaml:"scope"`
+	// Decision and finding records are created through the CLI. Issue names
+	// an issue alias; Path is only used for descriptive entries.
+	Issue   string `yaml:"issue"`
+	Outcome bool   `yaml:"outcome"`
 }
 
 // RepoSpec describes the optional git repository around the project.
@@ -145,6 +150,17 @@ func (s *Spec) Validate() error {
 			if !seen[d] {
 				return fmt.Errorf("issue %q: depends_on %q is not an alias in this project", is.Title, d)
 			}
+		}
+	}
+	for _, k := range s.Knowledge {
+		if k.Issue != "" && !seen[k.Issue] {
+			return fmt.Errorf("knowledge %q: issue %q is not an alias in this project", k.Title, k.Issue)
+		}
+		if k.Outcome && k.Type != "decision" {
+			return fmt.Errorf("knowledge %q: only a decision can be an outcome", k.Title)
+		}
+		if k.Issue != "" && k.Type != "decision" && k.Type != "finding" {
+			return fmt.Errorf("knowledge %q: only records can link an issue", k.Title)
 		}
 	}
 	return nil

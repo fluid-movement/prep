@@ -1,0 +1,21 @@
+name: shop
+repo:
+  files:
+    go.mod: "module shop\n\ngo 1.22\n"
+    src/cart.go: |
+      package shop
+
+      func CartTotal(items []int) int {
+          total := 0
+          for _, item := range items { total += item }
+          return total
+      }
+knowledge:
+  - type: decision
+    title: Recompute cart totals on every page view
+    description: Totals are recomputed on every page view, with no cache.
+    body: >-
+      Cart items can change between views. Always sum the current items so
+      checkout never displays a stale price; the small carts do not justify
+      cache invalidation complexity.
+    scope: [src/cart.go]
