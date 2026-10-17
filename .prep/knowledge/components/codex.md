@@ -8,7 +8,7 @@ generated:
 scope:
   - internal/setup/codex/**
   - plugins/codex/**
-confirmed_commit: bacc2245668c64831389dced173514b2db6000df
+confirmed_commit: c4976b6ee5a7ffd2c68c46078332a05ad733edb7
 ---
 
 # Codex integration
