@@ -304,5 +304,5 @@
 * [Prompt hook sends its text only when it changed](/decisions/01M55HD38T3F9834JTB8KG4H91.md) - The prompt hook sends its text only when it differs from what the session last received; session start clears that record, so the briefing is sent again after compaction.
 * [Build eval knowledge records through the CLI](/decisions/01M55HXQX2V30800C06MH3SHW3.md) - Eval fixtures declare decision and finding records in knowledge; the builder creates them with decide and finding.
 * [List columns drop by title text cut off](/decisions/01M55J44DH8QHRKH4XJDR7HFDB.md) - A list drops ID, then state label, then kind while its visible rows cut off more than 30 title characters (each row counted up to 10).
-* [Keep setup.Unregister as test support](/decisions/01M55K6M7QYGYXA2M27RMXX75K.md) - Unregister isolates tests from the user's real harness registrations; it stays though no command calls it
 * [Look up prior decisions and capture user decisions with their reason](/decisions/01M55JZPT42FACWG47G6VD5QRK.md) - Before changing code, look up and follow existing decisions; record decisions the user states with their reason, without recording small implementation choices.
+* [Keep setup.Unregister as test support](/decisions/01M55K6M7QYGYXA2M27RMXX75K.md) - Unregister isolates tests from the user's real harness registrations; it stays though no command calls it
