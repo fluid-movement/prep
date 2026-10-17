@@ -1,0 +1,3 @@
+- [ ] prep guide for a ready or claimed issue prints the requirement, criteria, context, linked decision titles, the Definition of Done and the implementer role, covered by tests
+- [ ] The implementer instructions never say to complete, check criteria, commit or push, and say to log and stop on a context conflict; a checker section says how to complete, covered by a test
+- [ ] The handoff eval case still loads; prep check reports no errors and GitHub CI on main is green
