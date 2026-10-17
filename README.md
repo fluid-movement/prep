@@ -81,7 +81,7 @@ An issue is **stale** when its requirement or kind differs from the newest basel
 
 Dependencies refer to issues in the same project. `prep projects` lists projects registered on this machine; `--project <name>` runs a command in another registered project.
 
-Prep serializes cooperating record writers within one checkout and recovers interrupted multi-file lifecycle writes before loading records. Conflicts return `E_CONFLICT`; reload and re-plan. Recovery conflicts retain the journal and staged data for reconciliation. Claims and activity remain local to each branch/worktree, so assigning parallel agents is the orchestrator's responsibility. This storage guarantee covers process interruption, with per-file atomic renames; it does not coordinate other worktrees or promise power-loss atomicity.
+Prep serializes cooperating record writers within one checkout: each write command holds a lock from load to its last write, so a second writer waits and plans on the first one's result. Files are written one at a time through a temporary file and rename, the file that defines an issue's state last. Claims and activity remain local to each branch/worktree, so assigning parallel agents is the orchestrator's responsibility. This storage guarantee covers process interruption, with per-file atomic renames and no rollback; it does not coordinate other worktrees or promise power-loss atomicity.
 
 ## The TUI
 

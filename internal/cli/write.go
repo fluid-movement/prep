@@ -161,6 +161,11 @@ func (a *app) fixIdentity() ([]string, error) {
 
 // bootstrap creates the knowledge base bootstrap issues.
 func (a *app) bootstrap() ([]string, error) {
+	unlock, err := a.lockWrite()
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
 	t, err := a.load(false)
 	if err != nil {
 		return nil, err
@@ -202,6 +207,11 @@ func cmdImport(a *app, args []string) error {
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
+	unlock, err := a.lockWrite()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	t, err := a.load(false)
 	if err != nil {
 		return err
@@ -245,6 +255,11 @@ func cmdNew(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
+	unlock, err := a.lockWrite()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	t, err := a.load(false)
 	if err != nil {
 		return err
@@ -314,6 +329,11 @@ func cmdEdit(a *app, args []string) error {
 	if set["body"] && set["body-file"] {
 		return usageErr("pass --body or --body-file, not both")
 	}
+	unlock, err := a.lockWrite()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	t, err := a.load(false)
 	if err != nil {
 		return err
@@ -419,6 +439,11 @@ func opCmd(op domain.Op) func(*app, []string) error {
 			return err
 		}
 		in.Docs = docs
+		unlock, err := a.lockWrite()
+		if err != nil {
+			return err
+		}
+		defer unlock()
 		t, err := a.load(false)
 		if err != nil {
 			return err
@@ -641,6 +666,11 @@ func recordCmd(op domain.Op) func(*app, []string) error {
 		for _, s := range adds {
 			in.Acceptance = append(in.Acceptance, domain.AcceptanceOp{Op: "add", Text: s})
 		}
+		unlock, err := a.lockWrite()
+		if err != nil {
+			return err
+		}
+		defer unlock()
 		t, err := a.load(false)
 		if err != nil {
 			return err

@@ -10,7 +10,7 @@ scope:
   - internal/cli/read.go
   - internal/projects/**
   - internal/tui/projects.go
-confirmed_commit: 58a1a906584b83d5380db9aefa0c83740ed4a6df
+confirmed_commit: 22a58e58c0cf17a7b64b7477344c30797dc116cf
 ---
 
 # Cross-project work

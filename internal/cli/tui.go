@@ -70,6 +70,13 @@ func runTUI(root string, agent bool, previous string) (*tui.Switch, error) {
 		mu.Lock()
 		defer mu.Unlock()
 		st := mdstore.Open(root)
+		// The checkout lock is held from the fresh load to the last write,
+		// so the plan is made on the current state.
+		unlock, err := st.Hold()
+		if err != nil {
+			return "", err
+		}
+		defer unlock()
 		t, err := domain.Load(st, &okf.Store{Root: root}, false)
 		if err != nil {
 			return "", err
