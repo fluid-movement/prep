@@ -302,6 +302,28 @@ func TestMouseOffFromTheUserConfiguration(t *testing.T) {
 	}
 }
 
+// In a narrow list the ID is not drawn, but a row still selects and opens,
+// since clicks resolve the row rather than its text.
+func TestNarrowRowsStayClickable(t *testing.T) {
+	p, ids := sample(t)
+	m := openModel(t, p, 110, 28)
+	listW, _ := ui.Split(110, listRatio, minListW, minDetailW)
+	keys(m, "6") // the All view
+	for _, l := range strings.Split(ansi.Strip(m.View().Content), "\n") {
+		if strings.Contains(ansi.Cut(l, 0, listW), shortID(ids["survey"])) {
+			t.Fatalf("the narrow list still draws the ID %s:\n%s", shortID(ids["survey"]), ansi.Strip(m.View().Content))
+		}
+	}
+	clickText(t, m, "Survey export tools", 0, listW)
+	if m.selected() != ids["survey"] {
+		t.Fatalf("row click selected %s, want %s", m.selected(), ids["survey"])
+	}
+	clickText(t, m, "Survey export tools", 0, listW)
+	if m.focus != focusDetail {
+		t.Fatal("second click on a narrow row did not open the detail")
+	}
+}
+
 func TestClickDialogs(t *testing.T) {
 	p, ids := sample(t)
 	var edits []string

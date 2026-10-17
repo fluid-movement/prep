@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/palette"
 	"github.com/fluid-movement/prep/internal/tui/theme"
 )
@@ -129,6 +130,44 @@ func golden(t *testing.T, name, got string) {
 	}
 }
 
+// A narrow list row drops the ID first, then the state label, then the kind,
+// and stops once the title has 30 cells; the state glyph always stays.
+func TestListRowDropsColumnsInOrder(t *testing.T) {
+	th := testTheme(true)
+	base := Row{ID: "PWJH2F", State: domain.StateInProgress, Kind: domain.KindCode, Title: "Findings from the first pass of the agent behavior test suite"}
+	cases := []struct {
+		width           int
+		id, label, kind bool
+	}{
+		{100, true, true, true},
+		{61, false, true, true},  // 29 cells short with the ID: only the ID goes
+		{50, false, false, true}, // the label goes too, the kind still fits
+		{40, false, false, false},
+	}
+	for _, c := range cases {
+		for _, dimmed := range []bool{false, true} {
+			r := base
+			r.Dimmed = dimmed
+			line := ansi.Strip(ListRow(th, r, false, c.width))
+			if got := strings.Contains(line, "PWJH2F"); got != c.id {
+				t.Errorf("width %d dimmed %v: ID shown %v, want %v: %q", c.width, dimmed, got, c.id, line)
+			}
+			if got := strings.Contains(line, "in progress"); got != c.label {
+				t.Errorf("width %d dimmed %v: label shown %v, want %v: %q", c.width, dimmed, got, c.label, line)
+			}
+			if got := strings.Contains(line, "code"); got != c.kind {
+				t.Errorf("width %d dimmed %v: kind shown %v, want %v: %q", c.width, dimmed, got, c.kind, line)
+			}
+			if !strings.Contains(line, "▶") {
+				t.Errorf("width %d dimmed %v: state glyph dropped: %q", c.width, dimmed, line)
+			}
+			if w := ansi.StringWidth(line); w > c.width {
+				t.Errorf("width %d dimmed %v: row is %d cells wide: %q", c.width, dimmed, w, line)
+			}
+		}
+	}
+}
+
 func TestTreePrefixes(t *testing.T) {
 	got := TreePrefixes([]int{0, 1, 2, 2, 1, 2, 0, 1})
 	want := []string{"", "├─ ", "│  ├─ ", "│  └─ ", "└─ ", "   └─ ", "", "└─ "}
@@ -158,5 +197,19 @@ func TestMenuRowKeepsLongLabelsOnOneLine(t *testing.T) {
 	}
 	if w := ansi.StringWidth(row); w != 40 {
 		t.Fatalf("row width %d, want 40", w)
+	}
+}
+
+// Every row of a list keeps the same columns, whatever its tree lines or
+// note, so the glyphs stay aligned.
+func TestListRowColumnsDependOnWidthOnly(t *testing.T) {
+	th := testTheme(true)
+	plain := Row{ID: "PWJH2F", State: domain.StateDone, Kind: domain.KindDecision, Title: "Choose the default format"}
+	busy := Row{ID: "EPMJ6R", State: domain.StateDefined, Kind: domain.KindCode, Title: "JSON writer", Tree: "└─ ", Note: "■■■■■ 0/1"}
+	for _, width := range []int{100, 61, 55, 50, 40} {
+		a, b := ansi.Strip(ListRow(th, plain, false, width)), ansi.Strip(ListRow(th, busy, false, width))
+		if fitColumns(plain, width) != fitColumns(busy, width) {
+			t.Errorf("width %d: columns differ between rows:\n%q\n%q", width, a, b)
+		}
 	}
 }

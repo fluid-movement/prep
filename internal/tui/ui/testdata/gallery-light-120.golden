@@ -50,6 +50,14 @@
 [48;2;232;236;242m[38;2;194;65;12m▌ [m[38;2;194;65;12mXA4M9C[m [38;2;194;65;12m▶ [m[38;2;194;65;12min progress[m [38;2;92;92;106mcode[m     [38;2;164;164;178m│  └─ [m[1;38;2;30;30;38mReplace the purple accent[m[m[48;2;232;236;242m                                                         [m
   [38;2;92;92;106mR2GT6V[m [38;2;30;30;38m◐ [m[38;2;30;30;38mdefined[m     [38;2;92;92;106mcode[m     [38;2;164;164;178m└─ [m[38;2;154;91;0mblocked[m [38;2;30;30;38mTUI hierarchy[m
 
+[1;38;2;194;65;12mNarrow list rows[m
+  [38;2;194;65;12m▶ [m[38;2;194;65;12min progress[m [38;2;92;92;106mcode[m     [38;2;164;164;178m[m[38;2;30;30;38mTUI design system: tokens, styles,…[m
+  [38;2;22;122;62m● [m[38;2;22;122;62mready[m       [38;2;92;92;106mdecision[m [38;2;164;164;178m[m[38;2;190;18;60mstale[m [38;2;154;91;0m!high[m [38;2;30;30;38mDecide the install and…[m[38;2;164;164;178m[m
+  [38;2;194;65;12m▶ [m[38;2;92;92;106mcode[m     [38;2;164;164;178m[m[38;2;30;30;38mTUI design system: tokens, styles, c…[m
+  [38;2;22;122;62m● [m[38;2;92;92;106mdecision[m [38;2;164;164;178m[m[38;2;190;18;60mstale[m [38;2;154;91;0m!high[m [38;2;30;30;38mDecide the install and u…[m[38;2;164;164;178m[m
+  [38;2;194;65;12m▶ [m[38;2;164;164;178m[m[38;2;30;30;38mTUI design system: tokens, styles, …[m
+  [38;2;22;122;62m● [m[38;2;164;164;178m[m[38;2;190;18;60mstale[m [38;2;154;91;0m!high[m [38;2;30;30;38mDecide the install and …[m[38;2;164;164;178m[m
+
 [1;38;2;194;65;12mLink rows[m
   [38;2;164;164;178mparent[m     [38;2;92;92;106m○[m [38;2;92;92;106mT4QF2N[m [38;2;30;30;38mTUI: human client next to the harness[m
 [48;2;232;236;242m[38;2;194;65;12m▌ [m[38;2;164;164;178mchild[m      [38;2;194;65;12m▶[m [38;2;194;65;12mR2GT6V[m [1;38;2;30;30;38mTUI hierarchy: tree mode, parent focus, navigable relations[m[m[48;2;232;236;242m                                       [m

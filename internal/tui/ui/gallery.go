@@ -106,6 +106,13 @@ func Gallery(t *theme.Theme, width int) string {
 		b.WriteString(ListRow(t, r, k == 4, width) + "\n")
 	}
 
+	section("Narrow list rows")
+	for _, w := range []int{60, 50, 40} {
+		for _, r := range rows[2:4] {
+			b.WriteString(ListRow(t, r, false, w) + "\n")
+		}
+	}
+
 	section("Link rows")
 	b.WriteString(LinkRow(t, "parent", domain.StateOpen, "T4QF2N", "TUI: human client next to the harness", false, width) + "\n")
 	b.WriteString(LinkRow(t, "child", domain.StateInProgress, "R2GT6V", "TUI hierarchy: tree mode, parent focus, navigable relations", true, width) + "\n")
