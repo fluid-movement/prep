@@ -1,0 +1,1 @@
+- 2026-10-17T18:31:43Z claude-code: Implemented, ready for check: list columns now chosen by ui.FitColumns from the title text the visible rows cut off (cap 10 each, budget 30).

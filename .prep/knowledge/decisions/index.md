@@ -302,3 +302,4 @@
 * [Guide brief applies to code issues; DoD shown from ready](/decisions/01M559ZH9S3T1GA44JMB5ZF6G8.md) - Brief and implementer role are built for ready or in-progress non-parent code issues only
 * [Bound only the lists that grow with the project](/decisions/01M55HBDFHYGAH7DGSJNWXVEW1.md) - Default text reads hide resolved issues, list the 30 newest knowledge records and cap ranked search at five blocks and 3,000 characters, with recovery flags.
 * [Prompt hook sends its text only when it changed](/decisions/01M55HD38T3F9834JTB8KG4H91.md) - The prompt hook sends its text only when it differs from what the session last received; session start clears that record, so the briefing is sent again after compaction.
+* [List columns drop by title text cut off](/decisions/01M55J44DH8QHRKH4XJDR7HFDB.md) - A list drops ID, then state label, then kind while its visible rows cut off more than 30 title characters (each row counted up to 10).

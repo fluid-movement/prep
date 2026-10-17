@@ -87,8 +87,9 @@ func Gallery(t *theme.Theme, width int) string {
 		{ID: "2YJ6PG", State: domain.StateDone, Kind: domain.KindResearch, Title: "Cloud sessions without the prep binary"},
 		{ID: "QK0D5S", State: domain.StateDropped, Kind: domain.KindManual, Title: "Free-form tags"},
 	}
+	cols := FitColumns(t, rows, width)
 	for k, r := range rows {
-		b.WriteString(ListRow(t, r, k == 2, width) + "\n")
+		b.WriteString(ListRow(t, r, cols, k == 2, width) + "\n")
 	}
 
 	section("Tree rows")
@@ -101,15 +102,19 @@ func Gallery(t *theme.Theme, width int) string {
 		{ID: "R2GT6V", State: domain.StateDefined, Kind: domain.KindCode, Note: Note(t, "blocked", ToneWarning), Title: "TUI hierarchy"},
 	}
 	prefixes := TreePrefixes([]int{0, 1, 1, 2, 2, 1})
+	for k := range tree {
+		tree[k].Tree = prefixes[k]
+	}
+	cols = FitColumns(t, tree, width)
 	for k, r := range tree {
-		r.Tree = prefixes[k]
-		b.WriteString(ListRow(t, r, k == 4, width) + "\n")
+		b.WriteString(ListRow(t, r, cols, k == 4, width) + "\n")
 	}
 
 	section("Narrow list rows")
 	for _, w := range []int{60, 50, 40} {
-		for _, r := range rows[2:4] {
-			b.WriteString(ListRow(t, r, false, w) + "\n")
+		cols := FitColumns(t, rows[1:5], w)
+		for _, r := range rows[1:5] {
+			b.WriteString(ListRow(t, r, cols, false, w) + "\n")
 		}
 	}
 

@@ -184,26 +184,36 @@ func PriorityMark(t *theme.Theme, p domain.Priority) string {
 	return ""
 }
 
-// minTitle is the room, in cells, a list row keeps for its title before it
-// drops columns.
-const minTitle = 30
+// cutBudget is how many cut-off title characters a list tolerates, summed
+// over its visible rows, before it drops the next column.
+const cutBudget = 30
 
-// rowColumns says which optional columns of a list row are drawn. The state
-// glyph is always drawn.
-type rowColumns struct{ id, label, kind bool }
+// cutCap is the most one row adds to that sum, so one very long title does
+// not empty the columns of the whole list.
+const cutCap = 10
 
-// fitColumns drops the ID, then the state label, then the kind, one at a
-// time, until the title has minTitle cells or all three are gone.
-func fitColumns(r Row, width int) rowColumns {
-	c := rowColumns{id: true, label: true, kind: true}
-	for titleRoom(r, c, width) < minTitle {
+// Columns says which optional columns of a list row are drawn. The state
+// glyph is always drawn. All rows of a list share one value.
+type Columns struct{ ID, Label, Kind bool }
+
+// AllColumns shows every column.
+var AllColumns = Columns{ID: true, Label: true, Kind: true}
+
+// FitColumns chooses the columns for the rows a list shows at this width.
+// It counts the title characters the width cuts off (up to cutCap per row)
+// and, while that exceeds cutBudget, drops the ID, then the state label,
+// then the kind, one at a time. The issue text comes first: the list shows
+// as many columns as leave it readable.
+func FitColumns(t *theme.Theme, rows []Row, width int) Columns {
+	c := AllColumns
+	for totalCut(t, rows, c, width) > cutBudget {
 		switch {
-		case c.id:
-			c.id = false
-		case c.label:
-			c.label = false
-		case c.kind:
-			c.kind = false
+		case c.ID:
+			c.ID = false
+		case c.Label:
+			c.Label = false
+		case c.Kind:
+			c.Kind = false
 		default:
 			return c
 		}
@@ -211,36 +221,49 @@ func fitColumns(r Row, width int) rowColumns {
 	return c
 }
 
-// titleRoom is the width left after the marker and the shown columns. It
-// depends on the width alone, never on a row's tree lines or note, so every
-// row of a list keeps the same columns and they stay aligned; tree lines and
-// notes then take their cells from the title of their own row.
-func titleRoom(r Row, c rowColumns, width int) int {
+func totalCut(t *theme.Theme, rows []Row, c Columns, width int) int {
+	sum := 0
+	for _, r := range rows {
+		sum += min(max(0, rowWidth(t, r, c)-width), cutCap)
+	}
+	return sum
+}
+
+// rowWidth is the width a row needs to show in full: marker, the shown
+// columns, tree lines, note, the title with its priority mark, and tags.
+func rowWidth(t *theme.Theme, r Row, c Columns) int {
 	used := 2 // the marker
-	if c.id {
+	if c.ID {
 		used += ansi.StringWidth(r.ID) + 1
 	}
-	if c.label {
+	if c.Label {
 		used += BadgeWidth
 	} else {
 		used += 2 // the glyph and a space
 	}
-	if c.kind {
+	if c.Kind {
 		used += KindWidth
 	}
-	return width - used
+	used += ansi.StringWidth(r.Tree)
+	if r.Note != "" {
+		used += ansi.StringWidth(r.Note) + 1
+	}
+	used += ansi.StringWidth(PriorityMark(t, r.Priority)) + ansi.StringWidth(r.Title)
+	if len(r.Tags) > 0 {
+		used += ansi.StringWidth("  #" + strings.Join(r.Tags, " #"))
+	}
+	return used
 }
 
 // ListRow renders one issue row: marker, ID, state, kind, tree lines, note,
-// title. Columns that do not fit are left out, see fitColumns; the state
+// title. The caller chooses the columns for the whole list, see FitColumns; the state
 // glyph stays. The selected row gets the selection background across the
 // full width; a dimmed row renders entirely in the subtle color.
-func ListRow(t *theme.Theme, r Row, selected bool, width int) string {
+func ListRow(t *theme.Theme, r Row, c Columns, selected bool, width int) string {
 	marker := "  "
 	if selected {
 		marker = lipgloss.NewStyle().Foreground(t.C.Accent).Render("▌ ")
 	}
-	c := fitColumns(r, width)
 	tree := t.S.Subtle.Render(r.Tree)
 	var head, title string
 	switch {
@@ -248,15 +271,15 @@ func ListRow(t *theme.Theme, r Row, selected bool, width int) string {
 		// A context row carries the same information as a result row, all
 		// in the subtle tone: the grey says it is only there for structure.
 		var plain string
-		if c.id {
+		if c.ID {
 			plain += r.ID + " "
 		}
-		if c.label {
+		if c.Label {
 			plain += fmt.Sprintf("%-*s", BadgeWidth, stateGlyphs[r.State]+" "+StateLabel(r.State))
 		} else {
 			plain += stateGlyphs[r.State] + " "
 		}
-		if c.kind {
+		if c.Kind {
 			plain += fmt.Sprintf("%-*s", KindWidth, r.Kind)
 		}
 		head = marker + t.S.Subtle.Render(plain) + tree
@@ -266,15 +289,15 @@ func ListRow(t *theme.Theme, r Row, selected bool, width int) string {
 		title = t.S.Subtle.Render(ansi.Strip(PriorityMark(t, r.Priority)) + r.Title)
 	default:
 		head = marker
-		if c.id {
+		if c.ID {
 			id := t.S.Muted.Render(r.ID)
 			if selected {
 				id = lipgloss.NewStyle().Foreground(t.C.Accent).Render(r.ID)
 			}
 			head += id + " "
 		}
-		head += StateCell(t, r.State, c.label)
-		if c.kind {
+		head += StateCell(t, r.State, c.Label)
+		if c.Kind {
 			head += KindTag(t, r.Kind)
 		}
 		head += tree
