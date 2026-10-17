@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/mdstore
   - testdata/contract
-confirmed_commit: e86d564225b8a1388e001d0aaf97392857ee2b29
+confirmed_commit: f5d307973808fcad23643143f1f2243ac9d54469
 ---
 
 # Storage format
@@ -21,7 +21,7 @@ Applies when editing files in `.prep` by hand or changing the markdown adapter. 
 - `config.yaml.dist` (committed, the project’s default) and `config.yaml` (each user’s own, ignored by `.prep/.gitignore`): the own file replaces the dist file as a whole when it exists. Both hold leading `#` comment lines, `views` (name → query flags, in tab order) and `theme` (one of the built-in theme names; see [Palette and themes](/components/palette.md)). The TUI settings write the own file in this form, creating it from the dist file and keeping the leading comments; other comments are not kept. Unknown keys are errors (P003); the removed `commit_mode` is the exception, read as the prep 0.1.0 layout and reported as P006, which `prep fix` converts.
 - `issues/<id>/`: the ID is a ULID (26 characters of Crockford base32, upper case: 48 bits of creation milliseconds and 80 random bits), so IDs created on different branches do not collide and sort by creation time as strings. Any other directory name is I001. Allowed entries are issue.md, acceptance.md, context.md, decisions.md, history.md, findings.md (research only), baselines/, ready.md, claim.md, resolution.md, attachments/. Anything else is an error.
 - `issue.md`: frontmatter `title`, `kind`, `parent`, `depends_on`, `tags`, `priority` (in that order, nothing else); tags are lowercase letters, digits and `. _ - /`; priority is `critical`, `high` or `low`, absent meaning medium (medium is never written; added within schema 1). The body is the requirement; `## Open questions` holds unresolved questions. A `##` heading appears at most once per record file (`issue.md`, `acceptance.md`, `context.md`, `findings.md`; headings in code fences do not count): prep check reports a repeat as I028, an error for Open questions, which prep reads only the first copy of, and a warning otherwise.
-- `acceptance.md`: `- [ ]` / `- [x]` criteria; optional `## Definition of Done` with additions. Project-level Definition of Done bullets live in `project.md` and are guidance.
+- `acceptance.md`: `- [ ]` / `- [x]` criteria only. The Definition of Done is project-level guidance: bullets under `## Definition of Done` in `project.md`, edited with `prep dod --add`/`--remove`.
 - `context.md`: free prose; `[text](/path.md)` links knowledge entries; backticked paths count as touched files for retrieval.
 - `decisions.md`: entries `## <id>: <title>` followed by `date: YYYY-MM-DD`, optional `supersedes: <id>` and `outcome: true`, then rationale and alternatives. Append-only. Blank lines between heading and metadata lines are accepted when reading; `prep fmt` removes them.
 - Records written only by commands: `baselines/<YYYYMMDD-HHMMSS>.md` (by, at, kind, ack; body = requirement; baseline names are per issue and stay timestamps), `ready.md` (by, at, baseline), `claim.md` (by, at), `resolution.md` (outcome, by, at, reason, evidence, documentation.entries / no_impact).

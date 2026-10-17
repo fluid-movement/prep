@@ -179,7 +179,7 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 	// Inputs: the issue's own records first, then upstream outputs.
 	g.Inputs = append(g.Inputs, Pointer{f("issue.md"), "requirement and open questions", ""})
 	if s != StateOpen {
-		for _, p := range []Pointer{{f("acceptance.md"), "acceptance criteria and Definition of Done additions", ""}, {f("context.md"), "implementation context", ""}, {f("decisions.md"), "decision records", ""}} {
+		for _, p := range []Pointer{{f("acceptance.md"), "acceptance criteria", ""}, {f("context.md"), "implementation context", ""}, {f("decisions.md"), "decision records", ""}} {
 			if i.HasFile(path.Base(p.Path)) {
 				g.Inputs = append(g.Inputs, p)
 			}

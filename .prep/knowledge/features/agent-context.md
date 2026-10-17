@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/domain/guide.go
   - internal/cli/read.go
-confirmed_commit: bacc2245668c64831389dced173514b2db6000df
+confirmed_commit: f5d307973808fcad23643143f1f2243ac9d54469
 ---
 
 - **Guide**: `prep guide <id>` tells the agent the current step, unmet conditions, files to read and exact commands for outputs and transitions. Follow the guide before opening records or changing code. It offers up to five relevant knowledge candidates with targeted reads. Completion requires checked criteria, the kind's result and a documentation decision. The project Definition of Done is guidance: `prep prime` always shows it, and `prep guide` shows it at the check step once all acceptance criteria are checked. Agents execute project checks and update affected knowledge entries. See [Completion requirements](/features/completion-policy.md) and [Knowledge lifecycle](/features/knowledge-lifecycle.md).
