@@ -372,7 +372,6 @@ knowledge_reviews:
       - internal/palette
       - internal/tui
     snapshot: 347fcb6e2d6fad1f6b2ee2ab3496c7bff617d888c90a68fde55e4cfe25a5f914
-generation: 1
 outcome: done
 by: claude-code/opus-5.5
 at: 2026-10-17T08:49:16Z

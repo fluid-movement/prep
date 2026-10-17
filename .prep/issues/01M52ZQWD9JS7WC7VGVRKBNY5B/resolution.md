@@ -265,7 +265,6 @@ knowledge_reviews:
       - internal/cli/eval_run.go
       - internal/eval
     snapshot: ffda4fece1f6da1085a90eb05f489367020a8ee10911dd0c26cfafdb863f73e5
-generation: 1
 outcome: done
 by: claude-code/opus-5.5
 at: 2026-10-17T09:08:22Z

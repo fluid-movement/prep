@@ -198,7 +198,6 @@ knowledge_reviews:
       - internal/cli/projects_test.go
       - internal/projects
     snapshot: 0b274428587213efcf5811c3673bf65cfc3813d8e3916ffa4d87c3e4a97dcb3f
-generation: 1
 outcome: done
 by: claude-code/opus-5.5
 at: 2026-10-17T08:51:38Z
