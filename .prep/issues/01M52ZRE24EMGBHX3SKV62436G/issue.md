@@ -12,7 +12,7 @@ Turn this repository's knowledge into decision and finding records, once the kno
 
 - The 162 issue decisions (in 80 issues) convert mechanically, without review: each becomes a decision record linked to its issue, with its title, date and body; the 8 that supersede an earlier one map --supersedes D<n> to the record ID.
 - The 43 descriptive entries are drafted by a subagent as one table per area (components, TUI, features and conventions): each statement that is a decision or constraint becomes a record (title, one-line description, why, code scopes from the entry); everything else is marked delete. The user reviews each table in chat in batches of about ten entries; only approved rows are applied. Deleted prose is not kept anywhere (git history aside); nothing is reworded to survive.
-- The project overview moves to a new AGENTS.md (what prep is, where things live), which Codex loads, plus a CLAUDE.md that imports it for Claude Code. The README stays user-facing.
+- The project overview moves to a new AGENTS.md (what prep is, where things live), which Codex and Claude Code both load natively; no CLAUDE.md. The README stays user-facing.
 - Rewrite design principle 9 as 'issues are the work; knowledge is what was decided and learned'.
 - Other prep projects (fathom, fpa-api, tuner, fpa-profiles) are out of scope; their entries stay readable, and each gets its own conversion issue when worked on.
 
