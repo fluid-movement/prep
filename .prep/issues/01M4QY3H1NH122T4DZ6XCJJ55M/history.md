@@ -21,3 +21,5 @@
 - 2026-10-17T13:31:33Z claude-code: Handoff record: codex | record redirect shell parsing (small-medium, security-relevant) | checker added command-wrapper unwrapping (sudo/env/timeout/xargs bypassed the redirect); otherwise clean
 
 - 2026-10-17T13:31:33Z claude-code: Handoff record: claude haiku subagent | record layout (medium) | checker fixed 1: emptying a never-existing file staged a missing path; 111k tokens, 57 tool uses, 5.2 min
+
+- 2026-10-17T13:40:29Z claude-code: Handoff record: claude haiku subagent | narrow TUI list columns (small, UI) | checker fixed 1: columns chosen per row (tree lines, note) misaligned rows of one list; now by width only. 100k tokens, 47 tool uses, 7.9 min
