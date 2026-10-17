@@ -13,3 +13,5 @@
 - 2026-10-17T12:52:51Z claude-code: Handoff record: codex | links removal (large, ~2.3k lines deleted) | no fixes
 
 - 2026-10-17T12:52:51Z claude-code: Handoff record: claude haiku subagent | eval harness errors (small, mapped) | no fixes; 64k tokens, 27 tool uses, 4.6 min
+
+- 2026-10-17T12:59:14Z claude-code: Handoff record: claude sonnet subagent | one lock per write command (medium, subtle) | checker fixed 2: knowledge confirm loaded before taking the lock; complete removed claim.md before writing resolution.md (an interruption would drop a completed issue to ready). 124k tokens, 60 tool uses, 6.1 min
