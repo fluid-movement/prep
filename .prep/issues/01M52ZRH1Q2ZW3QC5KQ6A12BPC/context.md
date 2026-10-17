@@ -1,0 +1,12 @@
+The knowledge base is now decision and finding records (`knowledge/decisions/<ulid>.md`, `knowledge/findings/<ulid>.md`, fields type, title, description, date, issue, supersedes, scope, outcome; superseded status is derived) plus old descriptive entries that are being converted away (01M52ZRE24EMGBHX3SKV62436G). The screen stays read-only.
+
+Where things are:
+- Knowledge screen: `internal/tui/knowledge.go`. `knowledgePaths` lists entries; `knowledgeRow` draws type, status and an attention mark, then the title; `entryPane` shows the selected entry. Change the list to records first, newest first (by date, then ID), each row: date, kind (decision or finding), title, and a muted `superseded` note for superseded records; descriptive entries, while they still exist, follow after the records. The status column (draft/stable) and the drift-based attention wording go; keep the `!` mark only for entries with check diagnostics.
+- Entry pane: for a record show its description, date, the linked issue (title and short ID), what it supersedes and what supersedes it, its scopes, then the body. Links to the issue and to superseding or superseded records are followable with the existing link mode (`o`, see `openEntryLinks`).
+- Filters: the existing filter bar (`knowledgeFilterKey`) keeps matching words; add a toggle to hide superseded records (default: hidden), shown in the keymap and footer like other toggles (keys are unshifted letters, see the TUI editing entry).
+- Issue detail: `internal/tui/detail.go` shows linked knowledge today through resolution documentation; add a 'Decisions' block listing the records linked to the issue (title, superseded note), followable to the Knowledge screen, using the domain lookup the CLI's `prep show` uses for linked records. Leave the old resolution 'Knowledge:' lines for old resolutions as they are.
+- Data: `m.tree.Knowledge` entries and the domain helpers the knowledge model added (find the function `prep show` uses to list linked records in `internal/domain` or `internal/cli/read.go`).
+- Tests and goldens: knowledge screen goldens (`internal/tui/testdata/*knowledge*`) and the detail goldens change; regenerate with `go test ./internal/tui/... -update` and read the diff; add fixture records (one superseded) to the sample project the TUI tests build.
+- Docs: knowledge entries are converted in parallel; do not edit them.
+
+Checks before stopping: `go test ./...`, `go build -o prep ./cmd/prep && ./prep check` (0 errors), `./prep fmt --check`. Do not run `prep eval run`.
