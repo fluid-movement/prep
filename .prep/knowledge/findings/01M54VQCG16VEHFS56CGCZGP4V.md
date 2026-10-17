@@ -1,0 +1,35 @@
+---
+type: finding
+title: "Findings: Investigate TUI live refresh missing external issue completion until restart"
+description: "Findings: Investigate TUI live refresh missing external issue completion until restart"
+date: "2026-10-17"
+issue: 01M4WYKSGGDM7R3FSKE8451X2X
+---
+
+## Observation and environment
+
+The historical report concerned prep issue 01M4WTN9CB82MSZYCDTWJY2RPN, completed in 33d632f: CLI state was done while an existing TUI appeared unresolved; restarting corrected it. The previous investigation recorded installed CLI v0.2.0-81-g33d632f (schema 1). On 2026-10-17, the installed executable is /Users/azaharias/.local/bin/prep, reporting v0.2.0-138-g0201240 (schema 1). Neither installed CLI version identifies the historical long-running TUI executable. Process inspection (`ps`) is denied, so its binary version, active project/worktree, screen and filter remain unknown. The restart correction is historical user evidence, not an observation recovered from that session.
+
+This investigation used source d70e633d9e5b270ae3a688456b1570f1bfd3c777 on branch handoff/tui-refresh in /Users/azaharias/coding/prep-wt/tui-refresh. The reproduction used disposable projects named test under the macOS temporary directory, not the live prep project or another registered project. It ran a real Bubble Tea program using the current TUI model, a pipe for terminal input, discarded terminal output, and a 110x28 viewport. The Issues screen, All tab, was tested with both an empty filter and `--state not-done`. The harness observed messages and the model's rendered string; it did not inspect physical terminal pixels or execute the installed CLI's interactive startup/project switcher.
+
+## Reproduction and results
+
+A temporary same-package investigation harness reused internal/tui's sample project. Its CSV writer issue (01KDYZ2ET086FCC9Y7DCDZP7X3) began in-progress with its criteria and fixture verification satisfied. The harness attached watch.Dir to the fixture's .prep directory and started the Bubble Tea event loop before launching a separate test-binary process. The child loaded the fixture, called the production domain completion planner, and applied the resulting change through mdstore.Store.Apply. This exercises the production transactional record writer without running `prep complete`, staging records, or changing any repository issue other than this investigation's records.
+
+The written path was <fixture>/.prep/issues/01KDYZ2ET086FCC9Y7DCDZP7X3/resolution.md. One observed fixture root was /var/folders/ct/5n0dd46x3ls8b29wp8v_y5jw0000gn/T/TestRefreshInvestigationAll_1120417878/001. The child reported successful transactional completion. The running TUI then received changedMsg with Tree=true, scheduled its real reload command, received loadedMsg, and applied state done. All retained the completed row; `--state not-done` removed it. A freshly constructed model loaded done and agreed on row membership in both cases. Restart was unnecessary. Tree reports contain flags rather than individual event paths; the path above is the actual writer's reported destination, not a raw fsnotify event trace.
+
+Reproduction command: temporarily copy /private/tmp/tui-refresh-investigation_test.go to internal/tui/refresh_investigation_test.go, then run `go test -count=10 -run '^TestRefreshInvestigation$' -v ./internal/tui`, and remove the temporary test. The scratch source remains available locally for the checker; it is not a committed regression test. This ran ten repetitions of both filter cases (20 cases). `go test -count=10 ./internal/watch` also passed. The previous investigation separately exercised atomic resolution creation/replacement in existing and newly created issue directories, passing 20 watcher cases; that earlier scratch experiment was not rerun here.
+
+## Event, scheduling and application review
+
+internal/watch/watch.go recursively registers directories at startup and registers newly created subtrees on fsnotify Create events. It debounces events for 150ms, merges pending Tree/Local flags, and requests a full reload after reported watcher errors. internal/mdstore/write.go and transaction.go render resolution.md and install transaction files through temporary files plus rename. These writes were delivered through the watched existing issue directory in the end-to-end experiment.
+
+internal/tui/app.go handles Tree changes by scheduling both another watcher receive and reload; Local-only activity changes load activity without reloading issues. reload calls the injected loader. loadedMsg invokes apply, replaces the tree, increments the rendering generation and rebuilds tabs while preserving selection by issue ID. Failed loads retain the previous tree and expose an error. internal/cli/tui.go injects a fresh domain.Load against the chosen root for each reload and watches that root's .prep directory. Activity timers are separate from issue watching; the tested issue refresh does not depend on polling.
+
+Code inspection also found unreported directory-registration errors (WalkDir/w.Add errors are ignored) and no ordering guard between concurrent load results. Neither was reproduced as a cause of this report. They are unconfirmed possibilities, not established defects or grounds for a fix in this issue.
+
+## Conclusion and overlap
+
+No defect was confirmed in the tested external completion -> watcher -> reload -> apply path. This does not establish why the historical TUI was stale: its executable, root and filter are unavailable, and the harness does not reproduce that exact session or the full external CLI command. An older running executable, a different project/worktree or filter, and an intermittent watcher/load failure remain distinguishable explanations requiring evidence from the actual failing session. Capture those identifiers plus event/load/apply observations if it recurs. No fix or focused regression proposal is justified by the current evidence, and no production code was changed.
+
+The originally related TUI Inbox shared app.go's loaded tree and reload/application surfaces. Issue 01M52ZQDGE4WPA096TW2EHMZ4N has since removed the Inbox; no Inbox screen remains in the inspected TUI. This investigation covers Issues only and does not restore or expand that work. /components/architecture.md was reviewed: its recursive debounced watcher and injected-loader description remains accurate. No documented product behavior changed, so no knowledge text needs updating.
