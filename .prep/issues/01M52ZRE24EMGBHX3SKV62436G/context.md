@@ -1,4 +1,4 @@
-Approved conversion tables, filled in batch by batch as the user reviews them. Apply only the rows listed here; every other statement of the entries in a reviewed batch is deleted. Batches not yet listed are still to be drafted. From batch 3 on, the user delegated the review to the main session (2026-10-17): it decides, records the result here, and brings only real questions to the user.
+Approved conversion tables, filled in batch by batch as the user reviews them. Apply only the rows listed here; every other statement of the entries in a reviewed batch is deleted. All 43 entries are reviewed (batches 1 to 4, 120 records). From batch 3 on, the user delegated the review to the main session (2026-10-17): it decides, records the result here, and brings only real questions to the user.
 
 ### Approved batch 1 (2026-10-17): components architecture through hooks
 
@@ -183,3 +183,231 @@ Deleted: relation block layout, link mode keys, tests list, children view mechan
 | 1 | Decision | Keys are melodies: unshifted letter sequences | Every TUI action is a short sequence of unshifted letters, never a chord, except ctrl+s/ctrl+e in text fields. | Decided in 01M47Y6EA0SMCZAKG03785YF76; reason not stated in the entry (memory: stable mnemonics, arrows only as fallback). | internal/tui |
 | 3 | Decision | Action menu lists only what no key of its own does | Each action has exactly one sequence; the menu shows only actions that apply now. | So each action has one sequence (01M4EDFAR0SWRETYBKJ5WC3TRP). | internal/tui |
 Deleted: tag dialog, key tables, keymap/help, dialog mechanics, create wizard, editor hand-off, settings pane. Completion rules by kind and human actor are covered by today's changes.
+
+### Approved batch 3 (2026-10-17, decided by the main session): TUI components, watch, features
+Dropped: watch 1 (= tui 1), tui 4 and cross-project 3 (behavior description), cli-contracts 1 (= the 'MCP parked' decision of 01M4ZCM7TTPASZ2EN8MQN6EPVZ, converted with the issue decisions). tui-mouse 3 includes the user's rule that the wheel scrolls a list's view, never its selection. agent-context, completion-policy, knowledge-lifecycle and knowledge-policy convert to nothing.
+## /components/tui-filter.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | decision | Live filter bar parses list flags | The TUI filter bar takes `prep list` flags plus bare words (joined into one text phrase), filters live on every parseable edit, and a word starting with `-` is always a flag, never a title search; flag values come from `Tree.QueryFlags`, the same source as `prep flags`. | So live filtering does not jump on the first `-`; one value source keeps TUI and CLI in step. | internal/tui, internal/domain |
+| 2 | constraint | Filter only narrows | A tab's filter is intersected with the tab's own query, so a filter can never widen a view; esc restores the filter from when the bar opened. | reason not stated | internal/tui |
+| 3 | decision | `/` is an unlisted alias of `f` | `/` also opens the filter bar but stays out of the keymap. | `/` is a chord on German layouts, kept for US-keyboard habits. | internal/tui |
+
+Deleted: completion picker mechanics (candidates, ordering, counts, which flags are offered), footer flag names, per-tab/title display, error-line behavior, pointer to mouse doc.
+
+## /components/tui-knowledge.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | decision | TUI knowledge screen is read-only | The TUI only shows knowledge; nothing in it edits entries. | Agents write knowledge for agents. | internal/tui |
+
+Deleted: layout, keys, meta line, "Changed by"/`o` links, attention marks and Options.Check (K003-K006 drift/confirm = knowledge drift, DELETE), issue-detail "knows" links.
+
+## /components/tui-mouse.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | constraint | Mouse mirrors keys | Keys stay the primary way in; every click does exactly what the clicked element's key does, and a click on the selected item does what enter does. | reason not stated | internal/tui |
+| 2 | decision | Mouse capture is the user's choice | Capture is `tui.mouse` in user config (unset = on), not a project setting; with it off the terminal selects text with a plain drag and the keymap/footer never list mouse actions. | (implied) the terminal setup is per person, not per project. | internal/tui, internal/userconfig |
+| 3 | decision | Click selects, click again acts; the wheel scrolls the view | Selecting and activating are separate clicks with no timed double click, and the wheel scrolls a list's view, never its selection. | User decision (TUI mouse rules). | internal/tui |
+
+Deleted: marking/IDs/hit-testing layers, back button handling, per-element click lists, wheel offsets and `wheeled` mechanics, tests.
+
+## /components/tui-navigation.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | decision | Two-tier navigation, one grammar | A screens bar (project name plus Issues, Agent, Knowledge) sits over the current screen's views; both tiers use plain labels, current one accent and bold, others muted, with no underline, chips, separators or status dots; the project name is plain text because it is not a place. | Decided in 01M4EA4RB500QF2449Y3914VMQ and 01M4EDFAWDFFX96Y4ZQCKS9BQ3; the accent marks places only. | internal/tui |
+| 2 | decision | Back stack restores screen and selection | Backspace (or the mouse back button) returns to the previous screen with its selection, from anywhere; there is no breadcrumb in the bar. | reason not stated | internal/tui |
+| 3 | decision | Short terminals merge the tiers | Below 16 rows both tiers share one line and wide-and-short keeps the side-by-side split. | So the TUI fits in a strip above or below the agent. | internal/tui |
+
+Deleted: project switcher mechanics (Switch/Previous restart), key list (= approved "keys are unshifted letter sequences"), click ids, spacing (= approved "spacing tokens"), tests, `headerH`.
+
+## /components/tui.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | decision | Live reload splits tree from activity | A project change reloads the issue tree; a `.prep/local` change only re-reads the activity stream; a load error keeps the last good tree and shows the error; selections are kept by issue ID. | So a busy agent never makes the TUI reparse every issue. | internal/tui, internal/watch |
+| 2 | decision | Viewports scroll vertically only | Left and right keep their navigation meaning, so text viewports never scroll horizontally. | Stated: left/right keep navigation meaning. | internal/tui |
+| 3 | constraint | Fresh stores per load | The CLI builds fresh stores for each TUI load and check because they can run concurrently. | Stated: reloads and checks can run concurrently. | internal/cli, internal/tui |
+
+= approved: entry/no storage-adapter imports (package import boundaries); `tui.layout` single/split as user config (user config stores choices only); dark-first startup and retheme; short ID = ULID suffix.
+Deleted: view/tab/list/detail rendering, tags, priority, stale diff, screen pointers, layout numbers, key inventory, tests, Bubble Tea notes, check screen drift loading.
+
+## /components/watch.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 2 | decision | Watcher errors mean full reload | An overflow or failed watch is reported as a change of everything. | Reload everything rather than miss changes. | internal/watch |
+| 3 | decision | Debounced, merged, never blocking | Events wait 150 ms because a transition writes several files; one goroutine owns pending state and a new report merges into the waiting one. | So a slow reader never blocks the watcher. | internal/watch |
+
+Deleted: fsnotify recursion handling, tests.
+
+## /features/agent-activity.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | decision | Activity is local UI state | The stream lives in `.prep/local/activity.jsonl`, per machine and per worktree, git-ignored, never a record, never staged or committed. | It is UI state; reads still never change records. | internal/activity |
+| 2 | constraint | Appends are single small writes | Each event is one JSON line written with `O_APPEND` in one write under 4 KiB (strings clipped, oversize refused), and the file is rewritten to its newest lines past 1 MiB. | So concurrent agents never interleave lines. | internal/activity |
+| 3 | decision | Record writes always, reads only for a named actor | Prep commands log writes always but reads only when run with `--by` or `PREP_ACTOR`. | Panels, hooks and people reading without a name buried the agent's own events. | internal/activity |
+
+Also kept inside rec 3 as one sentence: focus follows prep events naming an issue except `show`, and never events with `project` or harness tool events (so a write in another project leaves the home focus alone). Reason stated.
+= issue decision: ended or 30-minute-quiet agents hidden, linked session IDs count as one agent (and keep the predecessor's focus); filters never alter stored events.
+= approved: Codex after-tool reporter, PREP_SESSION/PREP_ACTOR, hooks fail open, `.prep` edit guard, no rewriting/auto-approval of calls.
+Deleted: event field list, session event validation, kinds/readers, Claude and Codex bridge descriptions, missing Codex token fields, P007 detail.
+
+## /features/agent-context.md
+Deleted: guide behavior (covered by today's completion changes and DoD guidance), "agents execute project checks" (kept once in cli-contracts), knowledge update on completion (drift/review gate).
+
+## /features/cli-contracts.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 2 | decision | `prep guide` is the lifecycle contract | Failed transitions point back to `prep guide <id>`, and domain planners decide validity and unmet conditions. | One shared source of next steps. (implied) | internal/cli, internal/domain |
+| 3 | constraint | Prep never runs project checks | A report of a passing check is an agent assertion; prep only verifies what records show. (Merged from completion-policy, lifecycle, agent-context.) | reason not stated | internal/domain, internal/cli |
+
+= approved: JSON response fields and exit codes (0/1/2/3).
+Deleted: artifact add/remove and frontmatter (removed), `confirmed_commit` (review marker), documentation-decision completion, additive-field compatibility text.
+
+## /features/completion-policy.md
+Deleted: all of it is covered by today's changes (DoD guidance, any actor, decision/research from defined, parents from ready), the removed docs gate, or kept once elsewhere (no project checks in cli-contracts, commit-format-only in lifecycle). `prep dod` editing is behavior.
+
+## /features/cross-project.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | decision | `--project` targets any registered project | A global flag (or `PREP_PROJECT`) takes name, ID suffix, remote or path; every command works there, writes stage in the target and never commit, output names the target; flags beat env vars, both root flags are `E_USAGE`, ambiguous or unknown projects fail before the command runs. | reason not stated | internal/cli, internal/projects |
+| 2 | decision | Activity copy to home stream | A command in another project logs to the target's stream and a copy (with `Project` set) to the home stream; copies never move focus. | A write elsewhere must leave the home project's current issue alone. | internal/activity, internal/cli |
+
+Deleted: TUI project switching (in tui-navigation, not a decision), skill rule 11 text, resolveProject mechanics. (Project links and cross-project dependencies are removed, not touched here.)
+
+## /features/knowledge-lifecycle.md
+Deleted: documentation decision gate (`--docs`/`--no-impact`), review against scoped code, DoD pointer.
+
+## /features/knowledge-policy.md
+Deleted: superseded by decision and finding records; the briefing-first rule is = approved "small global prompt context"; DoD as guidance covered today.
+
+## /features/lifecycle.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | decision | State is derived, never stored | Issue state comes from which files exist (resolution, claim, ready against newest baseline, baseline); no state field is written. | reason not stated | internal/domain, internal/mdstore |
+| 2 | decision | Define settles what, enrich settles how | The user has authority over the requirement at define; at enrich the agent drafts context, decisions and criteria, the user agrees, and `prep ready` signs off; code may be read during define only to test whether the requirement makes sense. | reason not stated | internal/domain |
+| 3 | decision | Completion evidence is format-checked only | Without `--commit` the evidence is the commit that adds `resolution.md`, so code and records land together; a given hash is validated for format only. | Evidence stays valid after a squash merge removes the branch commit (01M4AVPH9A56WJ4JFMYZT476H0, 01M46ARQ78P8M40K4FSPVNK531). | internal/domain, internal/cli |
+| 4 | decision | Prep never pushes; claims travel with branches | A claim is visible elsewhere once its branch merges; working on main has no lag. | Decided in 01M46ARR6G4K7NZBYZQJZGBCR0. | internal/domain |
+| 5 | constraint | Record writes and edits never change state | `context`, `decide`, `criterion`, `findings`, `log` and `edit` work on unresolved issues without moving state; only a requirement or kind edit can make a defined issue stale. | reason not stated | internal/domain, internal/cli |
+
+Deleted: transition table and gates (code; completion rules covered by today's changes), ack (now `--trivial`, covered today), DoD, actor gate, stale/actionable/blocked definitions, reopen/drop/release details, I023, parents never claimed (covered).
+
+## /features/local-write-safety.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | constraint | No unlocked fallback | The advisory lock is `.prep/local/write.lock`; a lock access failure is surfaced, never bypassed, and reads outside a prep project never create `.prep`. | Process death releases the lock; a silent fallback would lose safety. (implied) | internal/mdstore |
+| 2 | decision | TUI writes reload under the lock | The TUI builds a fresh store per write, holds the lock, loads again, then plans and applies. | A long-running TUI must never plan on a stale screen. | internal/tui, internal/cli, internal/mdstore |
+| 3 | decision | No journal, no rollback | An interrupted write leaves the previous or new state plus harmless extra files that `prep check` reports; the fix is to run the command again. | (implied) ordered atomic file writes make recovery by rerun enough. | internal/mdstore |
+| 4 | constraint | Bounded guarantee | Safety covers cooperating prep processes on one checkout, not direct editors, power loss or distributed coordination; other worktrees have separate records, and parallel agents stay the orchestrator's job. Markdown stays authoritative, domain policy stays out of storage. | Stated limits. | internal/mdstore |
+
+= approved: one lock per write command (no stale-plan hash), temp-plus-rename, state file last and removals after (complete writes resolution then removes claim), skip `.prep-tmp-` files.
+Deleted: Hold/Locked mechanics, writeRank detail, tests.
+
+### Approved batch 4 (2026-10-17, decided by the main session): conventions, decisions, overview
+Dropped: knowledge-base 2 (records are named by ULID) and 4 (= principle 10); storage-format 1, 2, 4 (= batches 1 and 2), 5 (= principle 10), 6 (issue decisions become knowledge records). Principle 8 'no index or cache' is superseded by the record converted from storage decision D1 of 01M4ZCMFJ5P67XNSMKX1NPANDF (a derived, disposable SQLite index); principles 1 and 3 and the Beads lesson stand. The overview converts to AGENTS.md (draft below) and no records.
+All records are kind decision. "Why" paraphrases the entry; "(implied)" marks inference.
+
+## /conventions/knowledge-base.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | decision | Knowledge bundle follows OKF | The knowledge bundle follows OKF closely: prep generates index.md (never edited), the root declares okf_version, log.md is reserved. | So OKF tools can read the bundle. | internal/okf |
+| 3 | decision | One concept per entry, kept small | One concept per entry, small; lint warns above 8 KiB. | (implied) cheap targeted retrieval | internal/okf |
+
+Deleted: bootstrapping, confirm and drift, completion-time documentation review, branch and backlink notes, "current state only", precedence rule, code-inventory guidance, draft/stable status, review experiments, the old type list. All depend on removed features or describe behavior.
+
+## /conventions/storage-format.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 3 | decision | Per-machine state lives in .prep/local | Machine-specific state (activity stream, write lock) goes in a git-ignored local directory. | (implied) it must not be versioned or shared between clones | internal/mdstore, internal/activity |
+| 7 | decision | Canonical file form enforced by prep fmt | Files have one canonical form (LF, fixed key order, one field per line, single blank lines); prep fmt normalizes and CI runs fmt --check. | (implied) clean diffs | internal/mdstore |
+| 8 | decision | A heading appears once per record file | A "##" heading appears at most once per record file; prep check reports repeats. | Stated: prep reads only the first copy of Open questions. | internal/mdstore |
+
+Deleted: exact frontmatter field lists and allowed-file lists (describe the code; check enforces them), error code details, tag and priority syntax, baseline file naming, ack and resolution documentation fields, artifacts, confirmed_commit, write-lock and tmp-file details (covered by local-write-safety), Definition of Done location (now guidance).
+
+## /decisions/design-principles.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | decision | Enforce steps, not how work happens | prep defines what each step must produce and the gates between steps, not how the work is done. | reason not stated | |
+| 2 | decision | Write permissions belong to the harness | prep has no approval mechanism; reads and writes are separate commands so harness rules can tell them apart. | Stated: harness rules must distinguish reads from writes. | internal/cli |
+| 3 | decision | Store only what cannot be derived | Store every fact that cannot be derived and nothing that can; state, progress, blocked and actionable are computed. | "It is a small database." | internal/domain |
+| 4 | decision | Every transition leaves a record in its file | Each transition is recorded in the file that represents it; no fact depends on git history. | reason not stated | internal/domain, internal/mdstore |
+| 5 | decision | Files never move | An issue lives at its ID directory forever. | reason not stated | internal/mdstore |
+| 6 | decision | Storage and presentation are decoupled | Files are storage, git is versioning, CLI and TUI are query interfaces. | reason not stated | internal/cli, internal/tui |
+| 7 | decision | Domain and storage are separate layers | Domain logic is independent of storage; markdown is the first storage adapter. | reason not stated | internal/domain, internal/mdstore |
+| 8 | decision | Keep it simple: scan all files, no index or cache | Scan all files on every run; add no index or cache until proven necessary. | "Keep it simple." | internal/mdstore | superseded by storage D1 of 01M4ZCMFJ5P67XNSMKX1NPANDF
+| 9 | decision | Issues are the work; knowledge is what was decided and learned | Issues track the work; the knowledge base holds only decisions and findings. | Rewritten per today's decision, replacing "issues record change, the knowledge base records state". | |
+| 10 | decision | The CLI is the API | Every data change goes through a command carrying content, not files; hand edits stay possible and prep check catches them. | Stated: agents and clients never need hand edits. | internal/cli |
+
+Deleted: preamble about the original design document; link from principle 9 to the old conventions entry.
+
+## /decisions/out-of-scope.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | decision | No GitHub integration | prep has no GitHub integration. | reason not stated | |
+| 2 | decision | Single project only | prep covers one project; there is no cross-project view. | reason not stated | |
+| 3 | decision | prep never orchestrates implementation | prep records work but never runs agents. | reason not stated | |
+| 4 | decision | No approval or permission system | Harness permissions handle approval. | See principle 2. | |
+| 5 | decision | No focus, goal or ranking between issues | No active goal or goal ordering; priority is fixed levels per issue, no ranking between issues (since 01M4874AR04JFPZ5KYW0402JC1). | reason not stated | internal/domain |
+| 6 | decision | How work inside a step happens is not prescribed | It is the user's and agent's choice. | See principle 1. | |
+| 7 | decision | User config holds only personal choices | ~/.config/prep holds only user choices such as integrated harnesses; project behavior stays in project config. | reason not stated | internal/userconfig |
+| 8 | decision | Hosted or database storage deferred | Possible later through the storage port; markdown only for now. | reason not stated | internal/mdstore |
+| 9 | decision | Editing, visualizing and publishing knowledge is left to other tools | Left to OKF ecosystem tools and $EDITOR; human-facing docs could be generated from knowledge later. | reason not stated | |
+
+Deleted: "completion evidence is a plain commit reference" clause (completion contract removed); link to the Harness setup entry.
+
+## /decisions/prior-art.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | decision | Taken from and avoided in Backlog.md | Took binary-served instructions, a project-level Definition of Done and dogfooding; avoided titles in file names, status as a field, scanning branches for cross-branch state. | reason not stated | |
+| 2 | decision | Taken from and avoided in Beads | Took the session-start briefing (prime), JSON output everywhere and contract tests; avoided syncing two representations (SQLite and JSONL) and many records in one file. | reason not stated | |
+
+Deleted: opening summary sentence (names drift detection, removed), spec-driven tools remark (not a choice).
+
+## /decisions/stack.md
+| # | Kind | Title | One-line description | Why (from the entry) | Scopes |
+|---|---|---|---|---|---|
+| 1 | decision | Go, one static binary | Core, CLI and TUI ship as one static Go binary. | Near-instant startup for frequent agent calls, simple install; TypeScript needs a runtime and starts slower, Rust has no decisive advantage and slower iteration. | go.mod, cmd |
+| 2 | decision | TUI on Charm v2 | The TUI uses Charm v2 libraries under charm.land at latest releases; v1 import paths are not used; pin majors when adding a Charm library. | Moved from v1 in 01M48N7E9GRPWH1SKX5MTB931Y; otherwise reason not stated. | internal/tui, go.mod |
+| 3 | decision | Third-party storage adapters speak JSON-RPC over stdio | External adapters use JSON-RPC over stdio, like LSP and MCP. | So the core stays a closed, tested binary. | internal/domain |
+| 4 | decision | Harness adapters are thin TypeScript only where required | TypeScript only where a harness requires it (Claude Code mod, Pi extension). | (implied) the harness requires it | plugins |
+
+Deleted: dependency list, binary-size and startup figures (drift).
+
+## /overview.md
+Content goes to AGENTS.md. Deleted: entry index (generated index replaces it), "completion requires a documentation decision", original-design-document note.
+
+AGENTS.md draft (repository root; replaces /overview.md):
+
+````markdown
+# AGENTS.md
+
+prep is a workflow engine and memory for coding agents, with a human supervising. It is a Go CLI and TUI that keeps issues, their lifecycle records and a knowledge base of decisions and findings in the repository under `.prep/`, versioned with the code. This repository is prep itself.
+
+## Where things live
+
+- `cmd/prep`: the binary's main package.
+- `internal/domain`: the core model, lifecycle rules and ports; no storage knowledge.
+- `internal/mdstore`: the markdown storage adapter for `.prep/`.
+- `internal/okf`: the OKF knowledge bundle (entries, index generation).
+- `internal/cli`: commands and output; `internal/cli/skill.md` is the source of the prep skill.
+- `internal/tui`: the terminal UI; `internal/palette`: its colors and themes.
+- `internal/activity`: per-machine agent activity stream; `internal/watch`: file watching.
+- `internal/gitx`: git access; `internal/projects`: project registry.
+- `internal/setup`: harness integration install (`prep setup`); `internal/update`: self-update; `internal/userconfig`: `~/.config/prep`.
+- `internal/eval`, `eval/`: evaluation of prep with agents.
+- `plugins/`: the Claude Code and Codex plugins; `testdata/`: the contract corpus and fixtures.
+- `install.sh`, `justfile`, `README.md`, `TOKEN-EFFICIENCY.md`.
+
+## Build, test, check
+
+- `go test ./...` (or `just test`) runs all tests, including the contract corpus.
+- `just install` builds with the version stamped, installs the binary and refreshes the harness integrations from this checkout.
+- `just lint` runs gofmt and go vet; `just fmt` formats Go and the prep records.
+- `prep check` validates the records; `prep fmt --check` verifies canonical form. `just check` runs both from source; `just ci` runs lint, test and check.
+- After changing `internal/cli/skill.md`, run `just sync-skill` so the plugin copies match.
+
+## Work and decisions
+
+- Work on this repository is tracked with prep itself. Start an issue with `prep guide <id>`; `prep prime` gives the project briefing.
+- Change prep records only through prep commands, never by editing their files.
+- Decisions and findings live in the knowledge base. Find them with `prep knowledge find <words>` and read them with `prep knowledge show <entry>`; record new decisions there, not in code comments or docs files.
+- Commit straight to `main` unless told otherwise.
+````
