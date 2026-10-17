@@ -4,7 +4,6 @@ kind: code
 parent: 01M52ZNHXFXHNDATT9WWQ3C87E
 depends_on:
   - 01M52ZQAGVQ5HX0GTBX7R2P47G
-  - 01M52ZR56WW8WDH9QGKJFN32FP
 tags:
   - workflow
 priority: high
