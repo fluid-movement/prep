@@ -1,0 +1,1 @@
+- 2026-10-17T08:15:09Z claude-code/opus-5.5: User, 2026-10-17: Pi is an excellent implementer harness for handoffs (custom agents and extensions, no gates). A Pi adapter is the likely next harness when it is used.

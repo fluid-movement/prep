@@ -1,0 +1,5 @@
+- [ ] prep help lists no review or dependency override command, and no record in this repository has review, approval-prerequisite or override files or fields
+- [ ] The TUI's screens are Issues, Agent and Knowledge; goldens are updated and no Inbox code remains
+- [ ] Reopening a done issue with a reason appends its resolution to history.md and leaves it ready, covered by a test
+- [ ] git grep finds no resolution review, generation, approval prerequisite or Inbox types
+- [ ] Knowledge describing review, the Inbox and reopen is deleted or updated, prep check reports no errors, and GitHub CI on main is green

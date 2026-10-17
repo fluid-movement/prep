@@ -1,0 +1,4 @@
+- [ ] prep eval mutate does not exist and prep help does not mention it
+- [ ] No CI workflow runs evals, and eval/experiments is gone
+- [ ] Knowledge describes evals as local runs without mutate, and prep check reports no errors
+- [ ] go test and fmt pass, and GitHub CI on main is green

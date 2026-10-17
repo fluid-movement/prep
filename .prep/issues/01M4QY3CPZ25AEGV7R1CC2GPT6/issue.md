@@ -1,5 +1,5 @@
 ---
-title: Projects in temporary directories pollute the project registry
+title: The project registry forgets directories that no longer exist
 kind: code
 parent: 01M52ZNHXFXHNDATT9WWQ3C87E
 tags:
@@ -8,6 +8,6 @@ tags:
 priority: low
 ---
 
-Any prep command run in a directory records that directory in the machine-wide registry (`$XDG_STATE_HOME/prep/projects.json`, [Project registry](/components/projects.md)); a project created under the system temp directory shows up in `prep projects` and in the briefing's "Other prep projects here" list of every other project until the directory is deleted. Running `prep init` in a scratch directory three times left `tmp.qtkhi1kpjp`, `tmp.54rzp9az8q`, `tmp.qutneq1uty` in the real registry (removed by hand with `prep projects remove`); it happened again later in the same day. Agents see these names in every session's briefing and may try to use them.
+Any prep command run in a directory records it in the machine-wide registry ([Project registry](/components/projects.md)), and nothing removes an entry when its directory is deleted: scratch projects under the system temp directory and removed git worktrees stay in prep projects and in every project's briefing ('Other prep projects here'), where agents see them and may try to use them. When prep reads the registry it drops entries whose root no longer exists and saves the cleaned registry. Worktrees are now the standard way to hand off issues (01M52ZR8564ECW8GP3ZHSXEM0A), so this matters more. Decided in 01M4ZCMDMWBYMYDMBNQKBYG1JH.
 
 ## Open questions

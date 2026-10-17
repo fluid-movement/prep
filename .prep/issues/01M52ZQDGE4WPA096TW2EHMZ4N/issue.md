@@ -8,6 +8,6 @@ tags:
 priority: high
 ---
 
-Remove prep review, resolution reviews and generations, approval prerequisites on dependencies (depends_on_approval), dependency override, approvals.md, the TUI Inbox screen and completion bundle. Reopen stays minimal: it moves the old resolution into history.md and returns the issue to ready. Decided in 01M4ZCM3ZJDTM3JRHS2N1NMF5H. Delete the code, its tests, fixtures, eval cases, record handling and knowledge text together; nothing stays behind for compatibility. Done when nothing references the removed feature and GitHub CI on main is green.
+Remove human approval records and the Inbox, per the review decision (01M4ZCM3ZJDTM3JRHS2N1NMF5H): prep review show and approve, resolution reviews (resolution-reviews.md), resolution generations and resolution-history.md, approval prerequisites on dependencies (depends_on_approval), prep dependency override with dependency-overrides.md, the TUI Inbox screen, the completion bundle and its review snapshot. Reopen becomes minimal: it needs a reason, appends the old resolution to history.md, removes resolution.md and returns the issue to ready. This repository's records are converted once, with no compatibility code. The completion contract machinery (policy, evidence, exceptions, knowledge review reports) stays until 01M52ZQAGVQ5HX0GTBX7R2P47G. Delete the code, its tests, fixtures, eval cases and knowledge text together. Done when nothing references the removed parts and GitHub CI on main is green.
 
 ## Open questions
