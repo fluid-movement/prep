@@ -29,3 +29,5 @@
 - 2026-10-17T14:21:31Z claude-code: Handoff record: codex | knowledge conversion (120 records from approved tables, AGENTS.md) | clean; checker added the tracking record (missing from my table) and the entries-removal stage
 
 - 2026-10-17T14:26:37Z claude-code: Handoff record: claude sonnet subagent | session-start rules and short skill (medium, text plus test) | checker restored 2 dropped rules; otherwise clean. 57k tokens, 28 tool uses, 4.2 min
+
+- 2026-10-17T14:33:59Z claude-code: Handoff record: codex | finish hook asks for decisions (small-medium) | no fixes

@@ -1,4 +1,4 @@
-- [ ] After a turn that changed code the finish hook asks once whether a decision was made and how to record it, with no issue-tracking text; a turn that changed only records gets nothing, covered by tests
-- [ ] The message names up to five non-superseded decision records whose scope matches a changed file, covered by a test
-- [ ] An eval case for recording a decision made while changing code is written and loads; its run waits for the user's approval
-- [ ] prep check reports no errors and GitHub CI on main is green
+- [x] After a turn that changed code the finish hook asks once whether a decision was made and how to record it, with no issue-tracking text; a turn that changed only records gets nothing, covered by tests
+- [x] The message names up to five non-superseded decision records whose scope matches a changed file, covered by a test
+- [x] An eval case for recording a decision made while changing code is written and loads; its run waits for the user's approval
+- [x] prep check reports no errors and GitHub CI on main is green
