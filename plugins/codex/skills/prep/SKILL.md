@@ -5,41 +5,19 @@ description: Work on issues tracked by prep (.prep/ in the repository). Use when
 
 # prep
 
-This repository tracks its work with prep. Issues live in `.prep/issues/<id>/`; the knowledge base lives in `.prep/knowledge/`.
+This repository tracks its work with prep: issues and knowledge live in `.prep/`. If no session hook did, run `prep prime` at session start. Run `prep guide <id>` for the issue you work on, and `prep --help` for commands.
 
-Before implementation, search for existing work with `prep list --text <distinctive words>` and reuse a clear match; create an issue for unmatched implementation of any size unless the user explicitly opts out of tracking. Ordinary questions, exploration and planning do not automatically need issues. If multiple issues fit, ask which one before changing records. Similar-issue hints from `prep new` are candidates to review, not authority to change another issue. Preserve the original request's scope: updating a requirement does not authorize implementation or completion, and an automatic finish review never overrides no-record-write restrictions. Read requirements and metadata before recommending work; do not infer effort from titles.
-
-1. At session start, run `prep prime` for a short briefing. Knowledge starts empty and grows from decisions and findings; there is no bootstrap prerequisite.
-2. Non-parent decision and research issues can complete directly from defined: record the agreed outcome with `prep decide <id> --title <title> --description <description> --body-file - --outcome` or the answer with `prep finding <id> --title <title> --description <description> --body-file -`, check any existing criteria, and run `prep complete <id>`. They still require a current baseline; ready and claim remain available for handoff. Code and manual issues complete only from in progress; parents complete from ready once their children are resolved. Any identity, including a human, can complete a code issue.
-
-   For the issue you work on, run `prep guide <id>`. It tells you the current step, what to read, which gates are unmet, where outputs go, and the exact command for the next transition. Follow it; it always matches the installed binary.
-3. Use `--json` when you parse output. Reads (`prime`, `guide`, `list`, `next`, `show`, `check`, `flags`, `views`, `knowledge list|find|show`, `activity`) do not initiate new issue changes; writes (`new`, `edit`, `context`, `decide`, `criterion`, `dod`, `finding`, `log`, `define` (`--trivial` too), `ready`, `claim`, `release`, `complete`, `drop`, `reopen`, `fmt`, `fix`) each perform one change. `prep flags` lists every query flag with the values it accepts now; a leading `not-` negates a value (`prep list --state not-done`).
-4. Read the knowledge base through prep, not its files: `prep knowledge find <words>` prints just the paragraphs and list items that match, `prep knowledge show <entry>#<section>` one section, `prep knowledge show <entry> --outline` an entry's headings with their sizes, `prep knowledge list` every entry with its description and size (sizes in approximate tokens). Search entries with `find`, not `grep` over `.prep/knowledge`: it returns whole paragraphs and list items with their entry. Start narrow and widen only when the step needs more; never `cat` entries or whole directories of them. Every read stays in your context and is paid again on each later request.
-5. Survey wide, read narrow. When a step needs many files (checking a codebase against the knowledge base or the issues), give each area to a subagent instead of reading everything yourself, on a smaller model when you can pick one; a knowledge lookup across several entries (where something is documented, facts from a few entries) goes to the smallest model, while one lookup stays inline, since a subagent's fixed prompt costs more than a single `find`. Subagents do not see this skill: pass these rules on unchanged, telling each to read knowledge through `prep knowledge find|show` and never the files, name the entries or sections it needs, and ask for a short report. Read code by searching and reading ranges rather than whole files, and keep command output bounded (`head`, `--max`) instead of reading back output a tool saved to a file.
-6. Write through commands, not files. `prep edit <id>` changes title, kind, parent, dependencies, tags, priority or requirement (`--depends-on` replaces the whole list, `--depends-on ''` clears it; `--priority critical|high|medium|low`, medium being the default; `--body`/`--body-file` replaces the requirement including its `## Open questions` section). `prep next` and `prep list` order work by priority, then ID. Records: `prep context` replaces its text; `prep decide [<id>] --title <title> --description <description>` and `prep finding [<id>] --title <title> --description <description>` create immutable knowledge records, `prep criterion` adds and checks criteria by the numbers `prep show` prints, `prep dod --add <item>` and `--remove <item>` edit the project Definition of Done guidance, `prep log` appends to the work log. `prep reopen <id> --reason <text>` moves a done issue's resolution into its work log and returns it to ready. Knowledge records live in `knowledge/decisions/<ulid>.md` and `knowledge/findings/<ulid>.md`. An issue is optional; scopes are optional repeatable `--scope <glob>` flags (absent means project-wide). Decisions accept `--outcome` and repeatable `--supersedes <record-id-or-suffix>` across the knowledge base. Superseded status is derived from newer records; records are never edited. Every record has a required one-line description. Read records and existing descriptive entries with `prep knowledge list|find|show`. Long text goes through `--body-file -` (stdin).
-7. Never invent issue IDs; `prep new` creates them (ULIDs: 26 characters, sortable by creation time). Commands accept any unique suffix of an ID, such as the last 6 characters the TUI shows. Never write `baselines/`, `ready.md`, `claim.md` or `resolution.md` by hand.
-8. For prep CLI invocations only, pass `--by <harness>/<version>` (or set `PREP_ACTOR` on that invocation) so records name the agent. If the session hook supplies `PREP_SESSION`, set it only on prep invocations too. Leave unrelated shell commands unchanged. prep notes each command in a local activity stream that `prep tui` shows the person live; the issue of your latest write or `prep guide` is your current issue. When you turn to another issue without either, run `prep focus <id>`.
-9. Claims and activity are branch/worktree local; assigning parallel agents is the orchestrator’s responsibility, and a claim does not reserve work globally. Each write command holds a checkout-local lock from load to its last write, so concurrent writers in one checkout queue; the lock covers only cooperating prep processes. An interrupted write can leave extra records without changing the issue state; `prep check` reports them. prep stages the `.prep` files it writes and never commits. Completion does not require a commit. For a code issue, `prep complete <id>` can happen before the code and records are committed together; its recorded work scopes stay valid before or after that commit. Use `--commit <hash>` only when work was committed earlier.
-10. Other prep projects on this machine are one flag away: `prep projects` lists them (name, ID, root, remote), and `--project <name>` runs any command there, reads and writes alike (`prep list --project api --text auth`, `prep new --project api ...`). Writes stage in that repository and the output names it; commit there only when the user asks. Never edit `id:` in `.prep/project.md`: it is the project's permanent identity.
-
-## Without the binary
-
-If `prep` is not on the PATH (for example in a cloud session), install it first; it takes under a minute:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/fluid-movement/prep/main/install.sh | sh
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-`| PREP_VERSION=v0.1.0 sh` picks a version. Without network access to GitHub releases, `go install github.com/fluid-movement/prep/cmd/prep@latest` works wherever Go is installed (the binary lands in `$(go env GOPATH)/bin`). Then use the commands above as usual.
-
-Only when both fail are the files the database and you edit them directly. Tell the user that prep could not be installed and that you are editing `.prep` by hand; `prep check` (later, locally or in CI) validates the edits:
-
-- Lifecycle: open (`issue.md`) → defined (`baselines/<timestamp>.md`) → ready (`ready.md`, references the newest baseline) → in progress (`claim.md`) → done or dropped (`resolution.md`). State is derived from which records exist.
-- Define: the requirement is the prose in `issue.md`; an issue can only be defined when its `## Open questions` section is empty. A stale issue (its requirement or kind changed after the newest baseline) is resolved with `prep define <id> --trivial` for a trivial change, which keeps the ready sign-off and any claim, or with `prep define <id>` and re-enrichment for a real one.
-- Enrich: `context.md` (implementation context; link knowledge entries as `/path.md`), `acceptance.md` (`- [ ]` criteria). The project Definition of Done in `project.md` is guidance shown in the briefing and at the check step.
-- Complete: non-parent decisions and research can go directly from defined to done; code and manual issues require in progress; parents complete from ready. Any identity can complete code. All existing criteria checked; research issues need a linked finding record; decision issues need a linked decision record with `outcome: true`. Completion has no documentation flags or gate.
-- Do not edit record files by hand; leave the transition for when the binary is available, and say so.
+Workflow rules:
+- Settle the requirement with the user before you define an issue.
+- Ready means another agent without this conversation could do the work.
+- Implementers claim, implement exactly the issue, log "Implemented, ready for check" and stop; they never complete, commit or push.
+- Checkers verify each criterion and the Definition of Done themselves, say which commands they ran, then complete.
+- Record a decision with prep decide when it is made.
+- Read and write records only through prep commands, never the files; search knowledge with prep knowledge find and read it with prep knowledge show.
+- Give parallel implementers separate git worktrees.
+- Run live evals only with the user's OK.
+- Keep command output short, and never read back a saved output file.
+- Give knowledge lookups across several entries to a subagent on a small model, and pass these rules on to every subagent.
 
 ## Codex integration
 

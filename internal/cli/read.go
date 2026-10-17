@@ -646,7 +646,7 @@ type primeBrief struct {
 	Plugin       string         `json:"plugin,omitempty"` // alert when the harness plugin and the binary differ
 	Focus        []focusSummary `json:"focus"`            // the newest current issues from the activity stream
 	Projects     []string       `json:"projects"`         // other prep projects on this machine, newest first
-	Hint         string         `json:"hint"`
+	Rules        string         `json:"rules"`
 }
 
 type claimSummary struct {
@@ -686,8 +686,7 @@ func cmdPrime(a *app, args []string) error {
 		}
 		return ss
 	}
-	b := primeBrief{DoD: t.Project.DoD, Issues: len(t.Issues), Parents: []summary{}, Next: []summary{}, Blocked: []summary{}, Stale: []summary{}, Claims: []claimSummary{},
-		Hint: "Run prep guide <id> for the issue you work on; it lists what to read and where outputs go. Read knowledge with prep knowledge find <words> (instead of grep) or prep knowledge show <entry>[#section], never the files. Give knowledge lookups across several entries to a subagent on the smallest model and wide surveys to a smaller one, and pass these rules on to them unchanged. Keep command output short; never read back a saved output file."}
+	b := primeBrief{DoD: t.Project.DoD, Issues: len(t.Issues), Parents: []summary{}, Next: []summary{}, Blocked: []summary{}, Stale: []summary{}, Claims: []claimSummary{}, Rules: rulesText}
 	for _, id := range t.IDs() {
 		i := t.Issues[id]
 		s := t.State(id)
@@ -792,7 +791,7 @@ func cmdPrime(a *app, args []string) error {
 	if len(b.Projects) > 0 {
 		a.printf("\nOther prep projects here: %s (prep projects lists them; --project <name> reads or files work there)\n", strings.Join(b.Projects, ", "))
 	}
-	a.printf("\n%s\n", b.Hint)
+	a.printf("\nWorkflow rules:\n%s", rulesText)
 	return nil
 }
 

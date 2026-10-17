@@ -41,6 +41,9 @@ func init() {
 //go:embed skill.md
 var skillText string
 
+//go:embed rules.md
+var rulesText string
+
 // Exit codes.
 const (
 	exitOK       = 0
