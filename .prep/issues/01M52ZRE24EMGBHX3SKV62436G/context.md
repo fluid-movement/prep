@@ -1,3 +1,5 @@
+The 162 issue decisions and the findings.md files are converted mechanically by the knowledge stage of 01M52ZRB3VY0MSZ0HZWJ2SEC24, in every prep project; this issue converts only this repository's 43 descriptive entries, moves the overview to AGENTS.md and rewrites principle 9.
+
 Approved conversion tables, filled in batch by batch as the user reviews them. Apply only the rows listed here; every other statement of the entries in a reviewed batch is deleted. All 43 entries are reviewed (batches 1 to 4, 121 records). From batch 3 on, the user delegated the review to the main session (2026-10-17): it decides, records the result here, and brings only real questions to the user.
 
 ### Approved batch 1 (2026-10-17): components architecture through hooks
