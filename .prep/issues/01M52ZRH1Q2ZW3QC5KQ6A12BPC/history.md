@@ -1,0 +1,1 @@
+- 2026-10-17T18:10:36Z codex: Implemented, ready for check: Knowledge now lists records newest first with a superseded toggle, followable issue and supersession links, and an issue Decisions block covered by tests and goldens.

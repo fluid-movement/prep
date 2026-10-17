@@ -1122,7 +1122,12 @@ func (m *Model) relations(id string) []relation {
 		out = append(out, relation{"blocks", b})
 	}
 	for _, p := range m.tree.IssueEntries(id) {
-		out = append(out, relation{"knowledge", p})
+		if e := m.tree.Knowledge[p]; e.ID == "" || e.Issue != id {
+			out = append(out, relation{"knowledge", p})
+		}
+	}
+	for _, e := range m.tree.IssueRecords(id) {
+		out = append(out, relation{"record", e.Path})
 	}
 	return out
 }
@@ -1339,8 +1344,9 @@ var knowledgeBindings = []binding{
 	bind("Knowledge", "↑↓ j k", "select an entry", false),
 	bind("Knowledge", "enter → l", "read the entry (arrows scroll, esc back)", false),
 	bind("Knowledge", "f", "filter: --type --status --scope, words match titles", true),
-	bind("Knowledge", "!", "only entries that need an agent's attention (marked !)", true),
-	bind("Knowledge", "o", "go to an issue that changed the entry", true),
+	bind("Knowledge", "!", "diagnostics: only entries marked !", true),
+	bind("Knowledge", "u", "superseded: show or hide records", true),
+	bind("Knowledge", "o", "links: follow issue and record links", true),
 	bind("Knowledge", "y", "copy the entry path", false),
 	bind("Screens", "esc b", "back to the issues", true),
 	bind("Screens", "i w", "issues, agent", false),
@@ -1598,8 +1604,20 @@ func (m *Model) relationBlock(id string, rels []relation, inner int) (out []stri
 			lines = append(lines, link(k, sub.Render(lead)))
 		}
 	}
+	recordHeading := false
 	for k, r := range rels {
 		switch r.label {
+		case "record":
+			if !recordHeading {
+				lines = append(lines, line{m.th.S.Muted.Render("Decisions"), -1})
+				recordHeading = true
+			}
+			e := m.tree.Knowledge[r.id]
+			text := "  " + m.th.S.Body.Render(e.Title)
+			if e.Superseded {
+				text += sub.Render(" · superseded")
+			}
+			lines = append(lines, line{mark(k, text), k})
 		case "depends on":
 			lead := sub.Render("← needs ")
 			if !m.tree.State(r.id).Terminal() {
