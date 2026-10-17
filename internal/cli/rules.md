@@ -1,0 +1,10 @@
+- Settle the requirement with the user before you define an issue.
+- Ready means another agent without this conversation could do the work.
+- Implementers claim, implement exactly the issue, log "Implemented, ready for check" and stop; they never complete, commit or push.
+- Checkers verify each criterion and the Definition of Done themselves, say which commands they ran, then complete.
+- Record a decision with prep decide when it is made.
+- Read and write records only through prep commands, never the files; search knowledge with prep knowledge find and read it with prep knowledge show.
+- Give parallel implementers separate git worktrees.
+- Run live evals only with the user's OK.
+- Keep command output short, and never read back a saved output file.
+- Give knowledge lookups across several entries to a subagent on a small model, and pass these rules on to every subagent.

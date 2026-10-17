@@ -1,4 +1,4 @@
-- [ ] prep prime, from the hook and plain, prints the workflow rules from one embedded source, covered by a test
-- [ ] The skill is a short intro plus the same rules text, with no command reference, and a test fails when it drifts from the source; the three copies match
-- [ ] An eval case that fails without the rules is written and loads; its run waits for the user's approval
-- [ ] prep check reports no errors and GitHub CI on main is green
+- [x] prep prime, from the hook and plain, prints the workflow rules from one embedded source, covered by a test
+- [x] The skill is a short intro plus the same rules text, with no command reference, and a test fails when it drifts from the source; the three copies match
+- [x] An eval case that fails without the rules is written and loads; its run waits for the user's approval
+- [x] prep check reports no errors and GitHub CI on main is green

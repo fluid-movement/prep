@@ -3,6 +3,7 @@ package fixture
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -180,12 +182,16 @@ func (p *Project) Query(args ...string) (string, error) {
 }
 
 func (w *Workspace) query(dir string, seed int64, args ...string) (string, error) {
-	cmd := exec.Command(w.opts.Binary, append([]string{"--root", dir}, args...)...)
-	cmd.Dir = dir
-	cmd.Env = w.env(seed)
 	var out, errb bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &out, &errb
-	if err := cmd.Run(); err != nil {
+	if err := runBusy(func() *exec.Cmd {
+		out.Reset()
+		errb.Reset()
+		cmd := exec.Command(w.opts.Binary, append([]string{"--root", dir}, args...)...)
+		cmd.Dir = dir
+		cmd.Env = w.env(seed)
+		cmd.Stdout, cmd.Stderr = &out, &errb
+		return cmd
+	}); err != nil {
 		return out.String(), fmt.Errorf("prep %s: %v\n%s", strings.Join(args, " "), err, strings.TrimSpace(errb.String()+out.String()))
 	}
 	return out.String(), nil
@@ -242,12 +248,15 @@ func (w *Workspace) prep(dir string, seed int64, args ...string) (string, error)
 			break
 		}
 	}
-	cmd := exec.Command(w.opts.Binary, full...)
-	cmd.Dir = dir
-	cmd.Env = w.env(seed)
 	var out bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &out, &out
-	if err := cmd.Run(); err != nil {
+	if err := runBusy(func() *exec.Cmd {
+		out.Reset()
+		cmd := exec.Command(w.opts.Binary, full...)
+		cmd.Dir = dir
+		cmd.Env = w.env(seed)
+		cmd.Stdout, cmd.Stderr = &out, &out
+		return cmd
+	}); err != nil {
 		return out.String(), fmt.Errorf("prep %s: %v\n%s", strings.Join(args, " "), err, strings.TrimSpace(out.String()))
 	}
 	return out.String(), nil
@@ -628,4 +637,21 @@ func topo(n int, deps func(int) []int) ([]int, error) {
 		}
 	}
 	return out, nil
+}
+
+// runBusy runs the command build returns, retrying briefly when it cannot
+// start because the binary is "text file busy" (ETXTBSY): on Linux a
+// parallel run that is still copying its pinned prep binary can leak the
+// write descriptor into a fork for a moment. The process never started, so
+// a retry is safe.
+func runBusy(build func() *exec.Cmd) error {
+	var err error
+	for attempt := 0; attempt < 6; attempt++ {
+		err = build().Run()
+		if !errors.Is(err, syscall.ETXTBSY) {
+			return err
+		}
+		time.Sleep(time.Duration(attempt+1) * 20 * time.Millisecond)
+	}
+	return err
 }

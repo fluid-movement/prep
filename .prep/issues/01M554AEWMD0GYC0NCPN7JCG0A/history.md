@@ -1,0 +1,1 @@
+- 2026-10-17T14:30:14Z claude-code: Implemented by the main session directly in fe2b3b7 and recorded afterwards; the issue was filed late.

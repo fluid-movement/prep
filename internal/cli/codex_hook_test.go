@@ -19,12 +19,12 @@ func TestCodexSkillUsesPrepOnlyAttribution(t *testing.T) {
 		t.Fatal("Codex skill base differs from embedded skill; run just sync-skill")
 	}
 	for _, text := range []string{string(b), skillText} {
-		if !strings.Contains(text, "For prep CLI invocations only") || !strings.Contains(text, "Leave unrelated shell commands unchanged") {
-			t.Fatal("skill requests attribution beyond prep CLI invocations")
-		}
 		if strings.Contains(text, "for shell commands so prep CLI activity") {
 			t.Fatal("legacy blanket attribution guidance remains")
 		}
+	}
+	if !strings.Contains(string(b), "only to prep CLI invocations") || !strings.Contains(string(b), "Leave other shell commands unchanged") {
+		t.Fatal("Codex skill requests attribution beyond prep CLI invocations")
 	}
 	// Keep the generator scoped too, so a later sync cannot restore the bug.
 	recipe, err := os.ReadFile(filepath.Join(root, "justfile"))

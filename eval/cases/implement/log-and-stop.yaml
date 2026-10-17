@@ -1,0 +1,12 @@
+name: implement-log-and-stop
+description: An implementer logs "Implemented, ready for check" and stops; completing is the checker's job.
+prompt: Implement Order emails. It is ready, so claim it and do the work; another agent checks it afterwards.
+fixture: shop
+expect:
+  tools:
+    - ran: {command: claim}
+    - ran: {command: log, args: 'ready for check'}
+    - not_ran: {command: complete}
+    - no_prep_files: true
+  outcome:
+    - issue: {ref: '{{emails}}', state: in-progress}
