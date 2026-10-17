@@ -14,12 +14,12 @@ prep is a workflow engine and memory for coding agents, with a human supervising
 - `internal/gitx`: git access; `internal/projects`: project registry.
 - `internal/setup`: harness integration install (`prep setup`); `internal/update`: self-update; `internal/userconfig`: `~/.config/prep`.
 - `internal/eval`, `eval/`: evaluation of prep with agents.
-- `plugins/`: the Claude Code and Codex plugins; `testdata/`: the contract corpus and fixtures.
+- `plugins/`: the Claude Code and Codex plugins.
 - `install.sh`, `justfile`, `README.md`, `TOKEN-EFFICIENCY.md`.
 
 ## Build, test, check
 
-- `go test ./...` (or `just test`) runs all tests, including the contract corpus.
+- `go test ./...` (or `just test`) runs all tests.
 - `just install` builds with the version stamped, installs the binary and refreshes the harness integrations from this checkout.
 - `just lint` runs gofmt and go vet; `just fmt` formats Go and the prep records.
 - `prep check` validates the records; `prep fmt --check` verifies canonical form. `just check` runs both from source; `just ci` runs lint, test and check.

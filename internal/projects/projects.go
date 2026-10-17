@@ -241,21 +241,6 @@ func Resolve(query string) (Project, error) {
 	return resolveIn(ps, query)
 }
 
-// ByID returns the most recently used checkout of the project with the
-// given ID.
-func ByID(id string) (Project, bool, error) {
-	ps, err := List()
-	if err != nil {
-		return Project{}, false, err
-	}
-	for _, p := range ps {
-		if p.ID == id {
-			return p, true, nil
-		}
-	}
-	return Project{}, false, nil
-}
-
 // resolveIn applies Resolve's rules to ps, newest first.
 func resolveIn(ps []Project, query string) (Project, error) {
 	q := strings.TrimSpace(query)
