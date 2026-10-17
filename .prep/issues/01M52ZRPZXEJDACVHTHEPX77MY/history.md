@@ -1,0 +1,1 @@
+- 2026-10-17T18:18:55Z claude-code: Implemented, ready for check: the prompt hook sends only changed text per session (reset by session start), with tests; the turn snapshot is still written on every prompt. Eval cases that show tracking behavior to rerun on approval: natural/fix-no-issue, natural/fix-matching-issue, natural/fix-opt-out, natural/read-only. Not run.

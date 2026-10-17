@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -92,6 +93,66 @@ func TestHookSmallDoesNotLoadTracker(t *testing.T) {
 	os.WriteFile(filepath.Join(root, mdstore.Dir, "project.md"), []byte("invalid yaml"), 0o644)
 	if out := runHook(t, "prompt", "codex", hookEvent{Cwd: root}); !strings.Contains(out, "existing work") {
 		t.Fatalf("small loaded tracker: %s", out)
+	}
+}
+
+func TestHookPromptSendsOnlyWhatChanged(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	h := newHarness(t)
+	idA := h.newIssue("--title", "Track sent prompt text", "--kind", "code")
+	idB := h.newIssue("--title", "Second tracked prompt", "--kind", "code")
+	// Turn snapshots are taken from git state, so the project needs a repository.
+	if b, err := exec.Command("git", "-C", h.dir, "init", "-q").CombinedOutput(); err != nil {
+		t.Fatalf("git: %v %s", err, b)
+	}
+	configDir := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "prep")
+	os.MkdirAll(configDir, 0o755)
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("hooks:\n  prompt: large\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	hooksDir := filepath.Join(h.dir, mdstore.Dir, "local", "hooks")
+	snapshots := func() []string {
+		matches, _ := filepath.Glob(filepath.Join(hooksDir, "*.json"))
+		return matches
+	}
+	e := hookEvent{Cwd: h.dir, Session: "session-sent", Prompt: "Implement " + idA}
+	if out := runHook(t, "prompt", "claude-code", e); !strings.Contains(out, idA) {
+		t.Fatalf("first prompt did not send the reminder: %s", out)
+	}
+	// An identical prompt sends nothing, but still writes the turn snapshot.
+	for _, path := range snapshots() {
+		os.Remove(path)
+	}
+	if out := runHook(t, "prompt", "claude-code", e); out != "" {
+		t.Fatalf("identical prompt resent text: %s", out)
+	}
+	if len(snapshots()) != 1 {
+		t.Fatal("turn snapshot not written for an unchanged prompt")
+	}
+	// The other harness keys its own session state, so it sends once.
+	if out := runHook(t, "prompt", "codex", e); !strings.Contains(out, idA) {
+		t.Fatalf("other harness did not send its first prompt: %s", out)
+	}
+	// Naming a new issue changes the text, so it is sent again.
+	e.Prompt = "Implement " + idB
+	if out := runHook(t, "prompt", "claude-code", e); !strings.Contains(out, idB) {
+		t.Fatalf("changed prompt was not sent: %s", out)
+	}
+	if out := runHook(t, "prompt", "claude-code", e); out != "" {
+		t.Fatalf("repeated changed prompt resent text: %s", out)
+	}
+	// Session start restores the briefing and clears what was sent, so the
+	// next prompt sends its text again.
+	runHook(t, "session-start", "claude-code", hookEvent{Cwd: h.dir, Session: "session-sent"})
+	if out := runHook(t, "prompt", "claude-code", e); !strings.Contains(out, idB) {
+		t.Fatalf("prompt after session start was not sent: %s", out)
+	}
+	// Without a session there is no key to track, so text is always sent.
+	anonymous := hookEvent{Cwd: h.dir, Prompt: "Implement " + idB}
+	for range 2 {
+		if out := runHook(t, "prompt", "claude-code", anonymous); !strings.Contains(out, idB) {
+			t.Fatalf("sessionless prompt was not sent: %s", out)
+		}
 	}
 }
 

@@ -36,8 +36,14 @@ func hookGit(root string, args ...string) (string, error) {
 }
 
 func hookTurnPath(a *app, e hookEvent) string {
+	return hookStatePath(a, e, ".json")
+}
+
+// hookStatePath names this session's local hook state file. The turn snapshot
+// and the last-sent prompt text are both keyed by harness and session.
+func hookStatePath(a *app, e hookEvent, ext string) string {
 	key := sha256.Sum256([]byte(a.actor + "\x00" + e.Session))
-	return filepath.Join(a.store.Root, mdstore.Dir, "local", "hooks", hex.EncodeToString(key[:])+".json")
+	return filepath.Join(a.store.Root, mdstore.Dir, "local", "hooks", hex.EncodeToString(key[:])+ext)
 }
 
 func hookSnapshot(root string) (hookTurn, error) {
