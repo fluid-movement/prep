@@ -1,2 +1,2 @@
-- [ ] The handoff cases ran locally on haiku and sonnet with the fewest runs that separate them; the result names the cheapest model that implements handed-off issues reliably, with cost per passing run
-- [ ] Failures that look like case faults were checked against the transcripts before being counted against a model
+- [x] The handoff cases ran locally on haiku and sonnet with the fewest runs that separate them; the result names the cheapest model that implements handed-off issues reliably, with cost per passing run
+- [x] Failures that look like case faults were checked against the transcripts before being counted against a model
