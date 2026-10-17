@@ -1,0 +1,3 @@
+- [ ] A run whose result has is_error true is recorded with status error and the harness message, even when its subtype is success, covered by a test
+- [ ] Errored runs are excluded from pass rates and the report shows how many there were, covered by a test
+- [ ] The eval knowledge describes how harness errors are recorded, prep check reports no errors, and GitHub CI on main is green
