@@ -1,4 +1,4 @@
-- [ ] prep new writes only issue.md, and a missing acceptance, context, decisions or history file reads as empty without a warning, covered by tests
-- [ ] A write that would leave a record file empty removes it instead, covered by a test
-- [ ] prep init writes history.md merge=union to .gitattributes without duplicating it, and two branches appending to one history.md merge cleanly, covered by tests
+- [x] prep new writes only issue.md, and a missing acceptance, context, decisions or history file reads as empty without a warning, covered by tests
+- [x] A write that would leave a record file empty removes it instead, covered by a test
+- [x] prep init writes history.md merge=union to .gitattributes without duplicating it, and two branches appending to one history.md merge cleanly, covered by tests
 - [ ] This repository and the other prep projects have no empty record files after the conversion, prep check reports no errors, and GitHub CI on main is green
