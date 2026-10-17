@@ -1,0 +1,4 @@
+- [ ] The rules say to record user-stated decisions with their reason and to look up decisions before changing code; skill and briefing carry them, covered by the existing tests
+- [ ] The finish hook question includes decisions the user stated, covered by a test
+- [ ] implement-complete and implement-log-and-stop are deleted and fix-matching-issue expects a decision record; all cases load
+- [ ] A rerun of the affected cases is proposed to the user; prep check reports no errors and GitHub CI on main is green
