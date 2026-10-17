@@ -52,7 +52,6 @@ const (
 	GateDocs          = "G_DOCS"
 	GateDocEntry      = "G_DOC_ENTRY"
 	GateReason        = "G_REASON"
-	GateActor         = "G_ACTOR"
 	GateTags          = "G_TAGS"
 	GatePriority      = "G_PRIORITY"
 	GateConfig        = "G_CONFIG"
@@ -156,11 +155,20 @@ func hasState(ss []State, s State) bool {
 	return false
 }
 
+// completeFromDefined identifies issues whose result can be recorded without a handoff.
+func (t *Tree) completeFromDefined(id string) bool {
+	i := t.Issues[id]
+	return i != nil && !t.IsParent(id) && (i.Kind == KindDecision || i.Kind == KindResearch)
+}
+
 // Applicable reports whether op can leave the issue's current state at all.
 func (t *Tree) Applicable(id string, op Op) bool {
 	s := t.State(id)
 	if op == OpComplete && t.IsParent(id) {
 		return s == StateReady || s == StateInProgress
+	}
+	if op == OpComplete && t.completeFromDefined(id) && s == StateDefined {
+		return true
 	}
 	if op == OpReopen {
 		i := t.Issues[id]
@@ -183,6 +191,9 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 		from := fromStates(op)
 		if op == OpComplete && parent {
 			from = []State{StateReady, StateInProgress}
+		}
+		if op == OpComplete && t.completeFromDefined(id) {
+			from = []State{StateDefined, StateInProgress}
 		}
 		add(GateState, "%s requires state %s, issue is %s", op, joinStates(from), s)
 	}
@@ -272,9 +283,6 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 					// orchestrate or require one.
 					if in.Commit != "" && !commitPattern.MatchString(in.Commit) {
 						add(GateCommit, "commit reference %q is not a hex commit hash", in.Commit)
-					}
-					if strings.HasPrefix(in.Actor, "human:") {
-						add(GateActor, "code issues are completed by an agent; use the agent's --by identity (commit provenance is optional)")
 					}
 				}
 			case KindResearch:

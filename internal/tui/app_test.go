@@ -838,7 +838,7 @@ func TestActionMenu(t *testing.T) {
 	run(m, "a")
 	for _, it := range m.modal.items {
 		if it.key == "f" {
-			t.Fatalf("complete listed for an agent's code issue")
+			t.Fatalf("complete listed while code criteria are unchecked")
 		}
 	}
 	run(m, "esc")
@@ -1677,5 +1677,41 @@ func TestEditTags(t *testing.T) {
 	run(m, "enter")
 	if got := issue(t, p, ids["csv"]).Tags; len(got) != 0 {
 		t.Fatalf("empty field kept tags %v", got)
+	}
+}
+
+func TestCompletionAvailableForHumanCodeAndDefinedResults(t *testing.T) {
+	p, ids := sample(t)
+	p.record(ids["csv"], domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "check", Index: 2}}})
+	for _, kind := range []domain.Kind{domain.KindDecision, domain.KindResearch} {
+		id := p.issue("Answer "+string(kind), kind, "Settle the question.", "")
+		p.op(id, domain.OpDefine, domain.Input{})
+		if kind == domain.KindDecision {
+			p.record(id, domain.OpDecide, domain.RecordInput{Title: "Choice", Text: "Agreed.", Outcome: true})
+		} else {
+			p.record(id, domain.OpFindings, domain.RecordInput{Text: "An answer."})
+		}
+		ids[string(kind)] = id
+	}
+	var edits []string
+	m := editable(t, p, &edits)
+	run(m, "6")
+	for _, key := range []string{"csv", "decision", "research"} {
+		if reason := m.gateCompletionForm(ids[key]); reason != "" {
+			t.Fatalf("%s blocked: %s", key, reason)
+		}
+		m.selectInCurrent(ids[key])
+		found := false
+		for _, a := range m.actions() {
+			if a.key == "f" {
+				found = true
+				if a.reason != "" {
+					t.Fatalf("%s completion action: %s", key, a.reason)
+				}
+			}
+		}
+		if !found {
+			t.Fatalf("no completion action for %s", key)
+		}
 	}
 }

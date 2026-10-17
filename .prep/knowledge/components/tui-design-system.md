@@ -9,7 +9,7 @@ generated:
 scope:
   - internal/tui/theme
   - internal/tui/ui
-confirmed_commit: 3a9c5801f8e077e2e96c5f82abe24bce2025705a
+confirmed_commit: dc8a789739da2f94fe9274590cdd0d9223976c35
 ---
 
 Applies when changing how the TUI looks or adding a screen or component. Screens compose components; they never set colors or styles themselves.

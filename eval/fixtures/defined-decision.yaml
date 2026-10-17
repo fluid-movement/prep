@@ -1,0 +1,7 @@
+name: defined-decision
+issues:
+  - alias: queue
+    title: Pick a queue
+    kind: decision
+    state: defined
+    body: Choose the job queue for background tasks.

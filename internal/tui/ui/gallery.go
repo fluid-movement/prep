@@ -127,7 +127,7 @@ func Gallery(t *theme.Theme, width int) string {
 		MenuRow(t, "n", "New issue", "", true, false, w-4),
 		MenuRow(t, "e", "Edit requirement", "", true, true, w-4),
 		MenuRow(t, "d", "Define", "the Open questions section is not empty", false, false, w-4),
-		MenuRow(t, "f", "Complete", "code issues are completed by an agent", false, false, w-4),
+		MenuRow(t, "f", "Complete", "acceptance criteria are unchecked", false, false, w-4),
 	}, "\n")
 	b.WriteString(Modal(t, "Actions · 6DWQ1B TUI editing and transitions", menu, w) + "\n")
 	b.WriteString(Modal(t, "Drop QK0D5S", Field(t, "Reason", "› not needed any more", true)+"\n\n"+Field(t, "Kind", "code", false), w))
