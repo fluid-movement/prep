@@ -4,7 +4,7 @@
 // PREP_ACTOR names the agent where it gives no --by.
 
 import type { EngineInterface, Register } from 'claude-code'
-type Event = Record<string, unknown> & { kind: 'tool' | 'request' }
+type Event = Record<string, unknown> & { kind: 'tool' | 'request' | 'session' }
 
 // Events wait here until the next send; a send is one prep call.
 let pending: Event[] = []
@@ -25,7 +25,14 @@ const ACTOR = 'claude-code'
 async function joinSession($: EngineInterface): Promise<void> {
   const id = await $.session.id()
   if (id === session) return
+  const previous = session
+  if (previous) {
+    pending.push({ kind: 'session', op: 'ended', session: previous })
+    void send($)
+  }
   session = id
+  pending.push({ kind: 'session', op: 'started', session: id, previous })
+  void send($)
   lastCost = 0
   await $.env.set('PREP_SESSION', id)
   await $.env.set('PREP_ACTOR', ACTOR)
@@ -34,7 +41,7 @@ async function joinSession($: EngineInterface): Promise<void> {
 /** Sends what is pending to prep activity add, never awaited by a call. */
 function send($: EngineInterface): Promise<void> {
   if (!enabled || pending.length === 0) return sending
-  const events = pending.map(e => ({ ...e, actor: ACTOR, session }))
+  const events = pending.map(e => ({ actor: ACTOR, session, ...e }))
   pending = []
   sending = sending
     .then(async () => {
@@ -100,7 +107,10 @@ export const register: Register = on => {
   }).catch(($, e, next) => next(e))
 
   on('session.end', async ($, e, next) => {
+    if (session) pending.push({ kind: 'session', op: 'ended', session })
+    // Awaited so the queue, including ended, is flushed before the session exits.
     await send($)
+    session = undefined
     return next(e)
   }).catch(($, e, next) => next(e))
 }

@@ -29,8 +29,8 @@ func agentEvents(ids map[string]string) []activity.Event {
 			Tokens: &activity.Tokens{Input: 1200, Output: 800, CacheRead: 42_000, CacheWrite: 3000}, Context: &activity.Context{Tokens: ctx, Window: 200_000}, CostUSD: 0.04}
 	}
 	return []activity.Event{
-		{At: at(-40), Actor: "pi/1.1", Kind: activity.KindPrep, Op: "guide", Issue: ids["json"], Verb: "read the guide", Target: "JSON writer", Area: activity.AreaIssue, Chars: 900},
 		s(-30, activity.KindPrep, "prime", "", "read the briefing", "", activity.AreaPrep, 1200),
+		{At: at(-29), Actor: "pi/1.1", Kind: activity.KindPrep, Op: "guide", Issue: ids["json"], Verb: "read the guide", Target: "JSON writer", Area: activity.AreaIssue, Chars: 900},
 		s(-29, activity.KindPrep, "guide", ids["format"], "read the guide", "Choose the default format", activity.AreaIssue, 1500),
 		req(-29, 31_000),
 		s(-25, activity.KindPrep, "decide", ids["format"], "recorded decision D1: CSV", "Choose the default format", activity.AreaIssue, 0),
@@ -210,5 +210,38 @@ func TestOnePaneLayout(t *testing.T) {
 	p, _ := sample(t)
 	if !NewModel(testTheme(), Options{Load: p.load, Single: true}).single {
 		t.Fatal("Options.Single does not start with one pane")
+	}
+}
+
+func TestAgentScreenLifecycle(t *testing.T) {
+	var events []activity.Event
+	m, ids, _ := agentModel(t, &events, 110, 28)
+	old := "4f1c9a2e-77"
+	events = append(events,
+		activity.Event{At: agentNow, Session: old, Kind: activity.KindSession, Op: "ended"},
+		activity.Event{At: agentNow, Session: "resumed", Previous: old, Kind: activity.KindSession, Op: "started"},
+		activity.Event{At: agentNow, Session: "finished", Kind: activity.KindSession, Op: "ended"},
+		activity.Event{At: agentNow.Add(-31 * time.Minute), Session: "crashed", Kind: activity.KindTool, Op: "Edit"},
+	)
+	m.applyActivity(activityMsg{events: events})
+	run(m, "w")
+	if got := m.agents(); len(got) != 2 || got[0] != "session:resumed" {
+		t.Fatalf("live agents: %v", got)
+	}
+	if d := m.agentView(m.shownAgent()); d.focus != ids["csv"] || d.requests != 3 {
+		t.Fatalf("resumed history: %+v", d)
+	}
+	run(m, "n")
+	if m.shownAgent() != "actor:pi/1.1" {
+		t.Fatal("cycling did not reach the other live agent")
+	}
+	// Let the actor-only agent age out while keeping the resumed session live.
+	m.clock = func() time.Time { return agentNow.Add(2 * time.Minute) }
+	m.applyActivity(activityMsg{events: events})
+	if got := m.shownAgent(); got != "session:resumed" {
+		t.Fatalf("expired pin: %s", got)
+	}
+	if got := ansi.Strip(m.View().Content); strings.Contains(got, "agent 1/2") {
+		t.Fatalf("stale count: %s", got)
 	}
 }

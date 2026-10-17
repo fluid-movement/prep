@@ -133,7 +133,7 @@ func TestFoci(t *testing.T) {
 	if len(f) != 2 || f["actor:a"].Issue != "I3" || f["actor:c"].Issue != "I5" {
 		t.Fatalf("foci: %+v", f)
 	}
-	if a := Agents(events); strings.Join(a, ",") != "actor:c,actor:a,actor:b" {
+	if a := Agents(events, t0.Add(6*time.Minute)); strings.Join(a, ",") != "actor:c,actor:a,actor:b" {
 		t.Fatalf("agents: %v", a)
 	}
 	// A session joins the agent's prep commands and its harness's events,
@@ -142,7 +142,7 @@ func TestFoci(t *testing.T) {
 		{At: t0, Actor: "claude-code/opus", Session: "s1", Kind: KindPrep, Op: "guide", Issue: "I1"},
 		{At: t0.Add(time.Minute), Actor: "claude-code/2.1", Session: "s1", Kind: KindTool, Op: "Edit"},
 	}
-	if a := Agents(s1); len(a) != 1 || a[0] != "session:s1" || Foci(s1)["session:s1"].Issue != "I1" {
+	if a := Agents(s1, t0.Add(time.Minute)); len(a) != 1 || a[0] != "session:s1" || Foci(s1)["session:s1"].Issue != "I1" {
 		t.Fatalf("session agent: %v %+v", a, Foci(s1))
 	}
 }
@@ -161,6 +161,76 @@ func TestValidate(t *testing.T) {
 	for _, e := range bad {
 		if e.Validate() == nil {
 			t.Fatalf("%+v should fail", e)
+		}
+	}
+}
+
+func TestSessionLifecycle(t *testing.T) {
+	events := []Event{
+		{At: t0, Session: "s1", Kind: KindPrep, Op: "guide", Issue: "I1"},
+		{At: t0.Add(time.Minute), Session: "s1", Kind: KindSession, Op: "ended"},
+		{At: t0.Add(time.Minute), Session: "s2", Previous: "s1", Kind: KindSession, Op: "started"},
+		{At: t0.Add(2 * time.Minute), Session: "s2", Kind: KindSession, Op: "ended"},
+		{At: t0.Add(2 * time.Minute), Session: "s3", Previous: "s2", Kind: KindSession, Op: "started"},
+	}
+	if got := Agents(events, t0.Add(3*time.Minute)); strings.Join(got, ",") != "session:s3" {
+		t.Fatalf("linked live agents: %v", got)
+	}
+	f := Foci(events)
+	if len(f) != 1 || f["session:s3"].Issue != "I1" || f["session:s3"].Session != "s3" {
+		t.Fatalf("inherited focus: %+v", f)
+	}
+	// A delayed predecessor event must not end the successor.
+	events = append(events, Event{At: t0.Add(3 * time.Minute), Session: "s1", Kind: KindSession, Op: "ended"})
+	if got := Agents(events, t0.Add(3*time.Minute)); len(got) != 1 {
+		t.Fatalf("predecessor ended successor: %v", got)
+	}
+	events = append(events, Event{At: t0.Add(4 * time.Minute), Session: "s3", Kind: KindSession, Op: "ended"})
+	// Even a late tool event cannot revive an ended session.
+	events = append(events, Event{At: t0.Add(5 * time.Minute), Session: "s3", Kind: KindTool, Op: "Edit"})
+	if got := Agents(events, t0.Add(5*time.Minute)); len(got) != 0 {
+		t.Fatalf("ended agents: %v", got)
+	}
+	// Focus remains in the stream, and clearing in a successor clears the chain.
+	events = append(events, Event{At: t0.Add(6 * time.Minute), Session: "s3", Kind: KindFocus})
+	if got := Foci(events); len(got) != 0 {
+		t.Fatalf("cleared focus: %+v", got)
+	}
+}
+
+func TestQuietAgents(t *testing.T) {
+	events := []Event{
+		{At: t0, Actor: "legacy", Kind: KindTool, Op: "Edit"},
+		{At: t0, Session: "crashed", Kind: KindSession, Op: "started"},
+	}
+	if got := Agents(events, t0.Add(30*time.Minute-time.Nanosecond)); len(got) != 2 {
+		t.Fatalf("before cutoff: %v", got)
+	}
+	if got := Agents(events, t0.Add(30*time.Minute)); len(got) != 0 {
+		t.Fatalf("at cutoff: %v", got)
+	}
+}
+
+func TestValidateSession(t *testing.T) {
+	for _, e := range []Event{
+		{Kind: KindSession, Session: "s1", Op: "started"},
+		{Kind: KindSession, Session: "s1", Op: "ended"},
+		{Kind: KindSession, Session: "s2", Op: "started", Previous: "s1"},
+	} {
+		if err := e.Validate(); err != nil {
+			t.Errorf("%+v: %v", e, err)
+		}
+	}
+	for _, e := range []Event{
+		{Kind: KindSession, Op: "started"},
+		{Kind: KindSession, Session: "s1"},
+		{Kind: KindSession, Session: "s1", Op: "stopped"},
+		{Kind: KindSession, Session: "s1", Op: "ended", Previous: "s0"},
+		{Kind: KindSession, Session: "s1", Op: "started", Previous: "s1"},
+		{Kind: KindTool, Op: "Edit", Previous: "s1"},
+	} {
+		if e.Validate() == nil {
+			t.Errorf("accepted %+v", e)
 		}
 	}
 }

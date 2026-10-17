@@ -31,6 +31,7 @@ const (
 	KindFocus   = "focus"   // prep focus: an explicit current issue, or none
 	KindTool    = "tool"    // a harness tool call
 	KindRequest = "request" // a harness model request
+	KindSession = "session" // a harness session started or ended
 )
 
 // Areas group what was read or changed.
@@ -44,10 +45,11 @@ const (
 
 // Event is one line of the stream. Kind decides which fields are set.
 type Event struct {
-	At      time.Time `json:"at"`
-	Actor   string    `json:"actor"`
-	Kind    string    `json:"kind"`
-	Session string    `json:"session,omitempty"` // the harness session, when one reports it
+	At       time.Time `json:"at"`
+	Actor    string    `json:"actor"`
+	Kind     string    `json:"kind"`
+	Previous string    `json:"previous,omitempty"` // predecessor session, on started events
+	Session  string    `json:"session,omitempty"`  // the harness session, when one reports it
 	// Op is the prep command (guide, criterion, knowledge find, ...) or the
 	// harness tool (Bash, Edit, read, ...).
 	Op     string `json:"op,omitempty"`
@@ -99,14 +101,25 @@ func (e Event) MovesFocus() bool {
 // Validate checks an event a harness adds.
 func (e Event) Validate() error {
 	var why []string
-	if e.Kind != KindTool && e.Kind != KindRequest {
-		why = append(why, fmt.Sprintf("kind must be %s or %s, not %q", KindTool, KindRequest, e.Kind))
+	if e.Kind != KindTool && e.Kind != KindRequest && e.Kind != KindSession {
+		why = append(why, fmt.Sprintf("kind must be %s, %s or %s, not %q", KindTool, KindRequest, KindSession, e.Kind))
 	}
 	if e.Kind == KindTool && e.Op == "" {
 		why = append(why, "a tool event needs op (the tool's name)")
 	}
 	if e.Kind == KindRequest && e.Tokens == nil && e.Context == nil && e.CostUSD == 0 {
 		why = append(why, "a request event needs tokens, context or cost_usd")
+	}
+	if e.Kind == KindSession {
+		if strings.TrimSpace(e.Session) == "" {
+			why = append(why, "a session event needs session")
+		}
+		if e.Op != "started" && e.Op != "ended" {
+			why = append(why, "a session event needs op started or ended")
+		}
+	}
+	if e.Previous != "" && (e.Kind != KindSession || e.Op != "started" || strings.TrimSpace(e.Previous) == "" || e.Previous == e.Session) {
+		why = append(why, "previous must name a different session on a session started event")
 	}
 	if e.Chars < 0 || e.CostUSD < 0 {
 		why = append(why, "chars and cost_usd cannot be negative")
@@ -133,7 +146,7 @@ func Path(prepDir string) string { return filepath.Join(prepDir, Dir, File) }
 
 // Append adds one event to the stream, creating .prep/local when needed.
 func Append(prepDir string, e Event) error {
-	for _, f := range []*string{&e.Actor, &e.Kind, &e.Session, &e.Op, &e.Issue, &e.Verb, &e.Target, &e.Area, &e.Project} {
+	for _, f := range []*string{&e.Actor, &e.Kind, &e.Session, &e.Previous, &e.Op, &e.Issue, &e.Verb, &e.Target, &e.Area, &e.Project} {
 		*f = clip(*f)
 	}
 	line, err := json.Marshal(e)
@@ -287,27 +300,75 @@ type Focus struct {
 // agents whose latest focus event cleared it are left out.
 func Foci(events []Event) map[string]Focus {
 	out := map[string]Focus{}
+	keys := AgentKeys(events)
 	for _, e := range events {
 		if !e.MovesFocus() {
 			continue
 		}
 		if e.Issue == "" {
-			delete(out, e.Agent())
+			delete(out, keys[e.Agent()])
 			continue
 		}
-		out[e.Agent()] = Focus{Agent: e.Agent(), Actor: e.Actor, Session: e.Session, Issue: e.Issue, At: e.At}
+		key := keys[e.Agent()]
+		session := ""
+		if strings.HasPrefix(key, "session:") {
+			session = strings.TrimPrefix(key, "session:")
+		}
+		out[key] = Focus{Agent: key, Actor: e.Actor, Session: session, Issue: e.Issue, At: e.At}
 	}
 	return out
 }
 
-// Agents lists the agents in events, the most recently active first.
-func Agents(events []Event) []string {
+// AgentKeys maps every event's agent key to the newest linked session key.
+// Links are only taken from started events; actor-only events stay separate.
+func AgentKeys(events []Event) map[string]string {
+	parent := map[string]string{}
+	var root func(string) string
+	root = func(key string) string {
+		if next, ok := parent[key]; ok && next != key {
+			parent[key] = root(next)
+			return parent[key]
+		}
+		parent[key] = key
+		return key
+	}
+	for _, e := range events {
+		root(e.Agent())
+		if e.Kind == KindSession && e.Op == "started" && e.Previous != "" && e.Session != "" {
+			old, current := root("session:"+e.Previous), root(e.Agent())
+			if old != current {
+				parent[old] = current
+			}
+		}
+	}
+	for key := range parent {
+		root(key)
+	}
+	return parent
+}
+
+const quietAfter = 30 * time.Minute
+
+// Agents lists live agents, most recently active first. Ended sessions and
+// agents with no events for 30 minutes are hidden; linked IDs count once.
+func Agents(events []Event, now time.Time) []string {
+	keys := AgentKeys(events)
+	ended := map[string]bool{}
+	for _, e := range events {
+		if e.Kind == KindSession {
+			ended[e.Agent()] = e.Op == "ended"
+		}
+	}
 	seen := map[string]bool{}
 	var out []string
 	for k := len(events) - 1; k >= 0; k-- {
-		if a := events[k].Agent(); !seen[a] {
+		e := events[k]
+		a := keys[e.Agent()]
+		if !seen[a] {
 			seen[a] = true
-			out = append(out, a)
+			if !ended[a] && now.Sub(e.At) < quietAfter {
+				out = append(out, a)
+			}
 		}
 	}
 	return out

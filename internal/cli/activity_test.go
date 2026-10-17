@@ -117,3 +117,34 @@ func TestActivityOutsideProject(t *testing.T) {
 		t.Fatalf("activity outside a project: %s", out.String())
 	}
 }
+
+func TestActivitySessionAndResumedPrime(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("PREP_SESSION", "old")
+	id := h.newIssue("--title", "Resumed work", "--kind", "code", "--by", "agent/1")
+	t.Setenv("PREP_SESSION", "new")
+	lines := `{"kind":"session","session":"old","op":"ended"}
+{"kind":"session","session":"middle","op":"started","previous":"old"}
+{"kind":"session","session":"middle","op":"ended"}
+{"kind":"session","session":"new","op":"started","previous":"middle"}`
+	if code, out := h.runStdin(lines, "activity", "add"); code != 0 {
+		t.Fatalf("add lifecycle: %d %s", code, out)
+	}
+	got := h.activity()
+	if len(got.Focus) != 1 || got.Focus[0].Session != "new" || got.Focus[0].Issue != id {
+		t.Fatalf("linked focus: %+v", got.Focus)
+	}
+	if out := h.ok("prime"); strings.Count(out, id+" [open] Resumed work — agent/1") != 1 {
+		t.Fatalf("resumed prime: %s", out)
+	}
+	for _, bad := range []string{
+		`{"kind":"session","session":"new","op":"bad"}`,
+		`{"kind":"session","session":"new","op":"ended","previous":"old"}`,
+		`{"kind":"session","session":"new","op":"started","previous":"new"}`,
+		`{"kind":"session","op":"started"}`,
+	} {
+		if code, _ := h.runStdin(bad, "activity", "add"); code == 0 {
+			t.Errorf("accepted %s", bad)
+		}
+	}
+}

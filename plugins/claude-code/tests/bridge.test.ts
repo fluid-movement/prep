@@ -29,9 +29,10 @@ function fakePrep(on: On, failing = false) {
     return { value: undefined }
   })
   on('session.start', async (_$, e) => ({ cwd: e.cwd }))
-  on('session.id', async () => ({ value: 'sess-1' }))
+  let session = 'sess-1'
+  on('session.id', async () => ({ value: session }))
   on('session.usage', async () => ({ value: { context: { tokens: 50_000, window: 200_000 }, cost: { usd: 0.3 } } as never }))
-  return { sent, env, calls: () => calls }
+  return { sent, env, calls: () => calls, setSession: (id: string) => { session = id } }
 }
 
 async function settle() {
@@ -48,7 +49,27 @@ describe('bridge', () => {
     await $.tool.call({ tool: 'Edit', tool_use_id: 't1', file_path: '/repo/main.go', old_string: 'a', new_string: 'b' } as never)
     await $.tool.call({ tool: 'Bash', tool_use_id: 't2', command: 'prep show 2NGSFZ --by claude-code/x' } as never)
     await settle()
-    expect(prep.sent).toHaveLength(0)
+    expect(prep.sent).toEqual([{ kind: 'session', op: 'started', actor: 'claude-code', session: id }])
+  })
+
+  test('reports lifecycle and links a changed session ID', async ($, on) => {
+    const prep = fakePrep(on)
+    on('turn.start', async () => ({ turnId: 'turn-1' } as never))
+    on('session.end', async () => ({ sessionId: 'sess-2' } as never))
+    await $.session.start(START)
+    await settle()
+    prep.setSession('sess-2')
+    await $.turn.start({ turnId: 'turn-1' } as never)
+    await settle()
+    expect(prep.env.PREP_SESSION).toBe('sess-2')
+    await $.session.end({} as never)
+    await settle()
+    expect(prep.sent).toEqual([
+      { kind: 'session', op: 'started', actor: 'claude-code', session: 'sess-1' },
+      { kind: 'session', op: 'ended', actor: 'claude-code', session: 'sess-1' },
+      { kind: 'session', op: 'started', actor: 'claude-code', session: 'sess-2', previous: 'sess-1' },
+      { kind: 'session', op: 'ended', actor: 'claude-code', session: 'sess-2' },
+    ])
   })
 
   test('outside a prep project the first failure turns it off', async ($, on) => {

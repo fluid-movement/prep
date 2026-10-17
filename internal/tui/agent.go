@@ -119,7 +119,7 @@ func (m *Model) agentTicked() tea.Cmd {
 }
 
 // agents lists the agents in the stream, the most recently active first.
-func (m *Model) agents() []string { return activity.Agents(m.agentS.events) }
+func (m *Model) agents() []string { return activity.Agents(m.agentS.events, m.clock()) }
 
 // shownAgent is the pinned agent while it is in the stream, else the most
 // recent one.
@@ -183,18 +183,19 @@ func (m *Model) agentKey(s string) tea.Cmd {
 // command (the name the agent gives itself; its harness's bridge uses its
 // own), else of any event, and its session.
 func agentLabel(key string, events []activity.Event) string {
+	keys := activity.AgentKeys(events)
 	for k := len(events) - 1; k >= 0; k-- {
-		if e := events[k]; e.Agent() == key && (e.Kind == activity.KindPrep || e.Kind == activity.KindFocus) {
+		if e := events[k]; keys[e.Agent()] == key && (e.Kind == activity.KindPrep || e.Kind == activity.KindFocus) {
 			if e.Session != "" {
-				return e.Actor + " · " + shortSession(e.Session)
+				return e.Actor + " · " + shortSession(strings.TrimPrefix(key, "session:"))
 			}
 			return e.Actor
 		}
 	}
 	for k := len(events) - 1; k >= 0; k-- {
-		if e := events[k]; e.Agent() == key {
+		if e := events[k]; keys[e.Agent()] == key {
 			if e.Session != "" {
-				return e.Actor + " · " + shortSession(e.Session)
+				return e.Actor + " · " + shortSession(strings.TrimPrefix(key, "session:"))
 			}
 			return e.Actor
 		}
@@ -234,9 +235,10 @@ type read struct {
 func (m *Model) agentView(key string) agentData {
 	d := agentData{key: key, label: agentLabel(key, m.agentS.events), areas: map[string]int{}}
 	current := ""
+	keys := activity.AgentKeys(m.agentS.events)
 	byTarget := map[string]int{}
 	for _, e := range m.agentS.events {
-		if e.Agent() != key {
+		if keys[e.Agent()] != key {
 			continue
 		}
 		if e.MovesFocus() {
