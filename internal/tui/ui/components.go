@@ -52,6 +52,19 @@ func StateBadge(t *theme.Theme, s domain.State) string {
 	return lipgloss.NewStyle().Width(BadgeWidth).Render(fg.Render(g+" ") + label.Render(StateLabel(s)))
 }
 
+// StateCell renders a state in its color: the badge with its label, or only
+// the glyph, two cells wide, when the label is dropped for lack of room.
+func StateCell(t *theme.Theme, s domain.State, label bool) string {
+	if label {
+		return StateBadge(t, s)
+	}
+	g, ok := stateGlyphs[s]
+	if !ok {
+		g = "?"
+	}
+	return lipgloss.NewStyle().Foreground(t.State(s)).Render(g + " ")
+}
+
 // KindTag renders an issue kind in its color, padded to KindWidth.
 func KindTag(t *theme.Theme, k domain.Kind) string {
 	return lipgloss.NewStyle().Foreground(t.Kind(k)).Width(KindWidth).Render(string(k))
@@ -171,33 +184,100 @@ func PriorityMark(t *theme.Theme, p domain.Priority) string {
 	return ""
 }
 
+// minTitle is the room, in cells, a list row keeps for its title before it
+// drops columns.
+const minTitle = 30
+
+// rowColumns says which optional columns of a list row are drawn. The state
+// glyph is always drawn.
+type rowColumns struct{ id, label, kind bool }
+
+// fitColumns drops the ID, then the state label, then the kind, one at a
+// time, until the title has minTitle cells or all three are gone.
+func fitColumns(r Row, width int) rowColumns {
+	c := rowColumns{id: true, label: true, kind: true}
+	for titleRoom(r, c, width) < minTitle {
+		switch {
+		case c.id:
+			c.id = false
+		case c.label:
+			c.label = false
+		case c.kind:
+			c.kind = false
+		default:
+			return c
+		}
+	}
+	return c
+}
+
+// titleRoom is the width left after the marker and the shown columns. It
+// depends on the width alone, never on a row's tree lines or note, so every
+// row of a list keeps the same columns and they stay aligned; tree lines and
+// notes then take their cells from the title of their own row.
+func titleRoom(r Row, c rowColumns, width int) int {
+	used := 2 // the marker
+	if c.id {
+		used += ansi.StringWidth(r.ID) + 1
+	}
+	if c.label {
+		used += BadgeWidth
+	} else {
+		used += 2 // the glyph and a space
+	}
+	if c.kind {
+		used += KindWidth
+	}
+	return width - used
+}
+
 // ListRow renders one issue row: marker, ID, state, kind, tree lines, note,
-// title. The selected row gets the selection background across the full
-// width; a dimmed row renders entirely in the subtle color.
+// title. Columns that do not fit are left out, see fitColumns; the state
+// glyph stays. The selected row gets the selection background across the
+// full width; a dimmed row renders entirely in the subtle color.
 func ListRow(t *theme.Theme, r Row, selected bool, width int) string {
 	marker := "  "
 	if selected {
 		marker = lipgloss.NewStyle().Foreground(t.C.Accent).Render("▌ ")
 	}
+	c := fitColumns(r, width)
 	tree := t.S.Subtle.Render(r.Tree)
 	var head, title string
 	switch {
 	case r.Dimmed:
 		// A context row carries the same information as a result row, all
 		// in the subtle tone: the grey says it is only there for structure.
-		g := stateGlyphs[r.State]
-		plain := fmt.Sprintf("%s %-*s%-*s", r.ID, BadgeWidth, g+" "+StateLabel(r.State), KindWidth, r.Kind)
+		var plain string
+		if c.id {
+			plain += r.ID + " "
+		}
+		if c.label {
+			plain += fmt.Sprintf("%-*s", BadgeWidth, stateGlyphs[r.State]+" "+StateLabel(r.State))
+		} else {
+			plain += stateGlyphs[r.State] + " "
+		}
+		if c.kind {
+			plain += fmt.Sprintf("%-*s", KindWidth, r.Kind)
+		}
 		head = marker + t.S.Subtle.Render(plain) + tree
 		if r.Note != "" {
 			head += t.S.Subtle.Render(ansi.Strip(r.Note)) + " "
 		}
 		title = t.S.Subtle.Render(ansi.Strip(PriorityMark(t, r.Priority)) + r.Title)
 	default:
-		id := t.S.Muted.Render(r.ID)
-		if selected {
-			id = lipgloss.NewStyle().Foreground(t.C.Accent).Render(r.ID)
+		head = marker
+		if c.id {
+			id := t.S.Muted.Render(r.ID)
+			if selected {
+				id = lipgloss.NewStyle().Foreground(t.C.Accent).Render(r.ID)
+			}
+			head += id + " "
 		}
-		head = marker + id + " " + StateBadge(t, r.State) + KindTag(t, r.Kind) + tree
+		head += StateCell(t, r.State, c.label)
+		if c.kind {
+			head += KindTag(t, r.Kind)
+		}
+		head += tree
 		if r.Note != "" {
 			head += r.Note + " "
 		}
