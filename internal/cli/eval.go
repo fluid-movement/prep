@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/eval/results"
@@ -12,7 +13,7 @@ import (
 
 // evalUsage is the one-line help of prep eval; the subcommands are listed in
 // evalCommands.
-const evalUsage = "eval run|list|doctor|report|compare|models|errors|check|judge-check|prune  agent behavior tests: run prompts against fake projects and report how agents used prep (see the eval knowledge entry)"
+const evalUsage = "eval run|list|doctor|report|compare|models|errors|check|judge-check|prune|clean  agent behavior tests: run prompts against fake projects and report how agents used prep (see the eval knowledge entry)"
 
 // evalCommand is one prep eval subcommand.
 type evalCommand struct {
@@ -27,6 +28,7 @@ func init() {
 		evalCommand{"report", evalReport},
 		evalCommand{"compare", evalCompare},
 		evalCommand{"prune", evalPrune},
+		evalCommand{"clean", evalClean},
 		evalCommand{"check", evalCheck},
 		evalCommand{"errors", evalErrors},
 	)
@@ -213,7 +215,7 @@ func evalErrors(a *app, dir string, args []string) error {
 	return nil
 }
 
-// evalPrune removes old stored runs.
+// evalPrune removes old stored runs and their kept environments.
 func evalPrune(a *app, dir string, args []string) error {
 	fs := flag.NewFlagSet("eval prune", flag.ContinueOnError)
 	keep := fs.Int("keep", 10, "runs to keep, newest first")
@@ -233,5 +235,32 @@ func evalPrune(a *app, dir string, args []string) error {
 		return nil
 	}
 	a.printf("removed %d stored run(s), kept up to %d\n", len(removed), *keep)
+	return nil
+}
+
+// evalClean removes leftover workspaces, including ones without stored results.
+func evalClean(a *app, dir string, args []string) error {
+	fs := flag.NewFlagSet("eval clean", flag.ContinueOnError)
+	all := fs.Bool("all", false, "include workspaces less than a day old (stop active eval runs first)")
+	pos, err := parse(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) > 0 {
+		return usageErr("usage: prep eval clean [--all]")
+	}
+	before := time.Now().Add(-24 * time.Hour)
+	if *all {
+		before = time.Time{}
+	}
+	removed, err := results.CleanWorkspaces(before)
+	if err != nil {
+		return err
+	}
+	if a.json {
+		a.emit(map[string]any{"removed": removed})
+		return nil
+	}
+	a.printf("removed %d workspace parent(s)\n", len(removed))
 	return nil
 }

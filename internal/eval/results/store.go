@@ -199,7 +199,8 @@ func (s Store) IDs() ([]string, error) {
 	return ids, nil
 }
 
-// Prune removes all but the newest keep runs and returns the removed IDs.
+// Prune removes all but the newest keep runs, including their kept environments,
+// and returns the removed IDs.
 func (s Store) Prune(keep int) ([]string, error) {
 	ids, err := s.IDs()
 	if err != nil {
@@ -213,6 +214,17 @@ func (s Store) Prune(keep int) ([]string, error) {
 	}
 	var removed []string
 	for _, id := range ids[keep:] {
+		r, err := s.Load(id)
+		if err != nil {
+			return removed, err
+		}
+		for _, cell := range r.Cells {
+			for _, run := range cell.Runs {
+				if err := removeWorkspace(run.Dir); err != nil {
+					return removed, err
+				}
+			}
+		}
 		if err := os.RemoveAll(s.Dir(id)); err != nil {
 			return removed, err
 		}
