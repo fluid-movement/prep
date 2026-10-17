@@ -174,6 +174,9 @@ func knowledgeSample(t *testing.T) (*project, map[string]string) {
 	file := filepath.Join(p.dir, ".prep/knowledge/decisions/format.md")
 	b, _ := os.ReadFile(file)
 	os.WriteFile(file, []byte(strings.Replace(string(b), "status: draft", "status: draft\nissue: "+ids["doc"], 1)), 0644)
+	p.knowledge(ids["doc"], "finding", "Lookup behavior observed", false)
+	ids["oldDecision"] = p.knowledge(ids["doc"], "decision", "Original lookup choice", false)
+	ids["newDecision"] = p.knowledge(ids["doc"], "decision", "Revised lookup choice", false, ids["oldDecision"])
 	return p, ids
 }
 
@@ -197,7 +200,7 @@ func TestKnowledgeScreen(t *testing.T) {
 		t.Fatal("b did not open the knowledge screen")
 	}
 	v := ansi.Strip(m.View().Content)
-	for _, want := range []string{"component  stable     ! CLI", "decision   draft        Default export format"} {
+	for _, want := range []string{"component ! CLI", "decision    Default export format"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("knowledge list lacks %q:\n%s", want, v)
 		}
@@ -209,7 +212,7 @@ func TestKnowledgeScreen(t *testing.T) {
 		t.Fatalf("attention-only = %v", paths)
 	}
 	v = ansi.Strip(m.View().Content)
-	if !strings.Contains(v, "Needs an agent's attention") || !strings.Contains(v, "K003 broken link to /components/gone.md") {
+	if !strings.Contains(v, "Check diagnostics") || !strings.Contains(v, "K003 broken link to /components/gone.md") {
 		t.Fatalf("entry lacks its finding:\n%s", v)
 	}
 	run(m, "!")
@@ -567,7 +570,7 @@ func TestHierarchy(t *testing.T) {
 	wantRels := []string{"path:" + ids["export"], "blocks:" + ids["json"]}
 	tr, _ := p.load()
 	for _, e := range tr.IssueRecords(ids["csv"]) {
-		wantRels = append(wantRels, "knowledge:"+e.Path)
+		wantRels = append(wantRels, "record:"+e.Path)
 	}
 	if strings.Join(got, ",") != strings.Join(wantRels, ",") {
 		t.Fatalf("relations = %v, want %v", got, wantRels)
@@ -1716,7 +1719,7 @@ func TestCompletionAvailableForHumanCodeAndDefinedResults(t *testing.T) {
 	}
 }
 
-func (p *project) knowledge(issue, typ, title string, outcome bool) {
+func (p *project) knowledge(issue, typ, title string, outcome bool, supersedes ...string) string {
 	p.t.Helper()
 	p.now = p.now.Add(time.Minute)
 	now := p.now
@@ -1725,11 +1728,12 @@ func (p *project) knowledge(issue, typ, title string, outcome bool) {
 		p.t.Fatal(err)
 	}
 	s := &okf.Store{Root: p.dir}
-	r := &domain.KnowledgeRecord{ID: id, Path: "/" + typ + "s/" + id + ".md", Type: typ, Title: title, Description: title, Issue: issue, Outcome: outcome, At: now}
+	r := &domain.KnowledgeRecord{ID: id, Path: "/" + typ + "s/" + id + ".md", Type: typ, Title: title, Description: title, Issue: issue, Outcome: outcome, At: now, Supersedes: supersedes, Body: "The record explains the choice.", Scope: []string{"internal/tui/**"}}
 	if _, err = s.Render(r); err != nil {
 		p.t.Fatal(err)
 	}
 	if _, err = s.Apply(r); err != nil {
 		p.t.Fatal(err)
 	}
+	return id
 }

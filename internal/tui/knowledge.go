@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"cmp"
 	"fmt"
 	"slices"
 	"strings"
@@ -14,20 +15,18 @@ import (
 )
 
 // knowState is the knowledge screen: the entries the filter and the
-// attention toggle leave, the selection, and whether the entry has the keys.
+// diagnostic toggle leave, the selection, and whether the entry has the keys.
 type knowState struct {
-	filter    string
-	attention bool // only entries that need an agent's attention
-	cursor    int
-	offset    int
-	path      string // selected entry, kept across reloads
-	onEntry   bool   // the entry pane has the keys (scrolling)
-	docKey    string
-	vp        viewport.Model // the entry, apart from the issue detail's
+	showSuperseded bool
+	filter         string
+	attention      bool // only entries with check diagnostics
+	cursor         int
+	offset         int
+	path           string // selected entry, kept across reloads
+	onEntry        bool   // the entry pane has the keys (scrolling)
+	docKey         string
+	vp             viewport.Model // the entry, apart from the issue detail's
 }
-
-// knowledgeCodes are the check results that mark an entry for an agent.
-var knowledgeCodes = []string{domain.CodeKnowledgeLink, domain.CodeKnowledgeSize}
 
 // openKnowledge shows the knowledge screen, with path selected when given,
 // and runs the check that marks entries needing attention.
@@ -37,6 +36,9 @@ func (m *Model) openKnowledge(path string) tea.Cmd {
 	m.know.onEntry = false
 	if path != "" {
 		m.know.filter, m.know.attention, m.know.path = "", false, path
+	}
+	if e := m.tree.Knowledge[path]; e != nil && e.Superseded {
+		m.know.showSuperseded = true
 	}
 	m.syncKnowledge()
 	if !m.diagDone {
@@ -52,6 +54,25 @@ func (m *Model) knowledgePaths() ([]string, error) {
 		return nil, err
 	}
 	paths := m.tree.QueryKnowledge(f)
+	paths = slices.DeleteFunc(paths, func(p string) bool {
+		return m.tree.Knowledge[p].Superseded && !m.know.showSuperseded
+	})
+	slices.SortStableFunc(paths, func(a, b string) int {
+		x, y := m.tree.Knowledge[a], m.tree.Knowledge[b]
+		if (x.ID != "") != (y.ID != "") {
+			if x.ID != "" {
+				return -1
+			}
+			return 1
+		}
+		if x.ID != "" {
+			if c := cmp.Compare(y.Date, x.Date); c != 0 {
+				return c
+			}
+			return cmp.Compare(y.ID, x.ID)
+		}
+		return cmp.Compare(a, b)
+	})
 	if m.know.attention {
 		paths = slices.DeleteFunc(paths, func(p string) bool { return len(m.attentionOf(p)) == 0 })
 	}
@@ -85,7 +106,7 @@ func (m *Model) shownEntry() string {
 func (m *Model) attentionOf(path string) []domain.Diagnostic {
 	var out []domain.Diagnostic
 	for _, d := range m.diags {
-		if d.File == ".prep/knowledge"+path && slices.Contains(knowledgeCodes, d.Code) {
+		if d.File == ".prep/knowledge"+path {
 			out = append(out, d)
 		}
 	}
@@ -93,8 +114,8 @@ func (m *Model) attentionOf(path string) []domain.Diagnostic {
 }
 
 // knowledgeKey handles the knowledge screen: arrows or j/k select, enter
-// gives the entry the keys for scrolling, f filters, a toggles attention,
-// o goes to an issue that changed the entry, backspace returns to the
+// gives the entry the keys for scrolling, f filters, ! toggles diagnostics,
+// u toggles superseded records, o follows links, backspace returns to the
 // issue the screen was opened from.
 func (m *Model) knowledgeKey(s string, k tea.KeyPressMsg) tea.Cmd {
 	paths, _ := m.knowledgePaths()
@@ -134,6 +155,9 @@ func (m *Model) knowledgeKey(s string, k tea.KeyPressMsg) tea.Cmd {
 		m.input.SetValue(m.know.filter)
 		m.input.CursorEnd()
 		return m.input.Focus()
+	case "u":
+		m.know.showSuperseded = !m.know.showSuperseded
+		m.syncKnowledge()
 	case "!":
 		m.know.attention = !m.know.attention
 		m.syncKnowledge()
@@ -167,28 +191,64 @@ func (m *Model) knowledgeFilterKey(text string) {
 	m.syncKnowledge()
 }
 
-// openEntryLinks lists the issues that changed the selected entry; going
-// to one returns to the issue screen.
+// openEntryLinks offers the selected entry's issue and related records.
 func (m *Model) openEntryLinks() tea.Cmd {
-	issues := m.tree.EntryIssues(m.shownEntry())
-	if len(issues) == 0 {
-		return m.flash("no issue has changed this entry yet")
+	e := m.tree.Knowledge[m.shownEntry()]
+	if e == nil {
+		return m.flash("no entry selected")
 	}
-	keys := linkKeys
-	d := &modal{kind: modalMenu, heading: "Changed by"}
-	for n, id := range issues {
-		if n >= len(keys) {
-			break
+	d := &modal{kind: modalMenu, heading: "Links"}
+	add := func(label string, run func() tea.Cmd) {
+		n := len(d.items)
+		if n < len(linkKeys) {
+			d.items = append(d.items, action{key: linkKeys[n : n+1], label: label, run: run})
 		}
-		target := id
-		d.items = append(d.items, action{key: keys[n : n+1], label: shortID(id) + " " + m.tree.Issues[id].Title, run: func() tea.Cmd {
+	}
+	issues := m.tree.EntryIssues(e.Path)
+	if e.ID != "" {
+		issues = []string{e.Issue}
+	}
+	for _, id := range issues {
+		if i := m.tree.Issues[id]; i != nil {
+			add("Issue: "+shortID(id)+" "+i.Title, func() tea.Cmd {
+				m.pushBack()
+				m.screen = screenIssues
+				return m.jump(id, false)
+			})
+		}
+	}
+	for _, r := range m.recordLinks(e) {
+		add(r.label+": "+m.tree.Knowledge[r.id].Title, func() tea.Cmd {
 			m.pushBack()
-			m.screen = screenIssues
-			return m.jump(target, false)
-		}})
+			return m.openKnowledge(r.id)
+		})
+	}
+	if len(d.items) == 0 {
+		return m.flash("no linked issues or records")
 	}
 	m.modal = d
 	return nil
+}
+
+// recordLinks resolves both directions of the supersession relationship.
+func (m *Model) recordLinks(e *domain.Entry) []relation {
+	var out []relation
+	for _, id := range e.Supersedes {
+		if r, err := m.tree.ResolveRecord(id); err == nil {
+			out = append(out, relation{"Supersedes", r.Path})
+		}
+	}
+	var newer []string
+	for p, r := range m.tree.Knowledge {
+		if e.ID != "" && slices.Contains(r.Supersedes, e.ID) {
+			newer = append(newer, p)
+		}
+	}
+	slices.Sort(newer)
+	for _, p := range newer {
+		out = append(out, relation{"Superseded by", p})
+	}
+	return out
 }
 
 // knowledgePane draws the list of entries beside the selected entry.
@@ -211,7 +271,10 @@ func (m *Model) knowledgeList(paths []string, err error, w, h int) string {
 	rows := h - 2
 	title := "Knowledge"
 	if m.know.attention {
-		title += "  needs attention"
+		title += "  check diagnostics"
+	}
+	if m.know.showSuperseded {
+		title += "  including superseded"
 	}
 	if m.know.filter != "" {
 		title += "  / " + m.know.filter
@@ -234,7 +297,7 @@ func (m *Model) knowledgeList(paths []string, err error, w, h int) string {
 	case err != nil:
 		body = ui.Error(m.th, err.Error())
 	case len(paths) == 0 && m.know.attention:
-		body = ui.Empty(m.th, "Nothing needs attention", "a shows all entries again", inner, rows)
+		body = ui.Empty(m.th, "No check diagnostics", "! shows all entries again", inner, rows)
 	case len(paths) == 0:
 		body = ui.Empty(m.th, "No entries", "Agents write knowledge as they complete issues", inner, rows)
 	default:
@@ -255,7 +318,7 @@ func (m *Model) knowledgeList(paths []string, err error, w, h int) string {
 	return ui.Pane{Title: title, Body: body, Focused: !m.know.onEntry, Width: w, Height: h}.View(m.th)
 }
 
-// knowledgeRow is one entry: type, status, attention mark, title.
+// knowledgeRow shows a record’s date, kind, diagnostic mark and title.
 func (m *Model) knowledgeRow(path string, selected bool, width int) string {
 	e := m.tree.Knowledge[path]
 	marker := "  "
@@ -268,11 +331,14 @@ func (m *Model) knowledgeRow(path string, selected bool, width int) string {
 	if len(m.attentionOf(path)) > 0 {
 		mark = lipgloss.NewStyle().Foreground(m.th.C.Warning).Render("! ")
 	}
-	status := e.Status
-	if status == "" {
-		status = "—"
+	date := ""
+	if e.ID != "" {
+		date = e.Date + " "
 	}
-	line := marker + m.th.S.Muted.Render(fmt.Sprintf("%-11s", e.Type)) + m.th.S.Subtle.Render(fmt.Sprintf("%-11s", status)) + mark + titleStyle.Render(e.Title)
+	line := marker + m.th.S.Subtle.Render(date) + m.th.S.Muted.Render(fmt.Sprintf("%-10s", e.Type)) + mark + titleStyle.Render(e.Title)
+	if e.Superseded {
+		line += m.th.S.Subtle.Render(" · superseded")
+	}
 	line = ui.Fit(line, width)
 	if selected {
 		return lipgloss.NewStyle().Background(m.th.C.Selection).Width(width).Render(line)
@@ -299,7 +365,7 @@ func (m *Model) entryPane(w, h int) string {
 		}
 		b.WriteString(heading + "\n\n")
 		meta := []string{"**" + e.Type + "**"}
-		if e.Status != "" {
+		if e.ID == "" && e.Status != "" {
 			meta = append(meta, e.Status)
 		}
 		meta = append(meta, "`"+e.Path+"`")
@@ -307,18 +373,27 @@ func (m *Model) entryPane(w, h int) string {
 		if e.Description != "" {
 			b.WriteString("_" + e.Description + "_\n\n")
 		}
+		if e.ID != "" {
+			fmt.Fprintf(&b, "Date: %s\n\n", e.Date)
+			if i := m.tree.Issues[e.Issue]; i != nil {
+				fmt.Fprintf(&b, "Issue: `%s` %s (o follows links)\n\n", shortID(e.Issue), i.Title)
+			}
+			for _, r := range m.recordLinks(e) {
+				fmt.Fprintf(&b, "%s: %s (`%s`)\n\n", r.label, m.tree.Knowledge[r.id].Title, r.id)
+			}
+		}
 		if len(e.Scope) > 0 {
 			fmt.Fprintf(&b, "Scope: `%s`", strings.Join(e.Scope, "`, `"))
 			b.WriteString("\n\n")
 		}
 		if ds := m.attentionOf(e.Path); len(ds) > 0 {
-			b.WriteString("**Needs an agent's attention**\n\n")
+			b.WriteString("**Check diagnostics**\n\n")
 			for _, d := range ds {
 				fmt.Fprintf(&b, "- %s %s\n", d.Code, d.Message)
 			}
 			b.WriteString("\n")
 		}
-		if issues := m.tree.EntryIssues(e.Path); len(issues) > 0 {
+		if issues := m.tree.EntryIssues(e.Path); e.ID == "" && len(issues) > 0 {
 			b.WriteString("**Changed by** (o goes to one)\n\n")
 			for _, id := range issues {
 				fmt.Fprintf(&b, "- `%s` %s\n", shortID(id), m.tree.Issues[id].Title)
