@@ -99,7 +99,7 @@ func issueEvent(t *domain.Tree, op, id, verb string) activity.Event {
 
 var opVerbs = map[domain.Op]string{
 	domain.OpDefine:   "defined the requirement",
-	domain.OpAck:      "acknowledged the requirement change",
+	domain.OpTrivial:  "defined a trivial requirement change",
 	domain.OpReady:    "signed off the enrichment",
 	domain.OpClaim:    "claimed the issue",
 	domain.OpRelease:  "released the issue",

@@ -167,7 +167,7 @@ func TestLifecycle(t *testing.T) {
 		t.Fatalf("next = %v", got)
 	}
 
-	// A trivial change makes the issue stale; ack keeps it ready.
+	// A trivial change makes the issue stale; define --trivial keeps it ready.
 	h.replace(a, "issue.md", "Export rows as CSV.", "Export the rows as CSV.")
 	h.expectState(a, "ready", true)
 	if got := listIDs(h, "next"); len(got) != 0 {
@@ -177,7 +177,7 @@ func TestLifecycle(t *testing.T) {
 		t.Fatalf("list --stale = %v", got)
 	}
 	h.fails("G_STALE", "claim", a, "--json")
-	h.ok("ack", a)
+	h.ok("define", a, "--trivial")
 	h.expectState(a, "ready", false)
 
 	// A real change: define again invalidates ready.md, re-enrich, ready again.
@@ -507,7 +507,7 @@ func TestEdit(t *testing.T) {
 	if r.State != "defined" || !r.Stale {
 		t.Fatalf("edit result = %+v, want defined and stale", r)
 	}
-	h.ok("ack", a)
+	h.ok("define", a, "--trivial")
 	if out := h.ok("edit", a, "--kind", "manual"); !strings.Contains(out, "stale") {
 		t.Fatalf("kind edit not reported as stale:\n%s", out)
 	}
@@ -1141,42 +1141,6 @@ func TestPrimeHookAndPluginVersion(t *testing.T) {
 	}
 }
 
-func TestImport(t *testing.T) {
-	h := newHarness(t)
-	var r writeResult
-	h.jsonOf(&r, "import")
-	id := r.ID
-	if r.Op != "import" || r.State != "open" || r.Next != "prep guide "+id || len(r.Files) == 0 {
-		t.Fatalf("import = %+v", r)
-	}
-	var s struct {
-		Issues []summary `json:"issues"`
-	}
-	h.jsonOf(&s, "list", "--tag", "import")
-	if len(s.Issues) != 1 || s.Issues[0].ID != id || s.Issues[0].Kind != "research" || s.Issues[0].Title != "Import existing work" {
-		t.Fatalf("import issues = %+v", s.Issues)
-	}
-	if ctx := h.read(id, "context.md"); !strings.Contains(ctx, "prep findings "+id) || !strings.Contains(ctx, "Source: <source>") {
-		t.Fatalf("import context:\n%s", ctx)
-	}
-	if acc := h.read(id, "acceptance.md"); !strings.Contains(acc, "Source: line") {
-		t.Fatalf("import criteria:\n%s", acc)
-	}
-	h.fails("an import issue is unresolved: prep guide "+id, "import", "--json")
-
-	// An imported issue is found by its source, which is how a rerun skips it.
-	h.ok("new", "--title", "CSV export", "--kind", "code", "--body", "Export rows as CSV.\n\nSource: internal/export/csv.go:48")
-	if got := listIDs(h, "list", "--text", "Source: internal/export/csv.go:48"); len(got) != 1 {
-		t.Fatalf("list --text by source = %v", got)
-	}
-
-	// Once the import is resolved, another can start; text output names the guide.
-	h.ok("drop", id, "--reason", "not now")
-	if out := h.ok("import"); !strings.Contains(out, "Next: prep guide ") {
-		t.Fatalf("import output:\n%s", out)
-	}
-}
-
 func TestOwnConfigIsNeverStaged(t *testing.T) {
 	h := newHarness(t)
 	git := func(args ...string) string {
@@ -1339,70 +1303,42 @@ func TestReopenMovesResolutionToHistoryAndReturnsToReady(t *testing.T) {
 	h.ok("claim", id)
 }
 
-func TestFixConvertsAPrep010Project(t *testing.T) {
+func TestDefineTrivialTakesOverAck(t *testing.T) {
 	h := newHarness(t)
-	git := func(args ...string) string {
-		t.Helper()
-		cmd := exec.Command("git", append([]string{"-c", "user.email=t@t", "-c", "user.name=t"}, args...)...)
-		cmd.Dir = h.dir
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-		return string(out)
-	}
-	// The layout prep 0.1.0 wrote: one committed config.yaml.
-	prep := filepath.Join(h.dir, ".prep")
-	for _, f := range []string{"config.yaml.dist", ".gitignore"} {
-		if err := os.Remove(filepath.Join(prep, f)); err != nil {
-			t.Fatal(err)
+	help := h.ok("help")
+	for _, gone := range []string{"  ack ", "  import ", "  artifact ", "  migrate "} {
+		if strings.Contains(help, gone) {
+			t.Fatalf("help lists %q:\n%s", gone, help)
 		}
 	}
-	old := "# prep project configuration (project-level only).\n# commit_mode: off stages .prep changes; all commits each tool operation.\ncommit_mode: off\nviews:\n  Unresolved: --state open,defined,ready,in_progress\n  All: \"\"\n"
-	if err := os.WriteFile(filepath.Join(prep, "config.yaml"), []byte(old), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	git("init", "-q")
-	git("add", "-A")
-	git("commit", "-qm", "0.1.0 project")
+	a := h.newIssue("--title", "Export", "--kind", "code", "--body", "Export rows as CSV.")
+	h.ok("define", a)
+	h.enrich(a)
+	h.ok("ready", a)
+	h.ok("claim", a)
+	// Only a stale issue has a trivial change to take over.
+	h.fails("G_STALE", "define", a, "--trivial", "--json")
+	// A stale in-progress issue keeps its claim and sign-off.
+	h.replace(a, "issue.md", "Export rows as CSV.", "Export the rows as CSV.")
+	h.expectState(a, "in-progress", true)
+	h.ok("define", a, "--trivial")
+	h.expectState(a, "in-progress", false)
+	h.ok("release", a)
+	h.expectState(a, "ready", false)
+}
 
-	// Before the fix: one fixable warning, and the views still work.
-	if out := h.ok("check"); !strings.Contains(out, "P006") || !strings.Contains(out, "0 errors") {
-		t.Fatalf("check:\n%s", out)
-	}
-	h.ok("list", "--view", "Unresolved")
-
-	h.ok("fix")
-	dist, err := os.ReadFile(filepath.Join(prep, "config.yaml.dist"))
+func TestNewerSchemaFailsWithErrSchema(t *testing.T) {
+	h := newHarness(t)
+	pm := filepath.Join(h.dir, ".prep", "project.md")
+	raw, err := os.ReadFile(pm)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, s := range []string{"commit_mode", "in_progress", "project-level only"} {
-		if strings.Contains(string(dist), s) {
-			t.Fatalf("config.yaml.dist still has %q:\n%s", s, dist)
-		}
+	if err := os.WriteFile(pm, []byte(strings.Replace(string(raw), "schema: 1", "schema: 2", 1)), 0o644); err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(string(dist), "views:\n  Unresolved: --state open,defined,ready,in-progress") {
-		t.Fatalf("config.yaml.dist:\n%s", dist)
-	}
-	own, _ := os.ReadFile(filepath.Join(prep, "config.yaml"))
-	if string(own) != string(dist) {
-		t.Fatalf("local config.yaml differs from the shared one:\n%s", own)
-	}
-	st := git("status", "--porcelain", "--ignored", ".prep")
-	for _, want := range []string{"D  .prep/config.yaml", "A  .prep/config.yaml.dist", "A  .prep/.gitignore", "!! .prep/config.yaml"} {
-		if !strings.Contains(st, want) {
-			t.Fatalf("status lacks %q:\n%s", want, st)
-		}
-	}
-	if out := h.ok("check"); !strings.Contains(out, "0 errors, 0 warnings") {
-		t.Fatalf("check after fix:\n%s", out)
-	}
-	// A current project is left alone.
-	git("commit", "-qm", "converted")
-	if out := h.ok("fix"); !strings.Contains(out, "0 files") {
-		t.Fatalf("second fix changed files:\n%s", out)
-	}
+	h.fails("update prep", "list")
+	h.fails("E_SCHEMA", "list")
 }
 
 func TestListSummaryCarriesOpenQuestionsAndResolution(t *testing.T) {

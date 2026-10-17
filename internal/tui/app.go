@@ -1702,7 +1702,7 @@ func (m *Model) staleDiff(id string, width int) string {
 	if b.Requirement != i.Body {
 		lines = append(lines, ui.Diff(m.th, ui.DiffLines(strings.Split(b.Requirement, "\n"), strings.Split(i.Body, "\n")), width))
 	}
-	lines = append(lines, m.th.S.Subtle.Render("prep ack for a trivial change, prep define to re-enrich"))
+	lines = append(lines, m.th.S.Subtle.Render("prep define --trivial for a trivial change, prep define to re-enrich"))
 	return strings.Join(lines, "\n")
 }
 

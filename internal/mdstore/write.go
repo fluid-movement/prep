@@ -230,21 +230,6 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 			return nil, nil, err
 		}
 	}
-	if c.Artifacts != nil {
-		rel := dir + "/issue.md"
-		raw, _, err := s.read(rel)
-		if err != nil {
-			return nil, nil, err
-		}
-		var i domain.Issue
-		if err := parseIssue(raw, &i); err != nil {
-			return nil, nil, fmt.Errorf("%s: %w", rel, err)
-		}
-		i.Artifacts = *c.Artifacts
-		if err := w("issue.md", renderIssue(&i)); err != nil {
-			return nil, nil, err
-		}
-	}
 	if c.Baseline != nil {
 		if err := w("baselines/"+c.Baseline.Name+".md", renderBaseline(c.Baseline)); err != nil {
 			return nil, nil, err
@@ -431,51 +416,6 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 	return changed, nil
 }
 
-// fixLegacyConfig converts a prep 0.1.0 configuration: both config files
-// in the current format, config.yaml.dist shared (from the personal
-// config.yaml when it is missing) and config.yaml ignored. Taking
-// config.yaml out of git's index is the CLI's part.
-func (s *Store) fixLegacyConfig() ([]string, error) {
-	var changed []string
-	ownRel, distRel, ignRel := Dir+"/"+ConfigOwn, Dir+"/"+ConfigDist, Dir+"/.gitignore"
-	own, hasOwn, err := s.read(ownRel)
-	if err != nil {
-		return nil, err
-	}
-	dist, hasDist, err := s.read(distRel)
-	if err != nil {
-		return nil, err
-	}
-	if !hasOwn && !hasDist {
-		return nil, nil
-	}
-	if conv, old := convertLegacyConfig(own); hasOwn && old {
-		if err := s.write(ownRel, conv); err != nil {
-			return changed, err
-		}
-		own, changed = conv, append(changed, ownRel)
-	}
-	if conv, old := convertLegacyConfig(dist); hasDist && old {
-		if err := s.write(distRel, conv); err != nil {
-			return changed, err
-		}
-		changed = append(changed, distRel)
-	}
-	if hasOwn && !hasDist {
-		if err := s.write(distRel, own); err != nil {
-			return changed, err
-		}
-		changed = append(changed, distRel)
-	}
-	if !s.IgnoresOwnConfig() {
-		if err := s.addIgnore(ConfigOwn); err != nil {
-			return changed, err
-		}
-		changed = append(changed, ignRel)
-	}
-	return changed, nil
-}
-
 // addIgnore appends a line to .prep/.gitignore.
 func (s *Store) addIgnore(line string) error {
 	rel := Dir + "/.gitignore"
@@ -499,11 +439,6 @@ func (s *Store) Fix() ([]string, error) {
 	}
 	defer release()
 	changed, err := s.Fmt(false)
-	if err != nil {
-		return changed, err
-	}
-	conf, err := s.fixLegacyConfig()
-	changed = append(changed, conf...)
 	if err != nil {
 		return changed, err
 	}
@@ -596,11 +531,6 @@ func (s *Store) issueIDs() ([]string, error) {
 	return ids, nil
 }
 
-// SetSchema rewrites the schema version in project.md, keeping the rest.
-func (s *Store) SetSchema(v int) error {
-	return s.editProject(func(p *domain.Project) { p.Schema = v })
-}
-
 // SetIdentity writes the project's ID and name into project.md, keeping the
 // rest; an empty value leaves that field as it is.
 func (s *Store) SetIdentity(id, name string) error {
@@ -634,11 +564,11 @@ func (s *Store) editProject(edit func(*domain.Project)) error {
 	if err != nil {
 		return err
 	}
-	// A frontmatter from an older schema may hold other keys; what decodes
-	// is kept and the rest is dropped, as SetSchema always did.
 	var f projectFM
 	fm, _, _, _ := splitFrontmatter(raw)
-	_ = decodeStrict(fm, &f)
+	if err := decodeStrict(fm, &f); err != nil {
+		return err
+	}
 	p := f.project()
 	edit(&p)
 	return s.write(rel, renderProject(p, body))

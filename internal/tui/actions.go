@@ -193,7 +193,7 @@ func (m *Model) actions() []action {
 		action{key: "m", label: "Move to another parent", reason: edit, run: m.openReparent},
 		action{key: "d", label: "Define", reason: m.gate(id, domain.OpDefine), run: m.transition(id, domain.OpDefine, "defined")},
 		action{key: "r", label: "Mark ready", reason: m.gate(id, domain.OpReady), run: m.transition(id, domain.OpReady, "marked ready")},
-		action{key: "a", label: "Acknowledge change", reason: m.gate(id, domain.OpAck), run: m.transition(id, domain.OpAck, "acknowledged")},
+		action{key: "a", label: "Define trivial change", reason: m.gate(id, domain.OpTrivial), run: m.transition(id, domain.OpTrivial, "defined trivial change")},
 		action{key: "x", label: "Drop", reason: m.gate(id, domain.OpDrop), run: m.openDrop},
 		action{key: "f", label: "Complete", reason: complete, run: m.openComplete},
 	)

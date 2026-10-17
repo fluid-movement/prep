@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -127,9 +126,6 @@ func (s *Store) loadUnlocked() (domain.Project, []*domain.Issue, []domain.Diagno
 	project.Config, _ = s.loadConfigUnlocked()
 	if s.localUnignored() {
 		diag(domain.CodeLocalTracked, domain.SevWarning, domain.ClassFixable, "", ".gitignore", "run prep fix, then commit", ".prep/.gitignore does not ignore %s, the per-machine activity stream", localIgnore)
-	}
-	if why := s.legacyConfig(); len(why) > 0 {
-		diag(domain.CodeConfigLegacy, domain.SevWarning, domain.ClassFixable, "", ConfigOwn, "run prep fix, then commit", "configuration from prep 0.1.0: %s", strings.Join(why, "; "))
 	}
 
 	entries, err := os.ReadDir(s.abs(Dir))
@@ -295,7 +291,7 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 			n := b.Name()
 			name := strings.TrimSuffix(n, ".md")
 			if b.IsDir() || !strings.HasSuffix(n, ".md") || !domain.ValidStamp(name) {
-				diag(domain.CodeRecordInvalid, domain.SevError, domain.ClassManual, "baselines/"+n, "baselines are written by prep define and prep ack", "unexpected baseline entry %s", n)
+				diag(domain.CodeRecordInvalid, domain.SevError, domain.ClassManual, "baselines/"+n, "baselines are written by prep define", "unexpected baseline entry %s", n)
 				continue
 			}
 			var bl domain.Baseline
@@ -373,55 +369,6 @@ func (s *Store) loadConfigUnlocked() (domain.Config, error) {
 // into place. Loading skips them: one may belong to a write in flight.
 const tempPrefix = ".prep-tmp-"
 
-var (
-	legacyCommitMode = regexp.MustCompile(`(?m)^#?\s*commit_mode:.*\n?`)
-	stateValues      = regexp.MustCompile(`--state[ =][^\s"']+`)
-	legacyHeader     = "# prep project configuration (project-level only).\n"
-)
-
-// convertLegacyConfig turns a config written by prep 0.1.0 into the
-// current format: no commit_mode, the state in-progress in --state values
-// (other text that contains in_progress stays), the current header. It reports whether anything changed.
-func convertLegacyConfig(raw string) (string, bool) {
-	out := legacyCommitMode.ReplaceAllString(raw, "")
-	out = stateValues.ReplaceAllStringFunc(out, func(flag string) string {
-		name, list := flag[:len("--state ")], strings.Split(flag[len("--state "):], ",")
-		for k, v := range list {
-			bare := strings.TrimLeft(strings.TrimPrefix(v, "not-"), "!")
-			if bare == "in_progress" {
-				list[k] = strings.TrimSuffix(v, "in_progress") + "in-progress"
-			}
-		}
-		return name + strings.Join(list, ",")
-	})
-	if strings.HasPrefix(out, legacyHeader) {
-		out = defaultHeader() + strings.TrimPrefix(out, legacyHeader)
-	}
-	return out, out != raw
-}
-
-// legacyConfig lists what is left of the prep 0.1.0 configuration layout:
-// old content in a config file, a config.yaml without config.yaml.dist,
-// no .gitignore entry for the personal config.
-func (s *Store) legacyConfig() []string {
-	var why []string
-	own, hasOwn, _ := s.read(Dir + "/" + ConfigOwn)
-	dist, hasDist, _ := s.read(Dir + "/" + ConfigDist)
-	if _, old := convertLegacyConfig(own); hasOwn && old {
-		why = append(why, "config.yaml uses commit_mode or in_progress")
-	}
-	if _, old := convertLegacyConfig(dist); hasDist && old {
-		why = append(why, "config.yaml.dist uses commit_mode or in_progress")
-	}
-	if hasOwn && !hasDist {
-		why = append(why, "no config.yaml.dist to share")
-	}
-	if (hasOwn || hasDist) && !s.IgnoresOwnConfig() {
-		why = append(why, ".prep/.gitignore does not ignore config.yaml")
-	}
-	return why
-}
-
 // localIgnore is the .gitignore line for .prep/local, per-machine state
 // such as the activity stream.
 const localIgnore = activity.Dir + "/"
@@ -445,9 +392,6 @@ func (s *Store) localUnignored() bool {
 	return false
 }
 
-// IgnoresOwnConfig reports whether .prep/.gitignore lists config.yaml.
-func (s *Store) IgnoresOwnConfig() bool { return s.ignores(ConfigOwn) }
-
 // ignores reports whether .prep/.gitignore lists name, with or without a
 // leading slash.
 func (s *Store) ignores(name string) bool {
@@ -467,7 +411,6 @@ func (s *Store) loadConfigFile(name string) (domain.Config, bool, error) {
 	if err != nil || !ok {
 		return cfg, ok, err
 	}
-	raw, _ = convertLegacyConfig(raw) // read a 0.1.0 config as converted; check reports it
 	var f configFile
 	if err := decodeStrict(raw, &f); err != nil {
 		return cfg, true, fmt.Errorf("%s: %v", name, err)

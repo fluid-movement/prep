@@ -13,7 +13,7 @@ type Op string
 
 const (
 	OpDefine   Op = "define"
-	OpAck      Op = "ack"
+	OpTrivial  Op = "define --trivial"
 	OpReady    Op = "ready"
 	OpClaim    Op = "claim"
 	OpRelease  Op = "release"
@@ -23,7 +23,7 @@ const (
 )
 
 // Ops lists transitions in lifecycle order.
-var Ops = []Op{OpDefine, OpAck, OpReady, OpClaim, OpRelease, OpComplete, OpDrop, OpReopen}
+var Ops = []Op{OpDefine, OpTrivial, OpReady, OpClaim, OpRelease, OpComplete, OpDrop, OpReopen}
 
 // Unmet is one gate condition that blocks a transition.
 type Unmet struct {
@@ -71,21 +71,20 @@ type Input struct {
 
 // Change is the set of records a transition writes. Storage adapters render it.
 type Change struct {
-	Op               Op                   `json:"op"`
-	IssueID          string               `json:"id"`
-	NewIssue         *Issue               `json:"-"`
-	Baseline         *Baseline            `json:"-"`
-	Ready            *Ready               `json:"-"`
-	Claim            *Claim               `json:"-"`
-	RemoveClaim      bool                 `json:"-"`
-	Resolution       *Resolution          `json:"-"`
-	RemoveResolution bool                 `json:"-"`
-	Artifacts        *[]ArtifactReference `json:"-"`
-	Edit             *IssueEdit           `json:"-"`
-	Context          *string              `json:"-"`
-	Findings         *string              `json:"-"`
-	Decision         *Decision            `json:"-"`
-	Acceptance       []AcceptanceOp       `json:"-"`
+	Op               Op             `json:"op"`
+	IssueID          string         `json:"id"`
+	NewIssue         *Issue         `json:"-"`
+	Baseline         *Baseline      `json:"-"`
+	Ready            *Ready         `json:"-"`
+	Claim            *Claim         `json:"-"`
+	RemoveClaim      bool           `json:"-"`
+	Resolution       *Resolution    `json:"-"`
+	RemoveResolution bool           `json:"-"`
+	Edit             *IssueEdit     `json:"-"`
+	Context          *string        `json:"-"`
+	Findings         *string        `json:"-"`
+	Decision         *Decision      `json:"-"`
+	Acceptance       []AcceptanceOp `json:"-"`
 	// Knowledge is a knowledge write; KnowledgeEntry is the entry the
 	// adapter rendered from it, used to validate before writing.
 	Knowledge      *KnowledgeEdit `json:"-"`
@@ -124,7 +123,7 @@ func fromStates(op Op) []State {
 	switch op {
 	case OpDefine:
 		return []State{StateOpen, StateDefined, StateReady}
-	case OpAck:
+	case OpTrivial:
 		return []State{StateDefined, StateReady, StateInProgress}
 	case OpReady:
 		return []State{StateDefined}
@@ -210,15 +209,15 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 		if strings.TrimSpace(i.OpenQuestions) != "" {
 			add(GateOpenQuestions, "the Open questions section in issue.md is not empty")
 		}
-	case OpAck:
+	case OpTrivial:
 		if !stale {
-			add(GateStale, "nothing to acknowledge: the requirement and kind match the newest baseline")
+			add(GateStale, "nothing to change: the requirement and kind match the newest baseline")
 		}
 		if !i.Kind.Valid() {
 			add(GateKind, "kind %q is not one of %s", i.Kind, joinKinds())
 		}
-		// Ack keeps the sign-off; a new kind may need context ready never
-		// checked for.
+		// define --trivial keeps the sign-off; a new kind may need context
+		// ready never checked for.
 		if b := i.LatestBaseline(); b != nil && b.Kind != i.Kind && i.Ready != nil && !parent && i.Kind != KindManual && strings.TrimSpace(i.Context) == "" {
 			add(GateContext, "the kind changed to %s and context.md is empty; %s issues require enrichment context", i.Kind, i.Kind)
 		}
@@ -227,7 +226,7 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 		}
 	case OpReady:
 		if stale {
-			add(GateStale, "the requirement changed since the newest baseline; run prep define (re-enrich) or prep ack (trivial change)")
+			add(GateStale, "the requirement changed since the newest baseline; run prep define (re-enrich) or prep define --trivial (trivial change)")
 		}
 		if len(i.Criteria) == 0 {
 			add(GateCriteria, "acceptance.md has no checkable criteria (- [ ] ...)")
@@ -237,7 +236,7 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 		}
 	case OpClaim:
 		if stale {
-			add(GateStale, "the issue is stale; resolve with prep ack or prep define")
+			add(GateStale, "the issue is stale; resolve with prep define --trivial or prep define")
 		}
 		if parent {
 			add(GateParent, "parents are not implemented themselves; claim a child instead")
@@ -248,7 +247,7 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 	case OpRelease:
 	case OpComplete:
 		if stale {
-			add(GateStale, "the issue is stale; resolve with prep ack or prep define before completing")
+			add(GateStale, "the issue is stale; resolve with prep define --trivial or prep define before completing")
 		}
 		n := 0
 		for _, c := range i.Criteria {
@@ -374,14 +373,14 @@ func (t *Tree) Plan(id string, op Op, in Input) (*Change, error) {
 	now := in.Now.UTC().Truncate(time.Second)
 	c := &Change{Op: op, IssueID: id}
 	switch op {
-	case OpDefine, OpAck:
+	case OpDefine, OpTrivial:
 		latest := ""
 		if b := i.LatestBaseline(); b != nil {
 			latest = b.Name
 		}
 		name := nextStamp(now, func(s string) bool { return s <= latest })
-		c.Baseline = &Baseline{Name: name, By: in.Actor, At: now, Kind: i.Kind, Ack: op == OpAck, Requirement: i.Body}
-		if op == OpAck && t.ReadyValid(i) {
+		c.Baseline = &Baseline{Name: name, By: in.Actor, At: now, Kind: i.Kind, Ack: op == OpTrivial, Requirement: i.Body}
+		if op == OpTrivial && t.ReadyValid(i) {
 			r := *i.Ready
 			r.Baseline = name
 			c.Ready = &r
@@ -567,9 +566,6 @@ func (t *Tree) Apply(c *Change) *Tree {
 		i := t.Issues[id]
 		if id == c.IssueID {
 			cp := *i
-			if c.Artifacts != nil {
-				cp.Artifacts = append([]ArtifactReference(nil), (*c.Artifacts)...)
-			}
 			cp.Baselines = append([]Baseline(nil), i.Baselines...)
 			if c.Baseline != nil {
 				cp.Baselines = append(cp.Baselines, *c.Baseline)

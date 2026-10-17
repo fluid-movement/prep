@@ -226,10 +226,10 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 	if stale {
 		return "resolve-drift", []string{
 			"The requirement or kind changed since the newest baseline (" + i.LatestBaseline().Name + "). Compare issue.md with " + f("baselines/"+i.LatestBaseline().Name+".md") + ".",
-			"Trivial change (typo, rewording): run prep ack " + i.ID + ". A new baseline is written; enrichment stays valid.",
+			"Trivial change (typo, rewording): run prep define " + i.ID + " --trivial. A new baseline is written; enrichment stays valid.",
 			"Real change: run prep define " + i.ID + ", then re-enrich: update the context (prep context) and criteria (prep criterion), and record new decisions with prep decide --supersedes <id> for the ones they replace. Never delete decisions. Finish with prep ready " + i.ID + ".",
 			"An issue in progress must be released (prep release) before it can be re-defined.",
-		}, []Pointer{{f("baselines/"), "new baseline, written by prep ack or prep define", ""}}
+		}, []Pointer{{f("baselines/"), "new baseline, written by prep define", ""}}
 	}
 	switch s {
 	case StateOpen:

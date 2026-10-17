@@ -1,0 +1,1 @@
+- 2026-10-17T13:14:35Z claude-code: Implemented, ready for check: removed prep import, artifact, migrate and the legacy config and record paths, and merged ack into define --trivial (new baseline, ready sign-off and claim kept); go test, prep check (0 errors) and prep fmt --check pass.

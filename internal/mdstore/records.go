@@ -15,13 +15,12 @@ import (
 // Frontmatter shapes. Field order is the canonical key order.
 
 type issueFM struct {
-	Title     string                     `yaml:"title"`
-	Kind      string                     `yaml:"kind"`
-	Parent    string                     `yaml:"parent,omitempty"`
-	DependsOn []string                   `yaml:"depends_on,omitempty"`
-	Tags      []string                   `yaml:"tags,omitempty"`
-	Priority  string                     `yaml:"priority,omitempty"`
-	Artifacts []domain.ArtifactReference `yaml:"artifacts,omitempty"`
+	Title     string   `yaml:"title"`
+	Kind      string   `yaml:"kind"`
+	Parent    string   `yaml:"parent,omitempty"`
+	DependsOn []string `yaml:"depends_on,omitempty"`
+	Tags      []string `yaml:"tags,omitempty"`
+	Priority  string   `yaml:"priority,omitempty"`
 }
 
 type baselineFM struct {
@@ -143,7 +142,6 @@ func parseIssue(raw string, i *domain.Issue) error {
 	i.DependsOn = f.DependsOn
 	i.Tags = f.Tags
 	i.Priority = domain.Priority(f.Priority)
-	i.Artifacts = f.Artifacts
 	i.Body = normalize(body)
 	i.Prose, i.OpenQuestions = splitOpenQuestions(i.Body)
 	return nil
@@ -155,7 +153,7 @@ func renderIssue(i *domain.Issue) string {
 	if i.Priority.Effective() == domain.PriorityMedium {
 		prio = ""
 	}
-	return withFrontmatter(encodeYAML(issueFM{Title: i.Title, Kind: string(i.Kind), Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags, Priority: prio, Artifacts: i.Artifacts}), i.Body)
+	return withFrontmatter(encodeYAML(issueFM{Title: i.Title, Kind: string(i.Kind), Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags, Priority: prio}), i.Body)
 }
 
 // requirementBody is the body of issue.md for a requirement given as text.

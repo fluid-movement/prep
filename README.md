@@ -61,23 +61,23 @@ prep stages the files it writes and never commits; you (or your agent) commit th
 
 The project Definition of Done is guidance shown by `prep prime` and `prep guide` at the check step. Edit it with `prep dod --add "<item>"` or `prep dod --remove "<item>"`. Completion checks the issue’s state, requirement freshness, checked criteria, kind-specific result, and documentation decision (`--docs` or `--no-impact`).
 
-Every read command (`prime`, `guide`, `list`, `next`, `show`, `check`, `views`) accepts `--json`; errors are JSON with stable codes under `--json`. Write commands (`new`, `import`, `define`, `ack`, `ready`, `claim`, `release`, `complete`, `drop`, `fmt`, `fix`, `migrate`) perform one transition each, so harness permission rules can allow reads and ask before writes. IDs accept any unique suffix. Name the actor with `--by` or `PREP_ACTOR` (`<producer>/<version>` for agents, `human:<id>` for people).
+Every read command (`prime`, `guide`, `list`, `next`, `show`, `check`, `views`) accepts `--json`; errors are JSON with stable codes under `--json`. Write commands (`new`, `define` (with `--trivial` for a trivial change), `ready`, `claim`, `release`, `complete`, `drop`, `fmt`, `fix`) perform one transition each, so harness permission rules can allow reads and ask before writes. IDs accept any unique suffix. Name the actor with `--by` or `PREP_ACTOR` (`<producer>/<version>` for agents, `human:<id>` for people).
 
 ## Lifecycle
 
-Link external workflow documents with `prep artifact add <id> --source <identity> --location <URI-or-path>`. `prep show` displays them as references; they do not import requirements or satisfy acceptance criteria. Lifecycle JSON responses preserve their existing fields and add success markers and actionable next commands where applicable.
+Lifecycle JSON responses preserve their existing fields and add success markers and actionable next commands where applicable.
 
 State is derived from which records exist in `.prep/issues/<id>/`, never stored:
 
 | State | Record | Written by |
 | --- | --- | --- |
 | open | `issue.md` | `prep new`, `prep edit` |
-| defined | `baselines/<timestamp>.md` | `prep define`, `prep ack` |
+| defined | `baselines/<timestamp>.md` | `prep define`, `prep define --trivial` |
 | ready | `ready.md` referencing the newest baseline | `prep ready` |
 | in progress | `claim.md` | `prep claim` (`prep release` removes it and logs to `history.md`) |
 | done / dropped | `resolution.md` | `prep complete`, `prep drop` (`prep reopen` removes a done resolution and logs it to `history.md`) |
 
-An issue is **stale** when its requirement or kind differs from the newest baseline: `prep ack` for a trivial change, `prep define` and re-enrichment for a real one. **Actionable** = ready, not stale, dependencies done, unclaimed, not a parent.
+An issue is **stale** when its requirement or kind differs from the newest baseline: `prep define --trivial` for a trivial change, `prep define` and re-enrichment for a real one. **Actionable** = ready, not stale, dependencies done, unclaimed, not a parent.
 
 Dependencies refer to issues in the same project. `prep projects` lists projects registered on this machine; `--project <name>` runs a command in another registered project.
 
@@ -91,7 +91,7 @@ Prep serializes cooperating record writers within one checkout: each write comma
 
 The tabs of `prep tui` are the saved views in the project configuration, in the order the file lists them. A view is a name and a query, with the same flags as `prep list`. `prep init` writes two to `.prep/config.yaml.dist`: all unresolved work first, where each row's state glyph tells the states apart, then every issue.
 
-The configuration is personal. The project commits `.prep/config.yaml.dist` as the shared default; your own `.prep/config.yaml` is gitignored and, when it exists, replaces the dist file as a whole (nothing is merged). Copy the dist file to start your own, or change a setting in the TUI, which creates it for you. A project set up with prep 0.1.0 (one committed `config.yaml` with `commit_mode`) still works; `prep check` points to `prep fix`, which converts it: `config.yaml.dist` shared, your `config.yaml` ignored and taken out of git's index. Commit the result.
+The configuration is personal. The project commits `.prep/config.yaml.dist` as the shared default; your own `.prep/config.yaml` is gitignored and, when it exists, replaces the dist file as a whole (nothing is merged). Copy the dist file to start your own, or change a setting in the TUI, which creates it for you.
 
 ```yaml
 views:

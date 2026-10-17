@@ -427,16 +427,16 @@ func (m *Model) nowCard(id string, width int) []string {
 	return lines
 }
 
-// nextTransition is the step that moves the issue on: ack when it is
-// stale, else the first besides ack, release and drop.
+// nextTransition is the step that moves the issue on: define --trivial when it is
+// stale, else the first besides define --trivial, release and drop.
 func nextTransition(g domain.Guide, stale bool) (domain.Transition, bool) {
 	for _, tr := range g.Transitions {
-		if stale && tr.Op == domain.OpAck {
+		if stale && tr.Op == domain.OpTrivial {
 			return tr, true
 		}
 	}
 	for _, tr := range g.Transitions {
-		if tr.Op != domain.OpAck && tr.Op != domain.OpRelease && tr.Op != domain.OpDrop {
+		if tr.Op != domain.OpTrivial && tr.Op != domain.OpRelease && tr.Op != domain.OpDrop {
 			return tr, true
 		}
 	}

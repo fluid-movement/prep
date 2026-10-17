@@ -8,7 +8,7 @@ generated:
 scope:
   - internal/mdstore
   - internal/domain/ports.go
-confirmed_commit: 28f150511800c7e93ff7bcd5e1ed4f499c1f8651
+confirmed_commit: b5239826093409fdd1b095d4b70a807d84db8687
 ---
 
 # Local record write safety
