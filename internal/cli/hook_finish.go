@@ -209,7 +209,7 @@ func hookFinish(a *app, e hookEvent) {
 		hookSaveTurn(path, after)
 		return
 	}
-	entries, _, err := a.kstore.Load(false)
+	entries, _, err := a.kstore.Load()
 	if err != nil {
 		return
 	}
@@ -241,9 +241,9 @@ func hookFinish(a *app, e hookEvent) {
 		message += "Within the authorized scope, search for the issue covering this implementation (create one if none matches unless tracking was explicitly waived), run prep guide <id>, and record actual progress with prep commands. A requirement-only request does not authorize implementation or completion; do not invent completed work. "
 	}
 	if len(knowledge) > 0 {
-		message += "Affected knowledge to review: " + hookFinishList(knowledge) + ". Read it through prep knowledge show/find; update changed behavior or confirm entries that still match. "
+		message += "Affected knowledge to review: " + hookFinishList(knowledge) + ". Read it through prep knowledge show/find; record any new decisions or findings. "
 	} else {
-		message += "Check whether the changed behavior needs new or updated knowledge. "
+		message += "Check whether the changed behavior yielded a decision or finding. "
 	}
 	message += "If records already reflect the changes or the work has no documentation impact, explain that briefly. This check does not require asking the user for approval."
 	if a.actor == "claude-code" {

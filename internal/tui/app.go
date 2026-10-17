@@ -30,8 +30,7 @@ type Options struct {
 	Load func() (*domain.Tree, error)
 	// Watch is the directory to watch for changes (.prep); empty disables it.
 	Watch string
-	// Check returns every diagnostic, including knowledge drift. It is slower
-	// than Load (git), so it runs only for the check screen.
+	// Check returns every diagnostic for the check screen.
 	Check func() ([]domain.Diagnostic, error)
 	// Write runs a planned change through the CLI's write pipeline (plan,
 	// CheckWrite, store, stage) and returns the changed issue's ID. Nil

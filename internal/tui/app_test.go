@@ -45,13 +45,13 @@ func newProject(t *testing.T) *project {
 }
 
 func (p *project) load() (*domain.Tree, error) {
-	return domain.Load(mdstore.Open(p.dir), &okf.Store{Root: p.dir}, false)
+	return domain.Load(mdstore.Open(p.dir), &okf.Store{Root: p.dir})
 }
 
 func (p *project) do(plan func(*domain.Tree, time.Time) (*domain.Change, error)) string {
 	p.t.Helper()
 	st := mdstore.Open(p.dir)
-	tr, err := domain.Load(st, &okf.Store{Root: p.dir}, false)
+	tr, err := domain.Load(st, &okf.Store{Root: p.dir})
 	if err != nil {
 		p.t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func sample(t *testing.T) (*project, map[string]string) {
 		p.record(id, domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "add", Text: "writes a header"}, {Op: "add", Text: "quotes fields"}}})
 	}
 	enrich(ids["csv"])
-	p.record(ids["csv"], domain.OpDecide, domain.RecordInput{Title: "Use encoding/csv", Text: "Standard library, handles quoting."})
+	p.knowledge(ids["csv"], "decision", "Use encoding/csv", false)
 	p.op(ids["csv"], domain.OpReady, domain.Input{})
 	p.op(ids["csv"], domain.OpClaim, domain.Input{})
 	p.record(ids["csv"], domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "check", Index: 1}}})
@@ -142,9 +142,9 @@ func sample(t *testing.T) (*project, map[string]string) {
 	p.record(ids["format"], domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "add", Text: "decided"}}})
 	p.op(ids["format"], domain.OpReady, domain.Input{})
 	p.op(ids["format"], domain.OpClaim, domain.Input{})
-	p.record(ids["format"], domain.OpDecide, domain.RecordInput{Title: "CSV", Outcome: true})
+	p.knowledge(ids["format"], "decision", "CSV", true)
 	p.record(ids["format"], domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "check", Index: 1}}})
-	p.op(ids["format"], domain.OpComplete, domain.Input{NoImpact: "fixture"})
+	p.op(ids["format"], domain.OpComplete, domain.Input{})
 	return p, ids
 }
 
@@ -170,7 +170,10 @@ func knowledgeSample(t *testing.T) (*project, map[string]string) {
 	p.op(ids["doc"], domain.OpReady, domain.Input{})
 	p.op(ids["doc"], domain.OpClaim, domain.Input{})
 	p.record(ids["doc"], domain.OpCriterion, domain.RecordInput{Acceptance: []domain.AcceptanceOp{{Op: "check", Index: 1}}})
-	p.op(ids["doc"], domain.OpComplete, domain.Input{Docs: []string{"/decisions/format.md"}})
+	p.op(ids["doc"], domain.OpComplete, domain.Input{})
+	file := filepath.Join(p.dir, ".prep/knowledge/decisions/format.md")
+	b, _ := os.ReadFile(file)
+	os.WriteFile(file, []byte(strings.Replace(string(b), "status: draft", "status: draft\nissue: "+ids["doc"], 1)), 0644)
 	return p, ids
 }
 
@@ -213,7 +216,7 @@ func TestKnowledgeScreen(t *testing.T) {
 
 	// f filters by type; the entry shows its body and who changed it.
 	run(m, "f")
-	typeIn(m, "--type decision")
+	typeIn(m, "--type decision default")
 	run(m, "enter")
 	if paths, _ := m.knowledgePaths(); len(paths) != 1 || m.know.path != "/decisions/format.md" {
 		t.Fatalf("filtered = %v, selected %s", paths, m.know.path)
@@ -439,7 +442,7 @@ func TestDetailContent(t *testing.T) {
 	for _, want := range []string{
 		"# CSV writer", "**in progress** · code · `" + ids["csv"] + "`",
 		"## Requirement", "## Context", "see CLI (`/components/cli.md`)",
-		"### D1: Use encoding/csv", "- [x] **1.** writes a header", "- [ ] **2.** quotes fields",
+		"## decision: Use encoding/csv", "- [x] **1.** writes a header", "- [ ] **2.** quotes fields",
 		"## History", "test/1: header done",
 	} {
 		if !strings.Contains(doc, want) {
@@ -449,7 +452,7 @@ func TestDetailContent(t *testing.T) {
 	if doc := detailMarkdown(tr, ids["survey"]); !strings.Contains(doc, "## Open questions\n\n- Which tools matter most?") {
 		t.Errorf("open questions missing:\n%s", doc)
 	}
-	if doc := detailMarkdown(tr, ids["format"]); !strings.Contains(doc, "**outcome**") || !strings.Contains(doc, "No knowledge impact: fixture") {
+	if doc := detailMarkdown(tr, ids["format"]); !strings.Contains(doc, "**outcome**") || !strings.Contains(doc, "**done**") {
 		t.Errorf("decision outcome or resolution missing:\n%s", doc)
 	}
 }
@@ -562,6 +565,10 @@ func TestHierarchy(t *testing.T) {
 		got = append(got, r.label+":"+r.id)
 	}
 	wantRels := []string{"path:" + ids["export"], "blocks:" + ids["json"]}
+	tr, _ := p.load()
+	for _, e := range tr.IssueRecords(ids["csv"]) {
+		wantRels = append(wantRels, "knowledge:"+e.Path)
+	}
 	if strings.Join(got, ",") != strings.Join(wantRels, ",") {
 		t.Fatalf("relations = %v, want %v", got, wantRels)
 	}
@@ -701,7 +708,7 @@ func TestCheckAndSettingsScreens(t *testing.T) {
 func (p *project) writer() func(func(*domain.Tree) (*domain.Change, error)) (string, error) {
 	return func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
 		st := mdstore.Open(p.dir)
-		tr, err := domain.Load(st, &okf.Store{Root: p.dir}, false)
+		tr, err := domain.Load(st, &okf.Store{Root: p.dir})
 		if err != nil {
 			return "", err
 		}
@@ -1273,13 +1280,6 @@ func TestTransitionsFromTheTUI(t *testing.T) {
 	m.Update(loadedMsg(func() loadedMsg { tr, err := p.load(); return loadedMsg{tr, err} }()))
 	run(m, "a")
 	run(m, "f")
-	run(m, "enter") // open the completion form
-	if m.modal == nil {
-		t.Fatal("completion form did not open")
-	}
-	run(m, "tab")
-	typeIn(m, "announcement only")
-	run(m, "enter")
 	if st, _ := stateOf(t, p, id); st != domain.StateDone {
 		t.Fatalf("after complete: %s (modal %+v notice %q)", st, m.modal, m.notice)
 	}
@@ -1687,9 +1687,9 @@ func TestCompletionAvailableForHumanCodeAndDefinedResults(t *testing.T) {
 		id := p.issue("Answer "+string(kind), kind, "Settle the question.", "")
 		p.op(id, domain.OpDefine, domain.Input{})
 		if kind == domain.KindDecision {
-			p.record(id, domain.OpDecide, domain.RecordInput{Title: "Choice", Text: "Agreed.", Outcome: true})
+			p.knowledge(id, "decision", "Choice", true)
 		} else {
-			p.record(id, domain.OpFindings, domain.RecordInput{Text: "An answer."})
+			p.knowledge(id, "finding", "An answer", false)
 		}
 		ids[string(kind)] = id
 	}
@@ -1697,7 +1697,7 @@ func TestCompletionAvailableForHumanCodeAndDefinedResults(t *testing.T) {
 	m := editable(t, p, &edits)
 	run(m, "6")
 	for _, key := range []string{"csv", "decision", "research"} {
-		if reason := m.gateCompletionForm(ids[key]); reason != "" {
+		if reason := m.gate(ids[key], domain.OpComplete); reason != "" {
 			t.Fatalf("%s blocked: %s", key, reason)
 		}
 		m.selectInCurrent(ids[key])
@@ -1713,5 +1713,23 @@ func TestCompletionAvailableForHumanCodeAndDefinedResults(t *testing.T) {
 		if !found {
 			t.Fatalf("no completion action for %s", key)
 		}
+	}
+}
+
+func (p *project) knowledge(issue, typ, title string, outcome bool) {
+	p.t.Helper()
+	p.now = p.now.Add(time.Minute)
+	now := p.now
+	id, err := domain.NewULID(now, strings.NewReader(strings.Repeat("\x00", 10)))
+	if err != nil {
+		p.t.Fatal(err)
+	}
+	s := &okf.Store{Root: p.dir}
+	r := &domain.KnowledgeRecord{ID: id, Path: "/" + typ + "s/" + id + ".md", Type: typ, Title: title, Description: title, Issue: issue, Outcome: outcome, At: now}
+	if _, err = s.Render(r); err != nil {
+		p.t.Fatal(err)
+	}
+	if _, err = s.Apply(r); err != nil {
+		p.t.Fatal(err)
 	}
 }

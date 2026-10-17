@@ -298,9 +298,6 @@ func (p *Project) build(seed int64) error {
 	}
 	run := func(args ...string) (string, error) { return w.prep(p.Dir, seed, args...) }
 	initArgs := []string{"init"}
-	if !s.Bootstrap {
-		initArgs = append(initArgs, "--no-bootstrap")
-	}
 	if _, err := run(initArgs...); err != nil {
 		return err
 	}
@@ -378,15 +375,21 @@ func (p *Project) buildKnowledge(run func(...string) (string, error)) error {
 		if body == "" {
 			body = k.Title + "."
 		}
-		args := []string{"knowledge", "new", k.Path, "--type", typ, "--title", k.Title, "--description", desc, "--body", body}
-		for _, sc := range k.Scope {
-			args = append(args, "--scope", sc)
+
+		data, err := yaml.Marshal(map[string]any{"type": typ, "title": k.Title, "description": desc, "scope": k.Scope})
+		if err != nil {
+			return err
 		}
-		if _, err := run(args...); err != nil {
+		file := filepath.Join(p.Dir, ".prep/knowledge", strings.TrimPrefix(k.Path, "/"))
+		if err = os.MkdirAll(filepath.Dir(file), 0755); err != nil {
+			return err
+		}
+		if err = os.WriteFile(file, []byte("---\n"+string(data)+"---\n\n"+body+"\n"), 0644); err != nil {
 			return err
 		}
 	}
-	return nil
+	_, err := run("fmt")
+	return err
 }
 
 type writeOut struct {
@@ -581,15 +584,15 @@ func (p *Project) reach(run func(...string) (string, error), is IssueSpec, id, s
 		}
 		switch kind {
 		case "research":
-			if _, err := run("findings", id, "--body", "Fixture findings."); err != nil {
+			if _, err := run("finding", id, "--title", "Fixture findings", "--description", "Fixture findings", "--body", "Fixture findings."); err != nil {
 				return err
 			}
 		case "decision":
-			if _, err := run("decide", id, "--title", "Fixture decision", "--body", "Decided for the fixture.", "--outcome"); err != nil {
+			if _, err := run("decide", id, "--title", "Fixture decision", "--description", "Fixture decision", "--body", "Decided for the fixture.", "--outcome"); err != nil {
 				return err
 			}
 		}
-		if _, err := run("complete", id, "--no-impact", "fixture"); err != nil {
+		if _, err := run("complete", id); err != nil {
 			return err
 		}
 	}

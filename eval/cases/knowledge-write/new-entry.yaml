@@ -1,14 +1,13 @@
 name: knowledge-write-new-entry
-description: New knowledge goes in as an entry written through prep.
+description: A decision made in conversation is recorded as a decision record through prep.
 prompt: |
-  We decided how the cart totals cache will work (it is not built yet). Write that decision down as a new
-  knowledge entry at /components/cart-cache.md: totals are cached per cart for 10 minutes and invalidated
-  on any item change.
+  We decided how the cart totals cache will work (it is not built yet): totals are cached per cart for
+  10 minutes and invalidated on any item change, because recomputing on every page view was too slow.
+  Write that decision down so later sessions find it.
 fixture: shop
 expect:
   tools:
-    - ran: {command: knowledge, args: new}
+    - ran: {command: decide}
     - no_prep_files: true
   outcome:
-    - knowledge: {path: /components/cart-cache.md, type: component, contains: ['10 minutes'], created: true}
     - check: clean

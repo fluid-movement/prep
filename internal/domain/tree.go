@@ -26,9 +26,11 @@ func NewTree(p Project, issues []*Issue, entries []*Entry, parseDiags []Diagnost
 		t.Issues[i.ID] = i
 	}
 	for _, e := range entries {
-		t.Knowledge[e.Path] = e
+		entry := *e
+		t.Knowledge[e.Path] = &entry
 	}
 	t.index()
+	t.DeriveSuperseded()
 	return t
 }
 
@@ -239,14 +241,4 @@ func CheckedAll(cs []Criterion) bool {
 		}
 	}
 	return true
-}
-
-// HasOutcome reports whether decisions contain an outcome entry.
-func HasOutcome(ds []Decision) bool {
-	for _, d := range ds {
-		if d.Outcome {
-			return true
-		}
-	}
-	return false
 }

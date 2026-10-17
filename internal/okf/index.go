@@ -129,7 +129,7 @@ func (s *Store) indexState(entries []*domain.Entry) (want map[string]string, sta
 // missing or outdated ones and removes those in directories without
 // entries. With dryRun it only reports what would change.
 func (s *Store) WriteIndexes(dryRun bool) ([]string, error) {
-	entries, _, err := s.Load(false)
+	entries, _, err := s.Load()
 	if err != nil {
 		return nil, err
 	}

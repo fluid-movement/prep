@@ -99,7 +99,7 @@ func TestInitWritesHistoryMergeOnce(t *testing.T) {
 		if _, err := Open(root).Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 			t.Fatal(err)
 		}
-		if got := readAttributes(t, root); got != line+"\n" {
+		if got := readAttributes(t, root); got != line+"\n.prep/knowledge/**/index.md merge=union\n" {
 			t.Fatalf(".gitattributes = %q", got)
 		}
 	})
@@ -111,7 +111,7 @@ func TestInitWritesHistoryMergeOnce(t *testing.T) {
 		if _, err := Open(root).Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 			t.Fatal(err)
 		}
-		if got := readAttributes(t, root); got != "*.png binary\n"+line+"\n" {
+		if got := readAttributes(t, root); got != "*.png binary\n"+line+"\n.prep/knowledge/**/index.md merge=union\n" {
 			t.Fatalf(".gitattributes = %q", got)
 		}
 	})
@@ -123,7 +123,7 @@ func TestInitWritesHistoryMergeOnce(t *testing.T) {
 		if _, err := Open(root).Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 			t.Fatal(err)
 		}
-		if got := readAttributes(t, root); got != "*.png binary\n"+line+"\n" {
+		if got := readAttributes(t, root); got != "*.png binary\n"+line+"\n.prep/knowledge/**/index.md merge=union\n" {
 			t.Fatalf(".gitattributes duplicated the line: %q", got)
 		}
 	})

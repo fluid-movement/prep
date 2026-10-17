@@ -78,7 +78,7 @@ func TestProjectDoDIsEditableGuidance(t *testing.T) {
 	}
 	// No additional per-issue records are needed to finish, and the project
 	// guidance has no checked state or completion gate.
-	h.ok("complete", id, "--no-impact", "Only temporary test behavior.")
+	h.ok("complete", id)
 	h.expectState(id, "done", false)
 	for _, file := range []string{"ready.md", "resolution.md"} {
 		raw := h.read(id, file)
@@ -88,7 +88,7 @@ func TestProjectDoDIsEditableGuidance(t *testing.T) {
 			}
 		}
 	}
-	h.ok("check", "--no-drift")
+	h.ok("check")
 }
 
 func TestHelpOmitsRemovedCommands(t *testing.T) {

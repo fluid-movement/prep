@@ -53,13 +53,11 @@ const (
 	CodeDepCycle           = "I009"
 	CodeDepOnAncestor      = "I010" // deadlock: depends on own parent or ancestor
 	CodeUnknownFile        = "I011"
-	CodeFindingsKind       = "I012" // findings.md on a non-research issue
 	CodeReadyOutdated      = "I013" // ready.md references an older baseline
 	CodeOrphanClaim        = "I014" // claim.md without valid ready sign-off
 	CodeRecordInvalid      = "I015" // baseline/ready/claim/resolution malformed
 	CodeDepDropped         = "I016"
 	CodeNotCanonical       = "I017"
-	CodeDecisionInvalid    = "I019"
 	CodeSelfDependency     = "I021"
 	CodeDuplicateDep       = "I022"
 	CodeResolvedChildOpen  = "I023" // resolved parent with unresolved children
@@ -74,8 +72,7 @@ const (
 	CodeKnowledgeField       = "K002" // required field missing or invalid
 	CodeKnowledgeLink        = "K003" // broken link
 	CodeKnowledgeSize        = "K004" // entry above size threshold
-	CodeKnowledgeDrift       = "K005" // scoped paths changed since confirmed_commit
-	CodeKnowledgeCommit      = "K006" // confirmed_commit cannot be resolved
+	CodeLegacyKnowledge      = "K008" // legacy issue knowledge pending conversion
 	CodeKnowledgeIndex       = "K007" // OKF index.md missing, outdated or unneeded
 
 )

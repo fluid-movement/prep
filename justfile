@@ -90,10 +90,6 @@ release version:
     for f in plugins/claude-code/.claude-plugin/plugin.json .claude-plugin/marketplace.json plugins/codex/.codex-plugin/plugin.json .agents/plugins/marketplace.json; do
         sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$v\"/" "$f" && rm "$f.bak"
     done
-    # The version is all that changed in the plugin entry's scope; the entry
-    # names no number, so confirm it rather than leave a drift warning.
-    go run ./cmd/prep knowledge confirm /components/claude-code.md >/dev/null
-    go run ./cmd/prep knowledge confirm /components/codex.md >/dev/null
     go test ./...
     git commit -qam "Release {{version}}"
     git tag -a "{{version}}" -m "prep {{version}}"

@@ -66,24 +66,6 @@ func detailSections(t *domain.Tree, id string) string {
 	section("Requirement", i.Prose)
 	section("Open questions", i.OpenQuestions)
 	section("Context", i.Context)
-	if len(i.Decisions) > 0 {
-		var d strings.Builder
-		for _, x := range i.Decisions {
-			fmt.Fprintf(&d, "### %s: %s\n\n", x.ID, x.Title)
-			line := []string{x.Date}
-			if x.Supersedes != "" {
-				line = append(line, "supersedes "+x.Supersedes)
-			}
-			if x.Outcome {
-				line = append(line, "**outcome**")
-			}
-			fmt.Fprintf(&d, "*%s*\n\n", strings.Join(line, " · "))
-			if x.Body != "" {
-				d.WriteString(x.Body + "\n\n")
-			}
-		}
-		section("Decisions", d.String())
-	}
 	if len(i.Criteria) > 0 {
 		var c strings.Builder
 		for k, x := range i.Criteria {
@@ -95,8 +77,15 @@ func detailSections(t *domain.Tree, id string) string {
 		}
 		section("Acceptance", c.String())
 	}
-	if i.Findings != nil {
-		section("Findings", *i.Findings)
+	for _, e := range t.IssueRecords(id) {
+		body := e.Description + "\n\n" + e.Body
+		if e.Outcome {
+			body = "**outcome**\n\n" + body
+		}
+		if e.Superseded {
+			body = "**superseded**\n\n" + body
+		}
+		section(e.Type+": "+e.Title, body)
 	}
 	section("History", i.History)
 	if r := i.Resolution; r != nil {

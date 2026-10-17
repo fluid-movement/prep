@@ -107,17 +107,11 @@ var opVerbs = map[domain.Op]string{
 	domain.OpDrop:     "dropped the issue",
 	domain.OpReopen:   "reopened the issue",
 	domain.OpContext:  "wrote the context",
-	domain.OpFindings: "wrote the findings",
 }
 
 // recordVerb says what a record write did.
 func recordVerb(op domain.Op, in domain.RecordInput, c *domain.Change) string {
 	switch op {
-	case domain.OpDecide:
-		if c.Decision != nil {
-			return fmt.Sprintf("recorded decision %s: %s", c.Decision.ID, c.Decision.Title)
-		}
-		return "recorded a decision"
 	case domain.OpLog:
 		return "logged: " + in.Text
 	case domain.OpCriterion:
@@ -159,7 +153,7 @@ func cmdFocus(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -209,7 +203,7 @@ func cmdActivity(a *app, args []string) error {
 	if len(pos) > 0 {
 		return usageErr("usage: prep activity [--max N] [--actor a] | add")
 	}
-	if _, err := a.load(false); err != nil {
+	if _, err := a.load(); err != nil {
 		return err
 	}
 	dir := a.prepDir()

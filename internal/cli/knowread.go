@@ -14,19 +14,24 @@ import (
 // files, so a read can be one section or an outline.
 
 type entryLine struct {
-	Path            string           `json:"path"`
-	Type            string           `json:"type"`
-	Title           string           `json:"title"`
-	Description     string           `json:"description"`
-	Status          string           `json:"status,omitempty"`
-	Scope           []string         `json:"scope,omitempty"`
-	ConfirmedCommit string           `json:"confirmed_commit,omitempty"`
-	Size            int              `json:"size"`
-	Sections        []domain.Section `json:"sections"`
+	ID          string           `json:"id,omitempty"`
+	Date        string           `json:"date,omitempty"`
+	Issue       string           `json:"issue,omitempty"`
+	Supersedes  []string         `json:"supersedes,omitempty"`
+	Outcome     bool             `json:"outcome,omitempty"`
+	Superseded  bool             `json:"superseded,omitempty"`
+	Path        string           `json:"path"`
+	Type        string           `json:"type"`
+	Title       string           `json:"title"`
+	Description string           `json:"description"`
+	Status      string           `json:"status,omitempty"`
+	Scope       []string         `json:"scope,omitempty"`
+	Size        int              `json:"size"`
+	Sections    []domain.Section `json:"sections"`
 }
 
 func describeEntry(e *domain.Entry) entryLine {
-	return entryLine{Path: e.Path, Type: e.Type, Title: e.Title, Description: e.Description, Status: e.Status, Scope: e.Scope, ConfirmedCommit: e.ConfirmedCommit, Size: len(e.Body), Sections: domain.Sections(e.Body)}
+	return entryLine{Path: e.Path, Type: e.Type, Title: e.Title, Description: e.Description, Status: e.Status, ID: e.ID, Date: e.Date, Issue: e.Issue, Supersedes: e.Supersedes, Outcome: e.Outcome, Superseded: e.Superseded, Scope: e.Scope, Size: len(e.Body), Sections: domain.Sections(e.Body)}
 }
 
 // tokens renders a byte count as approximate tokens.
@@ -43,7 +48,7 @@ func knowledgeList(a *app, args []string) error {
 	if err != nil {
 		return usageErr("knowledge list: %v", err)
 	}
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -59,7 +64,7 @@ func knowledgeList(a *app, args []string) error {
 	}
 	for _, p := range paths {
 		e := t.Knowledge[p]
-		a.printf("%s  %s  %s — %s (%s)\n", p, e.Type, e.Title, e.Description, tokens(len(e.Body)))
+		a.printf("%s  %s  %s — %s (%s)\n", p, e.Type, recordTitle(e.Title, e.Superseded), e.Description, tokens(len(e.Body)))
 	}
 	if len(paths) == 0 {
 		a.printf("no knowledge entries match\n")
@@ -77,7 +82,7 @@ func knowledgeFind(a *app, args []string) error {
 	if len(pos) == 0 {
 		return usageErr("usage: prep knowledge find <query> [--max N]")
 	}
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -107,7 +112,7 @@ func knowledgeFind(a *app, args []string) error {
 		if k > 0 {
 			a.printf("\n")
 		}
-		a.printf("== %s — %s (whole entry %s)\n", p, by[p][0].Title, tokens(len(t.Knowledge[p].Body)))
+		a.printf("== %s — %s (whole entry %s)\n", p, recordTitle(by[p][0].Title, by[p][0].Superseded), tokens(len(t.Knowledge[p].Body)))
 		section := ""
 		for _, h := range by[p] {
 			// Label the section when it changes, unless it is the entry's own title heading.
@@ -137,7 +142,7 @@ func knowledgeShow(a *app, args []string) error {
 	if len(pos) == 0 {
 		return usageErr("usage: prep knowledge show <entry>[#section]... [--outline]")
 	}
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -181,14 +186,11 @@ func knowledgeShow(a *app, args []string) error {
 		if s.Anchor != "" {
 			ref += "#" + s.Anchor
 		}
-		a.printf("== %s — %s\n", ref, s.Title)
+		a.printf("== %s — %s\n", ref, recordTitle(s.Title, s.Superseded))
 		if *outline {
 			a.printf("%s: %s\n", s.Type, s.Description)
 			if len(s.Scope) > 0 {
 				a.printf("scope: %s\n", strings.Join(s.Scope, ", "))
-			}
-			if s.ConfirmedCommit != "" {
-				a.printf("last explicit review: %s (provenance, not semantic proof)\n", s.ConfirmedCommit)
 			}
 			for _, x := range s.Sections {
 				if x.Anchor == "" {

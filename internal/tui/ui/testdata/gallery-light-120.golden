@@ -76,9 +76,9 @@
 [1;38;2;190;18;60m✕ I019[m  [38;2;92;92;106m01K6W3Y8GZ5M0T7C2RNB4QHXDE · decisions.md[m
   [38;2;30;30;38mdecision D1 has no date[m
   [38;2;164;164;178mmanual · fix: entries are '## <id>: <title>' followed by date: YYYY-MM-DD[m
-[1;38;2;154;91;0m▲ K005[m  [38;2;92;92;106mcomponents/cli.md[m
-  [38;2;30;30;38mscoped paths changed since 0da33f5: internal/cli/cli.go[m
-  [38;2;164;164;178mguided · fix: re-check the entry against the code, update it and confirmed_commit[m
+[1;38;2;154;91;0m▲ K007[m  [38;2;92;92;106mindex.md[m
+  [38;2;30;30;38mindex file is missing, outdated or no longer needed[m
+  [38;2;164;164;178mfixable · fix: run prep fmt to regenerate the OKF index files[m
 
 [1;38;2;194;65;12mMenu and modal[m
 [38;2;194;65;12m╭─[m [1;38;2;194;65;12mActions · 6DWQ1B TUI editing and transitions[m [38;2;194;65;12m───────────────╮[m

@@ -26,7 +26,7 @@ func cmdDoD(a *app, args []string) error {
 		return err
 	}
 	defer unlock()
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}

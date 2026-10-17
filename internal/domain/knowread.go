@@ -107,13 +107,14 @@ func Slug(heading string) string {
 // KnowledgeHit is one block of an entry, a paragraph or a top-level list
 // item with what it nests, matching a knowledge search.
 type KnowledgeHit struct {
-	Path    string `json:"path"`
-	Title   string `json:"title"`
-	Anchor  string `json:"anchor,omitempty"` // the section the block is in
-	Heading string `json:"heading,omitempty"`
-	Text    string `json:"text"`
-	Score   int    `json:"score"`
-	Matched int    `json:"matched"` // how many query terms the block or its heading matched
+	Superseded bool   `json:"superseded,omitempty"`
+	Path       string `json:"path"`
+	Title      string `json:"title"`
+	Anchor     string `json:"anchor,omitempty"` // the section the block is in
+	Heading    string `json:"heading,omitempty"`
+	Text       string `json:"text"`
+	Score      int    `json:"score"`
+	Matched    int    `json:"matched"` // how many query terms the block or its heading matched
 }
 
 // FindKnowledge ranks the blocks of all entries against a query, so a search
@@ -133,11 +134,15 @@ func (t *Tree) FindKnowledge(query string, limit int) []KnowledgeHit {
 	for path, e := range t.Knowledge {
 		title, desc := words(e.Title), words(e.Description)
 		scope := words(strings.Join(e.Scope, " ") + " " + path)
-		for _, s := range Sections(e.Body) {
+		text := e.Body
+		if strings.TrimSpace(text) == "" {
+			text = e.Description
+		}
+		for _, s := range Sections(text) {
 			heading := words(s.Heading)
 			for _, b := range Blocks(s.Own) {
 				body := words(b)
-				h := KnowledgeHit{Path: path, Title: e.Title, Anchor: s.Anchor, Heading: s.Heading, Text: b}
+				h := KnowledgeHit{Superseded: e.Superseded, Path: path, Title: e.Title, Anchor: s.Anchor, Heading: s.Heading, Text: b}
 				own := false
 				for _, term := range terms {
 					inBody := 0
@@ -149,10 +154,10 @@ func (t *Tree) FindKnowledge(query string, limit int) []KnowledgeHit {
 					}
 					inHeading := match(term, heading)
 					h.Score += max(4*match(term, title), 3*match(term, desc), 3*inHeading, 2*match(term, scope)) + 2*inBody
-					if inBody > 0 {
+					if inBody > 0 || match(term, title) > 0 || match(term, desc) > 0 || match(term, scope) > 0 {
 						own = true
 					}
-					if inBody > 0 || inHeading > 0 {
+					if inBody > 0 || inHeading > 0 || match(term, title) > 0 || match(term, desc) > 0 || match(term, scope) > 0 {
 						h.Matched++
 					}
 				}

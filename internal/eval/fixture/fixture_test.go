@@ -156,7 +156,7 @@ func TestSeamsDoNothingUnset(t *testing.T) {
 	newID := func(env ...string) string {
 		dir := t.TempDir()
 		base := append([]string{"PATH=" + os.Getenv("PATH"), "HOME=" + dir, "XDG_STATE_HOME=" + dir}, env...)
-		for _, args := range [][]string{{"init", "--no-bootstrap"}, {"new", "--title", "x", "--kind", "code", "--json"}} {
+		for _, args := range [][]string{{"init"}, {"new", "--title", "x", "--kind", "code", "--json"}} {
 			c := exec.Command(prepBin, append([]string{"--root", dir}, args...)...)
 			c.Env = base
 			out, err := c.CombinedOutput()
@@ -234,7 +234,7 @@ func TestSpecErrors(t *testing.T) {
 	}
 }
 
-func TestScopeBootstrapAndGenerate(t *testing.T) {
+func TestScopeEmptyKnowledgeAndGenerate(t *testing.T) {
 	const src = `
 name: big
 repo:
@@ -256,9 +256,6 @@ knowledge:
 	if out, _ := p.Prep("knowledge", "list"); strings.Count(out, "/components/") != 7 {
 		t.Errorf("entries:\n%s", out)
 	}
-	if out, err := p.Prep("knowledge", "confirm", "/components/a.md"); err != nil {
-		t.Errorf("a scoped entry can be confirmed: %v\n%s", err, out)
-	}
 	if st, err := os.Stat(filepath.Join(p.Dir, "test.sh")); err != nil || st.Mode()&0o100 == 0 {
 		t.Errorf("executable bit: %v %v", err, st)
 	}
@@ -278,10 +275,10 @@ knowledge:
 			t.Errorf("no generated issue in state %s: %v", want, states)
 		}
 	}
-	// bootstrap: the knowledge base starts empty, with the bootstrap issues
+	// Compatibility fixture option leaves knowledge empty; init creates no issues.
 	b := build(t, load(t, "name: fresh\nbootstrap: true\nrepo: {files: {main.go: \"package main\\n\"}}\n"))
-	if out, _ := b.Prep("list"); !strings.Contains(strings.ToLower(out), "bootstrap") && !strings.Contains(out, "knowledge") {
-		t.Errorf("bootstrap issues missing:\n%s", out)
+	if out, _ := b.Prep("list"); !strings.Contains(out, "no issues") {
+		t.Errorf("init created unexpected issues:\n%s", out)
 	}
 	if out, _ := b.Prep("knowledge", "list"); strings.Contains(out, "/overview.md") {
 		t.Errorf("a bootstrapped fixture should have no overview yet:\n%s", out)

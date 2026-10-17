@@ -1,4 +1,0 @@
-## D1: Capture review snapshots before approval; retain normal attention actions
-date: 2026-10-14
-
-Inbox is a read-only domain classification with completion reviews first. The TUI provides a dedicated review bundle, optional explicit scope selection for legacy/no-scope records, and an Approve dialog with a reason. Approve targets the exact displayed resolution and scoped snapshot; the adapter rechecks both immediately before using the shared domain Plan/CheckWrite/Apply pipeline. A changed snapshot refuses approval and requires refresh. Other attention categories navigate to normal issue/ready actions, with no review reject action. u opens Inbox; copy y returns the selected issue ID. Completion notices compare successful loads and preserve navigation/focus. Parallel workers have disjoint classifier and CLI adapter ownership; root owns TUI and integration.

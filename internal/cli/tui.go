@@ -62,8 +62,8 @@ func cmdTUI(a *app, args []string) error {
 func runTUI(root string, agent bool, previous string) (*tui.Switch, error) {
 	// Loads run in background goroutines, sometimes two at once (reload and
 	// check), so each builds its own stores instead of sharing the app's.
-	load := func(drift bool) (*domain.Tree, error) {
-		return domain.Load(mdstore.Open(root), &okf.Store{Root: root}, drift)
+	load := func() (*domain.Tree, error) {
+		return domain.Load(mdstore.Open(root), &okf.Store{Root: root})
 	}
 	var mu sync.Mutex
 	write := func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
@@ -77,7 +77,7 @@ func runTUI(root string, agent bool, previous string) (*tui.Switch, error) {
 			return "", err
 		}
 		defer unlock()
-		t, err := domain.Load(st, &okf.Store{Root: root}, false)
+		t, err := domain.Load(st, &okf.Store{Root: root})
 		if err != nil {
 			return "", err
 		}
@@ -110,13 +110,13 @@ func runTUI(root string, agent bool, previous string) (*tui.Switch, error) {
 		SaveLayout: saveLayout,
 		Actor:      humanActor(),
 		Write:      write,
-		Load:       func() (*domain.Tree, error) { return load(false) },
+		Load:       func() (*domain.Tree, error) { return load() },
 		Watch:      filepath.Join(root, mdstore.Dir),
 		// The last 2,000 events at most: the stream prunes itself near that.
 		Activity:   func() ([]activity.Event, error) { return activity.Read(filepath.Join(root, mdstore.Dir), 2000) },
 		StartAgent: agent,
 		Check: func() ([]domain.Diagnostic, error) {
-			t, err := load(true)
+			t, err := load()
 			if err != nil {
 				return nil, err
 			}

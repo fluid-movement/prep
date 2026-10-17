@@ -13,7 +13,7 @@ func (t *Tree) EntryIssues(path string) []string {
 	var out []string
 	for _, id := range t.IDs() {
 		r := t.Issues[id].Resolution
-		if r != nil && r.Documentation != nil && slices.Contains(r.Documentation.Entries, path) {
+		if (t.Knowledge[path] != nil && t.Knowledge[path].Issue == id) || (r != nil && r.Documentation != nil && slices.Contains(r.Documentation.Entries, path)) {
 			out = append(out, id)
 		}
 	}
@@ -42,6 +42,9 @@ func (t *Tree) IssueEntries(id string) []string {
 		for _, p := range r.Documentation.Entries {
 			add(p)
 		}
+	}
+	for _, e := range t.IssueRecords(id) {
+		add(e.Path)
 	}
 	return out
 }
@@ -107,7 +110,7 @@ func (t *Tree) QueryKnowledge(f KnowledgeFilter) []string {
 		if len(f.Statuses) > 0 && !slices.Contains(f.Statuses, e.Status) {
 			continue
 		}
-		if len(f.Scopes) > 0 && !slices.ContainsFunc(f.Scopes, func(path string) bool {
+		if len(f.Scopes) > 0 && !(e.ID != "" && len(e.Scope) == 0) && !slices.ContainsFunc(f.Scopes, func(path string) bool {
 			// Either side may be the wider one: --scope internal finds an entry
 			// scoped to internal/cli, --scope internal/cli/x.go one scoped to internal/cli.
 			return slices.ContainsFunc(e.Scope, func(s string) bool { return ScopeMatch(s, path) || ScopeMatch(path, s) })

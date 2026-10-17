@@ -20,17 +20,6 @@ func TestOpenQuestionsIgnoreHeadingsInFences(t *testing.T) {
 	}
 }
 
-func TestDecisionBodiesKeepFencedHeadings(t *testing.T) {
-	raw := "## D1: Template\ndate: 2026-10-05\n\nThe file:\n\n```md\n## inner\n```\n\n## D2: Next\ndate: 2026-10-06\n\nRows.\n"
-	ds, problems := parseDecisions(raw)
-	if len(problems) > 0 || len(ds) != 2 || ds[0].Body != "The file:\n\n```md\n## inner\n```" {
-		t.Fatalf("parsed %+v problems %v", ds, problems)
-	}
-	if got := canonicalDecisions(raw); got != raw {
-		t.Fatalf("canonical =\n%q\nwant\n%q", got, raw)
-	}
-}
-
 func TestNormalizeTracksFenceType(t *testing.T) {
 	in := "````md\n```go\nx  \n\n\n```\n````\ntail  "
 	want := "````md\n```go\nx  \n\n\n```\n````\ntail"

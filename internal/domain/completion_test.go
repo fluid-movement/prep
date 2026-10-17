@@ -11,9 +11,7 @@ func TestCompleteSourceStates(t *testing.T) {
 		for _, parent := range []bool{false, true} {
 			for _, state := range []State{StateOpen, StateDefined, StateReady, StateInProgress, StateDone, StateDropped} {
 				t.Run(string(kind)+"/"+string(state)+map[bool]string{true: "/parent", false: "/leaf"}[parent], func(t *testing.T) {
-					i := &Issue{ID: idA, Kind: kind, Body: "Do it.", Prose: "Do it.", Decisions: []Decision{{Outcome: true}}}
-					findings := "An answer."
-					i.Findings = &findings
+					i := &Issue{ID: idA, Kind: kind, Body: "Do it.", Prose: "Do it."}
 					if state != StateOpen {
 						i.Baselines = []Baseline{{Name: "20261017-120000", Kind: kind, Requirement: i.Body}}
 					}
@@ -40,7 +38,7 @@ func TestCompleteSourceStates(t *testing.T) {
 					if got := tree.Applicable(idA, OpComplete); got != want {
 						t.Fatalf("applicable = %v, want %v", got, want)
 					}
-					unmet, _ := tree.Gates(idA, OpComplete, &Input{Actor: "human:andre", NoImpact: "none"})
+					unmet, _ := tree.Gates(idA, OpComplete, &Input{Actor: "human:andre"})
 					if got := slices.Contains(codes(unmet), GateState); got == want {
 						t.Fatalf("state gates: %+v", unmet)
 					}
@@ -57,9 +55,9 @@ func TestDefinedResultCompletionGatesAndGuide(t *testing.T) {
 			tree := NewTree(Project{}, []*Issue{i}, nil, nil)
 			resultGate, command := GateOutcome, "prep decide "
 			if kind == KindResearch {
-				resultGate, command = GateFindings, "prep findings "
+				resultGate, command = GateFindings, "prep finding "
 			}
-			in := Input{Actor: "human:andre", NoImpact: "no impact"}
+			in := Input{Actor: "human:andre"}
 			if got := codes(must(tree.Gates(idA, OpComplete, &in))); !slices.Equal(got, []string{resultGate}) {
 				t.Fatalf("missing result: %v", got)
 			}
@@ -68,12 +66,11 @@ func TestDefinedResultCompletionGatesAndGuide(t *testing.T) {
 			if guide.Step != "complete" || !strings.Contains(text, command+idA) || !strings.Contains(text, "prep complete "+idA) || len(guide.Outputs) < 2 {
 				t.Fatalf("guide: %+v", guide)
 			}
-			if kind == KindDecision {
-				i.Decisions = []Decision{{Outcome: true}}
-			} else {
-				answer := "The answer."
-				i.Findings = &answer
+			typ := "decision"
+			if kind == KindResearch {
+				typ = "finding"
 			}
+			tree.Knowledge["/"+typ+"s/"+idB+".md"] = &Entry{ID: idB, Path: "/" + typ + "s/" + idB + ".md", Type: typ, Issue: idA, Outcome: true}
 			if unmet, _ := tree.Gates(idA, OpComplete, nil); len(unmet) != 0 {
 				t.Fatalf("guide completion blocked: %+v", unmet)
 			}
@@ -102,8 +99,8 @@ func TestDefinedResultCompletionGatesAndGuide(t *testing.T) {
 				t.Fatalf("unchecked: %v", got)
 			}
 			i.Criteria[0].Checked = true
-			if got := codes(must(tree.Gates(idA, OpComplete, &Input{}))); !slices.Equal(got, []string{GateDocs}) {
-				t.Fatalf("documentation: %v", got)
+			if got := codes(must(tree.Gates(idA, OpComplete, &Input{}))); len(got) != 0 {
+				t.Fatalf("completion: %v", got)
 			}
 			i.Body = "Changed question."
 			if got := codes(must(tree.Gates(idA, OpComplete, &in))); !slices.Equal(got, []string{GateStale}) {

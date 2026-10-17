@@ -2,84 +2,122 @@ package domain
 
 import (
 	"fmt"
-	"path"
+	"sort"
 	"strings"
 	"time"
 )
 
-// KnowledgeEdit creates or updates one knowledge entry. Nil fields stay as
-// they are on update. The path never changes: entries are never renamed.
-type KnowledgeEdit struct {
-	Path            string // bundle-relative, normalized by PlanKnowledge
-	New             bool
-	Type            *string
-	Title           *string
-	Description     *string
-	Status          *string
-	Scope           *[]string
-	ConfirmedCommit *string
-	Body            *string
-	Actor           string
-	At              time.Time
+// KnowledgeRecord creates an immutable decision or finding in the knowledge base.
+type KnowledgeRecord struct {
+	Path        string
+	ID          string
+	Type        string
+	Title       string
+	Description string
+	Body        string
+	Issue       string
+	Supersedes  []string
+	Scope       []string
+	Outcome     bool
+	At          time.Time
 }
 
-// PlanKnowledge checks a knowledge write as far as the domain can without
-// the adapter. The adapter then renders the entry (KnowledgeStore.Render)
-// and CheckWrite validates the tree with it, including links.
-func (t *Tree) PlanKnowledge(in KnowledgeEdit) (*Change, error) {
-	p := NormalizeEntryPath(in.Path)
-	if strings.Contains(p, "..") || strings.Contains(p, "//") || p == "/.md" || strings.ContainsAny(p, " \t\\") {
-		return nil, &Error{Code: ErrUsage, Message: fmt.Sprintf("%q is not a valid entry path; use a bundle path such as /components/export.md", in.Path)}
+// PlanKnowledgeRecord validates a new record. Existing records are never changed.
+func (t *Tree) PlanKnowledgeRecord(in KnowledgeRecord) (*Change, error) {
+	if in.Type != "decision" && in.Type != "finding" {
+		return nil, &Error{Code: ErrUsage, Message: "record type must be decision or finding"}
 	}
-	if b := path.Base(p); b == "index.md" || b == "log.md" {
-		return nil, &Error{Code: ErrUsage, Message: fmt.Sprintf("%s is reserved: prep generates index.md and keeps log.md for a chronological log; name the entry differently", p)}
+	if !ValidID(in.ID) {
+		return nil, &Error{Code: ErrUsage, Message: "record ID must be a ULID"}
 	}
-	in.Path = p
+	in.Title, in.Description = strings.TrimSpace(in.Title), strings.TrimSpace(in.Description)
+	if in.Title == "" || in.Description == "" || strings.ContainsAny(in.Description, "\r\n") {
+		return nil, &Error{Code: ErrUsage, Message: "--title and a one-line --description are required"}
+	}
+	if in.Issue != "" && t.Issues[in.Issue] == nil {
+		return nil, &Error{Code: ErrNotFound, Message: "no issue " + in.Issue}
+	}
+	if in.Type == "finding" && (in.Outcome || len(in.Supersedes) > 0) {
+		return nil, &Error{Code: ErrUsage, Message: "outcome and supersedes are decision fields"}
+	}
 	in.At = in.At.UTC().Truncate(time.Second)
-	if in.Body != nil && strings.TrimSpace(*in.Body) == "" {
-		return nil, &Error{Code: ErrUsage, Message: "the body is empty; an entry needs content (nothing was written)"}
+	for _, scope := range in.Scope {
+		if strings.TrimSpace(scope) == "" {
+			return nil, &Error{Code: ErrUsage, Message: "scope must be a non-empty path glob"}
+		}
 	}
-	exists := t.Knowledge[p] != nil
-	empty := func(s *string) bool { return s == nil || strings.TrimSpace(*s) == "" }
-	switch {
-	case in.New && exists:
-		return nil, &Error{Code: ErrInvalid, Message: fmt.Sprintf("entry %s already exists; use prep knowledge update", p)}
-	case in.New:
-		var unmet []Unmet
-		for _, f := range []struct {
-			v    *string
-			name string
-		}{{in.Type, "--type"}, {in.Title, "--title"}, {in.Description, "--description"}, {in.Body, "--body or --body-file"}} {
-			if empty(f.v) {
-				unmet = append(unmet, Unmet{GateRequirement, f.name + " is required"})
+	in.Supersedes = append([]string(nil), in.Supersedes...)
+	for n, ref := range in.Supersedes {
+		e, err := t.ResolveRecord(ref)
+		if err != nil {
+			return nil, err
+		}
+		if e.ID >= in.ID {
+			return nil, &Error{Code: ErrUsage, Message: "supersedes must name an older record"}
+		}
+		in.Supersedes[n] = e.ID
+	}
+	in.Path = "/" + in.Type + "s/" + in.ID + ".md"
+	if t.Knowledge[in.Path] != nil {
+		return nil, &Error{Code: ErrConflict, Message: "record already exists: " + in.ID}
+	}
+	return &Change{Op: Op(in.Type), IssueID: in.Issue, Knowledge: &in}, nil
+}
+
+// ResolveRecord accepts a record ID, unique suffix, or bundle path.
+func (t *Tree) ResolveRecord(ref string) (*Entry, error) {
+	if strings.TrimSpace(ref) == "" {
+		return nil, &Error{Code: ErrUsage, Message: "record reference cannot be empty"}
+	}
+	var matches []*Entry
+	for _, e := range t.Knowledge {
+		if e.ID != "" && (e.ID == strings.ToUpper(ref) || strings.HasSuffix(e.ID, strings.ToUpper(ref)) || e.Path == NormalizeEntryPath(ref)) {
+			matches = append(matches, e)
+		}
+	}
+	if len(matches) == 1 {
+		return matches[0], nil
+	}
+	if len(matches) > 1 {
+		return nil, &Error{Code: ErrAmbiguous, Message: fmt.Sprintf("record %q is ambiguous", ref)}
+	}
+	return nil, &Error{Code: ErrNotFound, Message: fmt.Sprintf("no knowledge record %q", ref)}
+}
+
+// IssueRecords returns linked records in stable chronological order.
+func (t *Tree) IssueRecords(id string) []*Entry {
+	var out []*Entry
+	for _, e := range t.Knowledge {
+		if e.ID != "" && e.Issue == id {
+			out = append(out, e)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
+	return out
+}
+func (t *Tree) HasRecord(id, typ string, outcome bool) bool {
+	for _, e := range t.IssueRecords(id) {
+		if e.Type == typ && (!outcome || e.Outcome) {
+			return true
+		}
+	}
+	return false
+}
+
+// DeriveSuperseded recomputes status solely from newer records.
+func (t *Tree) DeriveSuperseded() {
+	byID := map[string]*Entry{}
+	for _, e := range t.Knowledge {
+		e.Superseded = false
+		if e.ID != "" {
+			byID[e.ID] = e
+		}
+	}
+	for _, e := range t.Knowledge {
+		for _, id := range e.Supersedes {
+			if old := byID[id]; old != nil && old.ID < e.ID {
+				old.Superseded = true
 			}
 		}
-		if len(unmet) > 0 {
-			return nil, &Error{Code: ErrUsage, Message: "cannot create " + p, Unmet: unmet}
-		}
-	case !exists:
-		return nil, &Error{Code: ErrNotFound, Message: fmt.Sprintf("no knowledge entry %s; prep knowledge new creates one", p)}
-	case in.Type == nil && in.Title == nil && in.Description == nil && in.Status == nil && in.Scope == nil && in.ConfirmedCommit == nil && in.Body == nil:
-		return nil, &Error{Code: ErrUsage, Message: "nothing to change: pass a field, --scope or --body"}
 	}
-	if in.New && p != OverviewEntry && !t.Bootstrapped() {
-		return nil, &Error{Code: ErrGate, Message: "cannot create " + p, Unmet: []Unmet{{GateBootstrap, t.BootstrapAlert() + " Entries come after the overview."}}}
-	}
-	if in.ConfirmedCommit != nil && *in.ConfirmedCommit != "" {
-		scope := t.scopeOf(p, in.Scope)
-		if len(scope) == 0 {
-			return nil, &Error{Code: ErrInvalid, Message: fmt.Sprintf("%s has no scope; confirmed_commit only means something for scoped entries", p)}
-		}
-	}
-	return &Change{Op: "knowledge", Knowledge: &in}, nil
-}
-
-func (t *Tree) scopeOf(p string, edit *[]string) []string {
-	if edit != nil {
-		return *edit
-	}
-	if e := t.Knowledge[p]; e != nil {
-		return e.Scope
-	}
-	return nil
 }

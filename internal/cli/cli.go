@@ -91,14 +91,14 @@ var commands []command
 
 func init() {
 	commands = []command{
-		{"init", true, "init [--no-bootstrap]      create .prep and the knowledge base bootstrap issues", cmdInit},
+		{"init", true, "init                      create .prep with an empty knowledge base", cmdInit},
 		{"prime", false, "prime [--max N]            session-start briefing: parents, actionable count, alerts", cmdPrime},
 		{"hook", false, "hook session-start|prompt|finish|before-tool|after-tool [--harness claude-code|codex] [--plugin path]  shared lifecycle hooks (event JSON on stdin)", cmdHook},
 		{"guide", false, "guide <id>                 step contract: state, transitions, unmet gates, inputs, outputs", cmdGuide},
 		{"list", false, "list [query flags]         query issues: --state --kind --tag --priority --under --stale --actionable --blocked --parent --leaf --top --text --tree --view --max N; not-<value> negates (--state not-open)", cmdList},
 		{"next", false, "next [--under <id>]        actionable issues: ready, not stale, dependencies done, unclaimed", cmdNext},
 		{"show", false, "show <id>                  read one issue with its derived state", cmdShow},
-		{"check", false, "check [--no-drift]         validate the whole tree", cmdCheck},
+		{"check", false, "check                      validate the whole tree", cmdCheck},
 		{"activity", false, "activity [--max N] [--actor a]  what agents did with prep, newest last (local, per machine); activity add: harness events as JSON lines on stdin", cmdActivity},
 		{"flags", false, "flags                      every query flag with the values it accepts now and their issue counts", cmdFlags},
 		{"knowledge", false, "knowledge list|find|show  read knowledge entries", cmdKnowledge},
@@ -107,18 +107,17 @@ func init() {
 		{"new", true, "new --title T --kind K     create an issue [--parent id] [--depends-on id]... [--tag t]... [--priority p] [--body text | --body-file path|-]", cmdNew},
 		{"edit", true, "edit <id>                  change [--title T] [--kind K] [--parent id|''] [--depends-on id|'']... [--tag t|'']... [--priority p] [--body text | --body-file path|-]", cmdEdit},
 		{"context", true, "context <id>               replace the implementation context: --body text | --body-file path|-", recordCmd(domain.OpContext)},
-		{"decide", true, "decide <id> --title T      append a decision [--body text | --body-file path|-] [--supersedes D<n>] [--outcome]", recordCmd(domain.OpDecide)},
+		{"decide", true, "decide [<id>] --title T --description D  write a decision record [--supersedes <record>] [--scope <glob>] [--outcome]", knowledgeRecordCmd("decision")},
 		{"criterion", true, "criterion <id>             acceptance criteria: --add text, --check n, --uncheck n, --remove n (repeatable)", recordCmd(domain.OpCriterion)},
 		{"dod", true, "dod --add|--remove <item>  edit the project Definition of Done guidance", cmdDoD},
-		{"findings", true, "findings <id>              replace a research issue's findings: --body text | --body-file path|-", recordCmd(domain.OpFindings)},
+		{"finding", true, "finding [<id>] --title T --description D  write a finding record [--scope <glob>]", knowledgeRecordCmd("finding")},
 		{"log", true, "log <id> <text>            append a line to the work log", recordCmd(domain.OpLog)},
 		{"focus", true, "focus <id> | --clear        set or clear the issue you work on, for prep tui's Agent view (local; writes no records)", cmdFocus},
-		{"knowledge", true, "knowledge new|update|confirm|bootstrap  update knowledge entries; confirm <entry>... | --drifted", cmdKnowledge},
 		{"define", true, "define <id> [--trivial]    write a requirement baseline (open questions must be empty); --trivial re-baselines a stale issue's trivial change, enrichment stays valid", opCmd(domain.OpDefine)},
 		{"ready", true, "ready <id> [--note]        sign off enrichment against the newest baseline", opCmd(domain.OpReady)},
 		{"claim", true, "claim <id> [--note]        start work", opCmd(domain.OpClaim)},
 		{"release", true, "release <id> [--reason]    stop work without finishing", opCmd(domain.OpRelease)},
-		{"complete", true, "complete <id>              finish: [--commit <hash>] --docs <entry>... | --no-impact <reason> [--note]", opCmd(domain.OpComplete)},
+		{"complete", true, "complete <id>              finish: [--commit <hash>] [--note]", opCmd(domain.OpComplete)},
 		{"reopen", true, "reopen <id> --reason <text> reopen a done issue: its resolution moves to the work log", opCmd(domain.OpReopen)},
 		{"drop", true, "drop <id> --reason <text>  drop an issue in any unresolved state", opCmd(domain.OpDrop)},
 		{"fmt", true, "fmt [--check]              rewrite files in canonical format (--check: report only, exit 1 on changes)", cmdFmt},
@@ -376,13 +375,13 @@ func (a *app) lockWrite() (func(), error) {
 	return func() { a.holding = false; release() }, nil
 }
 
-func (a *app) load(drift bool) (*domain.Tree, error) {
+func (a *app) load() (*domain.Tree, error) {
 	if !a.holding {
 		if err := a.open(); err != nil {
 			return nil, err
 		}
 	}
-	return domain.Load(a.store, a.kstore, drift)
+	return domain.Load(a.store, a.kstore)
 }
 
 // parse runs a flag set allowing flags and positionals in any order.

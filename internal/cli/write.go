@@ -80,7 +80,6 @@ func (a *app) reportWrite(r writeResult) {
 
 func cmdInit(a *app, args []string) error {
 	fs := flag.NewFlagSet("init", flag.ContinueOnError)
-	noBootstrap := fs.Bool("no-bootstrap", false, "do not create the knowledge base bootstrap issues")
 	newID := fs.Bool("new-id", false, "give an initialized project a new permanent ID (a fork that becomes its own project)")
 	if _, err := parse(fs, args); err != nil {
 		return err
@@ -106,13 +105,6 @@ func cmdInit(a *app, args []string) error {
 	}
 	a.store = st
 	a.afterWrite(files)
-	if !*noBootstrap {
-		more, err := a.bootstrap()
-		if err != nil {
-			return err
-		}
-		files = append(files, more...)
-	}
 	a.reportWrite(writeResult{OK: true, Op: "init", Files: files})
 	return nil
 }
@@ -156,24 +148,6 @@ func (a *app) fixIdentity() ([]string, error) {
 		return nil, err
 	}
 	return []string{mdstore.Dir + "/project.md"}, nil
-}
-
-// bootstrap creates the knowledge base bootstrap issues.
-func (a *app) bootstrap() ([]string, error) {
-	unlock, err := a.lockWrite()
-	if err != nil {
-		return nil, err
-	}
-	defer unlock()
-	t, err := a.load(false)
-	if err != nil {
-		return nil, err
-	}
-	cs, err := t.PlanBootstrap(a.actor, a.now(), a.entropy)
-	if err != nil {
-		return nil, err
-	}
-	return a.applyAll(t, cs)
 }
 
 // applyAll writes planned changes one after the other through the write
@@ -230,7 +204,7 @@ func cmdNew(a *app, args []string) error {
 		return err
 	}
 	defer unlock()
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -304,7 +278,7 @@ func cmdEdit(a *app, args []string) error {
 		return err
 	}
 	defer unlock()
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -370,7 +344,7 @@ func cmdEdit(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	after, err := a.load(false)
+	after, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -383,7 +357,6 @@ func opCmd(op domain.Op) func(*app, []string) error {
 	return func(a *app, args []string) error {
 		fs := flag.NewFlagSet(string(op), flag.ContinueOnError)
 		in := domain.Input{}
-		var docs multi
 		var trivial bool
 		switch op {
 		case domain.OpDefine:
@@ -394,8 +367,6 @@ func opCmd(op domain.Op) func(*app, []string) error {
 			fs.StringVar(&in.Reason, "reason", "", "why work stops")
 		case domain.OpComplete:
 			fs.StringVar(&in.Commit, "commit", "", "commit hash (code issues)")
-			fs.Var(&docs, "docs", "knowledge entry updated or created (repeatable)")
-			fs.StringVar(&in.NoImpact, "no-impact", "", "why the knowledge base is unaffected")
 			fs.StringVar(&in.Note, "note", "", "resolution note")
 		case domain.OpDrop:
 			fs.StringVar(&in.Reason, "reason", "", "why the issue is dropped")
@@ -415,13 +386,12 @@ func opCmd(op domain.Op) func(*app, []string) error {
 		if trivial {
 			op = domain.OpTrivial
 		}
-		in.Docs = docs
 		unlock, err := a.lockWrite()
 		if err != nil {
 			return err
 		}
 		defer unlock()
-		t, err := a.load(false)
+		t, err := a.load()
 		if err != nil {
 			return err
 		}
@@ -542,15 +512,11 @@ func recordCmd(op domain.Op) func(*app, []string) error {
 		var adds multi
 		var checks, unchecks, removes intList
 		switch op {
-		case domain.OpContext, domain.OpFindings, domain.OpDecide:
+		case domain.OpContext:
 			fs.StringVar(&body, "body", "", "text")
 			fs.StringVar(&bodyFile, "body-file", "", "read the text from a file (- for stdin)")
 		}
 		switch op {
-		case domain.OpDecide:
-			fs.StringVar(&in.Title, "title", "", "decision title")
-			fs.StringVar(&in.Supersedes, "supersedes", "", "ID of the decision this one replaces")
-			fs.BoolVar(&in.Outcome, "outcome", false, "the decision answers a decision issue")
 		case domain.OpCriterion:
 			fs.Var(&adds, "add", "add a criterion (repeatable)")
 			fs.Var(&checks, "check", "check criterion n (repeatable)")
@@ -576,10 +542,10 @@ func recordCmd(op domain.Op) func(*app, []string) error {
 		if set["body"] && set["body-file"] {
 			return usageErr("pass --body or --body-file, not both")
 		}
-		if (op == domain.OpContext || op == domain.OpFindings) && !set["body"] && !set["body-file"] {
+		if op == domain.OpContext && !set["body"] && !set["body-file"] {
 			return usageErr("%s replaces the whole record: pass --body or --body-file", op)
 		}
-		if op == domain.OpContext || op == domain.OpFindings || op == domain.OpDecide {
+		if op == domain.OpContext {
 			if in.Text, err = a.readBody(body, bodyFile); err != nil {
 				return err
 			}
@@ -601,7 +567,7 @@ func recordCmd(op domain.Op) func(*app, []string) error {
 			return err
 		}
 		defer unlock()
-		t, err := a.load(false)
+		t, err := a.load()
 		if err != nil {
 			return err
 		}
@@ -620,10 +586,6 @@ func recordCmd(op domain.Op) func(*app, []string) error {
 		files, err := a.store.Apply(c)
 		if err != nil {
 			return err
-		}
-		msg := fmt.Sprintf("prep: %s %s", op, id)
-		if c.Decision != nil {
-			msg += fmt.Sprintf(" %s %s", c.Decision.ID, c.Decision.Title)
 		}
 		a.afterWrite(files)
 		a.note(issueEvent(t, string(op), id, recordVerb(op, in, c)))
