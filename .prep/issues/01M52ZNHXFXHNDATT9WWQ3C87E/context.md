@@ -14,4 +14,4 @@ Records of removed features: no prep command deletes them and the record hook bl
 
 Known: a hook false positive blocks commands whose text contains the records directory path, even reads or prep writes; rephrase. Flaky tests: TestLiveRunner, TestStatuses/timeout and TestEvalMutate under load (logged on 01M52ZQ5YCA96FHQT9WQB6M8C2).
 
-Next: get the user's OK on the contract removal draft (01M52ZQAGVQ5HX0GTBX7R2P47G), define and ready it, hand it to Codex; meanwhile settle the gates decision (01M52ZR56WW8WDH9QGKJFN32FP) with the user.
+Next: Codex implements the contract removal (01M52ZQAGVQ5HX0GTBX7R2P47G) in prep-wt/contract-removal; check it, add the contract stage to convert-records.py from the record files the implementer logs, convert with the user's go-ahead, complete with complete.py. The gates decision (01M52ZR56WW8WDH9QGKJFN32FP) has its outcome; its implementation 01M54KB1FPD39RBHZTAK5NSWVM is drafted and waits for the user's OK. Complete the decision issue itself once that lands (today it still needs ready and claim).
