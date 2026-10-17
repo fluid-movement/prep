@@ -1465,10 +1465,16 @@ func (m *Model) listPane(w, h int) string {
 		c := m.cursor[tb.name]
 		off := listOffset(m.offset[tb.name], c, len(tb.rows), rows, !m.wheeled)
 		m.offset[tb.name] = off
-		var lines []string
+		var shown []ui.Row
 		for k := off; k < len(tb.rows) && k < off+rows; k++ {
-			m.mark(fmt.Sprintf("row:%d", k), paneInner.x, paneInner.y+len(bar)+k-off, inner, 1)
-			lines = append(lines, ui.ListRow(m.th, m.row(tb.rows[k]), k == c, inner))
+			shown = append(shown, m.row(tb.rows[k]))
+		}
+		cols := ui.FitColumns(m.th, shown, inner)
+		var lines []string
+		for j, r := range shown {
+			k := off + j
+			m.mark(fmt.Sprintf("row:%d", k), paneInner.x, paneInner.y+len(bar)+j, inner, 1)
+			lines = append(lines, ui.ListRow(m.th, r, cols, k == c, inner))
 		}
 		body = strings.Join(lines, "\n")
 	}

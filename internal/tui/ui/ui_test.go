@@ -130,39 +130,91 @@ func golden(t *testing.T, name, got string) {
 	}
 }
 
-// A narrow list row drops the ID first, then the state label, then the kind,
-// and stops once the title has 30 cells; the state glyph always stays.
-func TestListRowDropsColumnsInOrder(t *testing.T) {
+// listOf makes n rows of the same shape and the width at which each is cut
+// by extra characters while every column is shown.
+func listOf(th *theme.Theme, n, extra int) ([]Row, int) {
+	var rows []Row
+	for k := 0; k < n; k++ {
+		rows = append(rows, Row{ID: "PWJH2F", State: domain.StateInProgress, Kind: domain.KindCode, Title: "Findings from the first pass of the agent behavior test suite"})
+	}
+	return rows, rowWidth(th, rows[0], AllColumns) - extra
+}
+
+// A list whose titles fit keeps every column, even in a narrow pane.
+func TestFitColumnsKeepsAllWhenTitlesFit(t *testing.T) {
 	th := testTheme(true)
-	base := Row{ID: "PWJH2F", State: domain.StateInProgress, Kind: domain.KindCode, Title: "Findings from the first pass of the agent behavior test suite"}
+	rows, _ := listOf(th, 4, 0)
+	for _, w := range []int{120, rowWidth(th, rows[0], AllColumns)} {
+		if c := FitColumns(th, rows, w); c != AllColumns {
+			t.Errorf("width %d: columns %+v, want all", w, c)
+		}
+	}
+	// Short titles in a narrow pane fit too.
+	short := []Row{{ID: "PWJH2F", State: domain.StateDone, Kind: domain.KindCode, Title: "Short"}}
+	if c := FitColumns(th, short, 35); c != AllColumns {
+		t.Errorf("short title: columns %+v, want all", c)
+	}
+}
+
+// When the cut-off title characters (each row up to 10) exceed 30, the list
+// drops the ID, then the state label, then the kind.
+func TestFitColumnsDropsInOrder(t *testing.T) {
+	th := testTheme(true)
 	cases := []struct {
-		width           int
-		id, label, kind bool
+		extra int // characters each of 4 rows is cut by with every column
+		want  Columns
 	}{
-		{100, true, true, true},
-		{61, false, true, true},  // 29 cells short with the ID: only the ID goes
-		{50, false, false, true}, // the label goes too, the kind still fits
-		{40, false, false, false},
+		{7, AllColumns},                    // 4*7 = 28, within the budget
+		{8, Columns{false, true, true}},    // 32: the ID goes, 4 cut remains
+		{15, Columns{false, false, true}},  // the ID alone leaves 4*8 = 32
+		{26, Columns{false, false, true}},  // 4*7 = 28 after ID and label
+		{27, Columns{false, false, false}}, // 4*8 = 32 after both
 	}
 	for _, c := range cases {
+		rows, w := listOf(th, 4, c.extra)
+		if got := FitColumns(th, rows, w); got != c.want {
+			t.Errorf("cut %d: columns %+v, want %+v", c.extra, got, c.want)
+		}
+	}
+}
+
+// One very long title alone adds at most 10 to the total and drops nothing.
+func TestFitColumnsCapsOneLongTitle(t *testing.T) {
+	th := testTheme(true)
+	rows := []Row{{ID: "PWJH2F", State: domain.StateOpen, Kind: domain.KindCode, Title: strings.Repeat("long ", 60)}}
+	if c := FitColumns(th, rows, 60); c != AllColumns {
+		t.Errorf("columns %+v, want all", c)
+	}
+}
+
+// Every row is drawn with the columns the list chose, whatever its tree
+// lines or note, so the glyphs stay aligned; the state glyph always stays.
+func TestListRowUsesGivenColumns(t *testing.T) {
+	th := testTheme(true)
+	plain := Row{ID: "PWJH2F", State: domain.StateDone, Kind: domain.KindDecision, Title: "Choose the default format"}
+	busy := Row{ID: "EPMJ6R", State: domain.StateDefined, Kind: domain.KindCode, Title: "JSON writer", Tree: "└─ ", Note: "■■■■■ 0/1"}
+	rows := []Row{plain, busy}
+	for _, width := range []int{100, 61, 50, 40} {
+		c := FitColumns(th, rows, width)
 		for _, dimmed := range []bool{false, true} {
-			r := base
-			r.Dimmed = dimmed
-			line := ansi.Strip(ListRow(th, r, false, c.width))
-			if got := strings.Contains(line, "PWJH2F"); got != c.id {
-				t.Errorf("width %d dimmed %v: ID shown %v, want %v: %q", c.width, dimmed, got, c.id, line)
-			}
-			if got := strings.Contains(line, "in progress"); got != c.label {
-				t.Errorf("width %d dimmed %v: label shown %v, want %v: %q", c.width, dimmed, got, c.label, line)
-			}
-			if got := strings.Contains(line, "code"); got != c.kind {
-				t.Errorf("width %d dimmed %v: kind shown %v, want %v: %q", c.width, dimmed, got, c.kind, line)
-			}
-			if !strings.Contains(line, "▶") {
-				t.Errorf("width %d dimmed %v: state glyph dropped: %q", c.width, dimmed, line)
-			}
-			if w := ansi.StringWidth(line); w > c.width {
-				t.Errorf("width %d dimmed %v: row is %d cells wide: %q", c.width, dimmed, w, line)
+			for _, r := range rows {
+				r.Dimmed = dimmed
+				line := ansi.Strip(ListRow(th, r, c, false, width))
+				if got := strings.Contains(line, r.ID); got != c.ID {
+					t.Errorf("width %d: ID shown %v, want %v: %q", width, got, c.ID, line)
+				}
+				if got := strings.Contains(line, StateLabel(r.State)); got != c.Label {
+					t.Errorf("width %d: label shown %v, want %v: %q", width, got, c.Label, line)
+				}
+				if got := strings.Contains(line, string(r.Kind)); got != c.Kind {
+					t.Errorf("width %d: kind shown %v, want %v: %q", width, got, c.Kind, line)
+				}
+				if !strings.Contains(line, stateGlyphs[r.State]) {
+					t.Errorf("width %d: state glyph dropped: %q", width, line)
+				}
+				if w := ansi.StringWidth(line); w > width {
+					t.Errorf("width %d: row is %d cells wide: %q", width, w, line)
+				}
 			}
 		}
 	}
@@ -197,19 +249,5 @@ func TestMenuRowKeepsLongLabelsOnOneLine(t *testing.T) {
 	}
 	if w := ansi.StringWidth(row); w != 40 {
 		t.Fatalf("row width %d, want 40", w)
-	}
-}
-
-// Every row of a list keeps the same columns, whatever its tree lines or
-// note, so the glyphs stay aligned.
-func TestListRowColumnsDependOnWidthOnly(t *testing.T) {
-	th := testTheme(true)
-	plain := Row{ID: "PWJH2F", State: domain.StateDone, Kind: domain.KindDecision, Title: "Choose the default format"}
-	busy := Row{ID: "EPMJ6R", State: domain.StateDefined, Kind: domain.KindCode, Title: "JSON writer", Tree: "└─ ", Note: "■■■■■ 0/1"}
-	for _, width := range []int{100, 61, 55, 50, 40} {
-		a, b := ansi.Strip(ListRow(th, plain, false, width)), ansi.Strip(ListRow(th, busy, false, width))
-		if fitColumns(plain, width) != fitColumns(busy, width) {
-			t.Errorf("width %d: columns differ between rows:\n%q\n%q", width, a, b)
-		}
 	}
 }
