@@ -1,5 +1,5 @@
-- [ ] Each CLI write command holds the checkout lock from load to its last write, and a second concurrent writer plans on the first one's result, covered by a test
-- [ ] The TUI's write holds the same lock across its load, plan and apply
-- [ ] The transaction journal, roll-forward recovery and hash-snapshot checks are gone; git grep finds none of their functions
-- [ ] The state-defining file is written last for define, ready, claim and complete, covered by a test for complete
-- [ ] Local write safety knowledge describes the lock and write order, prep check reports no errors, and GitHub CI on main is green
+- [x] Each CLI write command holds the checkout lock from load to its last write, and a second concurrent writer plans on the first one's result, covered by a test
+- [x] The TUI's write holds the same lock across its load, plan and apply
+- [x] The transaction journal, roll-forward recovery and hash-snapshot checks are gone; git grep finds none of their functions
+- [x] The state-defining file is written last for define, ready, claim and complete, covered by a test for complete
+- [x] Local write safety knowledge describes the lock and write order, prep check reports no errors, and GitHub CI on main is green
