@@ -37,21 +37,6 @@ func TestResolveExternalTreatsMalformedTargetAsUnknown(t *testing.T) {
 	if !tree.Blocked(dependentID) {
 		t.Fatal("malformed external target must block claim")
 	}
-	change, err := tree.PlanDependencyOverride(dependentID, domain.DependencyOverrideInput{Ref: ref, Actor: "human:alex", Reason: "Proceed while target is malformed", Now: time.Now()})
-	if err != nil {
-		t.Fatal(err)
-	}
-	withOverride := tree.Apply(change)
-	if withOverride.DependencyOverrideStatus(dependentID, ref) != "current" {
-		t.Fatal("override should match malformed source observation")
-	}
-	if err := os.WriteFile(filepath.Join(issueDir, "issue.md"), []byte("---\ntitle: [still invalid but changed\n---\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	ResolveExternal(withOverride)
-	if withOverride.DependencyOverrideStatus(dependentID, ref) != "stale" {
-		t.Fatal("uncommitted target record change must stale override")
-	}
 }
 
 func TestResolveExternalChangedProjectIdentityDoesNotSatisfyDependency(t *testing.T) {

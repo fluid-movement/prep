@@ -139,7 +139,7 @@ func (m *Model) xDepLine(ref string, k int, selected bool, key string, inner int
 	x := m.tree.ExternalDependency(m.selected(), ref)
 	sub := m.th.S.Subtle
 	lead := sub.Render("← needs ")
-	if x.Outcome != domain.DependencySatisfied && x.OverrideStatus != "current" {
+	if x.Outcome != domain.DependencySatisfied {
 		lead = lipgloss.NewStyle().Foreground(m.th.C.Warning).Render("← needs ")
 	}
 	l := ui.Link{Lead: lead + m.th.S.Muted.Render(x.Link+" › "), State: x.State, ID: shortID(x.ID), Title: x.Title, Key: key}
@@ -153,19 +153,6 @@ func (m *Model) xDepLine(ref string, k int, selected bool, key string, inner int
 		}
 		if x.Remote != "" {
 			l.Title += sub.Render(" · clone " + x.Remote)
-		}
-	}
-	if x.RequiresApproval && x.ReviewStatus != domain.ReviewApproved {
-		status := x.ReviewStatus
-		if status == domain.ReviewNone && x.Status != domain.XFound {
-			status = "unknown"
-		}
-		l.Title += sub.Render(" · approval " + status + " required")
-	}
-	if x.OverrideStatus != "none" {
-		l.Title += sub.Render(" · override " + x.OverrideStatus)
-		if x.OverrideReason != "" {
-			l.Title += sub.Render(" by " + x.OverrideBy + ": " + x.OverrideReason)
 		}
 	}
 	if x.ProvenanceWarning != "" {

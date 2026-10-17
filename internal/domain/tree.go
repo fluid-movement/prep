@@ -3,7 +3,6 @@ package domain
 import (
 	"fmt"
 	"regexp"
-	"slices"
 	"sort"
 	"strings"
 )
@@ -193,21 +192,11 @@ func (t *Tree) Drifted(i *Issue) bool {
 }
 
 // UnresolvedDeps returns dependencies that are not satisfied. Unknown
-// cross-project dependencies block unless the newest human override matches
-// both the current source observation and local requirement snapshot.
+// cross-project dependencies block.
 func (t *Tree) UnresolvedDeps(id string) []string {
 	var out []string
 	for _, d := range t.Issues[id].DependsOn {
-		switch t.DependencyOutcome(d) {
-		case DependencySatisfied:
-			if slices.Contains(t.Issues[id].DependsOnApproval, d) && t.DependencyApprovalStatus(d) != ReviewApproved {
-				out = append(out, d)
-			}
-		case DependencyUnknown:
-			if slices.Contains(t.Issues[id].DependsOnApproval, d) && t.DependencyApprovalStatus(d) != ReviewApproved || t.DependencyOverrideStatus(id, d) != "current" {
-				out = append(out, d)
-			}
-		default:
+		if t.DependencyOutcome(d) != DependencySatisfied {
 			out = append(out, d)
 		}
 	}

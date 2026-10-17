@@ -195,7 +195,6 @@ def outcome(project, binary, issue_id, prep_session):
         "issue_state": show_json.get("state"),
         "stale": show_json.get("stale"),
         "evidence_pending": show_json.get("evidence_pending"),
-        "resolution_review_status": (show_json.get("resolution_review") or {}).get("status"),
         "knowledge_reviews": knowledge_reviews,
         "evidence_reports": evidence_records,
         "evidence_report_query_ok": evidence.returncode == 0,

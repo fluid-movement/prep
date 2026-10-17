@@ -495,7 +495,6 @@ knowledge_reviews:
       - go.sum
       - justfile
     snapshot: b26e4b09ac9a13351ff264cd121940a156b8ecb40bf31e1ba33db24c73f80940
-generation: 2
 outcome: done
 by: codex
 at: 2026-10-14T16:34:56Z

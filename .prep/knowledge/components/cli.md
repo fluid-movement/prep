@@ -42,8 +42,7 @@ confirmed_commit: 8030cc0c6ca5ae85dd8d4b1e186d0aab1b963960
 - **Eval**: test seams `PREP_TEST_NOW`, `PREP_TEST_SEED` (`testSeams`); [prep eval](/components/eval.md).
 `prep new` returns bounded advisory `similar_issues` candidates when titles overlap unresolved records; terminal/self records are omitted. Hints never prevent creation or choose a match. See [Tracking](/decisions/tracking.md).
 
-- `prep knowledge review record/show` records scoped assessments for policy-bound completion; `prep review approve/show` and `prep reopen` manage versioned resolution review/history. Approval-dependent local or cross-project prerequisites use `edit --depends-on-approval`. See [Knowledge lifecycle](/features/knowledge-lifecycle.md) and [Resolution review](/features/resolution-review.md).
-`tui_review.go` supplies fresh, captured Inbox review/approval callbacks through the serialized writer. See [TUI Inbox](/components/tui-inbox.md).
-`prep dependency show|override`: [source observations and scoped human overrides](/features/cross-project.md).
+- `prep knowledge review record/show` records scoped assessments for policy-bound completion; `prep reopen <id> --reason` moves a done resolution into the work log. See [Knowledge lifecycle](/features/knowledge-lifecycle.md).
+`prep dependency show`: [source observations](/features/cross-project.md).
 
 Artifact metadata and additive lifecycle JSON/error guidance: [CLI contracts](/features/cli-contracts.md).

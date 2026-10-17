@@ -359,7 +359,6 @@ knowledge_reviews:
       - eval/fixtures/webapp.yaml
       - internal/eval
     snapshot: 0c7eea5c3f1870c22c5ad5fe13b728dc9d3a9f37242fcf6a373620bb0fb60891
-generation: 1
 outcome: done
 by: codex
 at: 2026-10-15T08:31:02Z

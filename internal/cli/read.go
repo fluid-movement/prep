@@ -390,8 +390,7 @@ func cmdShow(a *app, args []string) error {
 		a.emit(map[string]any{
 			"cross_deps": s.CrossDeps, "dependents": deps, "cross_knowledge": xknow,
 			"issue": i, "dir": mdstore.IssueDir(id), "priority": i.Priority.Effective(), "state": s.State, "stale": s.Stale, "blocked": s.Blocked,
-			"resolution_review": reviewView(t, id),
-			"actionable":        s.Actionable, "children": nonNil(t.Children(id)), "blocks": nonNil(t.Blocks(id)),
+			"actionable": s.Actionable, "children": nonNil(t.Children(id)), "blocks": nonNil(t.Blocks(id)),
 			"progress": s.Progress, "definition_of_done": nonNil(dod), "dod_opt_outs": opt,
 			"context": i.Context, "findings": i.Findings, "history": i.History, "evidence_pending": pending,
 		})
@@ -420,11 +419,7 @@ func cmdShow(a *app, args []string) error {
 			a.printf("depends on: %s\n", xDepLine(t.ExternalDependency(id, d)))
 			continue
 		}
-		label := "depends on"
-		if slices.Contains(i.DependsOnApproval, d) {
-			label = "depends on approved resolution"
-		}
-		a.printf("%s: %s [%s] %s\n", label, d, t.State(d), titleOf(t, d))
+		a.printf("depends on: %s [%s] %s\n", d, t.State(d), titleOf(t, d))
 	}
 	for _, b := range t.Blocks(id) {
 		a.printf("blocks: %s [%s] %s\n", b, t.State(b), titleOf(t, b))
@@ -509,9 +504,6 @@ func cmdShow(a *app, args []string) error {
 			a.printf(" (evidence: the commit that adds its resolution.md, not made yet)")
 		}
 		a.printf("\n")
-		if r.Outcome == domain.OutcomeDone {
-			a.printf("- resolution review: %s (prep review show %s)\n", t.ResolutionReviewStatus(id), id)
-		}
 	}
 	return nil
 }
@@ -602,9 +594,6 @@ func cmdGuide(a *app, args []string) error {
 	}
 	a.printf("%s  %s\n", g.ID, g.Title)
 	a.printf("kind: %s   state: %s", g.Kind, g.State)
-	if g.ResolutionReviewStatus != "" {
-		a.printf("   resolution review: %s", g.ResolutionReviewStatus)
-	}
 	if g.Stale {
 		a.printf("   STALE")
 	}
@@ -892,30 +881,15 @@ func otherProjects(root, id string, max int) []string {
 
 // xDepLine describes a cross-project dependency for text output.
 func xDepLine(x domain.XIssue) string {
-	approval := ""
-	if x.RequiresApproval && x.ReviewStatus != domain.ReviewApproved {
-		status := x.ReviewStatus
-		if status == domain.ReviewNone && x.Status != domain.XFound {
-			status = "unknown"
-		}
-		approval = "; approval " + status + " required"
-	}
-	override := ""
-	if x.OverrideStatus != "none" {
-		override = "; override " + x.OverrideStatus + " by " + x.OverrideBy + ": " + x.OverrideReason
-	}
 	switch x.Status {
 	case domain.XFound:
-		state := string(x.State)
-		if x.Outcome == domain.DependencyUnsatisfied && x.RequiresApproval {
-			state = "approval pending"
-		}
+		warning := ""
 		if x.ProvenanceWarning != "" {
-			approval += "; provenance warning: " + x.ProvenanceWarning
+			warning = "; provenance warning: " + x.ProvenanceWarning
 		}
-		return fmt.Sprintf("%s [%s%s%s] %s (in %s; prep show %s --project %s)", x.Ref, state, approval, override, x.Title, x.Project, x.ID, x.Link)
+		return fmt.Sprintf("%s [%s%s] %s (in %s; prep show %s --project %s)", x.Ref, x.State, warning, x.Title, x.Project, x.ID, x.Link)
 	case domain.XMissing:
-		return fmt.Sprintf("%s [missing: no such issue in %s at %s%s%s]", x.Ref, x.Project, x.Root, approval, override)
+		return fmt.Sprintf("%s [missing: no such issue in %s at %s]", x.Ref, x.Project, x.Root)
 	}
 	hint := ""
 	if x.Remote != "" {
@@ -927,7 +901,7 @@ func xDepLine(x domain.XIssue) string {
 	if x.ProvenanceWarning != "" {
 		hint += "; provenance warning: " + x.ProvenanceWarning
 	}
-	return fmt.Sprintf("%s [unknown%s%s%s]", x.Ref, hint, approval, override)
+	return fmt.Sprintf("%s [unknown%s]", x.Ref, hint)
 }
 
 func cmdSkill(a *app, args []string) error {
