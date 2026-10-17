@@ -1,0 +1,4 @@
+- [ ] The Knowledge screen lists records newest first with date, kind and title, hides superseded records by default behind a toggle, and stays read-only, covered by goldens
+- [ ] The entry pane shows a record's issue, supersedes and superseded-by links, followable with o
+- [ ] An issue's detail lists the decision records linked to it, followable to the Knowledge screen, covered by a golden
+- [ ] prep check reports no errors and GitHub CI on main is green

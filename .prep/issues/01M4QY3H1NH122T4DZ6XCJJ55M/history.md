@@ -25,3 +25,5 @@
 - 2026-10-17T13:40:29Z claude-code: Handoff record: claude haiku subagent | narrow TUI list columns (small, UI) | checker fixed 1: columns chosen per row (tree lines, note) misaligned rows of one list; now by width only. 100k tokens, 47 tool uses, 7.9 min
 
 - 2026-10-17T14:13:53Z claude-code: Handoff record: codex | knowledge model (large, 86 files) | checker fixed eval cases left on removed flags and the bootstrap case; code itself clean
+
+- 2026-10-17T14:21:31Z claude-code: Handoff record: codex | knowledge conversion (120 records from approved tables, AGENTS.md) | clean; checker added the tracking record (missing from my table) and the entries-removal stage

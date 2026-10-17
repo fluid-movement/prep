@@ -6,7 +6,7 @@ date: "2026-10-14"
 issue: 01M4TSWXVKTTMMEXZGB8G2SJXZ
 ---
 
-Implement the already defined requirement using the existing [Cross-project work](/features/cross-project.md), [Project registry](/components/projects.md), [Domain](/components/domain.md), Resolution review and [Lifecycle](/features/lifecycle.md). Historical 01M4N5ARVE6J5APZYJ7VA0N464 establishes permanent project IDs and checkout-local links; its unknown-never-blocks behavior is intentionally superseded here.
+Implement the already defined requirement using the existing Cross-project work, Project registry, Domain, Resolution review and Lifecycle. Historical 01M4N5ARVE6J5APZYJ7VA0N464 establishes permanent project IDs and checkout-local links; its unknown-never-blocks behavior is intentionally superseded here.
 
 `internal/domain/links.go` and `tree.go` currently skip missing/unknown dependencies. Keep lookup presence distinct from satisfied/unsatisfied/unknown outcome; claim and actionable predicates fail closed for unknown. Sources are freshly loaded local checkouts only, with permanent project ID, checkout root/name, Git revision when available, deterministic target-content/review-status observation digest and explicit uncertainty. Missing checkout, target or readable source is unknown; no cached satisfaction or remote fetching.
 
