@@ -116,7 +116,7 @@ A theme has eight colors: the gray ramp `text`, `muted` and `subtle`, the `accen
 ## Development
 
 ```sh
-just test      # go test ./..., including the contract corpus in testdata/contract
+just test      # go test ./...
 just check     # prep check and prep fmt --check on this repository's .prep
 just ci        # lint, test and check: everything CI runs
 ```

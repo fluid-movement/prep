@@ -38,15 +38,6 @@ func isCrockford(c byte) bool {
 	return c != 'I' && c != 'L' && c != 'O' && c != 'U'
 }
 
-// ULIDTime returns the creation time a valid ULID encodes.
-func ULIDTime(id string) time.Time {
-	var ms int64
-	for k := 0; k < 10; k++ {
-		ms = ms<<5 | int64(decodeCrockford(id[k]))
-	}
-	return time.UnixMilli(ms).UTC()
-}
-
 func decodeCrockford(c byte) byte {
 	for k := 0; k < len(crockford); k++ {
 		if crockford[k] == c {

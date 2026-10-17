@@ -30,7 +30,7 @@ install: build
 uninstall:
     rm -f '{{bindir}}/prep'
 
-# Run all tests, including the contract corpus
+# Run all tests
 test:
     go test ./...
 

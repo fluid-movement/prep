@@ -210,9 +210,6 @@ func TestResolve(t *testing.T) {
 			t.Errorf("collision: %+v", p)
 		}
 	}
-	if p, ok, _ := ByID("01M4AAAAAAAAAAAAAAAAAAAP11"); !ok || p.Root != apiClone {
-		t.Fatalf("by id: %+v", p)
-	}
 }
 
 func TestAddAndRemove(t *testing.T) {

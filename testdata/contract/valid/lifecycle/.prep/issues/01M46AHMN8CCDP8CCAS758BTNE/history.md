@@ -1,1 +1,0 @@
-Started streaming writer.

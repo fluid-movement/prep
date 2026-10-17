@@ -76,7 +76,7 @@ func (s *Store) read(rel string) (string, bool, error) {
 // Allowed top-level entries.
 var (
 	issueFiles   = map[string]bool{"issue.md": true, "acceptance.md": true, "context.md": true, "decisions.md": true, "history.md": true, "findings.md": true, "ready.md": true, "claim.md": true, "resolution.md": true}
-	issueDirs    = map[string]bool{"baselines": true, "attachments": true}
+	issueDirs    = map[string]bool{"baselines": true}
 	projectFiles = map[string]bool{"project.md": true, "config.yaml": true, "config.yaml.dist": true, "issues": true, "knowledge": true, ".gitignore": true, activity.Dir: true}
 )
 
@@ -186,7 +186,7 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 		case e.IsDir() && issueDirs[n]:
 		case !e.IsDir() && issueFiles[n]:
 		default:
-			diag(domain.CodeUnknownFile, domain.SevError, domain.ClassManual, n, "move free-form files into attachments/", "unknown entry %s", n)
+			diag(domain.CodeUnknownFile, domain.SevError, domain.ClassManual, n, "remove the unknown entry from the issue directory", "unknown entry %s", n)
 		}
 	}
 	sort.Strings(i.Files)

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -237,20 +236,6 @@ func TestProjectFlagRunsCommandsInAnotherProject(t *testing.T) {
 	home.jsonOf(&b, "prime")
 	if len(b.Projects) != 1 {
 		t.Fatalf("prime projects: %v", b.Projects)
-	}
-}
-
-// rename sets the project's name in project.md.
-func (h *harness) rename(name string) {
-	h.t.Helper()
-	pm := filepath.Join(h.dir, ".prep", "project.md")
-	b, err := os.ReadFile(pm)
-	if err != nil {
-		h.t.Fatal(err)
-	}
-	out := regexp.MustCompile(`(?m)^name: .*$`).ReplaceAllString(string(b), "name: "+name)
-	if err := os.WriteFile(pm, []byte(out), 0o644); err != nil {
-		h.t.Fatal(err)
 	}
 }
 

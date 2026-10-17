@@ -719,15 +719,6 @@ func TestPriorities(t *testing.T) {
 	h.fails("I027", "check")
 }
 
-func newHarnessNoBootstrap(t *testing.T) *harness {
-	t.Setenv("PREP_SESSION", "")
-	t.Setenv("PREP_ACTOR", "")
-	h := &harness{t: t, dir: t.TempDir(), now: time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)}
-	clock = func() time.Time { h.now = h.now.Add(time.Second); return h.now }
-	h.ok("init")
-	return h
-}
-
 func TestUpdateRefusesDevelopmentBuilds(t *testing.T) {
 	h := newHarness(t)
 	old := Version

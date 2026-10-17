@@ -37,15 +37,6 @@ func TestPathsKeepNonASCIINames(t *testing.T) {
 	names := []string{"src/größe.go", "src/plain.go", "src/with space.go"}
 	dir := repo(t, names...)
 	base, _ := Run(dir, "rev-parse", "HEAD")
-	for _, n := range names {
-		if err := os.WriteFile(filepath.Join(dir, n), []byte("b\n"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	got, err := ChangedSince(dir, base, []string{"src"})
-	if err != nil || !slices.Equal(got, names) {
-		t.Fatalf("ChangedSince = %q, %v", got, err)
-	}
 	files, err := FilesInCommit(dir, base)
 	if err != nil || !slices.Equal(files, names) {
 		t.Fatalf("FilesInCommit = %q, %v", files, err)

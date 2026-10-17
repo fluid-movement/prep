@@ -93,13 +93,3 @@ func SortDiagnostics(ds []Diagnostic) {
 		return x.Message < y.Message
 	})
 }
-
-// HasErrors reports whether any diagnostic is an error.
-func HasErrors(ds []Diagnostic) bool {
-	for _, d := range ds {
-		if d.Severity == SevError {
-			return true
-		}
-	}
-	return false
-}

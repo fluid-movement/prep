@@ -184,7 +184,6 @@ func cmdNew(a *app, args []string) error {
 	fs.Var(&deps, "depends-on", "dependency id (repeatable)")
 	var tags multi
 	fs.Var(&tags, "tag", "tag (repeatable or comma-separated)")
-	fs.Var(&tags, "tags", "alias of --tag")
 	priority := fs.String("priority", "", "critical, high, medium or low")
 	pos, err := parse(fs, args)
 	if err != nil {
@@ -258,7 +257,6 @@ func cmdEdit(a *app, args []string) error {
 	fs.Var(&deps, "depends-on", "dependency id (repeatable, replaces the list; '' clears it)")
 	var tags multi
 	fs.Var(&tags, "tag", "tag (repeatable or comma-separated, replaces the list; '' clears it)")
-	fs.Var(&tags, "tags", "alias of --tag")
 	priority := fs.String("priority", "", "critical, high, medium or low (medium unsets it)")
 	pos, err := parse(fs, args)
 	if err != nil {

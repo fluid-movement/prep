@@ -43,11 +43,6 @@ func OverlayAt(bw, bh, width, height int) (x, y int) {
 	return max(0, (width-bw)/2), max(0, (height-bh)/2)
 }
 
-// Center places a block in the middle of an area.
-func Center(t *theme.Theme, block string, width, height int) string {
-	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, block)
-}
-
 // MenuRow renders one action of a menu: key, label and, for an unavailable
 // action, the reason. The selected row is highlighted.
 func MenuRow(t *theme.Theme, key, label, reason string, enabled, selected bool, width int) string {

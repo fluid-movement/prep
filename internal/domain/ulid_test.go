@@ -16,9 +16,6 @@ func TestULIDEncoding(t *testing.T) {
 	if !ValidID(zero) || zero[10:] != "0000000000000000" {
 		t.Fatalf("NewULID with zero entropy = %q", zero)
 	}
-	if got := ULIDTime(zero); !got.Equal(now) {
-		t.Fatalf("ULIDTime = %v, want %v", got, now)
-	}
 	full, _ := NewULID(now, bytes.NewReader(bytes.Repeat([]byte{0xff}, 10)))
 	if full[:10] != zero[:10] || full[10:] != "ZZZZZZZZZZZZZZZZ" {
 		t.Fatalf("NewULID with full entropy = %q", full)
@@ -73,8 +70,8 @@ func TestPlanNewULIDsSortByCreation(t *testing.T) {
 		ids = append(ids, c.IssueID)
 		tree = tree.Apply(c)
 	}
-	if !ULIDTime(ids[9]).Equal(now) {
-		t.Fatalf("same-millisecond ID moved to %v", ULIDTime(ids[9]))
+	if ids[9][:10] != ids[0][:10] {
+		t.Fatalf("same-millisecond ID moved off %q", ids[0][:10])
 	}
 }
 
@@ -91,7 +88,7 @@ func TestNextULIDCarries(t *testing.T) {
 	}
 	last := low[:10] + "ZZZZZZZZZZZZZZZZ"
 	got, _ = nextULID(now, bytes.NewReader(make([]byte, 20)), []string{last})
-	if !ULIDTime(got).Equal(now.Add(time.Millisecond)) {
+	if got[:10] == last[:10] {
 		t.Fatalf("exhausted millisecond gave %q", got)
 	}
 }

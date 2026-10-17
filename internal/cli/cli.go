@@ -297,16 +297,6 @@ func usageErr(format string, a ...any) error {
 	return &domain.Error{Code: domain.ErrUsage, Message: fmt.Sprintf(format, a...)}
 }
 
-func withNext(err error, next string) error {
-	var de *domain.Error
-	if !errors.As(err, &de) || de.Next != "" {
-		return err
-	}
-	copy := *de
-	copy.Next = next
-	return &copy
-}
-
 func (a *app) fail(err error) int {
 	var se silentErr
 	if errors.As(err, &se) {

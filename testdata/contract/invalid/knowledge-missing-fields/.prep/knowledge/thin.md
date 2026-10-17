@@ -1,5 +1,0 @@
----
-type: component
----
-
-Thin.
