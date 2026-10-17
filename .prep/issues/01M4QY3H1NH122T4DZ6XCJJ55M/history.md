@@ -33,3 +33,5 @@
 - 2026-10-17T14:33:59Z claude-code: Handoff record: codex | finish hook asks for decisions (small-medium) | no fixes
 
 - 2026-10-17T18:12:48Z claude-code: Handoff record: claude sonnet subagent | guide as implementer brief (medium) | no fixes; 80k tokens, 50 tool uses (wall time inflated by a machine sleep)
+
+- 2026-10-17T18:16:28Z claude-code: Handoff record: codex | TUI Knowledge screen (medium, UI) | no fixes
