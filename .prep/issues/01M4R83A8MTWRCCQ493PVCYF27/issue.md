@@ -13,7 +13,6 @@ In a narrow pane the issue list spends about 30 of its columns on the ID, the st
 
 The priority mark, the progress bar, `blocked`/`stale` notes and tags stay: they carry information the title does not. The selected row, mouse hit-testing and the detail pane must keep working with fewer columns (the ID is what a click or `enter` resolves, internally, not what is drawn).
 
-## Open questions
+Settled on 2026-10-17: no fixed widths. A row drops the columns one by one, ID first, then the state label, then the kind, until the title has at least 30 cells or all three are gone; the state glyph always stays. No key overrides it: the ID stays visible in the detail pane.
 
-- At which widths do the columns disappear, and all at once or one by one (ID first, then state text, then kind)? In the screenshot the list is about 65 columns wide and loses most of the title; the TUI already has a "short layout" and a single-pane mode below 92 columns (`ui.Split`), so the thresholds should be chosen with those in mind.
-- Should `z` (the existing toggle between the adaptive split and one pane) or a new key override the automatic hiding, for people who want the ID even in a narrow pane?
+## Open questions

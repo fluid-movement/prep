@@ -1,3 +1,4 @@
 - [ ] Below the chosen widths the ID, the state text and the kind are not drawn in issue rows, and the state glyph, priority, notes and tags are
 - [ ] Selecting, clicking and opening a row work as before
 - [ ] Golden snapshots and width tests cover the narrow form
+- [ ] A width test shows the drop order: a row just short of room loses only the ID, a narrower one also the state label, then the kind
