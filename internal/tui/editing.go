@@ -13,7 +13,6 @@ import (
 
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/palette"
-	"github.com/fluid-movement/prep/internal/tui/theme"
 	"github.com/fluid-movement/prep/internal/tui/ui"
 )
 
@@ -328,7 +327,7 @@ func (m *Model) settingsRows() int { return 2 + len(domain.ViewNames(m.tree.Proj
 // settingsConfig copies the project configuration with its view order spelled out.
 func (m *Model) settingsConfig() domain.Config {
 	c := m.tree.Project.Config
-	cp := domain.Config{Views: map[string]string{}, ViewOrder: domain.ViewNames(c), Theme: c.Theme, Themes: c.Themes}
+	cp := domain.Config{Views: map[string]string{}, ViewOrder: domain.ViewNames(c), Theme: c.Theme}
 	for _, n := range cp.ViewOrder {
 		cp.Views[n] = c.Views[n]
 	}
@@ -366,15 +365,13 @@ func (m *Model) settingsKey(s string) tea.Cmd {
 	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
 		m.setIdx = clamp(int(s[0]-'0'), 1, rows-2)
 	case "t", "T":
-		m.startPreview()
-		m.stepPreview(s == "T")
+		return m.toggleTheme()
 	case "space", "enter":
 		if onMouse {
 			return m.toggleMouse()
 		}
 		if view == -1 {
-			m.startPreview()
-			return nil
+			return m.toggleTheme()
 		}
 		if s == "enter" {
 			name := cfg.ViewOrder[view]
@@ -405,58 +402,14 @@ func (m *Model) settingsKey(s string) tea.Cmd {
 	return nil
 }
 
-// themePreview shows themes on the issue screen before one is kept: the
-// palette from before the preview (esc restores it), the theme names and
-// the one being shown.
-type themePreview struct {
-	from  palette.Palette
-	names []string
-	idx   int
-}
-
-// startPreview shows the issue screen with a theme bar in the footer;
-// nothing is saved until enter.
-func (m *Model) startPreview() {
-	names := palette.Names(m.tree.Project.Config.Themes)
-	m.preview = &themePreview{from: m.th.Palette, names: names, idx: max(0, slices.Index(names, m.th.Palette.Name))}
-	m.screen = screenIssues
-}
-
-// stepPreview shows the next (or previous) theme.
-func (m *Model) stepPreview(back bool) {
-	pv := m.preview
-	step := 1
-	if back {
-		step = len(pv.names) - 1
+// toggleTheme saves the other built-in theme directly from settings.
+func (m *Model) toggleTheme() tea.Cmd {
+	cfg := m.settingsConfig()
+	cfg.Theme = palette.Light
+	if m.th.Palette.Name == palette.Light {
+		cfg.Theme = palette.Default
 	}
-	pv.idx = (pv.idx + step) % len(pv.names)
-	if p, err := palette.Resolve(pv.names[pv.idx], m.tree.Project.Config.Themes); err == nil {
-		m.setTheme(theme.From(p, m.th.Profile))
-	}
-}
-
-// previewKey handles keys during a theme preview: arrows, j/k and t/T
-// move through the themes, enter keeps the one shown (saved to the user's
-// own config), esc restores the one from before; both return to settings.
-func (m *Model) previewKey(s string) tea.Cmd {
-	switch s {
-	case "right", "l", "down", "j", "t":
-		m.stepPreview(false)
-	case "left", "h", "up", "k", "T":
-		m.stepPreview(true)
-	case "enter":
-		name := m.preview.names[m.preview.idx]
-		m.preview, m.screen = nil, screenSettings
-		cfg := m.settingsConfig()
-		cfg.Theme = name
-		return m.saveSettings("theme "+name, cfg, false)
-	case "esc":
-		m.setTheme(theme.From(m.preview.from, m.th.Profile))
-		m.preview, m.screen = nil, screenSettings
-	case "ctrl+c", "q":
-		return tea.Quit
-	}
-	return nil
+	return m.saveSettings("theme "+cfg.Theme, cfg, false)
 }
 
 // moveKey moves the selected view while in move mode: j/k or arrows move

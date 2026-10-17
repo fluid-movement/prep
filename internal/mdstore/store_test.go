@@ -208,13 +208,13 @@ func TestConfigFallsBackToDist(t *testing.T) {
 	}
 }
 
-func TestConfigKeepsThemes(t *testing.T) {
+func TestConfigKeepsTheme(t *testing.T) {
 	root := t.TempDir()
 	if _, err := Open(root).Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
 		t.Fatal(err)
 	}
 	own := filepath.Join(root, Dir, "config.yaml")
-	src := "views:\n  All: \"\"\ntheme: mine\nthemes:\n  mine:\n    base: nord\n    accent: \"#123456\"\n"
+	src := "views:\n  All: \"\"\ntheme: light\n"
 	if err := os.WriteFile(own, []byte(src), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -222,11 +222,11 @@ func TestConfigKeepsThemes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Theme != "mine" || cfg.Themes["mine"].Base != "nord" || cfg.Themes["mine"].Colors["accent"] != "#123456" {
+	if cfg.Theme != "light" {
 		t.Fatalf("loaded %+v", cfg)
 	}
 
-	// A settings save (here: a new view) keeps the theme and custom themes.
+	// A settings save (here: a new view) keeps the selected theme.
 	cfg.ViewOrder = append(cfg.ViewOrder, "Hot")
 	cfg.Views["Hot"] = "--priority high"
 	c, err := domain.NewTree(domain.Project{Config: cfg}, nil, nil, nil).PlanConfig(cfg)
@@ -240,7 +240,7 @@ func TestConfigKeepsThemes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Theme != "mine" || got.Themes["mine"].Colors["accent"] != "#123456" || got.Views["Hot"] != "--priority high" {
+	if got.Theme != "light" || got.Views["Hot"] != "--priority high" {
 		b, _ := os.ReadFile(own)
 		t.Fatalf("after save %+v\n%s", got, b)
 	}
@@ -391,4 +391,27 @@ func TestFrontmatterAfterBOM(t *testing.T) {
 	if err != nil || !ok || fm != "title: X\n" || strings.TrimSpace(body) != "Body." {
 		t.Fatalf("fm %q body %q ok %v err %v", fm, body, ok, err)
 	}
+}
+
+// Custom themes were removed: a themes key in a configuration is an unknown
+// key, reported as P003 for that file like any other.
+func TestConfigRejectsThemesKey(t *testing.T) {
+	root := t.TempDir()
+	if _, err := Open(root).Init("01M4AAAAAAAAAAAAAAAAAAAAAA", "test"); err != nil {
+		t.Fatal(err)
+	}
+	cfg := "themes:\n  mine:\n    base: default\n"
+	if err := os.WriteFile(filepath.Join(root, Dir, "config.yaml"), []byte(cfg), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, _, d, err := Open(root).Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, x := range d {
+		if x.Code == domain.CodeConfigInvalid && x.File == "config.yaml" {
+			return
+		}
+	}
+	t.Fatalf("themes key accepted; diagnostics %+v", d)
 }

@@ -20,7 +20,7 @@ import (
 
 // RunGallery shows every component in a scrollable view that reflows on
 // resize, without project data. It starts with the configured theme and
-// t/T switch through the built-in themes and the config's custom ones, so
+// t/T switch between the two built-in themes, so
 // a theme can be judged before choosing it.
 func RunGallery(in io.Reader, out io.Writer, cfg domain.Config) error {
 	g := newGallery(cfg, theme.New(true, colorprofile.Detect(out, os.Environ())))
@@ -31,7 +31,6 @@ func RunGallery(in io.Reader, out io.Writer, cfg domain.Config) error {
 type gallery struct {
 	th     *theme.Theme
 	theme  string // the configured theme; empty follows the background
-	themes map[string]domain.ThemeDef
 	names  []string
 	chosen bool // the user switched themes; the background no longer picks
 	vp     viewport.Model
@@ -40,14 +39,14 @@ type gallery struct {
 }
 
 func newGallery(cfg domain.Config, th *theme.Theme) *gallery {
-	g := &gallery{th: th, theme: cfg.Theme, themes: cfg.Themes, names: palette.Names(cfg.Themes)}
+	g := &gallery{th: th, theme: cfg.Theme, names: palette.Builtins()}
 	g.show(palette.Pick(cfg.Theme, true))
 	return g
 }
 
 // show switches to a theme by name and re-renders.
 func (g *gallery) show(name string) {
-	p, err := palette.Resolve(name, g.themes)
+	p, err := palette.Resolve(name)
 	if err != nil {
 		return
 	}

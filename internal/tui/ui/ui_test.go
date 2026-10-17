@@ -41,30 +41,13 @@ func TestGallerySnapshots(t *testing.T) {
 	}
 }
 
-// TestThemeGallerySnapshots keeps every built-in theme's look reviewable.
-func TestThemeGallerySnapshots(t *testing.T) {
-	for _, name := range palette.Builtins() {
-		if name == palette.Default || name == palette.Light {
-			continue // gallery-dark-* and gallery-light-*
-		}
-		p, err := palette.Resolve(name, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		snap := fmt.Sprintf("gallery-%s-80", name)
-		t.Run(snap, func(t *testing.T) {
-			golden(t, snap, Gallery(theme.From(p, colorprofile.TrueColor), 80))
-		})
-	}
-}
-
 // TestThemesFollowTheColorProfile checks what a terminal receives with
 // every theme: Bubble Tea writes through a colorprofile.Writer, which
 // downsamples for 256- and 16-color terminals and drops colors without
 // color support (NO_COLOR).
 func TestThemesFollowTheColorProfile(t *testing.T) {
 	for _, name := range palette.Builtins() {
-		p, _ := palette.Resolve(name, nil)
+		p, _ := palette.Resolve(name)
 		for _, c := range []struct {
 			profile colorprofile.Profile
 			banned  []string

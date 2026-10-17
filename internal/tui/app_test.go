@@ -1105,28 +1105,13 @@ func TestEditSettings(t *testing.T) {
 		return tr.Project.Config
 	}
 
-	// t previews the next theme on the issue screen without saving; enter
-	// keeps it; esc after another step restores it.
-	run(m, "t")
-	if m.preview == nil || m.screen != screenIssues || m.th.Palette.Name != "high-contrast" || cfg().Theme != "" {
-		t.Fatalf("t: preview %v, screen %d, shown %q, saved %q", m.preview != nil, m.screen, m.th.Palette.Name, cfg().Theme)
-	}
-	if f := ansi.Strip(m.footer()); !strings.Contains(f, "Theme high-contrast 2/8") {
-		t.Fatalf("theme bar: %q", f)
-	}
-	run(m, "enter")
-	if m.preview != nil || m.screen != screenSettings || cfg().Theme != "high-contrast" || m.th.Palette.Name != "high-contrast" {
-		t.Fatalf("enter: preview %v, screen %d, saved %q", m.preview != nil, m.screen, cfg().Theme)
-	}
-	run(m, "enter") // the Theme row: preview again
-	run(m, "right")
-	run(m, "right")
-	if m.th.Palette.Name != "pastel" {
-		t.Fatalf("right right shows %s", m.th.Palette.Name)
-	}
-	run(m, "esc")
-	if m.preview != nil || m.screen != screenSettings || m.th.Palette.Name != "high-contrast" || cfg().Theme != "high-contrast" {
-		t.Fatalf("esc: shown %q, saved %q", m.th.Palette.Name, cfg().Theme)
+	// Settings save each switch directly and stay on the settings screen.
+	for _, key := range []string{"t", "T", "enter", "space"} {
+		before := m.th.Palette.Name
+		run(m, key)
+		if m.screen != screenSettings || m.th.Palette.Name == before || cfg().Theme != m.th.Palette.Name {
+			t.Fatalf("%s: screen %d, shown %q, saved %q", key, m.screen, m.th.Palette.Name, cfg().Theme)
+		}
 	}
 	run(m, "down")
 
@@ -1455,10 +1440,10 @@ func TestDetailDoesNotScrollSideways(t *testing.T) {
 }
 
 func TestGallerySwitchesThemes(t *testing.T) {
-	cfg := domain.Config{Theme: "mine", Themes: map[string]domain.ThemeDef{"mine": {Base: "nord"}}}
+	cfg := domain.Config{Theme: "light"}
 	g := newGallery(cfg, testTheme())
 	g.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
-	if g.th.Palette.Name != "mine" || !strings.Contains(ansi.Strip(g.render()), "theme mine") {
+	if g.th.Palette.Name != "light" || !strings.Contains(ansi.Strip(g.render()), "theme light") {
 		t.Fatalf("gallery starts with %s", g.th.Palette.Name)
 	}
 	g.Update(keyMsg("t"))
@@ -1466,12 +1451,12 @@ func TestGallerySwitchesThemes(t *testing.T) {
 		t.Fatalf("t after the last theme: %s", g.th.Palette.Name)
 	}
 	g.Update(keyMsg("t"))
-	if g.th.Palette.Name != "high-contrast" || !strings.Contains(ansi.Strip(g.render()), "theme high-contrast") {
+	if g.th.Palette.Name != "light" || !strings.Contains(ansi.Strip(g.render()), "theme light") {
 		t.Fatalf("t: %s", g.th.Palette.Name)
 	}
 	g.Update(keyMsg("T"))
 	g.Update(keyMsg("T"))
-	if g.th.Palette.Name != "mine" {
+	if g.th.Palette.Name != "light" {
 		t.Fatalf("T T: %s", g.th.Palette.Name)
 	}
 }
@@ -1489,10 +1474,10 @@ func TestUnsetThemeFollowsTheTerminal(t *testing.T) {
 	}
 
 	// A configured theme ignores the background.
-	m.tree.Project.Config.Theme = "nord"
+	m.tree.Project.Config.Theme = "default"
 	m.retheme(false, m.th.Profile)
-	if m.th.Palette.Name != "nord" {
-		t.Fatalf("configured nord shows %s", m.th.Palette.Name)
+	if m.th.Palette.Name != "default" {
+		t.Fatalf("configured default shows %s", m.th.Palette.Name)
 	}
 }
 
@@ -1723,36 +1708,6 @@ func TestManyChildren(t *testing.T) {
 	run(m, "1")
 	if m.childView != "" || len(m.tabs) != len(domain.ViewNames(m.tree.Project.Config)) {
 		t.Fatal("switching views did not close the children view")
-	}
-}
-
-func TestThemePreviewOnTheIssueScreen(t *testing.T) {
-	p, _ := sample(t)
-	var edits []string
-	m := editable(t, p, &edits)
-	m.Update(tea.WindowSizeMsg{Width: 110, Height: 28})
-	run(m, "6")
-	run(m, "s")
-	run(m, "enter") // the Theme row
-	run(m, "left")  // the last theme: light
-	if m.th.Palette.Name != "light" || m.screen != screenIssues {
-		t.Fatalf("left from default shows %s on screen %d", m.th.Palette.Name, m.screen)
-	}
-	checkSize(t, m.View().Content, 110, 28)
-	golden(t, "theme-preview-110x28", m.View().Content)
-
-	// A reload during the preview keeps the previewed theme.
-	tr, err := p.load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	m.apply(tr, nil)
-	if m.th.Palette.Name != "light" {
-		t.Fatalf("reload reset the preview to %s", m.th.Palette.Name)
-	}
-	run(m, "esc")
-	if m.th.Palette.Name != "default" || m.screen != screenSettings {
-		t.Fatalf("esc: %s on screen %d", m.th.Palette.Name, m.screen)
 	}
 }
 

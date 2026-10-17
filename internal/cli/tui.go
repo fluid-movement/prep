@@ -31,7 +31,7 @@ func cmdTUI(a *app, args []string) error {
 		return usageErr("tui needs a terminal; agents use the other commands")
 	}
 	if *gallery {
-		// In a prep project the gallery offers its custom themes and starts
+		// In a prep project the gallery starts
 		// with the chosen one; elsewhere the built-ins.
 		var cfg domain.Config
 		if a.open() == nil {

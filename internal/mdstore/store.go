@@ -460,9 +460,8 @@ func canonicalProject(raw string) string {
 // --- config ---
 
 type configFile struct {
-	Views  map[string]string          `yaml:"views,omitempty"`
-	Theme  string                     `yaml:"theme,omitempty"`
-	Themes map[string]domain.ThemeDef `yaml:"themes,omitempty"`
+	Views map[string]string `yaml:"views,omitempty"`
+	Theme string            `yaml:"theme,omitempty"`
 }
 
 // Config files in .prep: each user's own config.yaml (gitignored) replaces
@@ -605,12 +604,12 @@ func (s *Store) loadConfigFile(name string) (domain.Config, bool, error) {
 			return cfg, true, fmt.Errorf("%s: view %q: %v", name, view, err)
 		}
 	}
-	if err := palette.Validate(f.Theme, f.Themes); err != nil {
+	if err := palette.Validate(f.Theme); err != nil {
 		return cfg, true, fmt.Errorf("%s: %v", name, err)
 	}
 	cfg.Views = f.Views
 	cfg.ViewOrder = viewOrder(raw)
-	cfg.Theme, cfg.Themes = f.Theme, f.Themes
+	cfg.Theme = f.Theme
 	return cfg, true, nil
 }
 
@@ -637,10 +636,9 @@ func viewOrder(raw string) []string {
 
 // renderConfig writes config.yaml from a configuration: the comment lines
 // that lead the current file (or the default header), the views in their
-// order, the theme, and custom themes by name with tokens in palette
-// order, so the file reads like the one prep init wrote.
+// order and the theme, so the file reads like the one prep init wrote.
 func renderConfig(current string, cfg domain.Config) (string, error) {
-	if err := palette.Validate(cfg.Theme, cfg.Themes); err != nil {
+	if err := palette.Validate(cfg.Theme); err != nil {
 		return "", &domain.Error{Code: domain.ErrUsage, Message: err.Error()}
 	}
 	var header []string
@@ -668,28 +666,6 @@ func renderConfig(current string, cfg domain.Config) (string, error) {
 	}
 	if cfg.Theme != "" {
 		root.Content = append(root.Content, scalar("theme"), scalar(cfg.Theme))
-	}
-	if len(cfg.Themes) > 0 {
-		themes := &yaml.Node{Kind: yaml.MappingNode}
-		for _, name := range palette.Names(cfg.Themes) {
-			def, ok := cfg.Themes[name]
-			if !ok {
-				continue
-			}
-			body := &yaml.Node{Kind: yaml.MappingNode}
-			if def.Base != "" {
-				body.Content = append(body.Content, scalar("base"), scalar(def.Base))
-			}
-			for _, tok := range palette.Tokens() {
-				if v, ok := def.Colors[tok]; ok {
-					val := scalar(v)
-					val.Style = yaml.DoubleQuotedStyle
-					body.Content = append(body.Content, scalar(tok), val)
-				}
-			}
-			themes.Content = append(themes.Content, scalar(name), body)
-		}
-		root.Content = append(root.Content, scalar("themes"), themes)
 	}
 	if len(root.Content) == 0 {
 		return strings.Join(header, "\n") + "\n", nil

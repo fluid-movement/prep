@@ -25,7 +25,7 @@ internal/okf        knowledge store adapter: .prep/knowledge as an OKF v0.2 bund
 internal/gitx       the few git calls (staging, drift, commit evidence)
 internal/activity   the local activity stream under .prep/local: append, prune, read, derive each actor's current issue (no store imports)
 internal/watch      fsnotify watcher over .prep (recursive, debounced), used by the TUI
-internal/palette    TUI color tokens, built-in themes, custom theme resolution, derived state colors (no TUI imports)
+internal/palette    TUI color tokens, the dark and light themes, derived state colors (no TUI imports)
 internal/tui        human interface: screens (Bubble Tea) loading through an injected loader; theme and ui hold the design system
 internal/setup      harness integrations installed, refreshed and removed by prep setup
 internal/userconfig the user's choices in ~/.config/prep/config.yaml (harnesses, TUI mouse/layout, prompt hook context)

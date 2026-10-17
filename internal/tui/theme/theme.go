@@ -49,7 +49,7 @@ type Theme struct {
 // start dark and follow the terminal's reported background; tests pass
 // fixed values so output is deterministic.
 func New(dark bool, profile colorprofile.Profile) *Theme {
-	p, _ := palette.Resolve(palette.Pick("", dark), nil)
+	p, _ := palette.Resolve(palette.Pick("", dark))
 	return From(p, profile)
 }
 

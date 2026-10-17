@@ -136,7 +136,6 @@ func init() {
 		{"fix", true, "fix                        safe auto-fixes from check", cmdFix},
 		{"migrate", true, "migrate                    migrate .prep to this binary's schema", cmdMigrate},
 		{"tui", false, "tui [--agent|--gallery]    terminal UI next to the harness (--agent: open on what the agent is doing; --gallery: every component, t/T switch themes)", cmdTUI},
-		{"theme", true, "theme list | new <name> [--from <theme>]  TUI themes: list them, or start a custom one with every token in .prep/config.yaml", cmdTheme},
 		{"setup", true, "setup [--harness h,...|--remove h|--refresh]  install harness integrations (skill, hooks, commands)", cmdSetup},
 		{"update", true, "update [--check]           replace this binary with the latest release (verifies its checksum)", cmdUpdate},
 		{"eval", false, evalUsage, cmdEval},

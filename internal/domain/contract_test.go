@@ -21,7 +21,7 @@ func TestContractTracksEffectivePolicyNotBookkeeping(t *testing.T) {
 	}
 	tr.Project.Policy.By = "another actor"
 	tr.Project.Policy.At = time.Now().Add(time.Hour)
-	tr.Project.Config.Theme = "nord"
+	tr.Project.Config.Theme = "light"
 	tr.Issues[i.ID].Criteria[0].Checked = true
 	if tr.Contract(i.ID).ID != initial.ID {
 		t.Fatal("bookkeeping changed contract")
