@@ -17,12 +17,10 @@ Wanted:
 - A `session` event kind that harnesses send through `prep activity add`, with `started` and `ended` (and an optional `previous` session when an ID changes), validated like the other harness kinds.
 - The Claude Code bridge sends `started` at `session.start`, `ended` at `session.end`, and on an ID change at `turn.start` sends `ended` for the old ID and `started` with `previous` for the new one.
 - `Agents` (and whatever the Agent view counts and cycles with tab) leaves out ended sessions and treats a chain of linked IDs as one agent.
-- Agents without an end event (crashed sessions, harnesses without lifecycle hooks such as Pi) drop out after a quiet period with no events.
+- Agents without an end event (crashed sessions, harnesses without lifecycle hooks such as Pi) drop out after 30 minutes with no events; the period is fixed, not configurable.
+- Ended and quiet agents are hidden from the Agent view entirely; their events stay in the activity stream.
+- `prep prime`'s "Recently worked on" (Foci) follows linked session IDs, so a resumed session sees its predecessor's issue as its own.
 - This repo's activity file is trimmed of the stale `live-demo-1` and actor-keyed lines once; no migration (no outside users).
 - The agent-activity, TUI Agent screen and Claude Code integration knowledge entries describe the lifecycle events.
 
 ## Open questions
-
-- How long is the quiet period, and is it fixed or configurable?
-- Are ended or quiet agents hidden from the Agent view entirely, or kept in a "finished" group that tab skips?
-- Does `prep prime`'s "Recently worked on" (Foci) also follow linked session IDs, so a resumed session sees its predecessor's issue as its own?
