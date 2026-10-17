@@ -1,4 +1,4 @@
-- [ ] An entry whose root directory was deleted no longer appears in prep projects or the briefing, and the registry file no longer holds it
-- [ ] Existing projects, --project resolution by name, ID, remote or path, and prep projects add keep working; tests cover a deleted root
-- [ ] The Project registry knowledge entry describes the rule, and prep check reports no errors
-- [ ] go test and fmt pass, and GitHub CI on main is green
+- [x] An entry whose root directory was deleted no longer appears in prep projects or the briefing, and the registry file no longer holds it
+- [x] Existing projects, --project resolution by name, ID, remote or path, and prep projects add keep working; tests cover a deleted root
+- [x] The Project registry knowledge entry describes the rule, and prep check reports no errors
+- [x] go test and fmt pass, and GitHub CI on main is green
