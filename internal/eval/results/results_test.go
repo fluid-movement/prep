@@ -264,3 +264,42 @@ func TestErrors(t *testing.T) {
 		t.Error("empty report")
 	}
 }
+
+func TestPruneOnlyRemovesDeletedRunsWorkspaces(t *testing.T) {
+	root := t.TempDir()
+	parent := filepath.Join(root, "prep-eval-work-test")
+	oldEnv := filepath.Join(parent, "prep-eval-old")
+	newEnv := filepath.Join(parent, "prep-eval-new")
+	unrelated := filepath.Join(root, "unrelated")
+	for _, dir := range []string{oldEnv, newEnv, unrelated} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s := Store{Root: filepath.Join(root, "results")}
+	for _, pair := range [][2]string{{"20261012", oldEnv}, {"20261013", newEnv}} {
+		cell := cellOf("a", "current", "haiku", 0, 1)
+		cell.Runs[0].Dir = pair[1]
+		cell.Runs = append(cell.Runs, matrix.RunResult{Dir: unrelated})
+		if err := s.Save(&Run{ID: pair[0], Cells: []*matrix.CellResult{cell}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.Prune(1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(oldEnv); !os.IsNotExist(err) {
+		t.Fatalf("deleted run environment remains: %v", err)
+	}
+	for _, path := range []string{newEnv, unrelated} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("retained path removed: %s: %v", path, err)
+		}
+	}
+	if _, err := s.Prune(0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(parent); !os.IsNotExist(err) {
+		t.Fatalf("empty workspace parent remains: %v", err)
+	}
+}

@@ -327,3 +327,94 @@ func TestEvalErrors(t *testing.T) {
 	}
 	h.fails("no stored run", "eval", "errors", "--dir", dir, "zzz")
 }
+
+func TestEvalPruneFailingFakeRun(t *testing.T) {
+	h := newHarness(t)
+	dir := copyEvalDir(t)
+	t.Setenv("TMPDIR", t.TempDir())
+	t.Setenv("ANTHROPIC_API_KEY", "k")
+	claude := fakeClaudeFor(t)
+	script, err := os.ReadFile(claude)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Fail the case's final_mentions assertion while completing the session.
+	if err := os.WriteFile(claude, []byte(strings.ReplaceAll(string(script), "Work on Payment integration.", "Nothing to recommend.")), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	h.ok("eval", "run", "--dir", dir, "--case", "session-what-next", "--models", "haiku", "--n", "2", "--no-judge",
+		"--claude", claude, "--plugin", "../../plugins/claude-code", "--binary", prepBinary(t))
+	st := resultsStore(dir)
+	r, err := st.Load("latest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kept []string
+	for _, cell := range r.Cells {
+		for _, run := range cell.Runs {
+			if run.Passed() || run.Status != "completed" {
+				t.Fatalf("expected a completed failing fake run: %+v", run)
+			}
+			if _, err := os.Stat(filepath.Join(run.Dir, "work")); err != nil {
+				t.Fatalf("retained workspace missing: %v", err)
+			}
+			kept = append(kept, run.Dir)
+		}
+	}
+	if len(kept) != 2 {
+		t.Fatalf("expected two retained environments, got %v", kept)
+	}
+	if err := st.Save(&results.Run{ID: "99991231-000000-ffff"}); err != nil {
+		t.Fatal(err)
+	}
+	h.ok("eval", "prune", "--dir", dir, "--keep", "1")
+	for _, path := range append(kept, filepath.Dir(kept[0]), st.Dir(r.ID)) {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Errorf("pruned path still exists: %s (%v)", path, err)
+		}
+	}
+	if _, err := st.Load("99991231-000000-ffff"); err != nil {
+		t.Fatalf("newest results removed: %v", err)
+	}
+}
+
+func TestEvalClean(t *testing.T) {
+	h := newHarness(t)
+	root := t.TempDir()
+	t.Setenv("TMPDIR", root)
+	for _, name := range []string{"prep-eval-work-old", "prep-eval-work-recent", "unrelated"} {
+		path := filepath.Join(root, name)
+		if err := os.MkdirAll(filepath.Join(path, "workspace"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	old := filepath.Join(root, "prep-eval-work-old")
+	then := time.Now().Add(-48 * time.Hour)
+	if err := os.Chtimes(old, then, then); err != nil {
+		t.Fatal(err)
+	}
+	if out := h.ok("eval", "clean"); !strings.Contains(out, "removed 1") {
+		t.Fatal(out)
+	}
+	if _, err := os.Stat(old); !os.IsNotExist(err) {
+		t.Fatalf("old workspace remains: %v", err)
+	}
+	recent := filepath.Join(root, "prep-eval-work-recent")
+	if _, err := os.Stat(recent); err != nil {
+		t.Fatalf("recent workspace removed: %v", err)
+	}
+	var report struct {
+		Removed []string `json:"removed"`
+	}
+	h.jsonOf(&report, "eval", "clean", "--all")
+	if len(report.Removed) != 1 || report.Removed[0] != recent {
+		t.Fatalf("clean --all: %+v", report)
+	}
+	if _, err := os.Stat(recent); !os.IsNotExist(err) {
+		t.Fatalf("recent workspace remains after --all: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "unrelated", "workspace")); err != nil {
+		t.Fatalf("unrelated directory removed: %v", err)
+	}
+	h.fails("usage", "eval", "clean", "extra")
+}
