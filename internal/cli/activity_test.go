@@ -33,7 +33,7 @@ func TestActivityRecordsCommands(t *testing.T) {
 	h.ok("guide", id, "--by", "agent/1")
 	h.ok("criterion", id, "--add", "one", "--add", "two", "--by", "agent/1")
 	h.ok("criterion", id, "--check", "1", "--by", "agent/1")
-	h.ok("decide", id, "--title", "Use JSON", "--body", "why", "--by", "agent/1")
+	h.ok("decide", id, "--title", "Use JSON", "--description", "Use JSON", "--body", "why", "--by", "agent/1")
 	h.ok("knowledge", "find", "test", "project", "--by", "agent/1")
 	other := h.newIssue("--title", "Other", "--kind", "code", "--by", "agent/2")
 	h.ok("show", id, "--by", "agent/2") // a read: agent/2 stays on Other
@@ -47,7 +47,7 @@ func TestActivityRecordsCommands(t *testing.T) {
 			verbs = append(verbs, e.Verb)
 		}
 	}
-	want := []string{"created a code issue", "read the guide", "added 2 criteria", "checked criterion 1", "recorded decision D1: Use JSON", "searched knowledge"}
+	want := []string{"created a code issue", "read the guide", "added 2 criteria", "checked criterion 1", "recorded decision: Use JSON", "searched knowledge"}
 	if strings.Join(verbs, "|") != strings.Join(want, "|") {
 		t.Fatalf("verbs:\n%v\nwant\n%v", verbs, want)
 	}

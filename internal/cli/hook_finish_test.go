@@ -11,7 +11,7 @@ import (
 func TestHookFinishReviewsOnlyTurnChanges(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	h := newHarness(t)
-	h.ok("knowledge", "new", "/code.md", "--type", "component", "--title", "Code", "--description", "Test code", "--scope", "main.go", "--body", "Current behavior.")
+	h.entry("/code.md", "component", "Code", "Test code", "Current behavior.", "main.go")
 	git := func(args ...string) {
 		t.Helper()
 		cmd := exec.Command("git", args...)
@@ -60,7 +60,7 @@ func TestHookFinishReviewsOnlyTurnChanges(t *testing.T) {
 		runHook(t, "prompt", harness, e)
 		write("main.go", "documented "+harness)
 		h.ok("new", "--kind", "code", "--title", "Turn record "+harness)
-		h.ok("knowledge", "update", "/code.md", "--body", "Documents "+harness)
+		h.entry("/code.md", "component", "Code", "Test code", "Documents "+harness, "main.go")
 		if out := runHook(t, "finish", harness, e); out != "" {
 			t.Fatalf("already reconciled: %s", out)
 		}

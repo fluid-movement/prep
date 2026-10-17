@@ -224,7 +224,7 @@ func hookRedirect(e hookEvent, root string) string {
 		for _, segment := range hookShellSegments(command) {
 			found, writes := hookShellArea(segment, cwd, root)
 			if writes {
-				return "Use prep CLI write commands (prep edit, context, criterion, knowledge update, etc.) to change .prep records; direct edits bypass validation."
+				return "Use prep CLI write commands (prep edit, context, criterion, decide, finding, etc.) to change .prep records; direct edits bypass validation."
 			}
 			if found != "" {
 				area = found
@@ -237,7 +237,7 @@ func hookRedirect(e hookEvent, root string) string {
 		return ""
 	}
 	if write {
-		return "Use prep CLI write commands to change .prep records (prep edit, context, criterion, knowledge update, etc.); direct edits bypass validation."
+		return "Use prep CLI write commands to change .prep records (prep edit, context, criterion, decide, finding, etc.); direct edits bypass validation."
 	}
 	if area == activity.AreaKnowledge {
 		return "Read knowledge with prep knowledge find <words> or prep knowledge show <entry>[#section], never the files. Use --outline first for long entries."

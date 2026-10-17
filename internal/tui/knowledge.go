@@ -27,7 +27,7 @@ type knowState struct {
 }
 
 // knowledgeCodes are the check results that mark an entry for an agent.
-var knowledgeCodes = []string{domain.CodeKnowledgeLink, domain.CodeKnowledgeSize, domain.CodeKnowledgeDrift, domain.CodeKnowledgeCommit}
+var knowledgeCodes = []string{domain.CodeKnowledgeLink, domain.CodeKnowledgeSize}
 
 // openKnowledge shows the knowledge screen, with path selected when given,
 // and runs the check that marks entries needing attention.
@@ -309,9 +309,6 @@ func (m *Model) entryPane(w, h int) string {
 		}
 		if len(e.Scope) > 0 {
 			fmt.Fprintf(&b, "Scope: `%s`", strings.Join(e.Scope, "`, `"))
-			if e.ConfirmedCommit != "" {
-				fmt.Fprintf(&b, " · confirmed at `%.7s`", e.ConfirmedCommit)
-			}
 			b.WriteString("\n\n")
 		}
 		if ds := m.attentionOf(e.Path); len(ds) > 0 {

@@ -152,16 +152,6 @@ type Criterion struct {
 	Checked bool   `json:"checked"`
 }
 
-// Decision is one append-only entry in decisions.md.
-type Decision struct {
-	ID         string `json:"id"`
-	Title      string `json:"title"`
-	Date       string `json:"date"`
-	Supersedes string `json:"supersedes,omitempty"`
-	Outcome    bool   `json:"outcome,omitempty"`
-	Body       string `json:"body,omitempty"`
-}
-
 // Baseline is a requirement snapshot written by define (Ack marks define --trivial).
 type Baseline struct {
 	Name        string    `json:"name"` // timestamp, also the file name
@@ -234,9 +224,7 @@ type Issue struct {
 	ContextLinks []string `json:"context_links,omitempty"` // knowledge entries linked from context.md
 	ContextPaths []string `json:"context_paths,omitempty"` // code paths mentioned in context.md
 
-	Decisions []Decision `json:"decisions,omitempty"`
-	History   string     `json:"-"` // the work log
-	Findings  *string    `json:"-"`
+	History string `json:"-"` // the work log
 
 	Baselines  []Baseline  `json:"baselines,omitempty"` // oldest first
 	Ready      *Ready      `json:"ready,omitempty"`
@@ -272,27 +260,26 @@ func (i *Issue) SortBaselines() {
 
 // Entry is one knowledge base entry (OKF concept), as read by the knowledge adapter.
 type Entry struct {
-	Path            string   `json:"path"` // bundle-relative, e.g. /components/export.md
-	Type            string   `json:"type"`
-	Title           string   `json:"title"`
-	Description     string   `json:"description"`
-	Status          string   `json:"status,omitempty"`
-	Scope           []string `json:"scope,omitempty"`
-	ConfirmedCommit string   `json:"confirmed_commit,omitempty"`
-	Links           []string `json:"-"`
-	Size            int      `json:"-"`
+	Path        string   `json:"path"` // bundle-relative, e.g. /components/export.md
+	Type        string   `json:"type"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Status      string   `json:"status,omitempty"`
+	Scope       []string `json:"scope,omitempty"`
+	Links       []string `json:"-"`
+	Size        int      `json:"-"`
 	// Body is the entry's text after the frontmatter, for display.
-	Body string `json:"-"`
-	// Drifted lists scoped paths changed since DriftSince, computed by the
-	// adapter: the later of ConfirmedCommit and the entry's last commit.
-	Drifted    []string `json:"drifted,omitempty"`
-	DriftSince string   `json:"-"`
-	// DriftErr is set when drift could not be computed (e.g. unknown commit).
-	DriftErr string `json:"-"`
+	Body       string   `json:"-"`
+	ID         string   `json:"id,omitempty"`
+	Date       string   `json:"date,omitempty"`
+	Issue      string   `json:"issue,omitempty"`
+	Supersedes []string `json:"supersedes,omitempty"`
+	Outcome    bool     `json:"outcome,omitempty"`
+	Superseded bool     `json:"superseded,omitempty"`
 }
 
 // KnowledgeTypes are the allowed OKF entry types.
-var KnowledgeTypes = []string{"feature", "component", "decision", "convention", "pitfall", "overview"}
+var KnowledgeTypes = []string{"feature", "component", "decision", "finding", "convention", "pitfall", "overview"}
 
 // OverviewEntry is the project overview entry, the last retrieval fallback.
 const OverviewEntry = "/overview.md"

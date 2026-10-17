@@ -12,9 +12,9 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/fluid-movement/prep/internal/domain"
-	"github.com/fluid-movement/prep/internal/gitx"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,17 +26,10 @@ type Store struct {
 	Root string // repository root
 }
 
-// Load reads every entry. With drift, it compares scoped paths against the
-// later of each entry's confirmed_commit and the last commit that changed
-// the entry file: writing or confirming an entry is its review, so code and
-// entry can land in one commit. An entry never confirmed counts from its
-// last commit alone; one not yet committed has nothing to drift from. While the entry file has uncommitted
-// changes, uncommitted changes in its scope count as reviewed with it.
-func (s *Store) Load(drift bool) ([]*domain.Entry, []domain.Diagnostic, error) {
+func (s *Store) Load() ([]*domain.Entry, []domain.Diagnostic, error) {
 	base := filepath.Join(s.Root, filepath.FromSlash(Dir))
 	var entries []*domain.Entry
 	var diags []domain.Diagnostic
-	useGit := drift && gitx.IsRepo(s.Root)
 	err := filepath.WalkDir(base, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
@@ -58,29 +51,6 @@ func (s *Store) Load(drift bool) ([]*domain.Entry, []domain.Diagnostic, error) {
 			diags = append(diags, domain.Diagnostic{Code: domain.CodeKnowledgeFrontmatter, Severity: domain.SevError, Class: domain.ClassManual,
 				File: Dir + bpath, Message: perr.Error(), Fix: "entries start with YAML frontmatter containing type, title and description"})
 			return nil
-		}
-		file := Dir + bpath
-		if useGit && len(e.Scope) > 0 && (e.ConfirmedCommit != "" || gitx.LastCommit(s.Root, file) != "") {
-			if e.ConfirmedCommit != "" && !gitx.CommitExists(s.Root, e.ConfirmedCommit) {
-				e.DriftErr = fmt.Sprintf("confirmed_commit %s is not in this repository", e.ConfirmedCommit)
-			} else {
-				since := e.ConfirmedCommit
-				if last := gitx.LastCommit(s.Root, file); last != "" && last != since && (since == "" || gitx.IsAncestor(s.Root, since, last)) {
-					since = last
-				}
-				var changed []string
-				var err error
-				if gitx.Dirty(s.Root, file) {
-					changed, err = gitx.ChangedBetween(s.Root, since, "HEAD", e.Scope)
-				} else {
-					changed, err = gitx.ChangedSince(s.Root, since, e.Scope)
-				}
-				if err != nil {
-					e.DriftErr = err.Error()
-				} else {
-					e.Drifted, e.DriftSince = changed, since
-				}
-			}
 		}
 		entries = append(entries, e)
 		return nil
@@ -147,7 +117,23 @@ func parseEntry(bpath, raw string) (*domain.Entry, error) {
 		}
 		return ""
 	}
-	e.Type, e.Title, e.Description, e.Status, e.ConfirmedCommit = str("type"), str("title"), str("description"), str("status"), str("confirmed_commit")
+	e.Type, e.Title, e.Description, e.Status = str("type"), str("title"), str("description"), str("status")
+	if date, ok := m["date"].(time.Time); ok {
+		m["date"] = date.Format("2006-01-02")
+	}
+	e.ID, e.Date, e.Issue = strings.TrimSuffix(path.Base(bpath), ".md"), str("date"), str("issue")
+	if !domain.ValidID(e.ID) || (e.Type != "decision" && e.Type != "finding") {
+		e.ID = ""
+	}
+	e.Outcome, _ = m["outcome"].(bool)
+	switch v := m["supersedes"].(type) {
+	case string:
+		e.Supersedes = []string{v}
+	case []any:
+		for _, x := range v {
+			e.Supersedes = append(e.Supersedes, fmt.Sprint(x))
+		}
+	}
 	switch v := m["scope"].(type) {
 	case string:
 		e.Scope = []string{v}

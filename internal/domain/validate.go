@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // KnowledgeSizeLimit is the entry size (bytes) above which lint warns.
@@ -95,11 +96,6 @@ func Validate(t *Tree) []Diagnostic {
 			e(CodeDepCycle, ClassManual, "issue.md", "remove a depends_on entry to break the cycle", "dependency cycle through this issue")
 		}
 
-		// Kind-specific files.
-		if i.HasFile("findings.md") && i.Kind != KindResearch && i.Kind.Valid() {
-			e(CodeFindingsKind, ClassGuided, "findings.md", "change kind to research, or move the findings into context.md or history.md", "findings.md is only allowed on research issues")
-		}
-
 		// Records.
 		if i.Ready != nil && !t.ReadyValid(i) && i.Resolution == nil {
 			w(CodeReadyOutdated, ClassGuided, "ready.md", "enrich against the current requirement and run prep ready, or prep define --trivial if the change was trivial", "ready.md references baseline %s, not the newest", i.Ready.Baseline)
@@ -121,9 +117,6 @@ func Validate(t *Tree) []Diagnostic {
 		if r := i.Resolution; r != nil {
 			switch r.Outcome {
 			case OutcomeDone:
-				if r.Documentation == nil || (len(r.Documentation.Entries) == 0 && strings.TrimSpace(r.Documentation.NoImpact) == "") {
-					e(CodeRecordInvalid, ClassManual, "resolution.md", "add documentation entries or a no_impact reason", "resolution has no documentation decision")
-				}
 				if t.IsParent(id) {
 					for _, c := range t.Children(id) {
 						if !t.State(c).Terminal() {
@@ -146,18 +139,6 @@ func Validate(t *Tree) []Diagnostic {
 		}
 		if t.State(id) == StateInProgress && t.Drifted(i) {
 			w(CodeStaleInProgress, ClassGuided, "issue.md", "prep define --trivial for a trivial change; otherwise prep release, then prep define and re-enrich", "requirement changed while in progress")
-		}
-
-		// Decisions.
-		ids := map[string]bool{}
-		for _, d := range i.Decisions {
-			if ids[d.ID] {
-				e(CodeDecisionInvalid, ClassManual, "decisions.md", "give each entry a unique ID", "duplicate decision id %s", d.ID)
-			}
-			if d.Supersedes != "" && !ids[d.Supersedes] {
-				e(CodeDecisionInvalid, ClassManual, "decisions.md", "supersedes must name an earlier entry", "decision %s supersedes unknown or later entry %s", d.ID, d.Supersedes)
-			}
-			ids[d.ID] = true
 		}
 
 		// Context links into the knowledge base. A resolved issue's links are
@@ -196,6 +177,30 @@ func validateKnowledge(t *Tree) []Diagnostic {
 		if strings.TrimSpace(k.Description) == "" {
 			e(CodeKnowledgeField, SevError, ClassManual, "add a one-line description; prep guide lists it for triage", "description is missing")
 		}
+		if k.ID != "" || k.Type == "finding" {
+			if !ValidID(k.ID) || p != "/"+k.Type+"s/"+k.ID+".md" {
+				e(CodeKnowledgeField, SevError, ClassManual, "use a ULID record filename in decisions/ or findings/", "invalid record path or ID")
+			}
+			if _, err := time.Parse("2006-01-02", k.Date); err != nil {
+				e(CodeKnowledgeField, SevError, ClassManual, "supply date: YYYY-MM-DD", "invalid or missing record date")
+			}
+			if strings.ContainsAny(k.Description, "\r\n") {
+				e(CodeKnowledgeField, SevError, ClassManual, "use a one-line description", "description spans several lines")
+			}
+			if k.Issue != "" && t.Issues[k.Issue] == nil {
+				e(CodeKnowledgeField, SevError, ClassManual, "link an existing issue", "unknown issue %s", k.Issue)
+			}
+			if k.Type == "finding" && (k.Outcome || len(k.Supersedes) > 0) {
+				e(CodeKnowledgeField, SevError, ClassManual, "outcome and supersedes belong to decisions", "finding has decision fields")
+			}
+			for _, id := range k.Supersedes {
+				old, err := t.ResolveRecord(id)
+				if err != nil || old.ID != id || old.ID >= k.ID {
+					e(CodeKnowledgeField, SevError, ClassManual, "supersedes must name an older record ID", "invalid supersedes reference %s", id)
+				}
+			}
+		}
+
 		if k.Status != "" && k.Status != "draft" && k.Status != "stable" && k.Status != "deprecated" {
 			e(CodeKnowledgeField, SevError, ClassManual, "use draft, stable or deprecated (OKF v0.2)", "status %q is not allowed", k.Status)
 		}
@@ -206,12 +211,6 @@ func validateKnowledge(t *Tree) []Diagnostic {
 		}
 		if k.Size > KnowledgeSizeLimit {
 			e(CodeKnowledgeSize, SevWarning, ClassManual, "split the entry: one concept per entry", "entry is %d bytes, above %d", k.Size, KnowledgeSizeLimit)
-		}
-		if k.DriftErr != "" {
-			e(CodeKnowledgeCommit, SevWarning, ClassManual, "set confirmed_commit to a commit in this repository", "%s", k.DriftErr)
-		}
-		if len(k.Drifted) > 0 {
-			e(CodeKnowledgeDrift, SevWarning, ClassGuided, "re-check the entry against the code, update it and confirmed_commit", "scoped paths changed since %s: %s", k.DriftSince, strings.Join(k.Drifted, ", "))
 		}
 	}
 	return ds

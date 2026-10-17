@@ -149,7 +149,7 @@ type Guide struct {
 	Outputs      []Pointer    `json:"outputs"`
 	DoD          []string     `json:"definition_of_done,omitempty"`
 	Diagnostics  []Diagnostic `json:"diagnostics,omitempty"`
-	Alerts       []string     `json:"alerts,omitempty"` // project-wide, such as a missing bootstrap
+	Alerts       []string     `json:"alerts,omitempty"` // project-wide alerts
 }
 
 // BuildGuide assembles the step contract. issueDir maps an ID to its
@@ -178,7 +178,7 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 	// Inputs: the issue's own records first, then upstream outputs.
 	g.Inputs = append(g.Inputs, Pointer{f("issue.md"), "requirement and open questions", ""})
 	if s != StateOpen {
-		for _, p := range []Pointer{{f("acceptance.md"), "acceptance criteria", ""}, {f("context.md"), "implementation context", ""}, {f("decisions.md"), "decision records", ""}} {
+		for _, p := range []Pointer{{f("acceptance.md"), "acceptance criteria", ""}, {f("context.md"), "implementation context", ""}, {".prep/knowledge/decisions/", "decision records", ""}} {
 			if i.HasFile(path.Base(p.Path)) {
 				g.Inputs = append(g.Inputs, p)
 			}
@@ -197,14 +197,13 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 		if di == nil {
 			continue
 		}
-		switch {
-		case di.Kind == KindResearch && di.Findings != nil:
-			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(d), "findings.md"), "findings of dependency: " + di.Title, ""})
-		case di.Kind == KindDecision && len(di.Decisions) > 0:
-			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(d), "decisions.md"), "outcome of dependency: " + di.Title, ""})
-		case t.State(d) == StateDone:
-			g.Inputs = append(g.Inputs, Pointer{path.Join(issueDir(d), "resolution.md"), "resolution of dependency: " + di.Title, ""})
+
+		for _, e := range t.IssueRecords(d) {
+			g.Inputs = append(g.Inputs, Pointer{".prep/knowledge" + e.Path, e.Title, "prep knowledge show " + e.Path})
 		}
+	}
+	for _, e := range t.IssueRecords(id) {
+		g.Inputs = append(g.Inputs, Pointer{".prep/knowledge" + e.Path, e.Title, "prep knowledge show " + e.Path})
 	}
 	g.Knowledge = t.Candidates(id, touched)
 	for _, d := range Validate(t) {
@@ -215,9 +214,6 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 	g.Step, g.Instructions, g.Outputs = stepContract(t, i, s, stale, parent, f)
 	if g.Step == "check" {
 		g.DoD = append([]string(nil), t.Project.DoD...)
-	}
-	if a := t.BootstrapAlert(); a != "" {
-		g.Alerts = append(g.Alerts, a)
 	}
 	return g
 }
@@ -241,22 +237,22 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		}, []Pointer{{f("issue.md"), "requirement prose, empty Open questions section", "prep edit " + i.ID + " --body-file -"}}
 	case StateDefined:
 		if t.completeFromDefined(i.ID) {
-			result := "Record the agreed outcome with prep decide " + i.ID + " --title <title> --body-file - --outcome."
-			output := Pointer{f("decisions.md"), "decision outcome", "prep decide " + i.ID + " --title <title> --body-file - --outcome"}
+			result := "Record the agreed outcome with prep decide " + i.ID + " --title <title> --description <description> --body-file - --outcome."
+			output := Pointer{".prep/knowledge/decisions/", "decision outcome", "prep decide " + i.ID + " --title <title> --description <description> --body-file - --outcome"}
 			if i.Kind == KindResearch {
-				result = "Record the answer with prep findings " + i.ID + " --body-file -."
-				output = Pointer{f("findings.md"), "research findings", "prep findings " + i.ID + " --body-file -"}
+				result = "Record the answer with prep finding " + i.ID + " --title <title> --description <description> --body-file -."
+				output = Pointer{".prep/knowledge/findings/", "research findings", "prep finding " + i.ID + " --title <title> --description <description> --body-file -"}
 			}
 			return "complete", []string{
 				result,
-				"Check any existing acceptance criteria, resolve requirement drift, and update affected knowledge or decide there is no documentation impact.",
-				"Then run prep complete " + i.ID + " --docs <entry>... (or --no-impact <reason>). Ready and claim are optional when handing the issue off: prep ready " + i.ID + ", then prep claim " + i.ID + ".",
+				"Check any existing acceptance criteria and resolve requirement drift.",
+				"Then run prep complete " + i.ID + ". Ready and claim are optional when handing the issue off: prep ready " + i.ID + ", then prep claim " + i.ID + ".",
 			}, []Pointer{output, {f("resolution.md"), "written by prep complete", ""}}
 		}
 		ins := []string{
 			"Enrich: settle how. The agent drafts, the user agrees.",
 			"Context: implementation context derived from the requirement, with prep context " + i.ID + " --body-file -. Link relevant knowledge entries with bundle-relative links such as [Export](/components/export.md); mention code paths in backticks.",
-			"Decisions: prep decide " + i.ID + " --title <title> --body-file - appends a dated entry with rationale and alternatives considered; --supersedes D<n> replaces an earlier one.",
+			"Decisions: prep decide " + i.ID + " --title <title> --description <description> --body-file - appends a dated entry with rationale and alternatives considered; --supersedes <record-id> replaces an earlier one.",
 			"Acceptance: prep criterion " + i.ID + " --add <text> (repeatable) for checkable criteria.",
 		}
 		switch {
@@ -274,14 +270,14 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		ins = append(ins, "Then run prep ready "+i.ID+" to sign off against the current baseline.")
 		return "enrich", ins, []Pointer{
 			{f("context.md"), "implementation context", "prep context " + i.ID + " --body-file -"},
-			{f("decisions.md"), "decision records", "prep decide " + i.ID + " --title <title> --body-file -"},
+			{".prep/knowledge/decisions/", "decision records", "prep decide " + i.ID + " --title <title> --description <description> --body-file -"},
 			{f("acceptance.md"), "acceptance criteria", "prep criterion " + i.ID + " --add <text>"},
 		}
 	case StateReady:
 		if parent {
 			return "complete-parent", []string{
 				"Work happens in the children; use prep next --under " + i.ID + ".",
-				"When all children are done or dropped and the criteria in acceptance.md are checked, run prep complete " + i.ID + " with a documentation decision.",
+				"When all children are done or dropped and the criteria in acceptance.md are checked, run prep complete " + i.ID + ".",
 			}, []Pointer{{f("acceptance.md"), "check criteria", "prep criterion " + i.ID + " --check <n>"}}
 		}
 		if deps := t.UnresolvedDeps(i.ID); len(deps) > 0 {
@@ -294,23 +290,23 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		ins := []string{
 			"Implement against the context and acceptance criteria. Log notable steps with prep log " + i.ID + " <text>.",
 			"Check criteria as they are met with prep criterion " + i.ID + " --check <n> (numbers as prep show lists them). Writes during implementation are reviewed as a batch at completion.",
-			"Documentation step: record what is now true with prep knowledge update <entry> (or prep knowledge new <entry> --type --title --description --body-file -), then prep knowledge confirm <entry> once an entry matches its scoped code; or decide there is no impact.",
+			"Record decisions and findings with prep decide or prep finding; records are immutable.",
 		}
 		var outs []Pointer
 		switch {
 		case parent:
 		case i.Kind == KindCode:
-			ins = append(ins, "Run prep complete "+i.ID+" --docs <entry>... (or --no-impact <reason>); a commit is not required. If the work was committed earlier, optionally pass --commit <hash> as provenance.")
+			ins = append(ins, "Run prep complete "+i.ID+"; a commit is not required. If the work was committed earlier, optionally pass --commit <hash> as provenance.")
 		case i.Kind == KindResearch:
-			ins = append(ins, "Write the answer with prep findings "+i.ID+" --body-file -, then run prep complete "+i.ID+" --docs <entry>... (or --no-impact <reason>).")
-			outs = append(outs, Pointer{f("findings.md"), "research findings", "prep findings " + i.ID + " --body-file -"})
+			ins = append(ins, "Write the answer with prep finding "+i.ID+" --body-file -, then run prep complete "+i.ID+".")
+			outs = append(outs, Pointer{".prep/knowledge/findings/", "research findings", "prep finding " + i.ID + " --title <title> --description <description> --body-file -"})
 		case i.Kind == KindDecision:
-			ins = append(ins, "After agreement, record the decision with prep decide "+i.ID+" --title <title> --body-file - --outcome, then run prep complete "+i.ID+" --docs <entry>... (or --no-impact <reason>).")
+			ins = append(ins, "After agreement, record the decision with prep decide "+i.ID+" --title <title> --description <description> --body-file - --outcome, then run prep complete "+i.ID+".")
 		case i.Kind == KindManual:
-			ins = append(ins, "Manual issues are completed by the user, usually in the TUI; with the CLI: prep complete "+i.ID+" --no-impact <reason> or --docs <entry>.")
+			ins = append(ins, "Manual issues are completed by the user, usually in the TUI; with the CLI: prep complete "+i.ID+".")
 		}
 		ins = append(ins, "Stopping without finishing: prep release "+i.ID+" --reason <why>.")
-		outs = append(outs, Pointer{f("history.md"), "work log", "prep log " + i.ID + " <text>"}, Pointer{f("acceptance.md"), "checked criteria", "prep criterion " + i.ID + " --check <n>"}, Pointer{".prep/knowledge/", "knowledge entries changed by this issue", "prep knowledge update <entry> --body-file -"}, Pointer{f("resolution.md"), "written by prep complete", ""})
+		outs = append(outs, Pointer{f("history.md"), "work log", "prep log " + i.ID + " <text>"}, Pointer{f("acceptance.md"), "checked criteria", "prep criterion " + i.ID + " --check <n>"}, Pointer{".prep/knowledge/", "knowledge entries changed by this issue", "prep finding " + i.ID + " --title <title> --description <description> --body-file -"}, Pointer{f("resolution.md"), "written by prep complete", ""})
 		if CheckedAll(i.Criteria) {
 			return "check", ins, outs
 		}

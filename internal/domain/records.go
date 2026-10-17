@@ -2,9 +2,7 @@ package domain
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -12,7 +10,6 @@ import (
 // Gate codes of the record write commands.
 const (
 	GateCriterion = "G_CRITERION"
-	GateDecision  = "G_DECISION"
 )
 
 // AcceptanceOp is one change to acceptance criteria. Index is 1-based and
@@ -29,11 +26,6 @@ type RecordInput struct {
 	Now   time.Time
 	Text  string
 
-	// decide
-	Title      string
-	Supersedes string
-	Outcome    bool
-
 	// criterion
 	Acceptance []AcceptanceOp
 }
@@ -41,22 +33,18 @@ type RecordInput struct {
 // Record writes, one command each.
 const (
 	OpContext   Op = "context"
-	OpFindings  Op = "findings"
-	OpDecide    Op = "decide"
 	OpCriterion Op = "criterion"
 	OpLog       Op = "log"
 )
 
-var decisionNumRe = regexp.MustCompile(`^D(\d+)$`)
-
 // PlanRecord validates a write to one of an unresolved issue's records and
 // returns the change. It never changes the issue's state.
 func (t *Tree) PlanRecord(id string, op Op, in RecordInput) (*Change, error) {
-	i := t.Issues[id]
 	if s := t.State(id); s.Terminal() {
 		return nil, &Error{Code: ErrGate, Message: fmt.Sprintf("cannot %s %s", op, id),
 			Unmet: []Unmet{{GateState, fmt.Sprintf("%s requires an unresolved issue, issue is %s", op, s)}}}
 	}
+	i := t.Issues[id]
 	var unmet []Unmet
 	add := func(code, format string, a ...any) {
 		unmet = append(unmet, Unmet{Code: code, Message: fmt.Sprintf(format, a...)})
@@ -67,34 +55,6 @@ func (t *Tree) PlanRecord(id string, op Op, in RecordInput) (*Change, error) {
 	case OpContext:
 		text := in.Text
 		c.Context = &text
-	case OpFindings:
-		if i.Kind != KindResearch {
-			add(GateKind, "findings are only for research issues, issue is %s", i.Kind)
-		}
-		text := in.Text
-		c.Findings = &text
-	case OpDecide:
-		if strings.TrimSpace(in.Title) == "" {
-			add(GateTitle, "--title is required")
-		}
-		if in.Outcome && i.Kind != KindDecision {
-			add(GateKind, "--outcome is only for decision issues, issue is %s", i.Kind)
-		}
-		n := 0
-		known := map[string]bool{}
-		for _, d := range i.Decisions {
-			known[d.ID] = true
-			if m := decisionNumRe.FindStringSubmatch(d.ID); m != nil {
-				if k, _ := strconv.Atoi(m[1]); k > n {
-					n = k
-				}
-			}
-		}
-		if in.Supersedes != "" && !known[in.Supersedes] {
-			add(GateDecision, "--supersedes %s: no such decision", in.Supersedes)
-		}
-		c.Decision = &Decision{ID: fmt.Sprintf("D%d", n+1), Title: strings.TrimSpace(in.Title), Date: now.Format("2006-01-02"),
-			Supersedes: in.Supersedes, Outcome: in.Outcome, Body: strings.TrimSpace(in.Text)}
 	case OpCriterion:
 		if len(in.Acceptance) == 0 {
 			add(GateCriterion, "nothing to change")

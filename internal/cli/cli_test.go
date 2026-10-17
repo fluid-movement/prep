@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"gopkg.in/yaml.v3"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -31,8 +32,8 @@ func newHarness(t *testing.T) *harness {
 	h := &harness{t: t, dir: t.TempDir(), now: time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)}
 	clock = func() time.Time { h.now = h.now.Add(time.Second); return h.now }
 	t.Cleanup(func() { clock = time.Now })
-	h.ok("init", "--no-bootstrap")
-	h.ok("knowledge", "new", "/overview.md", "--type", "overview", "--title", "Project overview", "--description", "Entry point to the knowledge base.", "--body", "The test project.")
+	h.ok("init")
+	h.entry("/overview.md", "overview", "Project overview", "Entry point to the knowledge base.", "The test project.")
 	return h
 }
 
@@ -214,14 +215,13 @@ func TestLifecycle(t *testing.T) {
 	}
 	h.expectState(a, "ready", false)
 	h.ok("claim", a)
-	h.fails("G_UNCHECKED", "complete", a, "--commit", "abc1234", "--no-impact", "none", "--json")
+	h.fails("G_UNCHECKED", "complete", a, "--commit", "abc1234", "--json")
 	h.replace(a, "acceptance.md", "- [ ]", "- [x]")
-	h.fails("G_COMMIT", "complete", a, "--commit", "not-a-hash", "--no-impact", "none", "--json")
-	h.fails("G_DOCS", "complete", a, "--commit", "abc1234", "--json")
-	h.ok("complete", a, "--commit", "abc1234", "--docs", "overview", "--by", "human:andre")
+	h.fails("G_COMMIT", "complete", a, "--commit", "not-a-hash", "--json")
+	h.ok("complete", a, "--commit", "abc1234", "--by", "human:andre")
 	h.expectState(a, "done", false)
 	res := h.read(a, "resolution.md")
-	for _, want := range []string{"outcome: done", "evidence: abc1234", "/overview.md"} {
+	for _, want := range []string{"outcome: done", "evidence: abc1234"} {
 		if !strings.Contains(res, want) {
 			t.Fatalf("resolution.md lacks %q:\n%s", want, res)
 		}
@@ -252,18 +252,18 @@ func TestParentCompletesWhenChildrenResolved(t *testing.T) {
 	h.write(p, "acceptance.md", "- [ ] goal reached\n")
 	h.ok("ready", p) // parents need no context
 	h.fails("G_PARENT", "claim", p, "--json")
-	h.fails("G_CHILDREN", "complete", p, "--no-impact", "n/a", "--json")
+	h.fails("G_CHILDREN", "complete", p, "--json")
 
 	h.ok("define", c)
 	h.write(c, "acceptance.md", "- [ ] done by hand\n")
 	h.ok("ready", c) // manual issues need no context
 	h.ok("claim", c)
 	h.replace(c, "acceptance.md", "- [ ]", "- [x]")
-	h.ok("complete", c, "--no-impact", "manual step", "--by", "human:andre")
+	h.ok("complete", c, "--by", "human:andre")
 
-	h.fails("G_UNCHECKED", "complete", p, "--no-impact", "n/a", "--json")
+	h.fails("G_UNCHECKED", "complete", p, "--json")
 	h.replace(p, "acceptance.md", "- [ ]", "- [x]")
-	h.ok("complete", p, "--no-impact", "n/a")
+	h.ok("complete", p)
 	h.expectState(p, "done", false)
 
 	ids := listIDs(h, "list", "--under", p)
@@ -281,73 +281,27 @@ func TestDefinedResearchAndDecisionComplete(t *testing.T) {
 		if kind == "research" {
 			gate = "G_FINDINGS"
 		}
-		h.fails(gate, "complete", id, "--no-impact", "none", "--json")
+		h.fails(gate, "complete", id, "--json")
 		guide := h.ok("guide", id)
 		command := "prep decide "
 		if kind == "research" {
-			command = "prep findings "
+			command = "prep finding "
 		}
 		if !strings.Contains(guide, command+id) || !strings.Contains(guide, "prep complete "+id) {
 			t.Fatalf("guide lacks direct completion: %s", guide)
 		}
 		if kind == "decision" {
-			h.ok("decide", id, "--title", "Choice", "--body", "Agreed.", "--outcome")
+			h.ok("decide", id, "--title", "Choice", "--description", "Agreed choice.", "--body", "Agreed.", "--outcome")
 		} else {
-			h.ok("findings", id, "--body", "The answer.")
+			h.ok("finding", id, "--title", "Answer", "--description", "Answer found.", "--body", "The answer.")
 		}
-		h.ok("complete", id, "--no-impact", "none")
+		h.ok("complete", id)
 		h.expectState(id, "done", false)
 		for _, record := range []string{"ready.md", "claim.md"} {
 			if _, err := os.Stat(filepath.Join(h.dir, ".prep", "issues", id, record)); !os.IsNotExist(err) {
 				t.Fatalf("unexpected %s: %v", record, err)
 			}
 		}
-	}
-}
-
-func TestResearchAndDecisionEvidence(t *testing.T) {
-	h := newHarness(t)
-	r := h.newIssue("--title", "Which parser?", "--kind", "research", "--body", "Find a parser.")
-	d := h.newIssue("--title", "Pick a format", "--kind", "decision", "--body", "Choose the format.")
-	for _, id := range []string{r, d} {
-		h.ok("define", id)
-		h.enrich(id)
-		h.replace(id, "acceptance.md", "- [ ]", "- [x]")
-		h.ok("ready", id)
-		h.ok("claim", id)
-	}
-	h.fails("G_FINDINGS", "complete", r, "--no-impact", "x", "--json")
-	h.write(r, "findings.md", "Use the stdlib parser.\n")
-	h.ok("complete", r, "--no-impact", "x")
-
-	h.write(d, "decisions.md", "## D1: Use CSV\ndate: 2026-10-05\n\nDraft.\n")
-	h.fails("G_OUTCOME", "complete", d, "--no-impact", "x", "--json")
-	h.write(d, "decisions.md", "## D1: Use CSV\ndate: 2026-10-05\n\nDraft.\n\n## D2: Use JSON\ndate: 2026-10-06\nsupersedes: D1\noutcome: true\n\nAgreed with the user.\n")
-	h.ok("complete", d, "--no-impact", "x")
-
-	// The decision's outcome flows into dependents through guide.
-	e := h.newIssue("--title", "Implement", "--kind", "code", "--body", "Build it.", "--depends-on", d, "--depends-on", r)
-	out := h.ok("guide", e)
-	if !strings.Contains(out, "prep show "+d+" — outcome of dependency") || !strings.Contains(out, "prep show "+r+" — findings of dependency") {
-		t.Fatalf("guide does not point at upstream outcomes:\n%s", out)
-	}
-	// The guide sends agents to prep show, not to the record files; the JSON
-	// keeps the paths for the clients that open them.
-	if strings.Contains(out, "/decisions.md") || strings.Contains(out, "issue.md —") {
-		t.Fatalf("guide text lists record files:\n%s", out)
-	}
-	var g struct {
-		Inputs []struct{ Path string } `json:"inputs"`
-	}
-	h.jsonOf(&g, "guide", e)
-	found := false
-	for _, in := range g.Inputs {
-		if strings.HasSuffix(in.Path, d+"/decisions.md") {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("guide JSON lost the paths: %+v", g)
 	}
 }
 
@@ -531,39 +485,15 @@ func TestNewKeepsOneOpenQuestionsSection(t *testing.T) {
 func TestRecordCommands(t *testing.T) {
 	h := newHarness(t)
 	a := h.newIssue("--title", "Export", "--kind", "code", "--body", "Export rows as CSV.")
-	q := h.newIssue("--title", "Which format", "--kind", "decision", "--body", "Pick a format.")
 	r := h.newIssue("--title", "Survey", "--kind", "research", "--body", "Survey formats.")
 
-	// context and findings replace their record; findings only on research.
+	// Context replaces its issue record; knowledge results use separate record tests.
 	h.fails("E_USAGE", "context", a, "--json")
 	h.ok("context", a, "--body", "Change `internal/export.go`.")
 	h.ok("context", a, "--body", "Change `internal/csv.go`.")
 	if got := h.read(a, "context.md"); got != "Change `internal/csv.go`.\n" {
 		t.Fatalf("context.md = %q", got)
 	}
-	h.fails("G_KIND", "findings", a, "--body", "x", "--json")
-	h.ok("findings", r, "--body", "CSV is enough.")
-	if got := h.read(r, "findings.md"); got != "CSV is enough.\n" {
-		t.Fatalf("findings.md = %q", got)
-	}
-
-	// decide appends numbered, dated entries the parser reads back.
-	h.ok("decide", a, "--title", "Use encoding/csv", "--body", "Standard library.")
-	h.ok("decide", a, "--title", "Stream rows", "--supersedes", "D1")
-	h.fails("G_DECISION", "decide", a, "--title", "x", "--supersedes", "D9", "--json")
-	h.fails("G_KIND", "decide", a, "--title", "x", "--outcome", "--json")
-	h.fails("G_TITLE", "decide", a, "--json")
-	dec := h.read(a, "decisions.md")
-	for _, want := range []string{"## D1: Use encoding/csv\ndate: 2026-10-05\n\nStandard library.", "## D2: Stream rows\ndate: 2026-10-05\nsupersedes: D1"} {
-		if !strings.Contains(dec, want) {
-			t.Fatalf("decisions.md lacks %q:\n%s", want, dec)
-		}
-	}
-	h.ok("decide", q, "--title", "CSV", "--outcome")
-	if !strings.Contains(h.read(q, "decisions.md"), "outcome: true") {
-		t.Fatalf("outcome not written")
-	}
-
 	// criterion keeps text a human wrote and numbers like prep show.
 	h.write(a, "acceptance.md", "Criteria for the export:\n\n- [ ] writes a header\n- [ ] quotes fields\n\n## Definition of Done\n\n- benchmarks run\n")
 	h.ok("criterion", a, "--check", "2", "--add", "handles empty input")
@@ -604,112 +534,10 @@ func TestRecordCommands(t *testing.T) {
 	h.fails("G_STATE", "log", r, "late note", "--json")
 }
 
-func TestKnowledgeCommands(t *testing.T) {
-	h := newHarness(t)
-	git := func(args ...string) {
-		t.Helper()
-		cmd := exec.Command("git", append([]string{"-c", "user.email=t@t", "-c", "user.name=t"}, args...)...)
-		cmd.Dir = h.dir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
-	entry := func(p string) string {
-		b, err := os.ReadFile(filepath.Join(h.dir, ".prep", "knowledge", filepath.FromSlash(p)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		return string(b)
-	}
-
-	h.fails("--title is required", "knowledge", "new", "components/export.md", "--type", "component", "--json")
-	h.fails("K003", "knowledge", "new", "components/export.md", "--type", "component", "--title", "Export", "--description", "Export: formats", "--body", "See [gone](/gone.md).", "--json")
-	h.fails("K002", "knowledge", "new", "components/export.md", "--type", "widget", "--title", "Export", "--description", "d", "--body", "b", "--json")
-	h.ok("knowledge", "new", "components/export.md", "--type", "component", "--title", "Export", "--description", "Export: formats and writers", "--scope", "internal/export/**", "--body", "See the [overview](/overview.md).", "--by", "claude-code/2.0")
-	got := entry("components/export.md")
-	for _, want := range []string{"type: component\ntitle: Export\ndescription: 'Export: formats and writers'\ngenerated:\n  by: claude-code/2.0\n  at: 2026-10-05T", "scope:\n  - internal/export/**\n---\n\nSee the [overview](/overview.md).\n"} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("new entry lacks %q:\n%s", want, got)
-		}
-	}
-	h.fails("already exists", "knowledge", "new", "components/export.md", "--type", "component", "--title", "x", "--description", "x", "--body", "x", "--json")
-
-	// Update changes only what is given and keeps keys prep does not model.
-	p := filepath.Join(h.dir, ".prep", "knowledge", "components", "export.md")
-	if err := os.WriteFile(p, []byte(strings.Replace(got, "scope:", "sources:\n  - https://example.com\nscope:", 1)), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	h.ok("knowledge", "update", "/components/export.md", "--status", "stable", "--body", "Rewritten.")
-	got = entry("components/export.md")
-	for _, want := range []string{"status: stable", "sources:\n  - https://example.com", "title: Export", "\n---\n\nRewritten.\n"} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("updated entry lacks %q:\n%s", want, got)
-		}
-	}
-	h.fails("nothing to change", "knowledge", "update", "components/export.md", "--json")
-	h.fails("the body is empty", "knowledge", "update", "components/export.md", "--body", "  ", "--json")
-	if !strings.Contains(entry("components/export.md"), "Rewritten.") {
-		t.Fatal("an empty body was written")
-	}
-	h.fails("E_NOT_FOUND", "knowledge", "update", "components/missing.md", "--title", "x", "--json")
-	h.fails("not a valid entry path", "knowledge", "update", "../escape.md", "--title", "x", "--json")
-
-	// Confirm needs git and a scope; --drifted confirms what drifted.
-	h.fails("git repository", "knowledge", "confirm", "components/export.md", "--json")
-	git("init", "-q")
-	git("add", "-A")
-	git("commit", "-qm", "init")
-	h.fails("has no scope", "knowledge", "confirm", "overview.md", "--json")
-	h.ok("knowledge", "confirm", "components/export.md")
-	if !strings.Contains(entry("components/export.md"), "confirmed_commit: ") {
-		t.Fatal("confirm did not set confirmed_commit")
-	}
-	var reviewed struct {
-		Entries []struct {
-			ConfirmedCommit string `json:"confirmed_commit"`
-		} `json:"entries"`
-	}
-	h.jsonOf(&reviewed, "knowledge", "show", "components/export.md", "--outline")
-	if len(reviewed.Entries) != 1 || len(reviewed.Entries[0].ConfirmedCommit) != 40 {
-		t.Fatalf("knowledge read omitted review provenance: %+v", reviewed)
-	}
-	if out := h.ok("knowledge", "show", "components/export.md", "--outline"); !strings.Contains(out, "last explicit review: "+reviewed.Entries[0].ConfirmedCommit+" (provenance, not semantic proof)") {
-		t.Fatalf("outline omitted qualified review provenance: %s", out)
-	}
-	git("commit", "-qam", "confirm")
-	if err := os.MkdirAll(filepath.Join(h.dir, "internal", "export"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(h.dir, "internal", "export", "csv.go"), []byte("package export\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	git("add", "-A")
-	git("commit", "-qm", "code")
-	if out := h.ok("check"); !strings.Contains(out, "K005") {
-		t.Fatalf("expected drift:\n%s", out)
-	}
-	var r struct {
-		Entries []string `json:"entries"`
-	}
-	h.jsonOf(&r, "knowledge", "confirm", "--drifted")
-	if len(r.Entries) != 1 || r.Entries[0] != "/components/export.md" {
-		t.Fatalf("confirm --drifted = %v", r.Entries)
-	}
-	if out := h.ok("check"); strings.Contains(out, "K005") {
-		t.Fatalf("drift not cleared:\n%s", out)
-	}
-
-	// Clearing the scope also drops confirmed_commit.
-	h.ok("knowledge", "update", "components/export.md", "--scope", "")
-	if got := entry("components/export.md"); strings.Contains(got, "scope:") || strings.Contains(got, "confirmed_commit") {
-		t.Fatalf("scope not cleared:\n%s", got)
-	}
-}
-
 func TestKnowledgeReads(t *testing.T) {
 	h := newHarness(t)
 	body := "Applies when exporting.\n\n## Formats\n\n- CSV writes one row per issue.\n- JSON nests children.\n\n### Escaping\n\nQuotes double inside CSV fields.\n\n## Writers\n\nOne writer per format."
-	h.ok("knowledge", "new", "components/export.md", "--type", "component", "--title", "Export", "--description", "Export: formats and writers", "--scope", "internal/export", "--body", body)
+	h.entry("components/export.md", "component", "Export", "Export: formats and writers", body, "internal/export")
 
 	out := h.ok("knowledge", "list", "--type", "component")
 	if !strings.Contains(out, "/components/export.md  component  Export — Export: formats and writers (~") || strings.Contains(out, "overview") {
@@ -883,67 +711,12 @@ func TestPriorities(t *testing.T) {
 	h.fails("I027", "check")
 }
 
-func TestBootstrap(t *testing.T) {
-	h := &harness{t: t, dir: t.TempDir(), now: time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)}
-	clock = func() time.Time { h.now = h.now.Add(time.Second); return h.now }
-	t.Cleanup(func() { clock = time.Now })
-	h.ok("init")
-
-	if _, err := os.Stat(filepath.Join(h.dir, ".prep", "knowledge", "overview.md")); err == nil {
-		t.Fatal("init still writes a placeholder overview")
-	}
-	var issues []summary
-	var r struct {
-		Issues []summary `json:"issues"`
-	}
-	h.jsonOf(&r, "list", "--tag", "bootstrap")
-	issues = r.Issues
-	if len(issues) != 2 || issues[0].Title != "Bootstrap the knowledge base" || issues[1].Kind != "research" || issues[1].Parent != issues[0].ID {
-		t.Fatalf("bootstrap issues = %+v", issues)
-	}
-	survey := issues[1].ID
-	if ctx := h.read(survey, "context.md"); !strings.Contains(ctx, "prep findings "+survey) || !strings.Contains(ctx, "--parent "+issues[0].ID) {
-		t.Fatalf("survey context does not name its issues:\n%s", ctx)
-	}
-	if acc := h.read(survey, "acceptance.md"); !strings.Contains(acc, "/overview.md exists as a draft") {
-		t.Fatalf("survey criteria missing:\n%s", acc)
-	}
-
-	// Not bootstrapped: prime and guide alert, knowledge new waits for the overview.
-	if out := h.ok("prime"); !strings.HasPrefix(out, "! The knowledge base is not bootstrapped yet") || !strings.Contains(out, "prep guide "+survey) {
-		t.Fatalf("prime does not lead with the bootstrap:\n%s", out)
-	}
-	if out := h.ok("guide", issues[0].ID); !strings.Contains(out, "not bootstrapped") {
-		t.Fatalf("guide lacks the alert:\n%s", out)
-	}
-	h.fails("G_BOOTSTRAP", "knowledge", "new", "/components/export.md", "--type", "component", "--title", "Export", "--description", "d", "--body", "b", "--json")
-	h.fails("bootstrap issues already exist", "knowledge", "bootstrap", "--json")
-
-	// Writing the overview bootstraps the project.
-	h.ok("knowledge", "new", "/overview.md", "--type", "overview", "--title", "Demo", "--description", "A demo project.", "--status", "draft", "--body", "What the demo is.")
-	if out := h.ok("prime"); strings.Contains(out, "not bootstrapped") {
-		t.Fatalf("prime still alerts after the overview:\n%s", out)
-	}
-	h.ok("knowledge", "new", "/components/export.md", "--type", "component", "--title", "Export", "--description", "d", "--body", "b")
-	h.fails("already bootstrapped", "knowledge", "bootstrap", "--json")
-
-	// Without the issues, the alert points at prep knowledge bootstrap.
-	g := newHarnessNoBootstrap(t)
-	if out := g.ok("prime"); !strings.Contains(out, "prep knowledge bootstrap") {
-		t.Fatalf("prime without bootstrap issues:\n%s", out)
-	}
-	g.ok("knowledge", "bootstrap")
-	if got := listIDs(g, "list", "--tag", "bootstrap"); len(got) != 2 {
-		t.Fatalf("knowledge bootstrap created %v", got)
-	}
-}
-
 func newHarnessNoBootstrap(t *testing.T) *harness {
 	t.Setenv("PREP_SESSION", "")
 	t.Setenv("PREP_ACTOR", "")
 	h := &harness{t: t, dir: t.TempDir(), now: time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)}
 	clock = func() time.Time { h.now = h.now.Add(time.Second); return h.now }
-	h.ok("init", "--no-bootstrap")
+	h.ok("init")
 	return h
 }
 
@@ -1242,7 +1015,7 @@ func TestCompleteInTheSameCommit(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(h.dir, "export.go"), []byte("package export\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	h.ok("complete", id, "--no-impact", "test")
+	h.ok("complete", id)
 	if out := h.ok("show", id); !strings.Contains(out, "not made yet") {
 		t.Fatalf("pending evidence not shown:\n%s", out)
 	}
@@ -1277,7 +1050,7 @@ func TestReopenMovesResolutionToHistoryAndReturnsToReady(t *testing.T) {
 	h.replace(id, "acceptance.md", "- [ ]", "- [x]")
 	h.ok("ready", id)
 	h.ok("claim", id)
-	h.ok("complete", id, "--no-impact", "test", "--note", "First result shipped.")
+	h.ok("complete", id, "--note", "First result shipped.")
 	h.fails("--reason", "reopen", id, "--json")
 	h.ok("reopen", id, "--reason", "New evidence needs another pass.")
 	if _, err := os.Stat(h.path(id, "resolution.md")); !os.IsNotExist(err) {
@@ -1385,4 +1158,27 @@ func TestUnchangedEditLeavesNoTempFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+// entry seeds an existing descriptive entry; these remain readable, but the
+// CLI deliberately offers no command that creates or updates them.
+func (h *harness) entry(path, typ, title, desc, body string, scope ...string) {
+	h.t.Helper()
+	p := filepath.Join(h.dir, ".prep/knowledge", strings.TrimPrefix(path, "/"))
+	if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
+		h.t.Fatal(err)
+	}
+
+	m := map[string]any{"type": typ, "title": title, "description": desc}
+	if len(scope) > 0 {
+		m["scope"] = scope
+	}
+	data, err := yaml.Marshal(m)
+	if err != nil {
+		h.t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte("---\n"+string(data)+"---\n\n"+body+"\n"), 0644); err != nil {
+		h.t.Fatal(err)
+	}
+	h.ok("fmt")
 }

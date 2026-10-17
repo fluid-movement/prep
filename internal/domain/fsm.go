@@ -49,8 +49,6 @@ const (
 	GateCommit        = "G_COMMIT"
 	GateFindings      = "G_FINDINGS"
 	GateOutcome       = "G_OUTCOME"
-	GateDocs          = "G_DOCS"
-	GateDocEntry      = "G_DOC_ENTRY"
 	GateReason        = "G_REASON"
 	GateTags          = "G_TAGS"
 	GatePriority      = "G_PRIORITY"
@@ -60,13 +58,11 @@ const (
 // Input carries the arguments of a transition. Nil fields in guide mode mean
 // "not provided yet"; gates that depend on them are reported as needs.
 type Input struct {
-	Actor    string
-	Now      time.Time
-	Note     string
-	Reason   string
-	Commit   string
-	Docs     []string
-	NoImpact string
+	Actor  string
+	Now    time.Time
+	Note   string
+	Reason string
+	Commit string
 }
 
 // Change is the set of records a transition writes. Storage adapters render it.
@@ -82,13 +78,11 @@ type Change struct {
 	RemoveResolution bool           `json:"-"`
 	Edit             *IssueEdit     `json:"-"`
 	Context          *string        `json:"-"`
-	Findings         *string        `json:"-"`
-	Decision         *Decision      `json:"-"`
 	Acceptance       []AcceptanceOp `json:"-"`
 	// Knowledge is a knowledge write; KnowledgeEntry is the entry the
 	// adapter rendered from it, used to validate before writing.
-	Knowledge      *KnowledgeEdit `json:"-"`
-	KnowledgeEntry *Entry         `json:"-"`
+	Knowledge      *KnowledgeRecord `json:"-"`
+	KnowledgeEntry *Entry           `json:"-"`
 	// DoD is the project Definition of Done guidance.
 	DoD *[]string `json:"-"`
 	// Config is a new project configuration (settings).
@@ -281,27 +275,12 @@ func (t *Tree) Gates(id string, op Op, in *Input) (unmet []Unmet, needs []string
 					}
 				}
 			case KindResearch:
-				if i.Findings == nil || strings.TrimSpace(*i.Findings) == "" {
-					add(GateFindings, "research issues need findings in findings.md")
+				if !t.HasRecord(id, "finding", false) {
+					add(GateFindings, "research issues need a linked finding record")
 				}
 			case KindDecision:
-				if !HasOutcome(i.Decisions) {
-					add(GateOutcome, "decision issues need an outcome entry in decisions.md (outcome: true)")
-				}
-			}
-		}
-		if in == nil {
-			needs = append(needs, "--docs <entry>... or --no-impact <reason>")
-		} else {
-			switch {
-			case len(in.Docs) == 0 && strings.TrimSpace(in.NoImpact) == "":
-				add(GateDocs, "a documentation decision is required: --docs <entry> (repeatable) or --no-impact <reason>")
-			case len(in.Docs) > 0 && strings.TrimSpace(in.NoImpact) != "":
-				add(GateDocs, "use either --docs or --no-impact, not both")
-			}
-			for _, d := range in.Docs {
-				if t.Knowledge[NormalizeEntryPath(d)] == nil {
-					add(GateDocEntry, "knowledge entry %s does not exist; run prep knowledge list and choose an existing --docs entry, or create it with prep knowledge new", NormalizeEntryPath(d))
+				if !t.HasRecord(id, "decision", true) {
+					add(GateOutcome, "decision issues need a linked decision record with outcome: true")
 				}
 			}
 		}
@@ -401,11 +380,6 @@ func (t *Tree) Plan(id string, op Op, in Input) (*Change, error) {
 		if !t.IsParent(id) && i.Kind == KindCode {
 			res.Evidence = strings.ToLower(in.Commit)
 		}
-		doc := &Documentation{NoImpact: strings.TrimSpace(in.NoImpact)}
-		for _, d := range in.Docs {
-			doc.Entries = append(doc.Entries, NormalizeEntryPath(d))
-		}
-		res.Documentation = doc
 		c.Resolution = res
 	case OpReopen:
 		// The adapter appends the removed resolution's text after this line.
@@ -597,16 +571,6 @@ func (t *Tree) Apply(c *Change) *Tree {
 			}
 			if c.Context != nil {
 				cp.Context = *c.Context
-			}
-			if c.Findings != nil {
-				f := *c.Findings
-				cp.Findings = &f
-				if !cp.HasFile("findings.md") {
-					cp.Files = append(append([]string(nil), cp.Files...), "findings.md")
-				}
-			}
-			if c.Decision != nil {
-				cp.Decisions = append(append([]Decision(nil), i.Decisions...), *c.Decision)
 			}
 			if len(c.Acceptance) > 0 {
 				cp.Criteria = ApplyAcceptance(i, c.Acceptance)

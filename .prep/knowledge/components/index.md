@@ -13,7 +13,7 @@
 * [Git helpers](/components/git.md) - internal/gitx — the few git calls prep makes (drift, staging, evidence, HEAD), how their output is read, and why git is optional.
 * [Shared lifecycle hooks](/components/hooks.md) - Shared session, prompt, finish and supporting tool hooks: context levels, record redirects, turn reconciliation, harness protocols and regression tests.
 * [Markdown store](/components/markdown-store.md) - internal/mdstore — parses and renders .prep files canonically, atomic writes with compare-and-swap, fmt and fix.
-* [OKF store](/components/okf-store.md) - internal/okf — reads the knowledge bundle (links, drift) and writes entries for prep knowledge new, update and confirm.
+* [OKF store](/components/okf-store.md) - internal/okf — immutable OKF decision/finding writes, reads and generated indexes.
 * [Palette and themes](/components/palette.md) - internal/palette — TUI color token names, the built-in themes, custom theme resolution and validation; how a theme reaches the screen.
 * [Project registry](/components/projects.md) - The machine-local registry of prep projects: where it lives, how commands record into it, project identity (ID, name, remote) and how a project is resolved.
 * [Release, install and update](/components/release.md) - How prep is released (GoReleaser on v* tags), installed (install.sh, go install, just install) and updated (prep update with checksum verification).

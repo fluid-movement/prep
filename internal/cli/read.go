@@ -150,7 +150,7 @@ func cmdList(a *app, args []string) error {
 			query = append(query, args[k])
 		}
 	}
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func cmdNext(a *app, args []string) error {
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ func cmdNext(a *app, args []string) error {
 }
 
 func cmdViews(a *app, args []string) error {
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -272,7 +272,7 @@ func cmdFlags(a *app, args []string) error {
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func cmdShow(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -367,7 +367,7 @@ func cmdShow(a *app, args []string) error {
 		a.emit(map[string]any{
 			"issue": i, "dir": mdstore.IssueDir(id), "priority": i.Priority.Effective(), "state": s.State, "stale": s.Stale, "blocked": s.Blocked,
 			"actionable": s.Actionable, "children": nonNil(t.Children(id)), "blocks": nonNil(t.Blocks(id)),
-			"progress": s.Progress, "context": i.Context, "findings": i.Findings, "history": i.History, "evidence_pending": pending,
+			"progress": s.Progress, "context": i.Context, "history": i.History, "knowledge": t.IssueRecords(id), "evidence_pending": pending,
 		})
 		return nil
 	}
@@ -399,6 +399,12 @@ func cmdShow(a *app, args []string) error {
 	if strings.TrimSpace(i.OpenQuestions) != "" {
 		a.printf("\n## Open questions\n\n%s\n", i.OpenQuestions)
 	}
+	if records := t.IssueRecords(id); len(records) > 0 {
+		a.printf("\n## Knowledge\n\n")
+		for _, e := range records {
+			a.printf("- %s: %s (%s)\n", e.Type, recordTitle(e.Title, e.Superseded), e.Path)
+		}
+	}
 	if len(i.Criteria) > 0 {
 		a.printf("\n## Acceptance\n\n")
 		for k, c := range i.Criteria {
@@ -411,22 +417,6 @@ func cmdShow(a *app, args []string) error {
 	}
 	if strings.TrimSpace(i.Context) != "" {
 		a.printf("\n## Context\n\n%s\n", i.Context)
-	}
-	if len(i.Decisions) > 0 {
-		a.printf("\n## Decisions\n\n")
-		for _, d := range i.Decisions {
-			extra := ""
-			if d.Supersedes != "" {
-				extra += " supersedes " + d.Supersedes
-			}
-			if d.Outcome {
-				extra += " (outcome)"
-			}
-			a.printf("- %s: %s [%s]%s\n", d.ID, d.Title, d.Date, extra)
-		}
-	}
-	if i.Findings != nil && *i.Findings != "" {
-		a.printf("\n## Findings\n\n%s\n", *i.Findings)
 	}
 	a.printf("\n## Records\n\n")
 	for _, b := range i.Baselines {
@@ -521,7 +511,7 @@ func cmdGuide(a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -603,11 +593,10 @@ func cmdGuide(a *app, args []string) error {
 
 func cmdCheck(a *app, args []string) error {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
-	noDrift := fs.Bool("no-drift", false, "skip the knowledge drift check")
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
-	t, err := a.load(!*noDrift)
+	t, err := a.load()
 	if err != nil {
 		return err
 	}
@@ -654,10 +643,9 @@ type primeBrief struct {
 	Stale        []summary      `json:"stale"`
 	Claims       []claimSummary `json:"claims"`
 	Check        checkSummary   `json:"check"`
-	Bootstrap    string         `json:"bootstrap,omitempty"` // alert while the knowledge base is not bootstrapped
-	Plugin       string         `json:"plugin,omitempty"`    // alert when the harness plugin and the binary differ
-	Focus        []focusSummary `json:"focus"`               // the newest current issues from the activity stream
-	Projects     []string       `json:"projects"`            // other prep projects on this machine, newest first
+	Plugin       string         `json:"plugin,omitempty"` // alert when the harness plugin and the binary differ
+	Focus        []focusSummary `json:"focus"`            // the newest current issues from the activity stream
+	Projects     []string       `json:"projects"`         // other prep projects on this machine, newest first
 	Hint         string         `json:"hint"`
 }
 
@@ -684,7 +672,7 @@ func cmdPrime(a *app, args []string) error {
 	if *max < 0 {
 		return usageErr("prime --max must be nonnegative")
 	}
-	t, err := a.load(false)
+	t, err := a.load()
 	if err != nil {
 		var de *domain.Error
 		if *hook && errors.As(err, &de) && de.Code == domain.ErrNoProject {
@@ -735,7 +723,6 @@ func cmdPrime(a *app, args []string) error {
 			b.Check.Warnings++
 		}
 	}
-	b.Bootstrap = t.BootstrapAlert()
 	b.Focus = a.recentFoci(t, 3)
 	if b.Focus == nil {
 		b.Focus = []focusSummary{}
@@ -751,9 +738,6 @@ func cmdPrime(a *app, args []string) error {
 	}
 	if b.Plugin != "" {
 		a.printf("! %s\n\n", b.Plugin)
-	}
-	if b.Bootstrap != "" {
-		a.printf("! %s\n\n", b.Bootstrap)
 	}
 	a.printf("prep: %d issues, %d actionable; check: %d errors, %d warnings\n", b.Issues, b.Actionable, b.Check.Errors, b.Check.Warnings)
 	section := func(title string, ss []summary) {
@@ -960,7 +944,11 @@ func readLines(inputs []domain.Pointer) []string {
 	for _, p := range inputs {
 		m := issueFile.FindStringSubmatch(p.Path)
 		if m == nil {
-			lines = append(lines, fmt.Sprintf("%s — %s", p.Path, p.What))
+			ref := p.Path
+			if strings.HasPrefix(ref, ".prep/knowledge/") {
+				ref = "prep knowledge show " + strings.TrimPrefix(ref, ".prep/knowledge")
+			}
+			lines = append(lines, fmt.Sprintf("%s — %s", ref, p.What))
 			continue
 		}
 		id := m[1]

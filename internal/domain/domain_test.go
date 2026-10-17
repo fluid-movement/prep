@@ -106,18 +106,6 @@ func TestKnowledgeViewQueries(t *testing.T) {
 	}
 }
 
-func TestKnowledgeReservedNames(t *testing.T) {
-	tree := NewTree(Project{}, nil, nil, nil)
-	body, typ := "Body.", "component"
-	for _, p := range []string{"/index.md", "/components/index.md", "/log.md"} {
-		_, err := tree.PlanKnowledge(KnowledgeEdit{Path: p, New: true, Body: &body, Type: &typ, Title: &typ, Description: &typ})
-		var de *Error
-		if !errors.As(err, &de) || de.Code != ErrUsage {
-			t.Fatalf("%s: expected a usage error, got %v", p, err)
-		}
-	}
-}
-
 const (
 	idA = "01M45YYRG0AP2P2A41FRCHGR0Q"
 	idB = "01M45YYSF8MH8F910XSA7Q366A"
@@ -201,11 +189,8 @@ func TestGatesForDefineAndComplete(t *testing.T) {
 		in   Input
 		want []string
 	}{
-		{Input{Actor: "agent/1"}, []string{GateDocs}},
-		{Input{Actor: "agent/1", Docs: []string{"/overview.md"}, NoImpact: "none"}, []string{GateDocs}},
-		{Input{Actor: "agent/1", Docs: []string{"/gone.md"}}, []string{GateDocEntry}},
-		{Input{Actor: "agent/1", Docs: []string{"overview"}}, nil},
-		{Input{Actor: "agent/1", NoImpact: "internal only"}, nil},
+
+		{Input{Actor: "agent/1"}, nil},
 	}
 	for _, c := range cases {
 		unmet, _ := tree.Gates(idB, OpComplete, &c.in)

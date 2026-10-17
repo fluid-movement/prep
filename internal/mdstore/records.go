@@ -247,24 +247,6 @@ func insertLines(lines []string, at int, ins []string) []string {
 	return append(out, lines[at:]...)
 }
 
-// renderDecision renders one decisions.md entry.
-func renderDecision(d *domain.Decision) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "## %s: %s\ndate: %s\n", d.ID, d.Title, d.Date)
-	if d.Supersedes != "" {
-		fmt.Fprintf(&b, "supersedes: %s\n", d.Supersedes)
-	}
-	if d.Outcome {
-		b.WriteString("outcome: true\n")
-	}
-	if d.Body != "" {
-		b.WriteString("\n" + d.Body + "\n")
-	}
-	return strings.TrimRight(b.String(), "\n")
-}
-
-// --- context.md ---
-
 var bundleLinkRe = regexp.MustCompile(`\]\((?:\.prep/knowledge)?(/[^)\s#]+\.md)(?:#[^)]*)?\)`)
 var codeSpanRe = regexp.MustCompile("`([^`\\s]+)`")
 var pathLikeRe = regexp.MustCompile(`^[A-Za-z0-9_.][A-Za-z0-9_./*-]*$`)
@@ -288,105 +270,6 @@ func parseContext(raw string, i *domain.Issue) {
 			i.ContextPaths = append(i.ContextPaths, p)
 		}
 	}
-}
-
-// --- decisions.md ---
-
-var decisionHeadRe = regexp.MustCompile(`^##\s+([A-Za-z0-9][A-Za-z0-9_-]*):\s*(.+)$`)
-var decisionKVRe = regexp.MustCompile(`^(date|supersedes|outcome):\s*(.*)$`)
-var dateRe = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}`)
-
-func parseDecisions(raw string) ([]domain.Decision, []string) {
-	var out []domain.Decision
-	var problems []string
-	var cur *domain.Decision
-	var body []string
-	inMeta := false
-	flush := func() {
-		if cur != nil {
-			cur.Body = strings.TrimSpace(strings.Join(body, "\n"))
-			if cur.Date == "" {
-				problems = append(problems, fmt.Sprintf("decision %s has no date", cur.ID))
-			}
-			out = append(out, *cur)
-		}
-		cur, body = nil, nil
-	}
-	var fence domain.Fence
-	for _, l := range strings.Split(normalize(raw), "\n") {
-		if in, _ := fence.Line(l); !in && strings.HasPrefix(l, "## ") {
-			flush()
-			m := decisionHeadRe.FindStringSubmatch(l)
-			if m == nil {
-				problems = append(problems, fmt.Sprintf("heading %q is not '## <id>: <title>'", l))
-				continue
-			}
-			cur = &domain.Decision{ID: m[1], Title: strings.TrimSpace(m[2])}
-			inMeta = true
-			continue
-		}
-		if cur == nil {
-			continue
-		}
-		if inMeta {
-			if strings.TrimSpace(l) == "" {
-				continue // blank lines before the metadata are tolerated
-			}
-			if m := decisionKVRe.FindStringSubmatch(l); m != nil {
-				v := strings.TrimSpace(m[2])
-				switch m[1] {
-				case "date":
-					if !dateRe.MatchString(v) {
-						problems = append(problems, fmt.Sprintf("decision %s: date %q is not YYYY-MM-DD", cur.ID, v))
-					}
-					cur.Date = v
-				case "supersedes":
-					cur.Supersedes = v
-				case "outcome":
-					cur.Outcome = v == "true" || v == "yes"
-				}
-				continue
-			}
-			inMeta = false
-		}
-		body = append(body, l)
-	}
-	flush()
-	return out, problems
-}
-
-// canonicalDecisions renders decisions.md canonically: blank lines between
-// a heading and its metadata lines are removed.
-func canonicalDecisions(raw string) string {
-	lines := strings.Split(normalize(raw), "\n")
-	var out []string
-	inMeta := false
-	var fence domain.Fence
-	for k, l := range lines {
-		in, _ := fence.Line(l)
-		switch {
-		case in:
-			inMeta = false
-		case strings.HasPrefix(l, "## "):
-			inMeta = true
-		case inMeta && strings.TrimSpace(l) == "":
-			next := ""
-			for _, n := range lines[k+1:] {
-				if strings.TrimSpace(n) != "" {
-					next = n
-					break
-				}
-			}
-			if decisionKVRe.MatchString(next) {
-				continue
-			}
-			inMeta = false
-		case inMeta && !decisionKVRe.MatchString(l):
-			inMeta = false
-		}
-		out = append(out, l)
-	}
-	return fileText(strings.Join(out, "\n"))
 }
 
 // --- baselines, ready, claim, resolution ---

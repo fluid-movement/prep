@@ -32,7 +32,6 @@ const (
 	modalReparent
 	modalCriteria
 	modalDrop
-	modalComplete
 	modalText     // requirement or context, inline
 	modalViewEdit // a saved view's name and query
 	modalHelp     // the keymap of the current screen
@@ -187,7 +186,7 @@ func (m *Model) actions() []action {
 	if crit == "" && len(i.Criteria) == 0 {
 		crit = "no criteria yet"
 	}
-	complete := m.gateCompletionForm(id)
+	complete := m.gate(id, domain.OpComplete)
 	return append(items,
 		action{key: "v", label: "Tick off criteria (verify)", reason: crit, run: m.openCriteria},
 		action{key: "m", label: "Move to another parent", reason: edit, run: m.openReparent},
@@ -195,29 +194,14 @@ func (m *Model) actions() []action {
 		action{key: "r", label: "Mark ready", reason: m.gate(id, domain.OpReady), run: m.transition(id, domain.OpReady, "marked ready")},
 		action{key: "a", label: "Define trivial change", reason: m.gate(id, domain.OpTrivial), run: m.transition(id, domain.OpTrivial, "defined trivial change")},
 		action{key: "x", label: "Drop", reason: m.gate(id, domain.OpDrop), run: m.openDrop},
-		action{key: "f", label: "Complete", reason: complete, run: m.openComplete},
+		action{key: "f", label: "Complete", reason: complete, run: m.transition(id, domain.OpComplete, "completed")},
 	)
 }
 
 func (m *Model) gate(id string, op domain.Op) string {
-	in := domain.Input{Actor: m.opts.Actor, Reason: "-", NoImpact: "-"}
+	in := domain.Input{Actor: m.opts.Actor, Reason: "-"}
 	if unmet, _ := m.tree.Gates(id, op, &in); len(unmet) > 0 {
 		return unmet[0].Message
-	}
-	return ""
-}
-
-// gateCompletionForm previews every gate that can be checked before the
-// completion form collects its documentation decision. The submitted Plan
-// still enforces the documentation decision.
-func (m *Model) gateCompletionForm(id string) string {
-	in := domain.Input{Actor: m.opts.Actor, Reason: "-"}
-	if unmet, _ := m.tree.Gates(id, domain.OpComplete, &in); len(unmet) > 0 {
-		for _, gate := range unmet {
-			if gate.Code != domain.GateDocs {
-				return gate.Message
-			}
-		}
 	}
 	return ""
 }
@@ -398,14 +382,6 @@ func (m *Model) insertTag() {
 
 func (m *Model) openDrop() tea.Cmd {
 	m.modal = &modal{kind: modalDrop, id: m.selected(), inputs: []textinput.Model{m.newInput("why it is not needed", "")}}
-	return m.modal.inputs[0].Focus()
-}
-
-func (m *Model) openComplete() tea.Cmd {
-	m.modal = &modal{kind: modalComplete, id: m.selected(), inputs: []textinput.Model{
-		m.newInput("/components/cli.md /overview.md", ""),
-		m.newInput("or: why the knowledge base is unaffected", ""),
-	}}
 	return m.modal.inputs[0].Focus()
 }
 
@@ -612,7 +588,7 @@ func (m *Model) paste(p tea.PasteMsg) tea.Cmd {
 	case d.kind == modalTags:
 		d.inputs[0], cmd = d.inputs[0].Update(p)
 		m.tagSuggestions()
-	case d.kind == modalRename || d.kind == modalDrop || d.kind == modalComplete || d.kind == modalViewEdit:
+	case d.kind == modalRename || d.kind == modalDrop || d.kind == modalViewEdit:
 		d.inputs[d.focus], cmd = d.inputs[d.focus].Update(p)
 	}
 	return cmd
@@ -652,13 +628,6 @@ func (m *Model) submit() tea.Cmd {
 		id, reason := d.id, d.inputs[0].Value()
 		return m.write("dropped "+shortID(id), func(t *domain.Tree) (*domain.Change, error) {
 			return t.Plan(id, domain.OpDrop, domain.Input{Actor: actor, Now: now, Reason: reason})
-		}, true)
-	case modalComplete:
-		id := d.id
-		docs := strings.FieldsFunc(d.inputs[0].Value(), func(r rune) bool { return r == ',' || r == ' ' })
-		noImpact := d.inputs[1].Value()
-		return m.write("completed "+shortID(id), func(t *domain.Tree) (*domain.Change, error) {
-			return t.Plan(id, domain.OpComplete, domain.Input{Actor: actor, Now: now, Docs: docs, NoImpact: noImpact})
 		}, true)
 	}
 	return nil
@@ -894,13 +863,6 @@ func (m *Model) modalView(width, height int) string {
 		title = "Drop · " + title
 		mark("field:0", next(), 0, inner, 2)
 		body = append(body, ui.Field(m.th, "Reason", d.inputs[0].View(), true))
-	case modalComplete:
-		title = "Complete · " + title
-		body = append(body, m.th.S.Muted.Render("Documentation decision: the knowledge entries this changed, or why none."), "")
-		mark("field:0", next(), 0, inner, 2)
-		body = append(body, ui.Field(m.th, "Knowledge entries", d.inputs[0].View(), d.focus == 0), "")
-		mark("field:1", next(), 0, inner, 2)
-		body = append(body, ui.Field(m.th, "No impact because", d.inputs[1].View(), d.focus == 1))
 	case modalCriteria:
 		title = "Criteria · " + title
 		for k, c := range m.tree.Issues[d.id].Criteria {

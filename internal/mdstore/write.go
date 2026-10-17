@@ -265,20 +265,6 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 			return nil, nil, err
 		}
 	}
-	if c.Findings != nil {
-		if err := w("findings.md", fileText(*c.Findings)); err != nil {
-			return nil, nil, err
-		}
-	}
-	if c.Decision != nil {
-		raw, err := current("decisions.md")
-		if err != nil {
-			return nil, nil, err
-		}
-		if err := w("decisions.md", fileText(normalize(raw)+"\n\n"+renderDecision(c.Decision))); err != nil {
-			return nil, nil, err
-		}
-	}
 	if len(c.Acceptance) > 0 {
 		raw, err := current("acceptance.md")
 		if err != nil {
@@ -373,9 +359,7 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 			}},
 			{"acceptance.md", always(canonicalAcceptance)},
 			{"context.md", always(fileText)},
-			{"decisions.md", always(canonicalDecisions)},
 			{"history.md", always(fileText)},
-			{"findings.md", always(fileText)},
 			{"ready.md", func(raw string) (string, bool) {
 				r, err := parseReady(raw)
 				if err != nil {
@@ -491,7 +475,7 @@ func (s *Store) Fix() ([]string, error) {
 		for _, f := range []struct {
 			name  string
 			canon func(string) string
-		}{{"acceptance.md", canonicalAcceptance}, {"context.md", fileText}, {"findings.md", fileText}} {
+		}{{"acceptance.md", canonicalAcceptance}, {"context.md", fileText}} {
 			rel, canon := dir+"/"+f.name, f.canon
 			raw, ok, err := s.read(rel)
 			if err != nil {

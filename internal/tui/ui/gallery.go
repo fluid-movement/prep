@@ -119,7 +119,7 @@ func Gallery(t *theme.Theme, width int) string {
 
 	section("Diagnostics")
 	b.WriteString(DiagnosticRow(t, Diagnostic{Error: true, Code: "I019", Where: "01K6W3Y8GZ5M0T7C2RNB4QHXDE · decisions.md", Message: "decision D1 has no date", Fix: "entries are '## <id>: <title>' followed by date: YYYY-MM-DD", Class: "manual"}, width) + "\n")
-	b.WriteString(DiagnosticRow(t, Diagnostic{Code: "K005", Where: "components/cli.md", Message: "scoped paths changed since 0da33f5: internal/cli/cli.go", Fix: "re-check the entry against the code, update it and confirmed_commit", Class: "guided"}, width))
+	b.WriteString(DiagnosticRow(t, Diagnostic{Code: "K007", Where: "index.md", Message: "index file is missing, outdated or no longer needed", Fix: "run prep fmt to regenerate the OKF index files", Class: "fixable"}, width))
 
 	section("Menu and modal")
 	w := min(width, 64)

@@ -2,13 +2,12 @@ name: implement-complete-defined-decision
 description: A settled decision completes directly from defined, without ready or claim.
 prompt: >-
   We agreed to use a database table as our job queue because it keeps operations simple
-  at our current scale. Record that on Pick a queue and close the issue. This decision
-  needs no knowledge changes.
+  at our current scale. Record that on Pick a queue and close the issue.
 fixture: defined-decision
 expect:
   tools:
     - ran: {command: decide, args: '--outcome'}
-    - ran: {command: complete, args: '--no-impact'}
+    - ran: {command: complete}
     - not_ran: {command: ready}
     - not_ran: {command: claim}
     - no_prep_files: true

@@ -9,6 +9,6 @@ generated:
 
 # Knowledge in the issue lifecycle
 
-Agents use `prep knowledge find` and `show` to inspect relevant entries while working. Completion records a documentation decision: name changed or relevant entries with `--docs`, or explain no impact with `--no-impact`. A reference to an entry documents the decision; prep does not claim that the content is correct. Update affected entries through `prep knowledge update` and review them against their scoped code.
+Use `prep knowledge find|show` to inspect relevant records and legacy descriptive entries. `prep decide [<issue>] --title T --description D` and `prep finding [<issue>] --title T --description D` create immutable knowledge records, optionally linked to an issue and scoped to code paths. New decisions may supersede older records across the knowledge base; status is derived. Show and guide list an issue's linked records by title.
 
-The project Definition of Done appears as guidance in the briefing and at the check step of `prep guide`. Completion requirements are described in [Completion requirements](/features/completion-policy.md); record formats are in [Storage format](/conventions/storage-format.md).
+Decision issues require a linked decision record with outcome to complete, research issues a linked finding record. Completion has no documentation flags or gate, and knowledge has no bootstrap or drift-confirmation workflow. The project Definition of Done remains guidance. See [Completion requirements](/features/completion-policy.md) and [Storage format](/conventions/storage-format.md).

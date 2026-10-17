@@ -61,8 +61,8 @@ func TestFindKnowledge(t *testing.T) {
 	if hits := tree.FindKnowledge("wheels scrolling", 1); len(hits) != 1 || hits[0].Anchor != "wheels" || hits[0].Matched != 2 {
 		t.Errorf("heading: %+v", hits)
 	}
-	// Description matches only rank: a block must match a term itself.
-	if hits := tree.FindKnowledge("commands git", 0); len(hits) != 1 || !strings.Contains(hits[0].Text, "git") {
+	// Description matches find entries even when the body uses other words.
+	if hits := tree.FindKnowledge("commands git", 0); len(hits) != 2 || !strings.Contains(hits[0].Text, "git") {
 		t.Errorf("description: %+v", hits)
 	}
 	if hits := tree.FindKnowledge("zzzz", 0); len(hits) != 0 {

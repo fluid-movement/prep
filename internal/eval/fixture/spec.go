@@ -25,9 +25,8 @@ type Spec struct {
 	Config map[string]any `yaml:"config"`
 	// Repo makes the project a git repository with stub files.
 	Repo *RepoSpec `yaml:"repo"`
-	// Bootstrap runs prep init the way a user does, creating the knowledge
-	// base bootstrap issues, and leaves the knowledge base empty (no
-	// overview): the starting point of "set up prep in this project".
+	// Bootstrap is the legacy fixture option for leaving knowledge empty.
+	// Init itself always creates no bootstrap issues.
 	Bootstrap bool `yaml:"bootstrap"`
 	// Generate adds synthetic issues and knowledge entries, to make a project
 	// as big as a real one.
@@ -65,7 +64,7 @@ type KnowledgeSpec struct {
 	Description string `yaml:"description"`
 	Body        string `yaml:"body"`
 	// Scope lists the paths or globs the entry applies to, which prep uses to
-	// notice drift when they change.
+	// retrieve records relevant to these paths.
 	Scope []string `yaml:"scope"`
 }
 

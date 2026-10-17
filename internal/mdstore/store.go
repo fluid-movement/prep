@@ -242,26 +242,16 @@ func (s *Store) loadIssue(id string) (*domain.Issue, []domain.Diagnostic, error)
 		parseContext(raw, i)
 		dupes("context.md", normalize(raw))
 	}
-	if raw, ok, err := plain("decisions.md", canonicalDecisions); err != nil {
-		return nil, nil, err
-	} else if ok {
-		var problems []string
-		i.Decisions, problems = parseDecisions(raw)
-		for _, p := range problems {
-			diag(domain.CodeDecisionInvalid, domain.SevError, domain.ClassManual, "decisions.md", "entries are '## <id>: <title>' followed by date: YYYY-MM-DD", "%s", p)
-		}
-	}
 	if raw, ok, err := plain("history.md", fileText); err != nil {
 		return nil, nil, err
 	} else if ok {
 		i.History = normalize(raw)
 	}
-	if raw, ok, err := plain("findings.md", fileText); err != nil {
-		return nil, nil, err
-	} else if ok {
-		f := normalize(raw)
-		i.Findings = &f
-		dupes("findings.md", f)
+
+	for _, name := range []string{"decisions.md", "findings.md"} {
+		if i.HasFile(name) {
+			diag(domain.CodeLegacyKnowledge, domain.SevWarning, domain.ClassManual, name, "convert to linked knowledge records", "legacy issue record awaits knowledge conversion")
+		}
 	}
 
 	record := func(name string, parse func(string) error, render func() string) error {
@@ -553,15 +543,28 @@ func ensureHistoryMerge(s *Store) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, line := range strings.Split(raw, "\n") {
-		if strings.TrimSpace(line) == historyMerge {
-			return nil, nil
+	original := raw
+	for _, rule := range []string{historyMerge, ".prep/knowledge/**/index.md merge=union"} {
+		found := false
+		for _, line := range strings.Split(raw, "\n") {
+			if strings.TrimSpace(line) == rule {
+				found = true
+			}
 		}
+		if !found {
+			if raw != "" && !strings.HasSuffix(raw, "\n") {
+				raw += "\n"
+			}
+			raw += rule + "\n"
+		}
+	}
+	if raw == original {
+		return nil, nil
 	}
 	if raw != "" && !strings.HasSuffix(raw, "\n") {
 		raw += "\n"
 	}
-	if err := s.write(rel, raw+historyMerge+"\n"); err != nil {
+	if err := s.write(rel, raw); err != nil {
 		return nil, err
 	}
 	return []string{rel}, nil

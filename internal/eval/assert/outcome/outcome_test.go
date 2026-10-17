@@ -116,7 +116,9 @@ func TestOutcomeKinds(t *testing.T) {
 		must(t, out, err)
 		out, err = p.Prep("claim", p.IDs["cart"])
 		must(t, out, err)
-		out, err = p.Prep("knowledge", "new", "/components/refunds.md", "--type", "component", "--title", "Refunds", "--description", "Refund rules", "--body", "Refunds take 5 days.")
+		// Seed a legacy descriptive entry for the assertion reader.
+		must(t, "", os.WriteFile(filepath.Join(p.Dir, ".prep/knowledge/components/refunds.md"), []byte("---\ntype: component\ntitle: Refunds\ndescription: Refund rules\n---\n\nRefunds take 5 days.\n"), 0644))
+		out, err = p.Prep("fmt")
 		must(t, out, err)
 		must(t, "", os.WriteFile(filepath.Join(p.Dir, "main.go"), []byte("package main // changed\n"), 0o644))
 		out, err = p.Git("commit", "-qam", "Change main")
