@@ -29,7 +29,7 @@ func TestEvalReportCompareAndPrune(t *testing.T) {
 	dir := t.TempDir()
 	st := results.Store{Root: filepath.Join(dir, "results")}
 	for id, cells := range map[string][]*matrix.CellResult{
-		"20261012-100000-aaaa": {evalCell("a", "base", 9, 1), evalCell("a", "mutant", 1, 9)},
+		"20261012-100000-aaaa": {evalCell("a", "base", 9, 1), evalCell("a", "alternate", 1, 9)},
 		"20261013-100000-bbbb": {evalCell("a", "base", 2, 8)},
 	} {
 		if err := st.Save(&results.Run{ID: id, Created: time.Date(2026, 10, 12, 0, 0, 0, 0, time.UTC), Definition: results.Definition{N: 10}, Cells: cells}); err != nil {
@@ -37,7 +37,7 @@ func TestEvalReportCompareAndPrune(t *testing.T) {
 		}
 	}
 	out := h.ok("eval", "report", "--dir", dir, "20261012")
-	for _, want := range []string{"run 20261012-100000-aaaa", "base / haiku", "9/10 90%", "mutant / haiku"} {
+	for _, want := range []string{"run 20261012-100000-aaaa", "base / haiku", "9/10 90%", "alternate / haiku"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("report lacks %q:\n%s", want, out)
 		}
@@ -57,7 +57,7 @@ func TestEvalReportCompareAndPrune(t *testing.T) {
 	if !strings.Contains(cmp, "REGRESSED") || !strings.Contains(cmp, "a / base / haiku") || !strings.Contains(cmp, "ONLY IN A") {
 		t.Errorf("compare:\n%s", cmp)
 	}
-	vc := h.ok("eval", "compare", "--dir", dir, "20261012", "--variants", "base,mutant")
+	vc := h.ok("eval", "compare", "--dir", dir, "20261012", "--variants", "base,alternate")
 	if !strings.Contains(vc, "REGRESSED (1)") {
 		t.Errorf("variant compare:\n%s", vc)
 	}
@@ -239,41 +239,6 @@ func TestEvalModels(t *testing.T) {
 	}
 	if rep := h.ok("eval", "report", "--dir", dir, "20261012", "20261013"); !strings.Contains(rep, "current / opus") || !strings.Contains(rep, "current / haiku") {
 		t.Errorf("merged report:\n%s", rep)
-	}
-}
-
-func TestEvalMutate(t *testing.T) {
-	h := newHarness(t)
-	dir := copyEvalDir(t)
-	claude := fakeClaudeFor(t)
-	plugin := "../../plugins/claude-code"
-	bin := prepBinary(t)
-	// A dry run lists the mutants and writes nothing.
-	dry := h.ok("eval", "mutate", "--dir", dir, "--operators", "drop-hook", "--plugin", plugin, "--case", "session-what-next", "--models", "haiku", "--dry-run", "--binary", bin)
-	if !strings.Contains(dry, "mutants/drop-hook-sessionstart") || !strings.Contains(dry, "mutants/drop-bridge") {
-		t.Errorf("dry run:\n%s", dry)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "variants", "mutants")); err == nil {
-		t.Error("dry run wrote mutants")
-	}
-	h.fails("unknown operator", "eval", "mutate", "--dir", dir, "--operators", "nonsense", "--plugin", plugin)
-	h.fails("--base", "eval", "mutate", "--dir", dir, "--variants", "current", "--plugin", plugin)
-	h.fails("no mutant to run", "eval", "mutate", "--dir", dir, "--operators", "drop-hook", "--only", "zzz", "--plugin", plugin)
-	t.Setenv("ANTHROPIC_API_KEY", "k")
-	out := h.ok("eval", "mutate", "--dir", dir, "--operators", "drop-hook", "--plugin", plugin, "--case", "session-what-next", "--models", "haiku",
-		"--only", "sessionstart,bridge", "--n", "1", "--no-judge", "--claude", claude, "--binary", bin)
-	for _, want := range []string{"2 mutant(s) of current", "mutants against current", "mutants/drop-hook-sessionstart", "mutants/drop-bridge", "stored as"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("mutate output lacks %q:\n%s", want, out)
-		}
-	}
-	if _, err := os.Stat(filepath.Join(dir, "variants", "mutants", "drop-bridge", "variant.yaml")); err != nil {
-		t.Errorf("mutant not written: %v", err)
-	}
-	// the mutants are ordinary variants: they can be run by name
-	if out := h.ok("eval", "run", "--dir", dir, "--case", "session-what-next", "--models", "haiku", "--n", "1", "--no-judge", "--claude", claude,
-		"--plugin", plugin, "--binary", bin, "--variants", "mutants/drop-bridge"); !strings.Contains(out, "mutants/drop-bridge / haiku") {
-		t.Errorf("run of a mutant:\n%s", out)
 	}
 }
 

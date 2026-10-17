@@ -149,8 +149,8 @@ func TestCompare(t *testing.T) {
 }
 
 func TestCompareVariantsInsideOneRun(t *testing.T) {
-	cells := []*matrix.CellResult{cellOf("x", "base", "m", 9, 1), cellOf("x", "mutant", "m", 1, 9), cellOf("y", "base", "m", 5, 5)}
-	ds := Compare(ForVariant(cells, "base"), ForVariant(cells, "mutant"), CaseModelKey)
+	cells := []*matrix.CellResult{cellOf("x", "base", "m", 9, 1), cellOf("x", "alternate", "m", 1, 9), cellOf("y", "base", "m", 5, 5)}
+	ds := Compare(ForVariant(cells, "base"), ForVariant(cells, "alternate"), CaseModelKey)
 	got := map[string]Class{}
 	for _, d := range ds {
 		got[d.Key] = d.Class

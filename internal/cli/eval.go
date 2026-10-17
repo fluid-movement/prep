@@ -12,7 +12,7 @@ import (
 
 // evalUsage is the one-line help of prep eval; the subcommands are listed in
 // evalCommands.
-const evalUsage = "eval run|list|doctor|report|compare|models|errors|mutate|check|judge-check|prune  agent behavior tests: run prompts against fake projects and report how agents used prep (see the eval knowledge entry)"
+const evalUsage = "eval run|list|doctor|report|compare|models|errors|check|judge-check|prune  agent behavior tests: run prompts against fake projects and report how agents used prep (see the eval knowledge entry)"
 
 // evalCommand is one prep eval subcommand.
 type evalCommand struct {

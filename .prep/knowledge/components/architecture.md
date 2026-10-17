@@ -31,7 +31,7 @@ internal/setup      harness integrations installed, refreshed and removed by pre
 internal/userconfig the user's choices in ~/.config/prep/config.yaml (harnesses, TUI mouse/layout, prompt hook context)
 internal/projects   the machine-local registry of project roots ($XDG_STATE_HOME/prep/projects.json), project identity and resolution (--project)
 internal/update     prep update: download, checksum check and replacement of the binary
-internal/eval       agent behavior tests: fixtures, isolated runs of Claude Code, transcripts, assertions, judge, matrix, results, variants, mutation (no imports of cli)
+internal/eval       agent behavior tests: fixtures, isolated runs of Claude Code, transcripts, assertions, judge, matrix, results, variants (no imports of cli)
 ```
 
 - Ports are defined in `internal/domain/ports.go`: `IssueStore` (checked record writes: `Load`, `Apply`) and `KnowledgeStore` (retrieval: `Load`; writes: `Render` then `Apply`). They are separate because access patterns differ.

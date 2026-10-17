@@ -63,8 +63,7 @@ func NewClaude(cfg Config) (*Judge, func(), error) {
 }
 
 // NewClaudeCaller is the Caller NewClaude builds on: one prompt in, the
-// model's reply text out, with no tools and nothing persisted. Other pieces
-// of the suite that need a plain model call (mutation proposals) use it too.
+// model's reply text out, with no tools and nothing persisted.
 func NewClaudeCaller(cfg Config) (Caller, func(), error) {
 	if cfg.Model == "" {
 		cfg.Model = "sonnet"
