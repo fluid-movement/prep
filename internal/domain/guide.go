@@ -131,6 +131,13 @@ type Pointer struct {
 	Command string `json:"command,omitempty"` // the write command for this record
 }
 
+// Record names a decision record linked to an issue.
+type Record struct {
+	ID    string `json:"id"`
+	Path  string `json:"path"`
+	Title string `json:"title"`
+}
+
 // Guide is the step contract for an issue: where it is, what can happen
 // next, what blocks it, what to read and where outputs go.
 type Guide struct {
@@ -147,7 +154,12 @@ type Guide struct {
 	Inputs       []Pointer    `json:"inputs"`
 	Knowledge    []Candidate  `json:"knowledge"`
 	Outputs      []Pointer    `json:"outputs"`
+	Requirement  string       `json:"requirement,omitempty"`
+	Criteria     []Criterion  `json:"criteria,omitempty"`
+	Context      string       `json:"context,omitempty"`
+	Decisions    []Record     `json:"decisions,omitempty"`
 	DoD          []string     `json:"definition_of_done,omitempty"`
+	Checker      []string     `json:"checker,omitempty"`
 	Diagnostics  []Diagnostic `json:"diagnostics,omitempty"`
 	Alerts       []string     `json:"alerts,omitempty"` // project-wide alerts
 }
@@ -175,9 +187,26 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 		g.Transitions = append(g.Transitions, Transition{Op: op, Command: cmd, Allowed: len(unmet) == 0, Unmet: unmet, Needs: needs})
 	}
 
+	// An implementer's brief carries the issue's own records as content, so
+	// they are not also listed as files to read.
+	brief := !stale && !parent && i.Kind == KindCode && (s == StateInProgress || (s == StateReady && len(t.UnresolvedDeps(id)) == 0))
+	if brief {
+		g.Requirement, g.Criteria, g.Context = i.Body, i.Criteria, i.Context
+		for _, e := range t.IssueRecords(id) {
+			g.Decisions = append(g.Decisions, Record{e.ID, e.Path, e.Title})
+		}
+		g.DoD = append([]string(nil), t.Project.DoD...)
+		g.Checker = []string{
+			"Verify each criterion and the Definition of Done yourself, not from the implementer's log.",
+			"Check criteria with prep criterion " + id + " --check <n>, then complete with prep complete " + id + " [--commit <hash>].",
+		}
+	}
+
 	// Inputs: the issue's own records first, then upstream outputs.
-	g.Inputs = append(g.Inputs, Pointer{f("issue.md"), "requirement and open questions", ""})
-	if s != StateOpen {
+	if !brief {
+		g.Inputs = append(g.Inputs, Pointer{f("issue.md"), "requirement and open questions", ""})
+	}
+	if s != StateOpen && !brief {
 		for _, p := range []Pointer{{f("acceptance.md"), "acceptance criteria", ""}, {f("context.md"), "implementation context", ""}, {".prep/knowledge/decisions/", "decision records", ""}} {
 			if i.HasFile(path.Base(p.Path)) {
 				g.Inputs = append(g.Inputs, p)
@@ -202,8 +231,10 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 			g.Inputs = append(g.Inputs, Pointer{".prep/knowledge" + e.Path, e.Title, "prep knowledge show " + e.Path})
 		}
 	}
-	for _, e := range t.IssueRecords(id) {
-		g.Inputs = append(g.Inputs, Pointer{".prep/knowledge" + e.Path, e.Title, "prep knowledge show " + e.Path})
+	if !brief {
+		for _, e := range t.IssueRecords(id) {
+			g.Inputs = append(g.Inputs, Pointer{".prep/knowledge" + e.Path, e.Title, "prep knowledge show " + e.Path})
+		}
 	}
 	g.Knowledge = t.Candidates(id, touched)
 	for _, d := range Validate(t) {
@@ -212,8 +243,8 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 		}
 	}
 	g.Step, g.Instructions, g.Outputs = stepContract(t, i, s, stale, parent, f)
-	if g.Step == "check" {
-		g.DoD = append([]string(nil), t.Project.DoD...)
+	if brief {
+		g.Outputs = []Pointer{{f("history.md"), "work log", "prep log " + id + " <text>"}}
 	}
 	return g
 }
@@ -283,20 +314,24 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		if deps := t.UnresolvedDeps(i.ID); len(deps) > 0 {
 			return "wait", []string{"Blocked by unresolved dependencies: " + strings.Join(deps, ", ") + "."}, nil
 		}
-		return "claim", []string{
-			"Claim the issue before implementing: prep claim " + i.ID + ".",
-		}, []Pointer{{f("claim.md"), "written by prep claim", ""}}
+		ins := []string{"Claim the issue before implementing: prep claim " + i.ID + "."}
+		if i.Kind == KindCode {
+			ins = append(ins, implementerRole(i.ID)...)
+		}
+		return "claim", ins, []Pointer{{f("claim.md"), "written by prep claim", ""}}
 	case StateInProgress:
 		ins := []string{
 			"Implement against the context and acceptance criteria. Log notable steps with prep log " + i.ID + " <text>.",
 			"Check criteria as they are met with prep criterion " + i.ID + " --check <n> (numbers as prep show lists them). Writes during implementation are reviewed as a batch at completion.",
 			"Record decisions and findings with prep decide or prep finding; records are immutable.",
 		}
+		if i.Kind == KindCode && !parent {
+			ins = implementerRole(i.ID)
+		}
 		var outs []Pointer
 		switch {
 		case parent:
 		case i.Kind == KindCode:
-			ins = append(ins, "Run prep complete "+i.ID+"; a commit is not required. If the work was committed earlier, optionally pass --commit <hash> as provenance.")
 		case i.Kind == KindResearch:
 			ins = append(ins, "Write the answer with prep finding "+i.ID+" --body-file -, then run prep complete "+i.ID+".")
 			outs = append(outs, Pointer{".prep/knowledge/findings/", "research findings", "prep finding " + i.ID + " --title <title> --description <description> --body-file -"})
@@ -315,4 +350,16 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		return "resolved", []string{"The issue is resolved; its records are history. Create a new issue for further change."}, nil
 	}
 	return "", nil, nil
+}
+
+// implementerRole is the instruction set for an agent implementing a code
+// issue: implement, log ready for check, stop. Completing is the checker's.
+func implementerRole(id string) []string {
+	return []string{
+		"Implement exactly the requirement and context, nothing beyond. Run the checks the context lists.",
+		"Record decisions made while implementing with prep decide " + id + " --title <T> --description <one line> --body <why>.",
+		"When the checks pass, run prep log " + id + " 'Implemented, ready for check: <one sentence>' and stop.",
+		"Never run prep complete, prep criterion --check, git commit or git push, and never run live evals (prep eval run).",
+		"If the context conflicts with the code or tests, log the conflict with prep log and stop; do not bend tests to fit.",
+	}
 }
