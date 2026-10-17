@@ -11,7 +11,7 @@ scope:
   - internal/cli
   - internal/tui/inbox.go
   - internal/tui/review_snapshot.go
-confirmed_commit: 10c47aa93d86e9ce523fc14d51307a031548c532
+confirmed_commit: 2c0c3af9f0e968721abae5a633ff084828af63c8
 ---
 
 Human approval is a separate post-completion action; it does not replace verification waivers, policy retention or Definition of Done opt-outs. Run `prep review show <id>` to inspect the active resolution and status (`pending`, `approved` or `stale`). `prep review approve <id> --reason <text> --by human:<name>` approves the done resolution. Prep adds the work and check-configuration scopes recorded by verification, exception approvals and selected knowledge-review reports, including the named knowledge entry files; legacy resolutions with no recorded work scopes require explicit repeatable `--scope <path>`. `prep guide <id>` and `prep show <id>` surface the required next action. This is local human attribution, not authentication, and agents must not invent approval.
