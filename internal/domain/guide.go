@@ -248,6 +248,19 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 			"When the Open questions section is empty, run prep define " + i.ID + " to write the baseline.",
 		}, []Pointer{{f("issue.md"), "requirement prose, empty Open questions section", "prep edit " + i.ID + " --body-file -"}}
 	case StateDefined:
+		if t.completeFromDefined(i.ID) {
+			result := "Record the agreed outcome with prep decide " + i.ID + " --title <title> --body-file - --outcome."
+			output := Pointer{f("decisions.md"), "decision outcome", "prep decide " + i.ID + " --title <title> --body-file - --outcome"}
+			if i.Kind == KindResearch {
+				result = "Record the answer with prep findings " + i.ID + " --body-file -."
+				output = Pointer{f("findings.md"), "research findings", "prep findings " + i.ID + " --body-file -"}
+			}
+			return "complete", []string{
+				result,
+				"Check any existing acceptance criteria, resolve requirement drift, and update affected knowledge or decide there is no documentation impact.",
+				"Then run prep complete " + i.ID + " --docs <entry>... (or --no-impact <reason>). Ready and claim are optional when handing the issue off: prep ready " + i.ID + ", then prep claim " + i.ID + ".",
+			}, []Pointer{output, {f("resolution.md"), "written by prep complete", ""}}
+		}
 		ins := []string{
 			"Enrich: settle how. The agent drafts, the user agrees.",
 			"Context: implementation context derived from the requirement, with prep context " + i.ID + " --body-file -. Link relevant knowledge entries with bundle-relative links such as [Export](/components/export.md); mention code paths in backticks.",

@@ -217,8 +217,7 @@ func TestLifecycle(t *testing.T) {
 	h.replace(a, "acceptance.md", "- [ ]", "- [x]")
 	h.fails("G_COMMIT", "complete", a, "--commit", "not-a-hash", "--no-impact", "none", "--json")
 	h.fails("G_DOCS", "complete", a, "--commit", "abc1234", "--json")
-	h.fails("G_ACTOR", "complete", a, "--commit", "abc1234", "--no-impact", "none", "--by", "human:andre", "--json")
-	h.ok("complete", a, "--commit", "abc1234", "--docs", "overview")
+	h.ok("complete", a, "--commit", "abc1234", "--docs", "overview", "--by", "human:andre")
 	h.expectState(a, "done", false)
 	res := h.read(a, "resolution.md")
 	for _, want := range []string{"outcome: done", "evidence: abc1234", "/overview.md"} {
@@ -269,6 +268,39 @@ func TestParentCompletesWhenChildrenResolved(t *testing.T) {
 	ids := listIDs(h, "list", "--under", p)
 	if len(ids) != 1 || ids[0] != c {
 		t.Fatalf("list --under = %v", ids)
+	}
+}
+
+func TestDefinedResearchAndDecisionComplete(t *testing.T) {
+	h := newHarness(t)
+	for _, kind := range []string{"decision", "research"} {
+		id := h.newIssue("--title", "Answer", "--kind", kind, "--body", "Settle the question.")
+		h.ok("define", id)
+		gate := "G_OUTCOME"
+		if kind == "research" {
+			gate = "G_FINDINGS"
+		}
+		h.fails(gate, "complete", id, "--no-impact", "none", "--json")
+		guide := h.ok("guide", id)
+		command := "prep decide "
+		if kind == "research" {
+			command = "prep findings "
+		}
+		if !strings.Contains(guide, command+id) || !strings.Contains(guide, "prep complete "+id) {
+			t.Fatalf("guide lacks direct completion: %s", guide)
+		}
+		if kind == "decision" {
+			h.ok("decide", id, "--title", "Choice", "--body", "Agreed.", "--outcome")
+		} else {
+			h.ok("findings", id, "--body", "The answer.")
+		}
+		h.ok("complete", id, "--no-impact", "none")
+		h.expectState(id, "done", false)
+		for _, record := range []string{"ready.md", "claim.md"} {
+			if _, err := os.Stat(filepath.Join(h.dir, ".prep", "issues", id, record)); !os.IsNotExist(err) {
+				t.Fatalf("unexpected %s: %v", record, err)
+			}
+		}
 	}
 }
 
