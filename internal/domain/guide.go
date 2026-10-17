@@ -252,7 +252,7 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 			"Enrich: settle how. The agent drafts, the user agrees.",
 			"Context: implementation context derived from the requirement, with prep context " + i.ID + " --body-file -. Link relevant knowledge entries with bundle-relative links such as [Export](/components/export.md); mention code paths in backticks.",
 			"Decisions: prep decide " + i.ID + " --title <title> --body-file - appends a dated entry with rationale and alternatives considered; --supersedes D<n> replaces an earlier one.",
-			"Acceptance: prep criterion " + i.ID + " --add <text> (repeatable) for checkable criteria; prep dod " + i.ID + " --add <item> or --opt-out <item> --reason <text> for the Definition of Done.",
+			"Acceptance: prep criterion " + i.ID + " --add <text> (repeatable) for checkable criteria.",
 		}
 		switch {
 		case parent:
