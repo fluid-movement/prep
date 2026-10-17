@@ -274,7 +274,7 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 		if err := parseIssue(raw, &i); err != nil {
 			return nil, nil, fmt.Errorf("%s: %w", rel, err)
 		}
-		i.Title, i.Kind, i.Parent, i.DependsOn, i.DependsOnApproval, i.Tags, i.Priority = e.Title, e.Kind, e.Parent, e.DependsOn, e.DependsOnApproval, e.Tags, e.Priority
+		i.Title, i.Kind, i.Parent, i.DependsOn, i.Tags, i.Priority = e.Title, e.Kind, e.Parent, e.DependsOn, e.Tags, e.Priority
 		if e.Body != nil {
 			i.Body = requirementBody(*e.Body)
 		}
@@ -318,14 +318,6 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 			return nil, nil, err
 		}
 	}
-	if c.DependencyOverrides != nil {
-		if err := s.cas(dir + "/dependency-overrides.md"); err != nil {
-			return nil, nil, err
-		}
-		if err := w("dependency-overrides.md", renderDependencyOverrides(*c.DependencyOverrides)); err != nil {
-			return nil, nil, err
-		}
-	}
 	if c.Approvals != nil || c.DoDRevision != nil || c.OptOutRevisions != nil {
 		var state approvalsFM
 		if err := s.cas(dir + "/approvals.md"); err != nil {
@@ -351,16 +343,6 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 			state.OptOutRevisions = *c.OptOutRevisions
 		}
 		if err := w("approvals.md", renderApprovalState(state)); err != nil {
-			return nil, nil, err
-		}
-	}
-	if c.ResolutionHistory != nil {
-		if err := w("resolution-history.md", renderResolutionHistory(*c.ResolutionHistory)); err != nil {
-			return nil, nil, err
-		}
-	}
-	if c.ResolutionReviews != nil {
-		if err := w("resolution-reviews.md", renderResolutionReviews(*c.ResolutionReviews)); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -421,7 +403,16 @@ func (s *Store) render(c *domain.Change) (touched []string, contents []*string, 
 		if err != nil {
 			return nil, nil, err
 		}
-		if err := w("history.md", fileText(normalize(raw)+"\n\n"+c.History)); err != nil {
+		entry := c.History
+		if c.Op == domain.OpReopen {
+			// Reopen keeps the removed resolution's text in the work log.
+			old, err := current("resolution.md")
+			if err != nil {
+				return nil, nil, err
+			}
+			entry += "\n\n" + archivedResolution(old)
+		}
+		if err := w("history.md", fileText(normalize(raw)+"\n\n"+entry)); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -519,40 +510,12 @@ func (s *Store) Fmt(dryRun bool) ([]string, error) {
 				}
 				return renderKnowledgeReviews(records), true
 			}},
-			{"dependency-overrides.md", func(raw string) (string, bool) {
-				records, err := parseDependencyOverrides(raw)
-				if err != nil {
-					return "", false
-				}
-				return renderDependencyOverrides(records), true
-			}},
 			{"resolution.md", func(raw string) (string, bool) {
 				r, err := parseResolution(raw)
 				if err != nil {
 					return "", false
 				}
 				return renderResolution(r), true
-			}},
-			{"resolution-history.md", func(raw string) (string, bool) {
-				rs, err := parseResolutionHistory(raw)
-				if err != nil {
-					return "", false
-				}
-				return renderResolutionHistory(rs), true
-			}},
-			{"resolution-reviews.md", func(raw string) (string, bool) {
-				fm, body, ok, err := splitFrontmatter(raw)
-				if err != nil || !ok || strings.TrimSpace(body) != "" {
-					return "", false
-				}
-				var state resolutionReviewsFM
-				if err := decodeStrict(fm, &state); err != nil {
-					return "", false
-				}
-				if err := validateResolutionReviewChain(state.Reviews); err != nil {
-					return "", false
-				}
-				return renderResolutionReviews(state.Reviews), true
 			}},
 		}
 		for _, st := range steps {
@@ -815,4 +778,14 @@ func (s *Store) editProject(edit func(*domain.Project)) error {
 	p := f.project()
 	edit(&p)
 	return s.write(rel, renderProject(p, body))
+}
+
+// archivedResolution quotes a removed resolution.md in a fenced block whose
+// fence is longer than any backtick run in the record.
+func archivedResolution(raw string) string {
+	fence := "```"
+	for strings.Contains(raw, fence) {
+		fence += "`"
+	}
+	return fence + "\n" + normalize(raw) + "\n" + fence
 }

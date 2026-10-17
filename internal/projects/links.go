@@ -221,7 +221,6 @@ func ResolveExternal(t *domain.Tree) {
 			}
 			if i := other.Issues[x.ID]; i != nil {
 				x.Status, x.State, x.Title = domain.XFound, other.State(x.ID), i.Title
-				x.ReviewStatus = other.ResolutionReviewStatus(x.ID)
 				x.TargetDigest = domain.DependencyTargetDigest(i)
 				if x.State == domain.StateDone {
 					x.Outcome = domain.DependencySatisfied
@@ -256,7 +255,7 @@ func rawDependencyTargetDigest(root, id string) (string, error) {
 			return err
 		}
 		rel = filepath.ToSlash(rel)
-		if rel != "issue.md" && rel != "acceptance.md" && rel != "ready.md" && rel != "claim.md" && rel != "resolution.md" && rel != "resolution-history.md" && rel != "resolution-reviews.md" && rel != "dependency-overrides.md" && !strings.HasPrefix(rel, "baselines/") {
+		if rel != "issue.md" && rel != "acceptance.md" && rel != "ready.md" && rel != "claim.md" && rel != "resolution.md" && !strings.HasPrefix(rel, "baselines/") {
 			return nil
 		}
 		contents, err := os.ReadFile(path)
@@ -326,7 +325,6 @@ func ResolveDep(t *domain.Tree, link, rest string) (ref string, add *domain.Proj
 			return "", nil, x, &domain.Error{Code: domain.ErrUsage, Message: fmt.Sprintf("cannot depend on dropped issue %s:%s", l.Name, id)}
 		}
 		x.ID, x.Status, x.State, x.Title, x.Project, x.Root = id, domain.XFound, other.State(id), other.Issues[id].Title, co.Name, co.Root
-		x.ReviewStatus = other.ResolutionReviewStatus(id)
 		x.TargetDigest = domain.DependencyTargetDigest(other.Issues[id])
 		if x.State == domain.StateDone {
 			x.Outcome = domain.DependencySatisfied

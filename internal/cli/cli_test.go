@@ -1331,80 +1331,7 @@ func TestCompleteInTheSameCommit(t *testing.T) {
 	}
 }
 
-func TestDerivedCommitEvidenceDoesNotInvalidateResolutionReview(t *testing.T) {
-	h := newHarness(t)
-	git := func(args ...string) string {
-		t.Helper()
-		cmd := exec.Command("git", append([]string{"-c", "user.email=t@t", "-c", "user.name=t"}, args...)...)
-		cmd.Dir = h.dir
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-		return strings.TrimSpace(string(out))
-	}
-	git("init", "-q")
-	git("add", "-A")
-	git("commit", "-qm", "initial project")
-	id := h.newIssue("--title", "Export", "--kind", "code", "--body", "Export rows.")
-	h.ok("define", id)
-	h.ok("context", id, "--body", "In internal/export.")
-	h.ok("criterion", id, "--add", "works")
-	h.ok("criterion", id, "--check", "1")
-	h.ok("ready", id)
-	h.ok("claim", id)
-	if err := os.WriteFile(filepath.Join(h.dir, "export.go"), []byte("package export\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	h.verify(id, "test")
-	h.ok("complete", id, "--no-impact", "test")
-	h.ok("review", "approve", id, "--reason", "Reviewed the scoped result.", "--by", "human:reviewer")
-	var before struct {
-		Status string `json:"status"`
-	}
-	h.jsonOf(&before, "review", "show", id)
-	if before.Status != domain.ReviewApproved {
-		t.Fatalf("review status before commit = %s", before.Status)
-	}
-	git("add", "-A")
-	git("commit", "-qm", "ship unchanged work and resolution")
-	var guide struct {
-		ReviewStatus string `json:"resolution_review_status"`
-	}
-	h.jsonOf(&guide, "guide", id)
-	h.jsonOf(&before, "review", "show", id)
-	if guide.ReviewStatus != domain.ReviewApproved || before.Status != domain.ReviewApproved {
-		t.Fatalf("derived Git evidence invalidated guide/review status: %s/%s", guide.ReviewStatus, before.Status)
-	}
-	var shown struct {
-		Issue struct {
-			Resolution struct {
-				Evidence string `json:"evidence"`
-			} `json:"resolution"`
-		} `json:"issue"`
-		Review struct {
-			Status string `json:"status"`
-		} `json:"resolution_review"`
-	}
-	h.jsonOf(&shown, "show", id)
-	if shown.Issue.Resolution.Evidence == "" || shown.Review.Status != domain.ReviewApproved {
-		t.Fatalf("show evidence/review = %q/%s", shown.Issue.Resolution.Evidence, shown.Review.Status)
-	}
-	knowledge := filepath.Join(h.dir, ".prep", "knowledge", "overview.md")
-	content, err := os.ReadFile(knowledge)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(knowledge, append(content, []byte("\nHuman reviewed an updated scoped result.\n")...), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	h.jsonOf(&before, "review", "show", id)
-	if before.Status != domain.ReviewStale {
-		t.Fatalf("scoped work change status = %s, want stale", before.Status)
-	}
-}
-
-func TestReopenPreservesReviewHistoryAndNewGenerationNeedsApproval(t *testing.T) {
+func TestReopenMovesResolutionToHistoryAndReturnsToReady(t *testing.T) {
 	h := newHarness(t)
 	id := h.newIssue("--title", "Reopenable work", "--kind", "code", "--body", "Finish the work.")
 	h.ok("define", id)
@@ -1413,65 +1340,30 @@ func TestReopenPreservesReviewHistoryAndNewGenerationNeedsApproval(t *testing.T)
 	h.ok("ready", id)
 	h.ok("claim", id)
 	h.verify(id, "test")
-	h.ok("complete", id, "--no-impact", "test")
-	h.ok("review", "approve", id, "--reason", "First result accepted.", "--by", "human:reviewer")
+	h.ok("complete", id, "--no-impact", "test", "--note", "First result shipped.")
+	h.fails("--reason", "reopen", id, "--json")
 	h.ok("reopen", id, "--reason", "New evidence needs another pass.")
 	if _, err := os.Stat(h.path(id, "resolution.md")); !os.IsNotExist(err) {
-		t.Fatalf("reopen did not remove active resolution, stat error: %v", err)
+		t.Fatalf("reopen did not remove resolution.md, stat error: %v", err)
 	}
-	if !strings.Contains(h.read(id, "resolution-history.md"), "generation: 1") || !strings.Contains(h.read(id, "resolution-reviews.md"), "First result accepted.") {
-		t.Fatal("reopen did not preserve resolution/review histories")
+	history := h.read(id, "history.md")
+	for _, want := range []string{"reopened by", "New evidence needs another pass.", "outcome: done", "First result shipped."} {
+		if !strings.Contains(history, want) {
+			t.Fatalf("history.md lacks %q:\n%s", want, history)
+		}
 	}
+	var shown struct {
+		State string `json:"state"`
+	}
+	h.jsonOf(&shown, "show", id)
+	if shown.State != string(domain.StateReady) {
+		t.Fatalf("state after reopen = %s, want ready", shown.State)
+	}
+	if out := h.ok("check"); !strings.Contains(out, "0 errors") {
+		t.Fatalf("check:\n%s", out)
+	}
+	h.ok("fmt", "--check")
 	h.ok("claim", id)
-	h.verify(id, "test")
-	h.ok("complete", id, "--no-impact", "test")
-	var status struct {
-		Status     string `json:"status"`
-		Generation uint64 `json:"generation"`
-		Reviews    []struct {
-			Generation uint64 `json:"generation"`
-		} `json:"reviews"`
-	}
-	h.jsonOf(&status, "review", "show", id)
-	if status.Status != domain.ReviewStale || status.Generation != 2 || len(status.Reviews) != 1 || status.Reviews[0].Generation != 1 {
-		t.Fatalf("recompleted review state = %+v", status)
-	}
-}
-
-func TestApprovalDependencyIsExplicitAndLocal(t *testing.T) {
-	h := newHarness(t)
-	dep := h.newIssue("--title", "Approved prerequisite", "--kind", "code", "--body", "Complete prerequisite.")
-	h.ok("define", dep)
-	h.enrich(dep)
-	h.replace(dep, "acceptance.md", "- [ ]", "- [x]")
-	h.ok("ready", dep)
-	h.ok("claim", dep)
-	h.verify(dep, "test")
-	h.ok("complete", dep, "--no-impact", "test")
-
-	ordinary := h.newIssue("--title", "Ordinary dependent", "--kind", "code", "--body", "Continue after completion.")
-	h.ok("edit", ordinary, "--depends-on", dep)
-	h.ok("define", ordinary)
-	h.enrich(ordinary)
-	h.replace(ordinary, "acceptance.md", "- [ ]", "- [x]")
-	h.ok("ready", ordinary)
-	if out := h.ok("claim", ordinary); !strings.Contains(out, "now in-progress") {
-		t.Fatalf("ordinary done dependency blocked claim: %s", out)
-	}
-
-	approved := h.newIssue("--title", "Approval gated dependent", "--kind", "code", "--body", "Continue after human approval.")
-	h.ok("edit", approved, "--depends-on", dep, "--depends-on-approval", dep)
-	h.ok("define", approved)
-	h.enrich(approved)
-	h.replace(approved, "acceptance.md", "- [ ]", "- [x]")
-	h.ok("ready", approved)
-	h.fails("G_DEPS", "claim", approved, "--json")
-	h.ok("review", "approve", dep, "--reason", "The completed prerequisite is accepted.", "--by", "human:reviewer")
-	h.ok("claim", approved)
-	if out := h.read(approved, "issue.md"); !strings.Contains(out, "depends_on_approval") {
-		t.Fatalf("approval dependency not persisted: %s", out)
-	}
-	h.fails("must also appear in --depends-on", "edit", approved, "--depends-on-approval", ordinary, "--json")
 }
 
 func TestFixConvertsAPrep010Project(t *testing.T) {

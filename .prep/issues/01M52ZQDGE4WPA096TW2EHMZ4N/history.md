@@ -1,3 +1,5 @@
 - 2026-10-17T08:03:23Z edited by claude-code/opus-5.5: depends_on
 
 - 2026-10-17T08:20:09Z edited by claude-code/opus-5.5: requirement
+
+- 2026-10-17T09:12:09Z claude-code/subagent: Implemented, ready for check: removed resolution reviews/generations/history, approval prerequisites, dependency overrides, the TUI Inbox and completion bundle; reopen now needs only a reason, appends the fenced old resolution.md to history.md and returns to ready (test TestReopenMovesResolutionToHistoryAndReturnsToReady). Checker must convert records: delete resolution-reviews.md in 01M4TSWX8HF105ZQQKS50MH6RP, 01M4TSWXEPBGMQG271CZJBBZJP, 01M4WSRP2FYKRNT2P61T88X9TH; delete resolution-history.md in 01M4TSWXEPBGMQG271CZJBBZJP; drop the generation: field from resolution.md in 01M4TST3C4ZSZDKA5WKBA3ND4H, 01M4TSWXEPBGMQG271CZJBBZJP, 01M4TSWXMYESCAEW74ZS58M6J6, 01M4TSWXVKTTMMEXZGB8G2SJXZ, 01M4TSWY40Z4473D9SPRTT711C, 01M4TSWYF45MFAAWHFS4PMMB8B, 01M4TSWYP7A94KVCEP8ZBMATPR, 01M52ZQ7J4SGWXY2W9X8EPEJV1; delete knowledge entries /features/resolution-review.md and /components/tui-inbox.md (then regenerate indexes).

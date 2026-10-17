@@ -56,9 +56,6 @@ func Validate(t *Tree) []Diagnostic {
 		w := func(code string, class Class, file, fix, format string, a ...any) {
 			add(Diagnostic{Code: code, Severity: SevWarning, Class: class, Issue: id, File: file, Message: fmt.Sprintf(format, a...), Fix: fix})
 		}
-		if err := ValidateDependencyOverrides(i.DependencyOverrides); err != nil {
-			e(CodeRecordInvalid, ClassManual, "dependency-overrides.md", "restore the original dependency override history", "invalid dependency override history: %v", err)
-		}
 		if err := ValidateArtifactReferences(i.Artifacts); err != nil {
 			e(CodeRecordInvalid, ClassManual, "issue.md", "use prep artifact add/remove to reconcile references", "invalid artifact references: %v", err)
 		}
@@ -113,15 +110,6 @@ func Validate(t *Tree) []Diagnostic {
 			case t.State(d) == StateDropped && !t.State(id).Terminal():
 				w(CodeDepDropped, ClassGuided, "issue.md", "remove the dependency or replace it with the issue that supersedes it", "depends on dropped issue %s", d)
 			}
-		}
-		seenApprovalDeps := map[string]bool{}
-		for _, d := range i.DependsOnApproval {
-			if seenApprovalDeps[d] {
-				w(CodeDuplicateDep, ClassFixable, "issue.md", "prep edit removes duplicate approval dependencies", "approval dependency %s listed twice", d)
-			} else if !seen[d] {
-				e(CodeDepMissing, ClassManual, "issue.md", "add it to depends_on or remove it from depends_on_approval", "approval dependency %s is not an ordinary dependency", d)
-			}
-			seenApprovalDeps[d] = true
 		}
 		if inDepCycle(t, id) {
 			e(CodeDepCycle, ClassManual, "issue.md", "remove a depends_on entry to break the cycle", "dependency cycle through this issue")

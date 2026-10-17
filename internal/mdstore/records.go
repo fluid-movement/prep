@@ -16,14 +16,13 @@ import (
 // Frontmatter shapes. Field order is the canonical key order.
 
 type issueFM struct {
-	Title             string                     `yaml:"title"`
-	Kind              string                     `yaml:"kind"`
-	Parent            string                     `yaml:"parent,omitempty"`
-	DependsOn         []string                   `yaml:"depends_on,omitempty"`
-	DependsOnApproval []string                   `yaml:"depends_on_approval,omitempty"`
-	Tags              []string                   `yaml:"tags,omitempty"`
-	Priority          string                     `yaml:"priority,omitempty"`
-	Artifacts         []domain.ArtifactReference `yaml:"artifacts,omitempty"`
+	Title     string                     `yaml:"title"`
+	Kind      string                     `yaml:"kind"`
+	Parent    string                     `yaml:"parent,omitempty"`
+	DependsOn []string                   `yaml:"depends_on,omitempty"`
+	Tags      []string                   `yaml:"tags,omitempty"`
+	Priority  string                     `yaml:"priority,omitempty"`
+	Artifacts []domain.ArtifactReference `yaml:"artifacts,omitempty"`
 }
 
 type baselineFM struct {
@@ -62,7 +61,6 @@ type resolutionFM struct {
 	Verification     []domain.VerificationEvidence `yaml:"verification,omitempty"`
 	Approvals        []domain.CompletionApproval   `yaml:"approvals,omitempty"`
 	KnowledgeReviews []domain.KnowledgeReview      `yaml:"knowledge_reviews,omitempty"`
-	Generation       uint64                        `yaml:"generation,omitempty"`
 	Outcome          string                        `yaml:"outcome"`
 	By               string                        `yaml:"by"`
 	At               time.Time                     `yaml:"at"`
@@ -71,23 +69,6 @@ type resolutionFM struct {
 	Documentation    *docFM                        `yaml:"documentation,omitempty"`
 	DoD              []string                      `yaml:"dod,omitempty"`
 	DoDOptOuts       []optOutFM                    `yaml:"dod_opt_outs,omitempty"`
-}
-
-type resolutionHistoryItemFM struct {
-	Record resolutionFM `yaml:"record"`
-	Note   string       `yaml:"note,omitempty"`
-}
-
-type resolutionHistoryFM struct {
-	Resolutions []resolutionHistoryItemFM `yaml:"resolutions"`
-}
-
-type resolutionReviewsFM struct {
-	Reviews []domain.ResolutionReview `yaml:"reviews"`
-}
-
-type dependencyOverridesFM struct {
-	Overrides []domain.DependencyOverride `yaml:"overrides"`
 }
 
 type projectFM struct {
@@ -194,7 +175,6 @@ func parseIssue(raw string, i *domain.Issue) error {
 	i.Kind = domain.Kind(f.Kind)
 	i.Parent = f.Parent
 	i.DependsOn = f.DependsOn
-	i.DependsOnApproval = f.DependsOnApproval
 	i.Tags = f.Tags
 	i.Priority = domain.Priority(f.Priority)
 	i.Artifacts = f.Artifacts
@@ -209,7 +189,7 @@ func renderIssue(i *domain.Issue) string {
 	if i.Priority.Effective() == domain.PriorityMedium {
 		prio = ""
 	}
-	return withFrontmatter(encodeYAML(issueFM{Title: i.Title, Kind: string(i.Kind), Parent: i.Parent, DependsOn: i.DependsOn, DependsOnApproval: i.DependsOnApproval, Tags: i.Tags, Priority: prio, Artifacts: i.Artifacts}), i.Body)
+	return withFrontmatter(encodeYAML(issueFM{Title: i.Title, Kind: string(i.Kind), Parent: i.Parent, DependsOn: i.DependsOn, Tags: i.Tags, Priority: prio, Artifacts: i.Artifacts}), i.Body)
 }
 
 // requirementBody is the body of issue.md for a requirement given as text.
@@ -614,7 +594,7 @@ func resolutionFromFM(f resolutionFM, body string) (*domain.Resolution, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &domain.Resolution{Outcome: f.Outcome, By: f.By, At: at, Reason: f.Reason, Evidence: f.Evidence, DoD: f.DoD, Note: normalize(body), Contract: f.Contract, Verification: f.Verification, Approvals: f.Approvals, Generation: f.Generation, KnowledgeReviews: f.KnowledgeReviews}
+	r := &domain.Resolution{Outcome: f.Outcome, By: f.By, At: at, Reason: f.Reason, Evidence: f.Evidence, DoD: f.DoD, Note: normalize(body), Contract: f.Contract, Verification: f.Verification, Approvals: f.Approvals, KnowledgeReviews: f.KnowledgeReviews}
 	if r.Contract != nil && r.Contract.ID != r.Contract.ContentID() {
 		return nil, fmt.Errorf("resolution completion contract content does not match its ID")
 	}
@@ -704,7 +684,7 @@ func renderResolution(r *domain.Resolution) string {
 }
 
 func resolutionToFM(r *domain.Resolution) resolutionFM {
-	f := resolutionFM{Outcome: r.Outcome, By: r.By, At: fmtTime(r.At), Reason: r.Reason, Evidence: r.Evidence, DoD: r.DoD, Contract: r.Contract, Verification: r.Verification, Approvals: r.Approvals, Generation: r.Generation, KnowledgeReviews: r.KnowledgeReviews}
+	f := resolutionFM{Outcome: r.Outcome, By: r.By, At: fmtTime(r.At), Reason: r.Reason, Evidence: r.Evidence, DoD: r.DoD, Contract: r.Contract, Verification: r.Verification, Approvals: r.Approvals, KnowledgeReviews: r.KnowledgeReviews}
 	if r.Documentation != nil {
 		f.Documentation = &docFM{Entries: r.Documentation.Entries, NoImpact: r.Documentation.NoImpact}
 	}
@@ -712,121 +692,6 @@ func resolutionToFM(r *domain.Resolution) resolutionFM {
 		f.DoDOptOuts = append(f.DoDOptOuts, optOutFM{Item: o.Item, Reason: o.Reason, ApprovalID: o.ApprovalID})
 	}
 	return f
-}
-
-func parseResolutionHistory(raw string) ([]domain.Resolution, error) {
-	fm, body, ok, err := splitFrontmatter(raw)
-	if err != nil || !ok {
-		if err == nil {
-			err = fmt.Errorf("missing frontmatter")
-		}
-		return nil, err
-	}
-	if strings.TrimSpace(body) != "" {
-		return nil, fmt.Errorf("resolution history is frontmatter-only")
-	}
-	var f resolutionHistoryFM
-	if err := decodeStrict(fm, &f); err != nil {
-		return nil, err
-	}
-	var out []domain.Resolution
-	last := uint64(0)
-	for _, item := range f.Resolutions {
-		r, err := resolutionFromFM(item.Record, item.Note)
-		if err != nil {
-			return nil, err
-		}
-		if r.Outcome != domain.OutcomeDone || r.Generation != 0 && r.Generation <= last {
-			return nil, fmt.Errorf("resolution history must contain done resolutions in increasing generation order")
-		}
-		if r.Generation > last {
-			last = r.Generation
-		}
-		out = append(out, *r)
-	}
-	return out, nil
-}
-
-func renderResolutionHistory(resolutions []domain.Resolution) string {
-	f := resolutionHistoryFM{}
-	for _, r := range resolutions {
-		f.Resolutions = append(f.Resolutions, resolutionHistoryItemFM{Record: resolutionToFM(&r), Note: r.Note})
-	}
-	return withFrontmatter(encodeYAML(f), "")
-}
-
-func parseResolutionReviews(raw string, resolutions map[string]uint64) ([]domain.ResolutionReview, error) {
-	fm, body, ok, err := splitFrontmatter(raw)
-	if err != nil || !ok {
-		if err == nil {
-			err = fmt.Errorf("missing frontmatter")
-		}
-		return nil, err
-	}
-	if strings.TrimSpace(body) != "" {
-		return nil, fmt.Errorf("resolution reviews are frontmatter-only")
-	}
-	var f resolutionReviewsFM
-	if err := decodeStrict(fm, &f); err != nil {
-		return nil, err
-	}
-	if err := validateResolutionReviewChain(f.Reviews); err != nil {
-		return nil, err
-	}
-	for n := range f.Reviews {
-		r := &f.Reviews[n]
-		generation, ok := resolutions[r.ResolutionID]
-		if !ok || generation != r.Generation {
-			return nil, fmt.Errorf("resolution review names an unknown resolution generation")
-		}
-	}
-	return f.Reviews, nil
-}
-
-func validateResolutionReviewChain(reviews []domain.ResolutionReview) error {
-	previous := ""
-	for _, r := range reviews {
-		if err := r.Validate(); err != nil {
-			return err
-		}
-		if r.Previous != previous {
-			return fmt.Errorf("resolution review chain is broken")
-		}
-		previous = r.ID
-	}
-	return nil
-}
-
-func renderResolutionReviews(reviews []domain.ResolutionReview) string {
-	return withFrontmatter(encodeYAML(resolutionReviewsFM{Reviews: reviews}), "")
-}
-
-func parseDependencyOverrides(raw string) ([]domain.DependencyOverride, error) {
-	fm, body, ok, err := splitFrontmatter(raw)
-	if err != nil {
-		return nil, err
-	}
-	if !ok || strings.TrimSpace(body) != "" {
-		return nil, fmt.Errorf("dependency-overrides.md must contain frontmatter and no body")
-	}
-	var f dependencyOverridesFM
-	if err := decodeStrict(fm, &f); err != nil {
-		return nil, err
-	}
-	if f.Overrides == nil {
-		f.Overrides = []domain.DependencyOverride{}
-	}
-	if err := domain.ValidateDependencyOverrides(f.Overrides); err != nil {
-		return nil, err
-	}
-	return f.Overrides, nil
-}
-
-func renderDependencyOverrides(overrides []domain.DependencyOverride) string {
-	if overrides == nil {
-		overrides = []domain.DependencyOverride{}
-	}
-	return withFrontmatter(encodeYAML(dependencyOverridesFM{Overrides: overrides}), "")
 }
 
 // --- project.md ---

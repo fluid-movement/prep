@@ -330,7 +330,6 @@ knowledge_reviews:
       - internal
       - plugins
     snapshot: b1b7358e5c98a9fc99ebd18db3d0e5474684895ce6be9edd4124bd9cfc10226d
-generation: 1
 outcome: done
 by: codex
 at: 2026-10-15T08:32:43Z

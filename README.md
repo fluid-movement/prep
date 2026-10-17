@@ -73,19 +73,17 @@ State is derived from which records exist in `.prep/issues/<id>/`, never stored:
 | defined | `baselines/<timestamp>.md` | `prep define`, `prep ack` |
 | ready | `ready.md` referencing the newest baseline | `prep ready` |
 | in progress | `claim.md` | `prep claim` (`prep release` removes it and logs to `history.md`) |
-| done / dropped | `resolution.md` | `prep complete`, `prep drop` |
+| done / dropped | `resolution.md` | `prep complete`, `prep drop` (`prep reopen` removes a done resolution and logs it to `history.md`) |
 
 An issue is **stale** when its requirement or kind differs from the newest baseline: `prep ack` for a trivial change, `prep define` and re-enrichment for a real one. **Actionable** = ready, not stale, dependencies done, unclaimed, not a parent.
 
-Cross-project dependencies use fresh local checkout observations: satisfied, unsatisfied, or unknown. An unavailable checkout or missing target is unknown and blocks claiming. `prep dependency show <id>` shows the source, revision, uncertainty and current or stale human overrides. Only an explicit human decision can override one unknown observation: `prep dependency override <id> <project:id> --reason <text> --by human:<name>`. Source or local requirement/dependency changes invalidate it. Dependencies normally require implementation completion; include a dependency in `--depends-on-approval` as well to require its current human resolution approval. An uncertainty override cannot waive that review.
+Cross-project dependencies use fresh local checkout observations: satisfied, unsatisfied, or unknown. An unavailable checkout or missing target is unknown and blocks claiming. `prep dependency show <id>` shows the source, revision and uncertainty.
 
 Prep serializes cooperating record writers within one checkout and recovers interrupted multi-file lifecycle writes before loading records. Conflicts return `E_CONFLICT`; reload and re-plan. Recovery conflicts retain the journal and staged data for reconciliation. Claims and activity remain local to each branch/worktree, so assigning parallel agents is the orchestrator's responsibility. This storage guarantee covers process interruption, with per-file atomic renames; it does not coordinate other worktrees or promise power-loss atomicity.
 
 ## The TUI
 
-`prep tui` has two rows of navigation. The top row is the screens: Inbox (`u`), Issues (`i`), Agent (`w`) and Knowledge (`b`), with the check's counts and a gear for the settings at its right end. Below it are the views of the screen you are on: your saved issue lists on Issues; Issue, Activity and Usage on Agent. `tab` and `1`–`9` move between views, and backspace (or the mouse's back button) returns to where you were, across screens. Everything can be clicked. On the issue list, `a` opens the actions that apply to the selected issue, `e` edits it, `p` sets its priority and `n` creates one; `?` lists every key. In a terminal under 16 rows both navigation rows share one line.
-
-Inbox puts completion reviews first, followed by ready signoffs, open questions, stale requirements or policy, and unknown dependencies. New completions show a brief notice without moving your focus. A completion review brings together the requirement, acceptance and Definition of Done, reported verification and knowledge assessments, exceptions, and available Git changes. Press `enter` to scroll, `a` to Approve review with a reason, or `y` to copy the issue ID for feedback to your agent. Leaving keeps review pending. Approval checks that the displayed resolution and scoped work are still current; a change requires a fresh review. Older completions without work scopes need explicit paths through `e`, followed by inspection of the refreshed bundle. `o` opens the ordinary issue and its lifecycle actions. Reopening remains an explicit agent action after your instruction.
+`prep tui` has two rows of navigation. The top row is the screens: Issues (`i`), Agent (`w`) and Knowledge (`b`), with the check's counts and a gear for the settings at its right end. Below it are the views of the screen you are on: your saved issue lists on Issues; Issue, Activity and Usage on Agent. `tab` and `1`–`9` move between views, and backspace (or the mouse's back button) returns to where you were, across screens. Everything can be clicked. On the issue list, `a` opens the actions that apply to the selected issue, `e` edits it, `p` sets its priority and `n` creates one; `?` lists every key. In a terminal under 16 rows both navigation rows share one line.
 
 ## Views
 

@@ -12,15 +12,15 @@ import (
 	"github.com/fluid-movement/prep/internal/tui/ui"
 )
 
-// The navigation is two tiers: the screens bar on top (Inbox, Issues, Agent,
+// The navigation is two tiers: the screens bar on top (Issues, Agent and
 // Knowledge, with Check and Settings at its right end), and under it the
 // views of the current screen (the issue lists, the Agent views). tab and
 // the digits always move in the second tier; one back stack covers both.
 
 // navScreens are the first tier, in bar order.
-var navScreens = []screen{screenInbox, screenIssues, screenAgent, screenKnowledge}
+var navScreens = []screen{screenIssues, screenAgent, screenKnowledge}
 
-var navLabels = map[screen]string{screenInbox: "Inbox", screenIssues: "Issues", screenAgent: "Agent", screenKnowledge: "Knowledge"}
+var navLabels = map[screen]string{screenIssues: "Issues", screenAgent: "Agent", screenKnowledge: "Knowledge"}
 
 // The Agent screen's views.
 const (
@@ -68,13 +68,6 @@ type place struct {
 const maxBack = 100
 
 func (m *Model) here() place {
-	if m.screen == screenInbox {
-		focus := focusList
-		if m.inboxS.detail {
-			focus = focusDetail
-		}
-		return place{screen: m.screen, issue: m.inboxS.id, focus: focus}
-	}
 	return place{screen: m.screen, issue: m.selected(), focus: m.focus, entry: m.know.path}
 }
 
@@ -103,10 +96,6 @@ func (m *Model) goBack() tea.Cmd {
 	m.back = m.back[:n-1]
 	m.moving, m.linkMode = false, false
 	switch p.screen {
-	case screenInbox:
-		m.inboxS.id = p.issue
-		m.inboxS.detail = p.focus == focusDetail
-		return m.openInbox()
 	case screenIssues:
 		m.screen = screenIssues
 		if p.issue == "" || m.tree.Issues[p.issue] == nil {
@@ -139,8 +128,6 @@ func (m *Model) goScreen(sc screen) tea.Cmd {
 	m.pushBack()
 	m.moving, m.linkMode = false, false
 	switch sc {
-	case screenInbox:
-		return m.openInbox()
 	case screenAgent:
 		return m.openAgent()
 	case screenKnowledge:
@@ -326,8 +313,6 @@ func (m *Model) secondTier(width, x, y int) string {
 // caption stands in the second tier of screens without views.
 func (m *Model) caption() string {
 	switch m.screen {
-	case screenInbox:
-		return fmt.Sprintf("%d items need attention", len(m.inboxS.items))
 	case screenKnowledge:
 		if m.tree == nil {
 			return ""

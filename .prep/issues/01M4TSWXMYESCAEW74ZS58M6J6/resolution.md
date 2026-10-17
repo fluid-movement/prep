@@ -435,7 +435,6 @@ knowledge_reviews:
       - internal/domain
       - internal/tui
     snapshot: bc03deb02b82a8624c7a6ff6c5243c446aab71dc1df5930d7462636b1498cef6
-generation: 1
 outcome: done
 by: codex
 at: 2026-10-14T17:33:15Z

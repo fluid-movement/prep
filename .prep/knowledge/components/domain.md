@@ -36,8 +36,7 @@ Applies when changing lifecycle rules, gates, diagnostics or queries.
 - `errors.go`: `E_*` error codes for commands.
 
 Rules worth knowing: see [Issue lifecycle](/features/lifecycle.md).
-- `links.go`/`dependency.go`: links, fail-closed outcomes, scoped overrides and review prerequisites ([Cross-project](/features/cross-project.md)); `StripCode` serves OKF.
+- `links.go`/`dependency.go`: links and fail-closed outcomes ([Cross-project](/features/cross-project.md)); `StripCode` serves OKF.
 - [Completion policy](/features/completion-policy.md): readiness-bound requirements and verification. `approval.go` plans human exceptions, policy retention and DoD opt-out approvals, tracks CLI policy/request revisions and selects used resolution approvals. Domain validates adapter-computed applicability without filesystem access; details: [Completion approvals](/features/completion-approvals.md).
 
-- `knowledge_review.go` binds reported knowledge assessments to contracts, canonical entries and adapter-computed scoped applicability; `review.go` binds human resolution approvals to full resolution identity/generation and selected scope unions. Shared completion, reopen and dependency gates serve CLI and TUI. See [Knowledge lifecycle](/features/knowledge-lifecycle.md) and [Resolution review](/features/resolution-review.md).
-`inbox.go`: `Tree.Inbox` classifies and orders human attention without changing lifecycle/dependency gates; see [TUI Inbox](/components/tui-inbox.md).
+- `knowledge_review.go` binds reported knowledge assessments to contracts, canonical entries and adapter-computed scoped applicability. Shared completion, reopen and dependency gates serve CLI and TUI. See [Knowledge lifecycle](/features/knowledge-lifecycle.md).

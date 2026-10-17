@@ -23,9 +23,8 @@
 * [TUI detail links](/components/tui-detail.md) - The issue detail's links above its document: breadcrumb, a children heading for any number of children, dependencies and knowledge, and link mode (o) for following them.
 * [TUI editing and keys](/components/tui-editing.md) - How the TUI writes and which keys do what: the write pipeline, action and edit menus, letter melodies, the keymap and ?, dialogs over the screen, inline text editing with $EDITOR hand-off, the create wizard and the editable settings.
 * [TUI filter bar](/components/tui-filter.md) - internal/tui filter bar: query flags and words per tab, and the picker that suggests flags and their values while typing.
-* [TUI Inbox and completion bundles](/components/tui-inbox.md) - Inbox attention classification, bundled completion review, non-blocking notifications and captured approval checks.
 * [TUI knowledge screen](/components/tui-knowledge.md) - internal/tui knowledge screen: entries with attention marks, the entry view, filters and links between issues and entries.
 * [TUI mouse](/components/tui-mouse.md) - How the TUI takes clicks and the wheel: elements marked as Lip Gloss layers while rendering, hit-testing, click semantics, and the per-user mouse capture setting.
-* [TUI navigation](/components/tui-navigation.md) - prep tui navigation: Inbox, Issues, Agent and Knowledge screens, view keys, clicks, back stack and short layout.
+* [TUI navigation](/components/tui-navigation.md) - prep tui navigation: Issues, Agent and Knowledge screens, view keys, clicks, back stack and short layout.
 * [TUI](/components/tui.md) - prep tui screens in internal/tui — the issue views (tabs, list, detail and its links), loader injection, live reload with fsnotify, navigation keys, and how screens are tested; editing is in TUI editing and keys.
 * [Watcher](/components/watch.md) - internal/watch — reports changes under .prep, debounced and merged, split into project and local changes; used by prep tui's live reload.

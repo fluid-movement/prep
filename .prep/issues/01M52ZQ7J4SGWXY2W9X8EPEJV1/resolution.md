@@ -337,7 +337,6 @@ knowledge_reviews:
       - internal/projects/projects.go
       - justfile
     snapshot: 612a52e7a8d3e9bf1f9fdb362462380cfc952907d0670598dbeedd53dd1fab12
-generation: 1
 outcome: done
 by: claude-code/opus-5.5
 at: 2026-10-17T07:56:54Z

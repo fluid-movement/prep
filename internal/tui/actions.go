@@ -37,8 +37,6 @@ const (
 	modalViewEdit // a saved view's name and query
 	modalHelp     // the keymap of the current screen
 	modalProjects // the project switcher
-	modalReviewApprove
-	modalReviewScopes
 )
 
 // action is one entry of the action menu.
@@ -72,8 +70,7 @@ type modal struct {
 	scroll   int
 	scrolled bool
 	// projects are the switcher's projects; picks holds their roots.
-	projects       []projects.Project
-	reviewSnapshot *ReviewSnapshot
+	projects []projects.Project
 }
 
 // entryMark is a clickable entry in a dialog's body: its ID, the body line
@@ -636,39 +633,6 @@ func (m *Model) submit() tea.Cmd {
 	d := m.modal
 	actor, now := m.opts.Actor, m.now()
 	switch d.kind {
-	case modalReviewScopes:
-		var scopes []string
-		for _, scope := range strings.Split(d.inputs[0].Value(), ",") {
-			if scope = strings.TrimSpace(scope); scope != "" {
-				scopes = append(scopes, scope)
-			}
-		}
-		if len(scopes) == 0 {
-			d.err = "Choose at least one work scope."
-			return nil
-		}
-		m.inboxS.extraScopes = scopes
-		m.modal = nil
-		return m.loadInboxReview()
-	case modalReviewApprove:
-		if m.inboxS.approving {
-			return nil
-		}
-		if strings.TrimSpace(d.inputs[0].Value()) == "" {
-			d.err = "Give a reason for this approval."
-			return nil
-		}
-		if d.reviewSnapshot == nil || m.opts.ApproveReview == nil {
-			d.err = "Review approval is unavailable."
-			return nil
-		}
-		request := ReviewApprovalRequest{Snapshot: *d.reviewSnapshot, Reason: strings.TrimSpace(d.inputs[0].Value())}
-		approve := m.opts.ApproveReview
-		m.inboxS.approving = true
-		return func() tea.Msg {
-			_, err := approve(request)
-			return inboxApprovedMsg{id: request.Snapshot.Issue.ID, err: err}
-		}
 	case modalCreate:
 		title, kind, parent, body := d.inputs[0].Value(), kinds[d.kindIdx], m.scopeTop(), strings.TrimSpace(d.area.Value())
 		return m.write("created "+strings.TrimSpace(title), func(t *domain.Tree) (*domain.Change, error) {
@@ -940,16 +904,6 @@ func (m *Model) modalView(width, height int) string {
 		body = append(body, ui.Field(m.th, "Knowledge entries", d.inputs[0].View(), d.focus == 0), "")
 		mark("field:1", next(), 0, inner, 2)
 		body = append(body, ui.Field(m.th, "No impact because", d.inputs[1].View(), d.focus == 1))
-	case modalReviewApprove:
-		title = "Approve review · " + title
-		body = append(body, m.th.S.Muted.Render("Approves the displayed resolution and work snapshot."), "")
-		mark("field:0", next(), 0, inner, 2)
-		body = append(body, ui.Field(m.th, "Approval reason", d.inputs[0].View(), true))
-	case modalReviewScopes:
-		title = "Review scopes · " + title
-		body = append(body, m.th.S.Muted.Render("Choose paths, then inspect the refreshed review before approving."), "")
-		mark("field:0", next(), 0, inner, 2)
-		body = append(body, ui.Field(m.th, "Work paths (comma-separated)", d.inputs[0].View(), true))
 	case modalCriteria:
 		title = "Criteria · " + title
 		for k, c := range m.tree.Issues[d.id].Criteria {

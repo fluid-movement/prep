@@ -98,18 +98,17 @@ func issueEvent(t *domain.Tree, op, id, verb string) activity.Event {
 }
 
 var opVerbs = map[domain.Op]string{
-	domain.OpDefine:           "defined the requirement",
-	domain.OpAck:              "acknowledged the requirement change",
-	domain.OpReady:            "signed off the enrichment",
-	domain.OpClaim:            "claimed the issue",
-	domain.OpRelease:          "released the issue",
-	domain.OpComplete:         "completed the issue",
-	domain.OpDrop:             "dropped the issue",
-	domain.OpResolutionReview: "approved the resolution",
-	domain.OpReopen:           "reopened the issue",
-	domain.OpContext:          "wrote the context",
-	domain.OpFindings:         "wrote the findings",
-	domain.OpDoD:              "changed the Definition of Done",
+	domain.OpDefine:   "defined the requirement",
+	domain.OpAck:      "acknowledged the requirement change",
+	domain.OpReady:    "signed off the enrichment",
+	domain.OpClaim:    "claimed the issue",
+	domain.OpRelease:  "released the issue",
+	domain.OpComplete: "completed the issue",
+	domain.OpDrop:     "dropped the issue",
+	domain.OpReopen:   "reopened the issue",
+	domain.OpContext:  "wrote the context",
+	domain.OpFindings: "wrote the findings",
+	domain.OpDoD:      "changed the Definition of Done",
 }
 
 // recordVerb says what a record write did.

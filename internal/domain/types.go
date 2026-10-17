@@ -218,7 +218,6 @@ type Resolution struct {
 	Verification     []VerificationEvidence `json:"verification,omitempty"`
 	Approvals        []CompletionApproval   `json:"approvals,omitempty"`
 	KnowledgeReviews []KnowledgeReview      `json:"knowledge_reviews,omitempty"`
-	Generation       uint64                 `json:"generation,omitempty"`
 	Outcome          string                 `json:"outcome"`
 	By               string                 `json:"by"`
 	At               time.Time              `json:"at"`
@@ -237,10 +236,7 @@ type Issue struct {
 	Kind      Kind     `json:"kind"`
 	Parent    string   `json:"parent,omitempty"`
 	DependsOn []string `json:"depends_on,omitempty"`
-	// DependsOnApproval is a subset of DependsOn whose done target must also
-	// have an applicable human resolution review.
-	DependsOnApproval []string `json:"depends_on_approval,omitempty"`
-	Tags              []string `json:"tags,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
 	// Artifacts are reference-only metadata, never imported requirements or evidence.
 	Artifacts []ArtifactReference `json:"artifacts,omitempty"`
 	// Priority as stored: empty means medium. Output carries Effective().
@@ -265,21 +261,17 @@ type Issue struct {
 	History   string     `json:"-"` // the work log
 	Findings  *string    `json:"-"`
 
-	Baselines               []Baseline             `json:"baselines,omitempty"` // oldest first
-	Ready                   *Ready                 `json:"ready,omitempty"`
-	Claim                   *Claim                 `json:"claim,omitempty"`
-	Resolution              *Resolution            `json:"resolution,omitempty"`
-	ResolutionHistory       []Resolution           `json:"resolution_history,omitempty"`
-	ResolutionReviews       []ResolutionReview     `json:"resolution_reviews,omitempty"`
-	ResolutionReviewCurrent map[string]bool        `json:"-"`
-	DependencyOverrides     []DependencyOverride   `json:"dependency_overrides,omitempty"`
-	Verification            []VerificationEvidence `json:"verification,omitempty"`
-	Approvals               []CompletionApproval   `json:"approvals,omitempty"`
-	KnowledgeReviews        []KnowledgeReview      `json:"knowledge_reviews,omitempty"`
-	KnowledgeReviewCurrent  map[string]bool        `json:"-"`
-	DoDRevision             string                 `json:"dod_revision,omitempty"`
-	OptOutRevisions         map[string]string      `json:"opt_out_revisions,omitempty"`
-	ApprovalCurrent         map[string]bool        `json:"-"`
+	Baselines              []Baseline             `json:"baselines,omitempty"` // oldest first
+	Ready                  *Ready                 `json:"ready,omitempty"`
+	Claim                  *Claim                 `json:"claim,omitempty"`
+	Resolution             *Resolution            `json:"resolution,omitempty"`
+	Verification           []VerificationEvidence `json:"verification,omitempty"`
+	Approvals              []CompletionApproval   `json:"approvals,omitempty"`
+	KnowledgeReviews       []KnowledgeReview      `json:"knowledge_reviews,omitempty"`
+	KnowledgeReviewCurrent map[string]bool        `json:"-"`
+	DoDRevision            string                 `json:"dod_revision,omitempty"`
+	OptOutRevisions        map[string]string      `json:"opt_out_revisions,omitempty"`
+	ApprovalCurrent        map[string]bool        `json:"-"`
 	// EvidenceCurrent is adapter-computed applicability, never persisted.
 	EvidenceCurrent map[string]bool `json:"-"`
 

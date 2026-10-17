@@ -12,4 +12,3 @@
 * [Lean knowledge policy](/features/knowledge-policy.md) - Decisions, constraints and navigation first; incremental knowledge maintenance.
 * [Issue lifecycle](/features/lifecycle.md) - States derived from records, transitions with their gates per kind, stale drift handling, parents, dependencies and Definition of Done.
 * [Local record write safety](/features/local-write-safety.md) - Checkout-local locks, stale-plan rejection and roll-forward recovery for interrupted Markdown record transactions.
-* [Resolution review and reopening](/features/resolution-review.md) - Human approvals bound to completed resolution history and scoped snapshots.

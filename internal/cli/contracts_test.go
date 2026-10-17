@@ -2,7 +2,6 @@ package cli
 
 import (
 	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/fluid-movement/prep/internal/domain"
@@ -79,30 +78,5 @@ func TestLifecycleJSONGuidanceIsAdditiveAndActionable(t *testing.T) {
 	h.jsonOf(&write, "complete", id, "--no-impact", "No documentation impact.")
 	if !write.OK || write.ID != id || write.Next != "prep guide "+id {
 		t.Fatalf("lifecycle completion omitted bounded guidance: %+v", write)
-	}
-	var pending resolutionReviewView
-	h.jsonOf(&pending, "review", "show", id)
-	if !pending.OK || pending.ID != id || pending.Status != domain.ReviewPending || !strings.HasPrefix(pending.Next, "prep review approve "+id) {
-		t.Fatalf("pending review response: %+v", pending)
-	}
-	if guide := h.ok("guide", id, "--json"); !strings.Contains(guide, `"resolution_review_status": "pending"`) || !strings.Contains(guide, "prep review approve "+id) {
-		t.Fatalf("guide omitted bounded pending-review action: %s", guide)
-	}
-	code, output = h.run("review", "approve", id, "--reason", "Agent must not approve.", "--by", "agent/test", "--json")
-	if code == 0 {
-		t.Fatalf("agent review approval unexpectedly passed: %s", output)
-	}
-	if !strings.Contains(output, "prep review approve "+id+" --reason <text> --by human:<name>") || !strings.Contains(output, `"next": "prep guide `+id+`"`) {
-		t.Fatalf("human approval error lacks usable guidance: %s", output)
-	}
-
-	h.jsonOf(&write, "review", "approve", id, "--reason", "Reviewed the reported work.", "--by", "human:reviewer")
-	if !write.OK || write.ID != id || write.Next != "prep guide "+id {
-		t.Fatalf("review approval response: %+v", write)
-	}
-	var approved resolutionReviewView
-	h.jsonOf(&approved, "review", "show", id)
-	if !approved.OK || approved.Status != domain.ReviewApproved || approved.Next != "prep guide "+id {
-		t.Fatalf("approved review response: %+v", approved)
 	}
 }
