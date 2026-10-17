@@ -6,19 +6,14 @@ import (
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
-	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/projects"
 	"github.com/fluid-movement/prep/internal/tui/ui"
 )
 
-// Switch is where the person asked to go: another project, optionally on
-// one of its issues. Run returns it, and prep tui starts over on that
-// project.
+// Switch is the project the person asked to go to. Run returns it, and
+// prep tui starts over on that project.
 type Switch struct {
-	Root  string
-	Issue string
-	Entry string // a knowledge entry to open
+	Root string
 }
 
 // projectName is the header's name for the project: its own name, else
@@ -91,7 +86,7 @@ func (m *Model) projectKey(k tea.KeyPressMsg) tea.Cmd {
 // current project just closes the switcher.
 func (m *Model) switchProject(s Switch) tea.Cmd {
 	m.modal = nil
-	if s.Root == m.opts.Root && s.Issue == "" {
+	if s.Root == m.opts.Root {
 		return nil
 	}
 	m.switchTo = &s
@@ -130,68 +125,4 @@ func (m *Model) projectRows(inner, rows int) []pickRow {
 		out = append(out, pickRow{fmt.Sprintf("pick:%d", k), ui.MenuRow(m.th, "", label, note, true, k == d.cursor, inner)})
 	}
 	return out
-}
-
-// xDepLine renders a dependency on another project's issue: the link's
-// name before the ID, the state from that project, and for one not
-// checked out here the clone hint in place of a title.
-func (m *Model) xDepLine(ref string, k int, selected bool, key string, inner int) string {
-	x := m.tree.ExternalDependency(m.selected(), ref)
-	sub := m.th.S.Subtle
-	lead := sub.Render("← needs ")
-	if x.Outcome != domain.DependencySatisfied {
-		lead = lipgloss.NewStyle().Foreground(m.th.C.Warning).Render("← needs ")
-	}
-	l := ui.Link{Lead: lead + m.th.S.Muted.Render(x.Link+" › "), State: x.State, ID: shortID(x.ID), Title: x.Title, Key: key}
-	switch x.Status {
-	case domain.XMissing:
-		l.Title = sub.Render("no such issue in " + x.Project)
-	case domain.XUnknown:
-		l.Title = sub.Render("unknown: " + x.Uncertainty)
-		if x.Uncertainty == "" {
-			l.Title = sub.Render("not checked out here")
-		}
-		if x.Remote != "" {
-			l.Title += sub.Render(" · clone " + x.Remote)
-		}
-	}
-	if x.ProvenanceWarning != "" {
-		l.Title += sub.Render(" · warning: " + x.ProvenanceWarning)
-	}
-	return ui.LinkLine(m.th, l, selected, inner)
-}
-
-// followElsewhere opens an issue or a knowledge entry of a linked project:
-// the TUI starts over there, and backspace comes back.
-func (m *Model) followElsewhere(label, link, rest string) tea.Cmd {
-	if label != "knowledge" {
-		x := m.tree.XIssueOf(link + ":" + rest)
-		if x.Status != domain.XFound {
-			return m.flash(link + " is not checked out here, or has no such issue")
-		}
-		return m.switchProject(Switch{Root: x.Root, Issue: x.ID})
-	}
-	root := m.linkRoot(link)
-	if root == "" {
-		return m.flash(link + " is not checked out here")
-	}
-	return m.switchProject(Switch{Root: root, Entry: rest})
-}
-
-// linkRoot is the newest checkout of the linked project, or "".
-func (m *Model) linkRoot(name string) string {
-	l, ok := m.tree.Project.Link(name)
-	if !ok || m.opts.Projects == nil {
-		return ""
-	}
-	ps, err := m.opts.Projects()
-	if err != nil {
-		return ""
-	}
-	for _, p := range ps {
-		if p.ID == l.ID {
-			return p.Root
-		}
-	}
-	return ""
 }

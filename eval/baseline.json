@@ -123,20 +123,6 @@
       "runs": 3
     },
     {
-      "case": "links-cross-dependency",
-      "variant": "current",
-      "model": "sonnet",
-      "passed": 3,
-      "runs": 3
-    },
-    {
-      "case": "links-other-project-knowledge",
-      "variant": "current",
-      "model": "sonnet",
-      "passed": 3,
-      "runs": 3
-    },
-    {
       "case": "links-read-other-project",
       "variant": "current",
       "model": "sonnet",

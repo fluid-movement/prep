@@ -133,7 +133,6 @@ type Project struct {
 	Name string
 	// Links are the other projects this one refers to, by local name
 	// (sorted).
-	Links  []ProjectLink
 	DoD    []string
 	Config Config
 }

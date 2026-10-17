@@ -34,7 +34,7 @@ confirmed_commit: dc8a789739da2f94fe9274590cdd0d9223976c35
 - `prep activity`, `activity add` and `prep focus`: [Agent activity](/features/agent-activity.md); commands note their event when they succeed and `Main` appends it.
 - `prep update [--check]` replaces the binary with the latest release; see [Release, install and update](/components/release.md).
 - `prep show --json` carries the issue's fields plus `history` (the work log text), `context`, `findings`, derived state, relations and progress.
-- `prep projects`, `init`'s identity and `--new-id`: [project registry](/components/projects.md); `prep links`, `prep link`, `validate` (check plus registry checks): [Cross-project work](/features/cross-project.md).
+- `prep projects`, `init`'s identity and `--new-id`: [project registry](/components/projects.md).
 
 - `prep tui` requires a terminal; `--agent` opens the Agent screen and `--gallery` shows the [design system](/components/tui-design-system.md) with project themes. `prep flags` lists query values/counts, including saved views and tree mode; `prep views` lists saved views in config order.
 - `prep skill` prints the embedded `internal/cli/skill.md`; `.claude/skills/prep/SKILL.md` must stay identical (tested).
@@ -43,6 +43,5 @@ confirmed_commit: dc8a789739da2f94fe9274590cdd0d9223976c35
 `prep new` returns bounded advisory `similar_issues` candidates when titles overlap unresolved records; terminal/self records are omitted. Hints never prevent creation or choose a match. See [Tracking](/decisions/tracking.md).
 
 - `prep reopen <id> --reason` moves a done resolution into the work log. See [Issue lifecycle](/features/lifecycle.md).
-`prep dependency show`: [source observations](/features/cross-project.md).
 
 Artifact metadata and additive lifecycle JSON/error guidance: [CLI contracts](/features/cli-contracts.md).

@@ -49,7 +49,7 @@ func cmdTUI(a *app, args []string) error {
 	var to *tui.Switch
 	for {
 		var err error
-		if to, err = runTUI(root, *agent, previous, to); err != nil || to == nil {
+		if to, err = runTUI(root, *agent, previous); err != nil || to == nil {
 			return err
 		}
 		_ = projects.Touch(to.Root, a.now())
@@ -59,20 +59,11 @@ func cmdTUI(a *app, args []string) error {
 }
 
 // runTUI runs the TUI on the project at root until it quits or switches.
-// at is where the switch that led here asked to open, if any.
-func runTUI(root string, agent bool, previous string, at *tui.Switch) (*tui.Switch, error) {
-	sel, entry := "", ""
-	if at != nil {
-		sel, entry = at.Issue, at.Entry
-	}
+func runTUI(root string, agent bool, previous string) (*tui.Switch, error) {
 	// Loads run in background goroutines, sometimes two at once (reload and
 	// check), so each builds its own stores instead of sharing the app's.
 	load := func(drift bool) (*domain.Tree, error) {
-		t, err := domain.Load(mdstore.Open(root), &okf.Store{Root: root}, drift)
-		if err == nil {
-			projects.ResolveExternal(t)
-		}
-		return t, err
+		return domain.Load(mdstore.Open(root), &okf.Store{Root: root}, drift)
 	}
 	var mu sync.Mutex
 	write := func(plan func(*domain.Tree) (*domain.Change, error)) (string, error) {
@@ -106,8 +97,6 @@ func runTUI(root string, agent bool, previous string, at *tui.Switch) (*tui.Swit
 		Root:       root,
 		Projects:   projects.List,
 		Previous:   previous,
-		Select:     sel,
-		Entry:      entry,
 		NoMouse:    ucfg.TUI.Mouse != nil && !*ucfg.TUI.Mouse,
 		SaveMouse:  saveMouse,
 		Single:     ucfg.TUI.Layout == "single",

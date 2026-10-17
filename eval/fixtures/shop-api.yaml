@@ -1,4 +1,4 @@
-# Two linked projects: web (where the agent starts) depends on api.
+# Two projects: web (where the agent starts) and api.
 primary: web
 projects:
   api:
@@ -16,12 +16,10 @@ projects:
         description: How login tokens work.
         body: "Access tokens expire after 15 minutes; refresh tokens after 30 days."
   web:
-    links: [api]
     issues:
       - alias: login
         title: Login page
         state: ready
-        depends_on: [api/auth]
         body: A login page that uses the api's auth endpoint.
         context: Call the api token endpoint from the login form.
         criteria: [A user can log in]

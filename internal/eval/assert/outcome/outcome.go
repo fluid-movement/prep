@@ -54,14 +54,6 @@ func clip(s string) string {
 	return s
 }
 
-// bareID strips a cross-project prefix ("api:01ABC" -> "01ABC").
-func bareID(s string) string {
-	if i := strings.LastIndex(s, ":"); i >= 0 {
-		return s[i+1:]
-	}
-	return s
-}
-
 // ---- issue
 
 type issueCheck struct {
@@ -206,7 +198,7 @@ func (c *issueCheck) Check(in *assert.Input) assert.Result {
 	for _, d := range c.DependsOn {
 		found := false
 		for _, have := range is.DependsOn {
-			if have == d || bareID(have) == bareID(d) {
+			if have == d {
 				found = true
 			}
 		}

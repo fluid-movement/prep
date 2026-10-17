@@ -1400,10 +1400,3 @@ func TestListSummaryCarriesOpenQuestionsAndResolution(t *testing.T) {
 		}
 	}
 }
-
-func TestUnknownDependencyHintsAtOtherProjects(t *testing.T) {
-	h := newHarness(t)
-	id := h.newIssue("--title", "Local", "--kind", "code")
-	h.fails("<project>:<id>", "edit", id, "--depends-on", "01KE6P50JGABYZR1S1G9JMY5HZ")
-	h.fails("<project>:<id>", "new", "--title", "X", "--kind", "code", "--depends-on", "01KE6P50JGABYZR1S1G9JMY5HZ")
-}

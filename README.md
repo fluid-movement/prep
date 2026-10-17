@@ -79,7 +79,7 @@ State is derived from which records exist in `.prep/issues/<id>/`, never stored:
 
 An issue is **stale** when its requirement or kind differs from the newest baseline: `prep ack` for a trivial change, `prep define` and re-enrichment for a real one. **Actionable** = ready, not stale, dependencies done, unclaimed, not a parent.
 
-Cross-project dependencies use fresh local checkout observations: satisfied, unsatisfied, or unknown. An unavailable checkout or missing target is unknown and blocks claiming. `prep dependency show <id>` shows the source, revision and uncertainty.
+Dependencies refer to issues in the same project. `prep projects` lists projects registered on this machine; `--project <name>` runs a command in another registered project.
 
 Prep serializes cooperating record writers within one checkout and recovers interrupted multi-file lifecycle writes before loading records. Conflicts return `E_CONFLICT`; reload and re-plan. Recovery conflicts retain the journal and staged data for reconciliation. Claims and activity remain local to each branch/worktree, so assigning parallel agents is the orchestrator's responsibility. This storage guarantee covers process interruption, with per-file atomic renames; it does not coordinate other worktrees or promise power-loss atomicity.
 

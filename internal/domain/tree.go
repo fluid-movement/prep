@@ -15,10 +15,6 @@ type Tree struct {
 	Knowledge map[string]*Entry // keyed by bundle-relative path
 	// ParseDiags holds format-level diagnostics reported by the adapters.
 	ParseDiags []Diagnostic
-	// External holds the other projects' issues that cross-project
-	// dependencies name, keyed by reference; the caller fills it through the
-	// project registry. A reference missing from it is unknown.
-	External map[string]XIssue
 
 	children map[string][]string
 }
@@ -191,12 +187,11 @@ func (t *Tree) Drifted(i *Issue) bool {
 	return b.Requirement != i.Body || b.Kind != i.Kind
 }
 
-// UnresolvedDeps returns dependencies that are not satisfied. Unknown
-// cross-project dependencies block.
+// UnresolvedDeps returns dependencies that are not done, including missing issues.
 func (t *Tree) UnresolvedDeps(id string) []string {
 	var out []string
 	for _, d := range t.Issues[id].DependsOn {
-		if t.DependencyOutcome(d) != DependencySatisfied {
+		if t.State(d) != StateDone {
 			out = append(out, d)
 		}
 	}

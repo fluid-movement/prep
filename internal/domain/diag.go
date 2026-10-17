@@ -80,14 +80,6 @@ const (
 	CodeKnowledgeCommit      = "K006" // confirmed_commit cannot be resolved
 	CodeKnowledgeIndex       = "K007" // OKF index.md missing, outdated or unneeded
 
-	// Links to other projects (project.md links and references to them).
-	CodeLinkUndefined  = "X001" // a reference names a link project.md does not define
-	CodeLinkInvalid    = "X002" // a link has an invalid name or ID, or is the project itself
-	CodeLinkDuplicate  = "X003" // two links name one project
-	CodeLinkRemote     = "X004" // the link's clone hint differs from the checkout's remote; prep fix updates it
-	CodeXDepMissing    = "X005" // a cross-project dependency names no issue in the checked-out project
-	CodeXDepDropped    = "X006" // a cross-project dependency names an issue dropped there
-	CodeXKnowledgeLink = "X007" // a cross-project knowledge link names no entry in the checked-out project
 )
 
 // SortDiagnostics orders diagnostics deterministically.

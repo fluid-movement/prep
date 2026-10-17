@@ -118,8 +118,7 @@ func cmdInit(a *app, args []string) error {
 	return nil
 }
 
-// renewID gives the project a new permanent ID: links other projects hold to
-// the old one keep pointing at the project it was copied from.
+// renewID gives a copied project a new permanent ID.
 func (a *app) renewID() error {
 	if err := a.open(); err != nil {
 		return err
@@ -256,37 +255,22 @@ func cmdNew(a *app, args []string) error {
 			return err
 		}
 	}
-	ids, add, err := a.resolveDeps(t, deps)
+	ids, err := a.resolveDeps(t, deps)
 	if err != nil {
 		return err
 	}
 	in.DependsOn = ids
-	lc, planOn, err := withLinks(t, add)
+	c, err := t.PlanNew(in, a.now())
 	if err != nil {
 		return err
 	}
-	c, err := planOn.PlanNew(in, a.now())
-	if err != nil {
-		return err
-	}
-	files, err := a.applyAll(t, nonNilChanges(lc, c))
+	files, err := a.applyAll(t, []*domain.Change{c})
 	if err != nil {
 		return err
 	}
 	a.note(activity.Event{Op: "new", Issue: c.IssueID, Verb: "created a " + string(in.Kind) + " issue", Target: in.Title, Area: activity.AreaIssue})
 	a.reportWrite(writeResult{OK: true, Op: "new", ID: c.IssueID, State: domain.StateOpen, Files: files, Similar: similarIssues(t, in.Title), Next: "prep guide " + c.IssueID})
 	return nil
-}
-
-// nonNilChanges drops nil changes, keeping the order.
-func nonNilChanges(cs ...*domain.Change) []*domain.Change {
-	var out []*domain.Change
-	for _, c := range cs {
-		if c != nil {
-			out = append(out, c)
-		}
-	}
-	return out
 }
 
 // readBody returns the requirement from --body-file (- for stdin) or --body.
@@ -355,7 +339,6 @@ func cmdEdit(a *app, args []string) error {
 		}
 		in.Parent = &p
 	}
-	var add []domain.ProjectLink
 	if set["depends-on"] {
 		list := []string{}
 		if !(len(deps) == 1 && deps[0] == "") {
@@ -364,11 +347,11 @@ func cmdEdit(a *app, args []string) error {
 					return usageErr("--depends-on '' clears the list and cannot be combined with IDs")
 				}
 			}
-			ids, more, err := a.resolveDeps(t, deps)
+			ids, err := a.resolveDeps(t, deps)
 			if err != nil {
 				return err
 			}
-			list, add = ids, more
+			list = ids
 		}
 		in.DependsOn = &list
 	}
@@ -389,15 +372,11 @@ func cmdEdit(a *app, args []string) error {
 		}
 		in.Body = &text
 	}
-	lc, planOn, err := withLinks(t, add)
+	c, err := t.PlanEdit(id, in)
 	if err != nil {
 		return err
 	}
-	c, err := planOn.PlanEdit(id, in)
-	if err != nil {
-		return err
-	}
-	files, err := a.applyAll(t, nonNilChanges(lc, c))
+	files, err := a.applyAll(t, []*domain.Change{c})
 	if err != nil {
 		return err
 	}
@@ -520,15 +499,6 @@ func cmdFix(a *app, args []string) error {
 		return err
 	}
 	files = append(files, ident...)
-	hints, err := a.fixLinkRemotes()
-	if err != nil {
-		return err
-	}
-	for _, f := range hints {
-		if !slices.Contains(files, f) {
-			files = append(files, f)
-		}
-	}
 	// The personal config is ignored now; a 0.1.0 project still has it in
 	// git's index, and committing the fix removes it there (config.yaml.dist
 	// takes its place).

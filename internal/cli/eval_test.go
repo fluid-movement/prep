@@ -119,7 +119,7 @@ func TestEvalListAndDryRun(t *testing.T) {
 	h := newHarness(t)
 	dir := copyEvalDir(t)
 	out := h.ok("eval", "list", "--dir", dir)
-	for _, want := range []string{"session-what-next", "links-cross-dependency", "define-from-scratch", "#smoke"} {
+	for _, want := range []string{"session-what-next", "links-read-other-project", "define-from-scratch", "#smoke"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("list lacks %q:\n%s", want, out)
 		}
@@ -127,7 +127,7 @@ func TestEvalListAndDryRun(t *testing.T) {
 	if out := h.ok("eval", "list", "--dir", dir, "--smoke"); strings.Contains(out, "enrich-tax-rules") || !strings.Contains(out, "session-what-next") {
 		t.Errorf("smoke list:\n%s", out)
 	}
-	if out := h.ok("eval", "list", "--dir", dir, "--area", "links"); strings.Count(out, "\n") != 2 {
+	if out := h.ok("eval", "list", "--dir", dir, "--area", "links"); strings.Count(out, "\n") != 1 {
 		t.Errorf("area list:\n%s", out)
 	}
 	h.fails("no case matches", "eval", "list", "--dir", dir, "--case", "nonsense")
