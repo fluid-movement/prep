@@ -1,4 +1,4 @@
-- [ ] prep help lists no import, artifact, migrate or ack command, and git grep finds none of their code or the legacy config path
-- [ ] prep define <id> --trivial on a stale ready or in-progress issue writes a new baseline and keeps the ready sign-off and claim; on a non-stale issue it fails, covered by tests
-- [ ] A project with a newer schema still fails with ErrSchema and the message says to update prep, covered by a test
-- [ ] The stale eval case expects define --trivial, the skill and knowledge describe define --trivial, prep check reports no errors, and GitHub CI on main is green
+- [x] prep help lists no import, artifact, migrate or ack command, and git grep finds none of their code or the legacy config path
+- [x] prep define <id> --trivial on a stale ready or in-progress issue writes a new baseline and keeps the ready sign-off and claim; on a non-stale issue it fails, covered by tests
+- [x] A project with a newer schema still fails with ErrSchema and the message says to update prep, covered by a test
+- [x] The stale eval case expects define --trivial, the skill and knowledge describe define --trivial, prep check reports no errors, and GitHub CI on main is green
