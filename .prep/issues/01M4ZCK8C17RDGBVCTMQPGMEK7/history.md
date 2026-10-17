@@ -1,1 +1,3 @@
 - 2026-10-16T16:38:18Z claude-code: Found 2026-10-16: GitHub CI on main failed on the last two pushes (2026-10-13 and 2026-10-15) in the desktop job (swift test, 15 minutes); the Go test job passes. The lifecycle orchestration epic was closed with 'final project CI passes' while CI was red. Deleting the desktop app removes the failing job; the lesson is that done was declared from local checks only.
+
+- 2026-10-17T07:34:34Z claude-code: 2026-10-17, user correction to the step 5 plan: the eval harness fix is not first. Removals come first (desktop deletion first, to turn CI green), then the knowledge model; the eval fix comes right before the guidance phase, the first change that needs an eval run.
