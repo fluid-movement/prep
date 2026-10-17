@@ -15,3 +15,5 @@
 - 2026-10-17T12:52:51Z claude-code: Handoff record: claude haiku subagent | eval harness errors (small, mapped) | no fixes; 64k tokens, 27 tool uses, 4.6 min
 
 - 2026-10-17T12:59:14Z claude-code: Handoff record: claude sonnet subagent | one lock per write command (medium, subtle) | checker fixed 2: knowledge confirm loaded before taking the lock; complete removed claim.md before writing resolution.md (an interruption would drop a completed issue to ready). 124k tokens, 60 tool uses, 6.1 min
+
+- 2026-10-17T13:17:10Z claude-code: Handoff record: claude haiku subagent | import/artifact/migrate/legacy removal and ack -> define --trivial (medium, many files) | no fixes needed; 263k tokens, 187 tool uses, 13.5 min
