@@ -299,3 +299,4 @@
 * [Track implementation work in issues](/decisions/01M553MC6A94WGF0S1M2KM5MSA.md) - Search before implementing, reuse a clear match, file unmatched work of any size, honor opt-outs, keep the request's scope
 * [Skill carries rules.md verbatim, kept in sync by a test](/decisions/01M553Q3RG9SGHQSXR064R05FQ.md) - skill.md is a hand-kept short intro plus rules.md, and a test fails when it drifts.
 * [Guide brief applies to code issues; DoD shown from ready](/decisions/01M559ZH9S3T1GA44JMB5ZF6G8.md) - Brief and implementer role are built for ready or in-progress non-parent code issues only
+* [Bound only the lists that grow with the project](/decisions/01M554P2YP7JSQDKHJ37N2M84F.md) - Bound prep list, knowledge list and knowledge find; leave check and help after the removals shrank them
