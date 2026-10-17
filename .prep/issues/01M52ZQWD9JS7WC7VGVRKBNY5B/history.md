@@ -1,1 +1,3 @@
 - 2026-10-17T08:19:22Z edited by claude-code/opus-5.5: depends_on, requirement
+
+- 2026-10-17T08:34:35Z codex: Blocked: removal implemented in CLI, mutation package/tests, eval workflow, experiments and knowledge; go build, prep check (0 errors, 6 warnings) and prep fmt --check pass, but go test ./... hits 10-minute timeouts in internal/cli, internal/eval and internal/eval/fixture and timing failures in internal/eval/run; the requested broad grep only matches unrelated mutation wording and EvalSymlinks, while literal removed-feature references are absent; GitHub CI on main is unverified and prep staging is denied by the environment.
