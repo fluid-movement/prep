@@ -1,3 +1,3 @@
-- [ ] prep and git commands, quoted message text and heredoc bodies that name a record path are allowed, covered by tests
-- [ ] Direct reads and writes of record files through cat, sed, grep, redirection, cp, mv, rm and tee are still redirected, covered by tests
-- [ ] The hooks knowledge describes the rule, prep check reports no errors, and GitHub CI on main is green
+- [x] prep and git commands, quoted message text and heredoc bodies that name a record path are allowed, covered by tests
+- [x] Direct reads and writes of record files through cat, sed, grep, redirection, cp, mv, rm and tee are still redirected, covered by tests
+- [x] The hooks knowledge describes the rule, prep check reports no errors, and GitHub CI on main is green
