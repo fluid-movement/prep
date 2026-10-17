@@ -1,5 +1,5 @@
-- [ ] prep help lists no link, links or dependency command, and --depends-on rejects a project:id reference, covered by a test
-- [ ] prep projects and --project still read and write another project, covered by the existing tests
-- [ ] The TUI shows no cross-project dependency or knowledge links; goldens are updated
-- [ ] git grep finds none of the removed link types or output fields outside issue records
-- [ ] Knowledge describing links is deleted or updated, prep check reports no errors, and GitHub CI on main is green
+- [x] prep help lists no link, links or dependency command, and --depends-on rejects a project:id reference, covered by a test
+- [x] prep projects and --project still read and write another project, covered by the existing tests
+- [x] The TUI shows no cross-project dependency or knowledge links; goldens are updated
+- [x] git grep finds none of the removed link types or output fields outside issue records
+- [x] Knowledge describing links is deleted or updated, prep check reports no errors, and GitHub CI on main is green
