@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -68,6 +69,35 @@ func (a *app) recordEvent(printed int) {
 		}
 		_ = activity.Append(filepath.Join(a.home, mdstore.Dir), e)
 	}
+}
+
+// recordFailure records a failed prep command as a prep event with failed
+// set: its command, the error code and the issue it named, if any. Reads
+// fail too, and agents guessing flags show up here. Like every record it
+// never changes the command's result.
+func (a *app) recordFailure(name string, args []string, err error) {
+	if name == "hook" {
+		return // hooks record their own outcomes
+	}
+	// A command can fail on its arguments before it loads the store.
+	if a.store == nil && a.open() != nil {
+		return
+	}
+	dir := a.prepDir()
+	if dir == "" {
+		return
+	}
+	code := domain.ErrIO
+	var se silentErr
+	var de *domain.Error
+	switch {
+	case errors.As(err, &se):
+		code = se.err.Code
+	case errors.As(err, &de):
+		code = de.Code
+	}
+	issue := strings.ToUpper(hookIDs.FindString(strings.Join(args, " ")))
+	_ = activity.Append(dir, activity.Event{At: a.now().UTC(), Actor: a.actor, Session: os.Getenv("PREP_SESSION"), Kind: activity.KindPrep, Op: name, Issue: issue, Verb: string(code), Failed: true})
 }
 
 // recordProject records the opened project in the machine's project

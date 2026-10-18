@@ -7,7 +7,6 @@ package activity
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -32,6 +32,7 @@ const (
 	KindTool    = "tool"    // a harness tool call
 	KindRequest = "request" // a harness model request
 	KindSession = "session" // a harness session started or ended
+	KindHook    = "hook"    // a prep hook's outcome, written by the binary
 )
 
 // Areas group what was read or changed.
@@ -86,7 +87,7 @@ type Context struct {
 // prep focus, and every prep command naming an issue except plain reads,
 // unless it ran in another project.
 func (e Event) MovesFocus() bool {
-	if e.Project != "" {
+	if e.Project != "" || e.Failed {
 		return false
 	}
 	switch e.Kind {
@@ -132,13 +133,11 @@ func (e Event) Validate() error {
 
 // Limits: lines stay below the size a single append writes atomically
 // (PIPE_BUF is 4 KiB on Linux and macOS), so concurrent writers never
-// interleave; past maxBytes the stream keeps its newest keepLines, at
-// most half of maxBytes.
+// interleave; past maxBytes the stream is archived and a new one starts.
 const (
-	maxLine   = 4000
-	maxField  = 300
-	maxBytes  = 1 << 20
-	keepLines = 2000
+	maxLine  = 4000
+	maxField = 300
+	maxBytes = 1 << 20
 )
 
 // Path is the stream's file under the .prep directory.
@@ -177,7 +176,7 @@ func Append(prepDir string, e Event) error {
 		err = cerr
 	}
 	if err == nil && statErr == nil && info.Size() > maxBytes {
-		err = prune(path)
+		err = archive(path, time.Now())
 	}
 	return err
 }
@@ -190,54 +189,56 @@ func clip(s string) string {
 	return s
 }
 
-// prune rewrites the stream with its newest lines. Two writers pruning at
-// once both write a valid file; an append racing the rename may be lost,
-// which a UI stream tolerates.
-func prune(path string) error {
-	lines, err := readLines(path)
+// archive moves a full stream aside as activity-<local date>.jsonl (with
+// -<n> added when that name exists) so the next append starts a new stream.
+// Rename is atomic: two writers archiving at once leave one archive, and a
+// writer that finds the stream already moved does nothing. An append racing
+// the rename may land in the archive, which a UI stream tolerates. Archives
+// are never read or pruned by prep.
+func archive(path string, now time.Time) error {
+	info, err := os.Stat(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
-	// Keep the newest lines that fit in half the limit, so pruning runs
-	// once per many appends rather than on each.
-	keep, size := 0, 0
-	for k := len(lines) - 1; k >= 0 && keep < keepLines && size+len(lines[k])+1 <= maxBytes/2; k-- {
-		keep, size = keep+1, size+len(lines[k])+1
+	if info.Size() <= maxBytes {
+		return nil // another writer archived it already
 	}
-	lines = lines[len(lines)-keep:]
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".activity-*")
-	if err != nil {
+	dir, stamp := filepath.Dir(path), now.Format("2006-01-02")
+	dest := filepath.Join(dir, "activity-"+stamp+".jsonl")
+	for n := 2; ; n++ {
+		if _, err := os.Stat(dest); errors.Is(err, fs.ErrNotExist) {
+			break
+		}
+		dest = filepath.Join(dir, fmt.Sprintf("activity-%s-%d.jsonl", stamp, n))
+	}
+	if err := os.Rename(path, dest); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	w := bufio.NewWriter(tmp)
-	for _, l := range lines {
-		w.Write(l)
-		w.WriteByte('\n')
-	}
-	if err := w.Flush(); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
-		return err
-	}
-	return os.Rename(tmp.Name(), path)
+	return nil
 }
 
-func readLines(path string) ([][]byte, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
+// ValidateHook checks an event the binary records for a hook outcome.
+// Harnesses cannot add these: prep activity add rejects the hook kind.
+func (e Event) ValidateHook() error {
+	verbs, ok := hookVerbs[e.Op]
+	if !ok {
+		return fmt.Errorf("hook op must be prompt, finish, before-tool or session-start, not %q", e.Op)
 	}
-	var out [][]byte
-	for l := range bytes.SplitSeq(b, []byte("\n")) {
-		if len(bytes.TrimSpace(l)) > 0 {
-			out = append(out, l)
-		}
+	if !slices.Contains(verbs, e.Verb) {
+		return fmt.Errorf("%s verb must be one of %v, not %q", e.Op, verbs, e.Verb)
 	}
-	return out, nil
+	return nil
+}
+
+// hookVerbs are the outcomes each hook records.
+var hookVerbs = map[string][]string{
+	"prompt":        {"sent", "skipped"},
+	"finish":        {"asked"},
+	"before-tool":   {"denied read", "denied write"},
+	"session-start": {"primed"},
 }
 
 // Read returns the stream's events, oldest first, at most max of the

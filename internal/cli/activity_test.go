@@ -47,13 +47,17 @@ func TestActivityRecordsCommands(t *testing.T) {
 			verbs = append(verbs, e.Verb)
 		}
 	}
-	want := []string{"created a code issue", "read the guide", "added 2 criteria", "checked criterion 1", "recorded decision: Use JSON", "searched knowledge"}
+	// The failed guide is recorded with its error code, after the commands that succeeded.
+	want := []string{"created a code issue", "read the guide", "added 2 criteria", "checked criterion 1", "recorded decision: Use JSON", "searched knowledge", "E_NOT_FOUND"}
 	if strings.Join(verbs, "|") != strings.Join(want, "|") {
 		t.Fatalf("verbs:\n%v\nwant\n%v", verbs, want)
 	}
 	for _, e := range got.Events {
 		switch e.Op {
 		case "guide", "show", "knowledge find":
+			if e.Failed {
+				continue // a failure records its code, not output
+			}
 			if e.Chars == 0 {
 				t.Fatalf("%s carries no output size: %+v", e.Op, e)
 			}
@@ -105,8 +109,12 @@ func TestActivityAdd(t *testing.T) {
 			t.Fatalf("accepted %q", bad)
 		}
 	}
-	if len(h.activity().Events) != n {
-		t.Fatal("rejected events were recorded")
+	// The rejected adds fail as commands, which record failed prep events;
+	// no harness event may be recorded.
+	for _, e := range h.activity().Events[n:] {
+		if !e.Failed || e.Kind != activity.KindPrep || e.Op != "activity" {
+			t.Fatalf("rejected event recorded as %+v", e)
+		}
 	}
 }
 

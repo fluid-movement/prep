@@ -124,11 +124,19 @@ func cmdHook(a *app, args []string) error {
 		}
 		message = hookBound(message, 10000)
 		if hookSendPrompt(a, e, message) {
+			hookRecord(a, e, mode, "sent", "", "")
 			hookContext(a, name, message)
+		} else {
+			hookRecord(a, e, mode, "skipped", "", "")
 		}
 	case "before-tool":
-		if reason := hookRedirect(e, a.store.Root); reason != "" {
+		if reason, area, write := hookDenial(e, a.store.Root); reason != "" {
 			a.emit(map[string]any{"hookSpecificOutput": map[string]any{"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": reason}})
+			verb := "denied read"
+			if write {
+				verb = "denied write"
+			}
+			hookRecord(a, e, mode, verb, area, hookDeniedTarget(e))
 		}
 	case "after-tool":
 		hookActivity(a, e)
@@ -226,7 +234,40 @@ func hookRecordArea(p, cwd, root string) string {
 	return ""
 }
 
+// hookRecord notes a hook's outcome in the activity stream. The binary writes
+// it, never a harness; an invalid event or a failed append is dropped, since
+// hooks fail open.
+func hookRecord(a *app, e hookEvent, op, verb, area, target string) {
+	ev := activity.Event{At: a.now().UTC(), Actor: a.actor, Session: e.Session, Kind: activity.KindHook, Op: op, Verb: verb, Area: area, Target: target}
+	if ev.ValidateHook() != nil {
+		return
+	}
+	_ = activity.Append(filepath.Join(a.store.Root, mdstore.Dir), ev)
+}
+
+// hookDeniedTarget is the first 200 characters of what a denied call named:
+// its command, else its path or pattern.
+func hookDeniedTarget(e hookEvent) string {
+	target := ""
+	for _, key := range []string{"command", "file_path", "path", "pattern"} {
+		if target == "" {
+			target = hookString(e.Input, key)
+		}
+	}
+	if r := []rune(target); len(r) > 200 {
+		target = string(r[:200])
+	}
+	return target
+}
+
 func hookRedirect(e hookEvent, root string) string {
+	reason, _, _ := hookDenial(e, root)
+	return reason
+}
+
+// hookDenial is the redirect for a tool call ("" when it is allowed), with
+// the record area it concerns and whether the redirect is for a write.
+func hookDenial(e hookEvent, root string) (reason, area string, write bool) {
 	cwd := e.Cwd
 	if cwd == "" {
 		cwd = root
@@ -245,33 +286,33 @@ func hookRedirect(e hookEvent, root string) string {
 			target += " " + match[1] + match[2]
 		}
 	}
-	area := hookArea(target, cwd, root)
-	write := e.Tool == "Edit" || e.Tool == "Write" || e.Tool == "NotebookEdit" || e.Tool == "apply_patch"
+	area = hookArea(target, cwd, root)
+	write = e.Tool == "Edit" || e.Tool == "Write" || e.Tool == "NotebookEdit" || e.Tool == "apply_patch"
 	if e.Tool == "Bash" {
 		// Check each segment: a prep call must not exempt a later direct read
 		// or write (the earlier Python integration did exempt the whole call).
 		for _, segment := range hookShellSegments(command) {
 			found, writes := hookShellArea(segment, cwd, root)
 			if writes {
-				return "Use prep CLI write commands (prep edit, context, criterion, decide, finding, etc.) to change .prep records; direct edits bypass validation."
+				return "Use prep CLI write commands (prep edit, context, criterion, decide, finding, etc.) to change .prep records; direct edits bypass validation.", found, true
 			}
 			if found != "" {
 				area = found
 			}
 		}
 	} else if !write && e.Tool != "Read" && e.Tool != "Grep" && e.Tool != "Glob" {
-		return ""
+		return "", "", false
 	}
 	if area == "" {
-		return ""
+		return "", "", false
 	}
 	if write {
-		return "Use prep CLI write commands to change .prep records (prep edit, context, criterion, decide, finding, etc.); direct edits bypass validation."
+		return "Use prep CLI write commands to change .prep records (prep edit, context, criterion, decide, finding, etc.); direct edits bypass validation.", area, true
 	}
 	if area == activity.AreaKnowledge {
-		return "Read knowledge with prep knowledge find <words> or prep knowledge show <entry>[#section], never the files. Use --outline first for long entries."
+		return "Read knowledge with prep knowledge find <words> or prep knowledge show <entry>[#section], never the files. Use --outline first for long entries.", area, false
 	}
-	return "Read issue records with prep show <id> and prep guide <id>; search with prep list --text <words>. Use prep projects or prep views for project configuration."
+	return "Read issue records with prep show <id> and prep guide <id>; search with prep list --text <words>. Use prep projects or prep views for project configuration.", area, false
 }
 
 func hookActivity(a *app, e hookEvent) {

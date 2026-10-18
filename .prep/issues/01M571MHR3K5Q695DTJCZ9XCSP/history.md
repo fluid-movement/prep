@@ -1,0 +1,1 @@
+- 2026-10-18T08:29:23Z claude-code: Implemented (Haiku subagent stopped before logging; main session finished: prep hook excluded from failure records, superseding decision 01M5722AWW3PAZEMQD04NAZDT4). Checked: go test ./..., prep check, prep fmt --check pass; cleanupPeriodDays is 180.

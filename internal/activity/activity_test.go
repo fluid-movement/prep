@@ -3,6 +3,8 @@ package activity
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -73,25 +75,101 @@ func TestConcurrentAppendsStayWhole(t *testing.T) {
 	}
 }
 
-func TestPrune(t *testing.T) {
+func TestArchiveAtSizeLimit(t *testing.T) {
 	dir := t.TempDir()
 	e := ev("a", "log", "I", 0)
 	e.Verb = strings.Repeat("y", 280)
 	e.Target = strings.Repeat("z", 280)
-	// ~700 bytes per line: past 1 MiB after ~1500 lines.
-	for k := range 2600 {
+	// ~700 bytes per line: each archive holds about 1500 lines, so 4000
+	// appends archive twice on the same day and leave the rest in the stream.
+	const total = 4000
+	for k := range total {
 		e.At = t0.Add(time.Duration(k) * time.Second)
 		if err := Append(dir, e); err != nil {
 			t.Fatal(err)
 		}
 	}
+	archives, _ := filepath.Glob(filepath.Join(dir, Dir, "activity-*.jsonl"))
+	if len(archives) != 2 {
+		t.Fatalf("archives: %v", archives)
+	}
+	stamp := time.Now().Format("2006-01-02")
+	want := []string{filepath.Join(dir, Dir, "activity-"+stamp+".jsonl"), filepath.Join(dir, Dir, "activity-"+stamp+"-2.jsonl")}
+	if !slices.Equal(archives, want) && !slices.Equal(archives, []string{want[1], want[0]}) {
+		t.Fatalf("archive names %v, want %v", archives, want)
+	}
+	archived := 0
+	for _, path := range archives {
+		info, _ := os.Stat(path)
+		if info.Size() <= maxBytes {
+			t.Fatalf("%s archived at %d bytes", path, info.Size())
+		}
+		f, _ := os.Open(path)
+		events, _ := Parse(f, 0)
+		f.Close()
+		archived += len(events)
+	}
+	// Readers see only the current stream: the newest events, after the archives.
 	got, _ := Read(dir, 0)
-	if len(got) > keepLines || !got[len(got)-1].At.Equal(t0.Add(2599*time.Second)) {
-		t.Fatalf("after pruning: %d events, last %v", len(got), got[len(got)-1].At)
+	if archived+len(got) != total || !got[len(got)-1].At.Equal(t0.Add((total-1)*time.Second)) {
+		t.Fatalf("archived %d, current %d", archived, len(got))
+	}
+	if len(got) >= total/2 {
+		t.Fatalf("current stream kept %d events; it should start empty at each archive", len(got))
+	}
+	if tail, _ := Read(dir, 1); len(tail) != 1 || !tail[0].At.Equal(t0.Add((total-1)*time.Second)) {
+		t.Fatalf("tail: %+v", tail)
 	}
 	info, _ := os.Stat(Path(dir))
 	if info.Size() > maxBytes+maxLine {
 		t.Fatalf("size %d", info.Size())
+	}
+}
+
+func TestArchiveLosesRaceQuietly(t *testing.T) {
+	dir := t.TempDir()
+	// Another writer already archived the full stream: the stream is gone
+	// or small again, and archiving does nothing.
+	if err := archive(Path(dir), time.Now()); err != nil {
+		t.Fatalf("missing stream: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, Dir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(Path(dir), []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := archive(Path(dir), time.Now()); err != nil {
+		t.Fatalf("small stream: %v", err)
+	}
+	if _, err := os.Stat(Path(dir)); err != nil {
+		t.Fatal("small stream was archived")
+	}
+}
+
+func TestValidateHook(t *testing.T) {
+	for _, e := range []Event{
+		{Op: "prompt", Verb: "sent"},
+		{Op: "prompt", Verb: "skipped"},
+		{Op: "finish", Verb: "asked"},
+		{Op: "before-tool", Verb: "denied read"},
+		{Op: "before-tool", Verb: "denied write"},
+	} {
+		if err := e.ValidateHook(); err != nil {
+			t.Errorf("%+v: %v", e, err)
+		}
+	}
+	for _, e := range []Event{
+		{Op: "stop", Verb: "sent"},
+		{Op: "prompt", Verb: "denied read"},
+		{Op: "before-tool", Verb: ""},
+	} {
+		if e.ValidateHook() == nil {
+			t.Errorf("accepted %+v", e)
+		}
+	}
+	if (Event{Kind: KindHook, Op: "prompt", Verb: "sent"}).Validate() == nil {
+		t.Error("harnesses may add hook events")
 	}
 }
 
