@@ -1,6 +1,6 @@
 name: implement-handoff-from-guide
 description: A ready issue can be implemented from prep guide alone, including the implementer handoff.
-prompt: Run prep guide {{emails}} for Order emails and follow it.
+prompt: Run prep guide {{emails}} for Order emails, implement it, log ready for check and stop.
 fixture: order-emails-ready
 expect:
   tools:

@@ -34,5 +34,4 @@ issues:
     context: >-
       Implement OrderPlaced in src/emails.go by calling the supplied send callback
       exactly once with the order ID and returning its error. Run `go test ./...`.
-      Another agent checks the work after you log Implemented, ready for check.
     criteria: [OrderPlaced sends the order ID exactly once and propagates the delivery error]

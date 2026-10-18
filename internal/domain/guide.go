@@ -159,7 +159,6 @@ type Guide struct {
 	Context      string       `json:"context,omitempty"`
 	Decisions    []Record     `json:"decisions,omitempty"`
 	DoD          []string     `json:"definition_of_done,omitempty"`
-	Checker      []string     `json:"checker,omitempty"`
 	Diagnostics  []Diagnostic `json:"diagnostics,omitempty"`
 	Alerts       []string     `json:"alerts,omitempty"` // project-wide alerts
 }
@@ -196,10 +195,6 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 			g.Decisions = append(g.Decisions, Record{e.ID, e.Path, e.Title})
 		}
 		g.DoD = append([]string(nil), t.Project.DoD...)
-		g.Checker = []string{
-			"Verify each criterion and the Definition of Done yourself, not from the implementer's log.",
-			"Check criteria with prep criterion " + id + " --check <n>, then complete with prep complete " + id + " [--commit <hash>].",
-		}
 	}
 
 	// Inputs: the issue's own records first, then upstream outputs.
@@ -245,6 +240,9 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 	g.Step, g.Instructions, g.Outputs = stepContract(t, i, s, stale, parent, f)
 	if brief {
 		g.Outputs = []Pointer{{f("history.md"), "work log", "prep log " + id + " <text>"}}
+	}
+	if brief && s == StateInProgress && readyForCheck(i.History) {
+		g.Step, g.Instructions = "check", checkerBrief(id)
 	}
 	return g
 }
@@ -317,6 +315,7 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		ins := []string{"Claim the issue before implementing: prep claim " + i.ID + "."}
 		if i.Kind == KindCode {
 			ins = append(ins, implementerRole(i.ID)...)
+			ins = append(ins, "To hand this issue off, start a subagent or another harness with the prompt \"run prep guide "+i.ID+", implement it, log ready for check and stop\"; for a review, \"run prep guide "+i.ID+" and follow its checker section\". Delegate when it pays (several issues, a cheaper model, a long session), not for one small issue.")
 		}
 		return "claim", ins, []Pointer{{f("claim.md"), "written by prep claim", ""}}
 	case StateInProgress:
@@ -352,14 +351,46 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 	return "", nil, nil
 }
 
+// readyForCheck reports whether the latest work-log line says the
+// implementer stopped for a check.
+// readyForCheck reports whether the latest role marker in the work log is
+// the implementer's 'ready for check'. A checker's 'Check failed' sends the
+// issue back; any other line (a note, a probe) leaves the state as it was.
+func readyForCheck(history string) bool {
+	lines := strings.Split(strings.TrimSpace(history), "\n")
+	for k := len(lines) - 1; k >= 0; k-- {
+		l := strings.ToLower(lines[k])
+		switch {
+		case strings.Contains(l, "check failed"):
+			return false
+		case strings.Contains(l, "ready for check"):
+			return true
+		}
+	}
+	return false
+}
+
 // implementerRole is the instruction set for an agent implementing a code
-// issue: implement, log ready for check, stop. Completing is the checker's.
+// issue. Implementer and checker are passes: with another agent checking it
+// logs ready for check and stops; alone it checks separately and completes.
 func implementerRole(id string) []string {
 	return []string{
 		"Implement exactly the requirement and context, nothing beyond. Run the checks the context lists.",
 		"Record decisions made while implementing with prep decide " + id + " --title <T> --description <one line> --body <why>.",
-		"When the checks pass, run prep log " + id + " 'Implemented, ready for check: <one sentence>' and stop.",
-		"Never run prep complete, prep criterion --check, git commit or git push, and never run live evals (prep eval run).",
+		"When the checks pass and another agent will check, run prep log " + id + " 'Implemented, ready for check: <one sentence>' and stop. Working alone, check in a separate pass against the criteria and the Definition of Done (prep criterion " + id + " --check <n>), then run prep complete " + id + " [--commit <hash>].",
+		"Never run git commit or git push, and never run live evals (prep eval run).",
 		"If the context conflicts with the code or tests, log the conflict with prep log and stop; do not bend tests to fit.",
+	}
+}
+
+// checkerBrief is the instruction set for an agent checking a code issue
+// whose implementer logged ready for check.
+func checkerBrief(id string) []string {
+	return []string{
+		"You are the checker, not the implementer: verify each criterion and the Definition of Done yourself, not from the implementer's log.",
+		"Read the change: the branch or worktree the work log names, else git diff.",
+		"Run the checks yourself and say which commands you ran.",
+		"Check each met criterion with prep criterion " + id + " --check <n>, then complete with prep complete " + id + " [--commit <hash>].",
+		"If something fails, send it back with prep log " + id + " 'Check failed: <what fails>' and stop without completing.",
 	}
 }

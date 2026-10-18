@@ -1,0 +1,15 @@
+name: implement-solo-implement-and-complete
+description: Working alone, a session implements, checks in a separate pass and completes.
+prompt: Implement Order emails and finish it.
+fixture: order-emails-ready
+expect:
+  tools:
+    - ran: {command: claim, args: '{{emails}}'}
+    - ran: {tool: Bash, shell: '\bgo\s+test\s+\./\.\.\.'}
+    - ran: {command: criterion, args: '{{emails}}.*--check'}
+    - ran: {command: complete, args: '{{emails}}'}
+    - no_prep_files: true
+  outcome:
+    - issue: {ref: '{{emails}}', state: done, criteria: {checked: 1}}
+  rubric:
+    - OrderPlaced invokes send exactly once with the order ID and returns its error, and the session completes Order emails itself.
