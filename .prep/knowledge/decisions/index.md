@@ -307,3 +307,4 @@
 * [Look up prior decisions and capture user decisions with their reason](/decisions/01M55JZPT42FACWG47G6VD5QRK.md) - Before changing code, look up and follow existing decisions; record decisions the user states with their reason, without recording small implementation choices.
 * [Keep setup.Unregister as test support](/decisions/01M55K6M7QYGYXA2M27RMXX75K.md) - Unregister isolates tests from the user's real harness registrations; it stays though no command calls it
 * [Prep offers handoffs and never runs them; implementer and checker are passes](/decisions/01M56ZKEQ4SYQTTK29AP0V9DJ1.md) - prep guide offers implement and review handoff prompts; solo sessions check in a separate pass and complete
+* [Handoff prompts say who checks; the check step follows role markers](/decisions/01M5706ZWRJV9GHQMEZ3ZF205Q.md) - The implement prompt tells a handed-off agent to log ready for check and stop; 'ready for check' and 'Check failed' log lines decide the check step
