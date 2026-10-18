@@ -15,7 +15,7 @@ prep is a workflow engine and memory for coding agents, with a human supervising
 - `internal/setup`: harness integration install (`prep setup`); `internal/update`: self-update; `internal/userconfig`: `~/.config/prep`.
 - `internal/eval`, `eval/`: evaluation of prep with agents.
 - `plugins/`: the Claude Code and Codex plugins.
-- `install.sh`, `justfile`, `README.md`, `TOKEN-EFFICIENCY.md`.
+- `install.sh`, `justfile`, `README.md`.
 
 ## Build, test, check
 

@@ -1,0 +1,1 @@
+- 2026-10-18T08:23:06Z claude-code: Implemented, ready for check: deleted TOKEN-EFFICIENCY.md and its mention in AGENTS.md.

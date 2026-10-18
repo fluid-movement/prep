@@ -1,0 +1,1 @@
+- [ ] TOKEN-EFFICIENCY.md is gone and nothing outside issue records references it; GitHub CI on main is green
