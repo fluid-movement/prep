@@ -1,0 +1,4 @@
+- [ ] Past the size limit the activity stream is archived to a dated file and a new stream starts; readers see only the current stream, covered by tests
+- [ ] Hooks record their outcomes as hook events (prompt sent or skipped, finish asked, before-tool denied with the reason and target) and stay fail-open, covered by tests
+- [ ] A failed prep command records an event with its command and error code, covered by a test
+- [ ] Claude Code keeps transcripts for 180 days; prep check reports no errors and GitHub CI on main is green
