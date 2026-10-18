@@ -247,6 +247,7 @@ func hookFinish(a *app, e hookEvent) {
 	if len(decisions) > 0 {
 		message += " Decisions scoped to these files: " + strings.Join(decisions, ", ") + ". Superseding one needs prep decide --supersedes <id>."
 	}
+	hookRecord(a, e, "finish", "asked", "", fmt.Sprintf("%d scoped decisions", len(decisions)))
 	if a.actor == "claude-code" {
 		hookContext(a, "Stop", message)
 	} else {

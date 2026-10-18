@@ -175,6 +175,7 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 				a.actor = "cli/prep-" + Version
 			}
 			if err := c.run(a, rest[1:]); err != nil {
+				a.recordFailure(name, rest[1:], err)
 				return a.fail(err)
 			}
 			a.recordEvent(out.n)
