@@ -115,19 +115,67 @@ func TestGuideIsImplementerBrief(t *testing.T) {
 			h.ok("claim", id)
 		}
 		out := h.ok("guide", id)
-		for _, want := range []string{"Unique requirement prose.", "1. [ ] Unique criterion", "Unique context text.", "Unique decision", "Run the full suite", "ready for check", "log the conflict", "Checker", "prep complete " + id + " [--commit <hash>]"} {
+		for _, want := range []string{"Unique requirement prose.", "1. [ ] Unique criterion", "Unique context text.", "Unique decision", "Run the full suite", "ready for check", "log the conflict", "Working alone, check in a separate pass", "prep complete " + id + " [--commit <hash>]"} {
 			if !strings.Contains(out, want) {
 				t.Fatalf("%s guide lacks %q:\n%s", step, want, out)
 			}
 		}
-		implementer := out[:strings.Index(out, "Transitions:")]
-		if strings.Contains(strings.ReplaceAll(implementer, "Never run prep complete", ""), "prep complete") {
-			t.Fatalf("%s implementer is told to complete:\n%s", step, implementer)
+		if strings.Contains(out, "Checker (a different agent") || strings.Contains(out, "Never run prep complete") {
+			t.Fatalf("%s guide keeps the old role wording:\n%s", step, out)
+		}
+		hint := "run prep guide " + id + " and follow it"
+		if got := strings.Contains(out, hint); got != (step == "ready") {
+			t.Fatalf("%s guide handoff hint present = %v:\n%s", step, got, out)
 		}
 		var g domain.Guide
 		h.jsonOf(&g, "guide", id)
-		if g.Requirement == "" || len(g.Criteria) != 1 || g.Context == "" || len(g.Decisions) != 1 || len(g.DoD) == 0 || len(g.Checker) == 0 {
+		if g.Requirement == "" || len(g.Criteria) != 1 || g.Context == "" || len(g.Decisions) != 1 || len(g.DoD) == 0 || g.Step == "check" {
 			t.Fatalf("%s json guide = %+v", step, g)
 		}
+		if got := strings.Contains(strings.Join(g.Instructions, "\n"), hint); got != (step == "ready") {
+			t.Fatalf("%s json handoff hint present = %v: %v", step, got, g.Instructions)
+		}
+	}
+}
+
+func TestGuideCheckBriefAfterReadyForCheck(t *testing.T) {
+	h := newHarness(t)
+	h.ok("dod", "--add", "Run the full suite")
+	id := h.newIssue("--title", "Brief", "--kind", "code", "--body", "Unique requirement prose.")
+	h.ok("criterion", id, "--add", "Unique criterion")
+	h.ok("context", id, "--body", "Unique context text.")
+	h.ok("define", id)
+	h.ok("decide", id, "--title", "Unique decision", "--description", "d", "--body", "b")
+	h.ok("ready", id)
+	h.ok("claim", id)
+	h.ok("log", id, "Implemented, ready for check: done in worktree x")
+	out := h.ok("guide", id)
+	for _, want := range []string{"step: check", "Unique requirement prose.", "1. [ ] Unique criterion", "Unique context text.", "Unique decision", "Run the full suite", "You are the checker", "branch or worktree the work log names", "say which commands you ran", "prep criterion " + id + " --check <n>", "prep complete " + id + " [--commit <hash>]", "stop without completing"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("check guide lacks %q:\n%s", want, out)
+		}
+	}
+	for _, bad := range []string{"Implement exactly", "and stop. Working alone", "Never run git commit"} {
+		if strings.Contains(out, bad) {
+			t.Fatalf("check guide keeps implementer role %q:\n%s", bad, out)
+		}
+	}
+	var g domain.Guide
+	h.jsonOf(&g, "guide", id)
+	joined := strings.Join(g.Instructions, "\n")
+	if g.Step != "check" || g.Requirement == "" || len(g.Criteria) != 1 || len(g.DoD) == 0 || !strings.Contains(joined, "You are the checker") || strings.Contains(joined, "Implement exactly") {
+		t.Fatalf("json check guide = %+v", g)
+	}
+	// A note logged during the check does not end the check step.
+	h.ok("log", id, "Verified criterion 1 by reading the diff")
+	h.jsonOf(&g, "guide", id)
+	if g.Step != "check" {
+		t.Fatalf("guide after a note = %+v", g)
+	}
+	// A checker's 'Check failed' sends the issue back to the implementer.
+	h.ok("log", id, "Check failed: the criterion is not met")
+	h.jsonOf(&g, "guide", id)
+	if g.Step != "implement" || strings.Contains(strings.Join(g.Instructions, "\n"), "You are the checker") {
+		t.Fatalf("guide after check failed = %+v", g)
 	}
 }

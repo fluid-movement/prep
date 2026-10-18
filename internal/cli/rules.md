@@ -1,7 +1,7 @@
 - Settle the requirement with the user before you define an issue.
 - Ready means another agent without this conversation could do the work.
-- Implementers claim, implement exactly the issue, log "Implemented, ready for check" and stop; they never complete, commit or push.
-- Checkers verify each criterion and the Definition of Done themselves, say which commands they ran, then complete.
+- Implementer and checker are passes: when another agent will check, the implementer logs "Implemented, ready for check" and stops; working alone, check in a separate pass against the criteria and the Definition of Done, then complete.
+- To hand an issue off, start a subagent or another harness with the prompt "run prep guide <id>, implement it, log ready for check and stop"; for a review, "run prep guide <id> and follow its checker section". Delegate when it pays (several issues, a cheaper model, a long session), not for one small issue.
 - Before changing code, look for decisions about it with prep knowledge find <area>; follow them, or record a new decision with prep decide --supersedes <id> first.
 - Record a decision with prep decide when it is made, including one the user states, with the reason given; your own small implementation choices need no record.
 - Read and write records only through prep commands, never the files; search knowledge with prep knowledge find and read it with prep knowledge show.

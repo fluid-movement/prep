@@ -633,12 +633,6 @@ func cmdGuide(a *app, args []string) error {
 			}
 		}
 	}
-	if len(g.Checker) > 0 {
-		a.printf("\nChecker (a different agent, after the implementer stops):\n")
-		for _, c := range g.Checker {
-			a.printf("  - %s\n", c)
-		}
-	}
 	if len(g.Diagnostics) > 0 {
 		a.printf("\nDiagnostics:\n")
 		for _, d := range g.Diagnostics {

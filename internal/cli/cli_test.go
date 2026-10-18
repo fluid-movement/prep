@@ -361,6 +361,14 @@ func TestSkillContainsRules(t *testing.T) {
 	if !strings.HasSuffix(skillText, "\nWorkflow rules:\n"+rulesText) {
 		t.Fatal("internal/cli/skill.md must end with 'Workflow rules:' and the text of internal/cli/rules.md")
 	}
+	for _, want := range []string{"Implementer and checker are passes", "working alone, check in a separate pass", `"run prep guide <id>, implement it, log ready for check and stop"`, `"run prep guide <id> and follow its checker section"`} {
+		if !strings.Contains(rulesText, want) {
+			t.Fatalf("rules lack %q", want)
+		}
+	}
+	if strings.Contains(rulesText, "Implementers claim") || strings.Contains(rulesText, "Checkers verify") {
+		t.Fatal("rules keep the old role rules")
+	}
 	if strings.Contains(skillText, "`prep edit") || len(skillText) > 2500 {
 		t.Fatal("the skill is a short intro and the rules, with no command reference")
 	}
