@@ -11,3 +11,4 @@
 * [Findings: Investigate TUI live refresh missing external issue completion until restart](/findings/01M54VQCG16VEHFS56CGCZGP4V.md) - Findings: Investigate TUI live refresh missing external issue completion until restart
 * [Eval run A after the rethink guidance](/findings/01M55JY49AXC8FATWKVH70HM3M.md) - Handoff and checker roles pass 3/3; agents miss user-stated decisions and do not look up decisions before coding; three cases are obsolete
 * [Haiku is enough for handed-off small and medium issues](/findings/01M55KCVZHH33HR3AMSH47ANZD.md) - Haiku passes the handoff evals 5/5 at a tenth of Sonnet's cost; use Sonnet for subtle code; the check keeps quality
+* [First review by a subagent passed what the main session caught](/findings/01M5708EMZD7A0DJWQ46AC5DQG.md) - A Sonnet reviewer working from the checker brief passed the change but missed two design weaknesses
