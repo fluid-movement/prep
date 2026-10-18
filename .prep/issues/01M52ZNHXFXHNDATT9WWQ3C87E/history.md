@@ -1,0 +1,1 @@
+- 2026-10-18T09:12:18Z claude-code: Released v0.3.0 on 2026-10-18 (tag at c5d04ca after the Windows build fix 01M573ERV3GAW5TS97EN7DW20N; the first tag's release job failed before publishing). Next: one to two weeks of use, then the usage analysis as a new issue.
