@@ -1,0 +1,4 @@
+- [ ] The rules and the implementer brief describe implementer and checker as passes and offer the implement and review handoff prompts, covered by tests
+- [ ] When the latest work-log line says ready for check, prep guide shows a check step with the checker brief and no implementer role, covered by tests
+- [ ] A solo implement-and-complete eval case is written and loads; its run waits for the user's approval
+- [ ] prep check reports no errors and GitHub CI on main is green

@@ -306,3 +306,4 @@
 * [List columns drop by title text cut off](/decisions/01M55J44DH8QHRKH4XJDR7HFDB.md) - A list drops ID, then state label, then kind while its visible rows cut off more than 30 title characters (each row counted up to 10).
 * [Look up prior decisions and capture user decisions with their reason](/decisions/01M55JZPT42FACWG47G6VD5QRK.md) - Before changing code, look up and follow existing decisions; record decisions the user states with their reason, without recording small implementation choices.
 * [Keep setup.Unregister as test support](/decisions/01M55K6M7QYGYXA2M27RMXX75K.md) - Unregister isolates tests from the user's real harness registrations; it stays though no command calls it
+* [Prep offers handoffs and never runs them; implementer and checker are passes](/decisions/01M56ZKEQ4SYQTTK29AP0V9DJ1.md) - prep guide offers implement and review handoff prompts; solo sessions check in a separate pass and complete
