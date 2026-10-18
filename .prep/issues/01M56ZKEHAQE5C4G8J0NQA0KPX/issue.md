@@ -1,6 +1,7 @@
 ---
 title: Prep offers handoffs; implementer and checker are passes
 kind: code
+parent: 01M52ZNHXFXHNDATT9WWQ3C87E
 tags:
   - integration
 priority: high
