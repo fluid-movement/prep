@@ -15,13 +15,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/fluid-movement/prep/internal/eval/assert"
 	"github.com/fluid-movement/prep/internal/eval/env"
 	"github.com/fluid-movement/prep/internal/eval/evalcase"
 	"github.com/fluid-movement/prep/internal/eval/fixture"
+	"github.com/fluid-movement/prep/internal/eval/proc"
 	"github.com/fluid-movement/prep/internal/eval/transcript"
 	"github.com/fluid-movement/prep/internal/eval/transcript/claudecode"
 )
@@ -160,7 +160,7 @@ func Run(ctx context.Context, req Request) (*Record, error) {
 	cmd.Stdin = strings.NewReader(comp.Prompt)
 	var stream, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stream, &stderr
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	proc.Group(cmd)
 	rec.Started = time.Now()
 	runErr := runCommand(rctx, cmd)
 	rec.Duration = time.Since(rec.Started)
@@ -207,7 +207,7 @@ func runCommand(ctx context.Context, cmd *exec.Cmd) error {
 	case err := <-done:
 		return err
 	case <-ctx.Done():
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) // the whole process group
+		proc.Kill(cmd) // the whole process group
 		select {
 		case <-done:
 		case <-time.After(5 * time.Second): // a grandchild still holds the pipes

@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
+	"github.com/fluid-movement/prep/internal/eval/proc"
 	"github.com/fluid-movement/prep/internal/eval/transcript"
 	"github.com/fluid-movement/prep/internal/eval/transcript/claudecode"
 )
@@ -53,7 +53,7 @@ func (e *Env) Probe(ctx context.Context, model, pluginDir string) (transcript.Me
 	cmd.Stdin = strings.NewReader("Reply with the single word ok.")
 	var out, errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errb
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	proc.Group(cmd)
 	if err := cmd.Start(); err != nil {
 		return transcript.Meta{}, err
 	}
@@ -62,7 +62,7 @@ func (e *Env) Probe(ctx context.Context, model, pluginDir string) (transcript.Me
 	select {
 	case <-done:
 	case <-ctx.Done():
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		proc.Kill(cmd)
 		select {
 		case <-done:
 		case <-time.After(5 * time.Second):

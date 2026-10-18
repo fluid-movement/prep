@@ -1,0 +1,2 @@
+- [ ] GOOS=windows go build ./cmd/prep succeeds; process-group handling lives in internal/eval/proc with Unix and Windows files
+- [ ] CI builds ./cmd/prep for linux, darwin and windows

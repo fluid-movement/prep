@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"syscall"
 	"time"
+
+	"github.com/fluid-movement/prep/internal/eval/proc"
 )
 
 // runCmd runs a prepared command, killing its process group when ctx ends,
@@ -15,7 +16,7 @@ import (
 func runCmd(ctx context.Context, cmd *exec.Cmd) ([]byte, error) {
 	var out, errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errb
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	proc.Group(cmd)
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
@@ -28,7 +29,7 @@ func runCmd(ctx context.Context, cmd *exec.Cmd) ([]byte, error) {
 		}
 		return out.Bytes(), nil
 	case <-ctx.Done():
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		proc.Kill(cmd)
 		select {
 		case <-done:
 		case <-time.After(5 * time.Second):
