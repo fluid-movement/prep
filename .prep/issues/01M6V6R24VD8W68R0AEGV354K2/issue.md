@@ -1,0 +1,15 @@
+---
+title: Stop hook asks about decisions only when the turn changed three or more code files
+kind: code
+parent: 01M5FS7KX63E8KZARSXXAS44C4
+---
+
+The finish hook asks its decision question only when the turn changed at least three files outside `.prep`. With one or two changed files it stays silent and records that it skipped.
+
+Why: every ask costs one full request that re-reads the session's context (about 2-3% of session cost in daypack and fpa-events), and most asks return nothing. Across 81 asks in three projects the question led to a recorded decision or finding in 3 of 26 turns that changed one or two files (12%), against 10 of 21 for three to eight files and 16 of 34 for more (finding 01M72A9TBJ5JQXT2VGT15N2HW1). The rule removes about a third of the asks and keeps about 90% of the decisions they produce.
+
+Losing about one decision in ten of those the question catches is accepted (decided 2026-11-10, the user having left the choice to the agent): the session rule "record a decision when it is made" stays and produced 25 of daypack's 30 decisions without the Stop question, and the skipped turns are recorded, so the activity report can show whether the threshold should move.
+
+Nothing else was found to separate useful asks from empty ones: whether scoped decisions exist, whether a person or a task notification started the turn, and whether the turn already recorded a decision all made no difference.
+
+## Open questions

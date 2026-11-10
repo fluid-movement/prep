@@ -1,0 +1,6 @@
+- `internal/cli/knowread.go`: the show command normalizes its argument with `domain.NormalizeEntryPath` (`internal/domain/fsm.go`), which turns `01M...` into `/01M....md`, and then fails the lookup. Before reporting E_NOT_FOUND, when the argument has no slash and no `.md`, match it against the loaded entries' IDs (exact, then unique suffix, case-insensitive as issue IDs are).
+- `prep decide --supersedes <record-id-or-suffix>` already resolves record IDs in `internal/cli/write.go` (`recordCmd`); reuse that resolution instead of writing a second one.
+- A `#section` suffix on the argument must keep working with an ID (`<id>#section`).
+- Ambiguity: return a usage or not-found error that lists the matching entries, as issue ID resolution does.
+- Tests: `internal/cli` knowledge read tests; add bare ID, suffix, ambiguous suffix, ID with section.
+- Checks: `go test ./...`, `just check`.

@@ -1,0 +1,26 @@
+---
+title: 'prep handback: write an implementer''s or checker''s report into the records, and hand off by brief in the rules'
+kind: code
+parent: 01M5FS7KX63E8KZARSXXAS44C4
+depends_on:
+  - 01M72CVD0W8E28HQZVRA9FD92K
+tags:
+  - handoff
+priority: high
+---
+
+`prep handback <id> --report <file>` (or `-` for stdin) reads a report in the format the brief asks for and writes the records it implies, in one command:
+
+- An implementer's report: the summary becomes a work-log line "Implemented, ready for check: <summary>"; each entry under Decisions becomes a decision record linked to the issue; each entry under Findings becomes a finding record linked to the issue; Problems are logged. The issue is claimed if it was ready.
+- A checker's report (`--check`): criteria reported as met are checked. When every criterion is met and Problems is empty, the issue is completed (`--commit <hash>` passes the evidence on). Otherwise the unmet criteria and problems are logged as "Check failed: ..." and the issue stays in progress.
+- A research issue's report: findings become finding records and the issue is completed.
+
+A report the command cannot read (no known heading, a criterion number the issue does not have, a decision without a reason) writes nothing and says which part is wrong, so a partial hand-back never happens. Output is one short line per record written.
+
+With both commands in place, the workflow rules, the skill and the guide's hand-off text tell an orchestrator to delegate with `prep brief <id> --out <file>` and a one-line prompt pointing the implementer at the file, and to finish with `prep handback`. The implementer and checker passes stay separate. `prep guide` remains the way for an agent that works alone.
+
+Why: decision 01M72AV3FRS077RJ3DPXZFX23M. Hand-back has to be one command fed from a file: if the orchestrator rewrote the report into log, criterion, decide and complete calls, the bookkeeping would move into its large context and cost more than it does in the implementer today.
+
+Before the rules change, the two commands are tried on at least three real issues with a small model as implementer, and the reports it returns are kept as test fixtures. If the reports do not keep to the format, the format or the brief's wording changes first.
+
+## Open questions

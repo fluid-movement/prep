@@ -1,0 +1,6 @@
+- `internal/cli/hook.go`, `cmdHook`: errors return nil throughout and `a.errw = io.Discard`. Record failures after `a.open()` succeeds (before that there is no project to write to): snapshot errors in `hookMarkTurn` and `hookFinish` (`internal/cli/hook_finish.go`), knowledge load errors, an unreadable user config. Use `hookRecord`; `activity.Event.ValidateHook` in `internal/activity/activity.go` lists accepted verbs.
+- Agent id: Claude Code hook input has `agent_id` and `agent_type` inside subagents; add them to `hookEvent` and an `Agent` field to `activity.Event`. Check what Codex provides.
+- Injected size: `hookContext` knows the message length; `activity.Event.Chars` exists ("output read back, in characters") and can carry it for hook events.
+- Archives: [Activity stream archives instead of pruning](/decisions/01M5722AWW3PAZEMQD04NAZDT4.md) describes the dated archive files; the reader is in `internal/activity`, the command in `internal/cli/activity.go`.
+- Hook outcomes policy: [Hook outcomes and failed commands are activity events](/decisions/01M5722JD0K8915A9ZB214Z0B9.md).
+- Tests: `internal/cli/hook_outcome_test.go`, `internal/activity` tests.

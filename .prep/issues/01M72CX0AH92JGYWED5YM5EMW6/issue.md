@@ -1,0 +1,19 @@
+---
+title: prep decide requires an issue, a scope or --project-wide; guide lists ancestors' decisions; the Stop question proposes scopes
+kind: code
+parent: 01M5FS7KX63E8KZARSXXAS44C4
+tags:
+  - knowledge
+---
+
+Three changes that make decisions findable, from decision issue 01M72AV3NJCBCFD5KTB608VCGE:
+
+1. `prep decide` without an issue and without `--scope` fails unless `--project-wide` is given, and the error names the three choices. With `--project-wide` the record is written as today's unscoped record. Existing records are unaffected and `prep check` does not report them.
+2. `prep guide <id>` lists the decisions linked to the issue's ancestors together with its own, marked with the ancestor they come from.
+3. The Stop question, when it asks, adds scope suggestions built from the directories of the changed files, in the form the agent can paste: `--scope <dir>/**`, at most three, most files first.
+
+Why: 18 of daypack's 30 decisions, 8 of 40 in fpa-events and 10 of 294 in prep have neither an issue nor a scope, so nothing can deliver them to the agent whose work they constrain. Scope and link can only be set when the record is written.
+
+`prep finding` is not changed: findings report what was measured and are found by search.
+
+## Open questions

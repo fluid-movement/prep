@@ -1,0 +1,4 @@
+- [ ] prep knowledge show <full record id> prints the record
+- [ ] A unique suffix works; an ambiguous one fails and lists the candidates
+- [ ] <id>#section and --outline work with an ID
+- [ ] Bundle paths behave as before

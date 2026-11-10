@@ -1,0 +1,8 @@
+- `internal/domain/guide.go`: `Guide()` sets `g.Requirement, g.Criteria, g.Context` only inside `if brief { ... }` (about line 191); `brief` is true for an unstale, non-parent code issue that is in progress or ready with dependencies done. Below it, `if !brief` adds the `issue.md`, `acceptance.md` and `context.md` pointers to `g.Inputs`. Move the three content assignments out of the `brief` condition and drop the matching pointers whenever the content is non-empty; keep `g.Decisions` and `g.DoD` under `brief` as they are. The decision-records pointer stays.
+- `internal/cli/read.go`, `cmdGuide` (about line 530-600): already prints `Requirement:`, `Acceptance criteria:` and context when the fields are set, so the text output needs no new section; check the order still reads well when `step:` is define or enrich. The JSON fields exist (`requirement`, `criteria`, `context`).
+- The define step's instruction "Write the requirement as prose with prep edit" stays; the requirement shown above it is what the agent edits.
+- `internal/cli/hook.go`: the prompt hook's `large` level bounds each guide to 4000 characters with `hookBound`; longer guides are cut there, which is acceptable.
+- Tests: `internal/domain/guide_test.go` and the guide cases in `internal/cli` tests assert on Inputs pointers for non-brief guides; update them and add cases for an open issue, a defined research issue, a parent and a done issue.
+- Guidance changes need an eval case ([Evals gate prep's own changes](/decisions/01M529ANGZY6HXDCN13EGPQKYJ.md)); cases live in `eval/cases`. Live runs need the user's OK.
+- Evidence and method: [finding](/findings/01M72A9TBJ5JQXT2VGT15N2HW1.md).
+- Checks: `go test ./...`, `just check`.

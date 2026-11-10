@@ -1,0 +1,9 @@
+- Depends on 01M72AV3TQPT1H6GQ6RY46R17T for archive reading, agent ids, injected sizes and hook error events.
+- `internal/activity/activity.go`: event kinds `prep`, `tool`, `request` (with `Tokens` and `CostUSD`), `session`, `hook`, `focus`; fields `Session`, `Op`, `Issue`, `Verb`, `Target`, `Area`, `Chars`, `Failed`. Prep events from Claude Code carry the session (checked 2026-11-10), so "has this session touched an issue" is a lookup of prep events by session.
+- `internal/cli/activity.go`: `prep activity` and `recordFailure` (the error code is in `Verb`). Add `report` as a subcommand there. `internal/cli/hook.go`: `hookRecord` writes hook outcomes (prompt sent or skipped, finish asked or skipped, before-tool denied); `hookActivity` writes tool events with `Area` code, issue or knowledge, and skips Bash calls that only run prep, which are recorded as prep events instead.
+- Request events come from the Claude Code plugin module `plugins/claude-code/hooks/register.ts` (about lines 80-105), for the main session. Daypack's stream held 125 of them for two days of work; find out whether subagent and Codex requests are reported at all and state the coverage in the report rather than widening it here.
+- `internal/tui/agent.go` aggregates request events for the Usage view (about lines 251 and 521); move the aggregation where both can use it.
+- Definitions and the numbers to compare against: [finding](/findings/01M72A9TBJ5JQXT2VGT15N2HW1.md). "Followed by a decision" means a prep decide or finding event in the same session before the next prompt event. A code edit is a tool event with op Edit, Write, NotebookEdit or apply_patch and area code.
+- Related: research 01M4J8784Q2JR9V8EWAH0C0A3F needs labelled real prompts and tool calls; the same session reader can produce them later.
+- A read command: document it in `prep help` (`internal/cli/cli.go`) and the README. No guidance or hook changes, so no eval case.
+- Checks: `go test ./...`, `just check`.

@@ -1,0 +1,15 @@
+---
+title: knowledge show accepts a bare record ID or a unique suffix
+kind: code
+parent: 01M5FS7KX63E8KZARSXXAS44C4
+tags:
+  - bug
+---
+
+`prep knowledge show <id>` finds a decision or finding record by its ID or by a unique suffix of it, the way issue commands and `prep decide --supersedes` already accept IDs. Today only the bundle path works (`/decisions/<id>.md`); a bare ID fails with "no knowledge entry /<id>.md [E_NOT_FOUND]".
+
+Why: `prep decide`, `prep finding`, the Stop question and issue records all print bare record IDs, so agents pass them to `knowledge show`. It failed that way three times in the sessions analysed on 2026-11-10 (finding 01M72A9TBJ5JQXT2VGT15N2HW1), each time costing a retry through `knowledge list` or `knowledge find`.
+
+An ambiguous suffix reports the candidates. Paths keep working unchanged.
+
+## Open questions

@@ -1,0 +1,6 @@
+- [ ] A turn that changes one or two files outside .prep gets no Stop question, and a finish skipped event with the file count is in the activity stream
+- [ ] A turn that changes three or more files outside .prep gets the question as before
+- [ ] The turn snapshot advances after a skipped turn
+- [ ] A decision record states the threshold and the measurements behind it
+- [ ] README describes the threshold
+- [ ] An eval case covers the changed hook; it is run live only with the user's OK

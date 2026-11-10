@@ -1,0 +1,4 @@
+- [ ] With the working directory in .prep/issues, Bash calls for cd .., pwd, git status, echo and prep check are allowed
+- [ ] From the same directory, cat of a record file by relative path and a write to one are still redirected
+- [ ] From the project root, reads and writes of .prep paths are redirected as before
+- [ ] Tests cover a working directory at .prep, .prep/issues, an issue directory and .prep/knowledge

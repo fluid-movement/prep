@@ -1,0 +1,9 @@
+- [ ] An implementer's report produces the ready-for-check log line and one linked record per decision and finding, and claims a ready issue
+- [ ] A checker's report with every criterion met and no problems checks the criteria and completes the issue, with --commit passed on
+- [ ] A checker's report with an unmet criterion or a problem logs Check failed with the details and leaves the issue in progress
+- [ ] A research report writes the findings and completes the issue
+- [ ] A report with an unknown criterion number, a missing section it needs or a decision without a reason writes nothing and names the fault
+- [ ] All records of one hand-back are written under one lock, the resolution last
+- [ ] Reports returned by a small model on three real issues are in the tests as fixtures and parse
+- [ ] rules.md, the skill (synced to the plugins), the guide's hand-off text and README describe hand-off by brief and handback
+- [ ] An eval case shows an orchestrator delegating with a brief and an implementer making no prep call; it is run live only with the user's OK

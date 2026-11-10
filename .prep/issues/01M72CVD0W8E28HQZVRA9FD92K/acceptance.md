@@ -1,0 +1,9 @@
+- [ ] prep brief <id> on a ready code issue prints the requirement, context, numbered criteria, applicable decisions with their text, the Definition of Done, the implementer rules and the report format
+- [ ] The output names no prep command and no .prep path
+- [ ] --check prints the checker's rules and report format for the same issue
+- [ ] Decisions linked to an ancestor and current decisions scoped to a path named in the context are included; superseded ones are not; a cut decision is marked as cut
+- [ ] A research issue's brief asks for findings
+- [ ] An open, stale, blocked, parent, decision or manual issue is refused with the reason
+- [ ] --out <file> writes the text and prints only the path; --json returns the parts
+- [ ] The report format comes from one definition shared with the handback parser
+- [ ] README and prep help describe the command

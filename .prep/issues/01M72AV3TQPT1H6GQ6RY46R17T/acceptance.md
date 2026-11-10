@@ -1,0 +1,4 @@
+- [ ] A hook that fails after the project is opened leaves a hook event with verb error and a reason; the hook still exits 0 with no output
+- [ ] Events from a Claude Code subagent carry its agent id
+- [ ] Hook events that add context record the number of characters added
+- [ ] prep activity can list events from archived streams, and --json includes them

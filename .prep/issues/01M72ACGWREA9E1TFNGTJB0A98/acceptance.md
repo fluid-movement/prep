@@ -1,0 +1,10 @@
+- [ ] Editing a file that matches the scope of a current decision returns additionalContext naming that decision's title and ID, and the edit proceeds
+- [ ] The same decision is not named again in the same session; it is named again after session start or compaction, and separately inside a subagent
+- [ ] Superseded decisions, decisions without a matching scope, paths under .prep and paths outside the project produce no output
+- [ ] At most five decisions are named per call
+- [ ] The Stop question no longer lists scoped decisions
+- [ ] A real Claude Code session shows the text reaching the model; the Codex behaviour is implemented or documented as unsupported
+- [ ] The outcome is recorded as a hook event in the activity stream
+- [ ] README and a decision record describe the behaviour
+- [ ] An eval case with a scoped decision fails without the hook; it is run live only with the user's OK
+- [ ] When more than five decisions match, the most specific scopes come first, then the newest, and the text says how many more match

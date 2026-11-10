@@ -1,0 +1,8 @@
+- `internal/cli/hook_finish.go`, `hookFinish`: after `code` (the sorted changed paths outside `.prep`) is built, it returns early only when `len(code) == 0`. Change the condition to fewer than three; still call `hookSaveTurn(path, after)` so the next turn starts from the new snapshot.
+- Record the skip with `hookRecord(a, e, "finish", "skipped", "", fmt.Sprintf("%d files", len(code)))` so later usage analysis can count it; `activity.Event.ValidateHook` (`internal/activity`) lists the verbs it accepts and may need "skipped" for finish. See [Hook outcomes and failed commands are activity events](/decisions/01M5722JD0K8915A9ZB214Z0B9.md).
+- Files changed over several short turns are not accumulated: each turn is judged on its own, as now.
+- Supersede [Finish asks for one reconciliation by heuristic](/decisions/01M553GN21TGH08RAXRGHBAG53.md) or add a decision next to it with `prep decide --scope internal/cli/hook_finish.go`, stating the threshold and the data.
+- Tests: `internal/cli/hook_finish_test.go` has cases that change one file and expect the question; raise them to three files and add cases for one and two files.
+- `README.md` describes turn finish in the Harness integrations section; update the sentence.
+- A hook change needs an eval case ([Evals gate prep's own changes](/decisions/01M529ANGZY6HXDCN13EGPQKYJ.md)); live runs need the user's OK.
+- Not chosen: a small model judging the last assistant message (Claude Code `type: "prompt"` Stop hooks receive `last_assistant_message`). It could remove more empty asks but adds a model call and a way to lose decisions silently; reconsider only if asks stay costly after this rule.

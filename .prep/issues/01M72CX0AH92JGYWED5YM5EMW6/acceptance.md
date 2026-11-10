@@ -1,0 +1,7 @@
+- [ ] prep decide with no issue, no --scope and no --project-wide fails with an error naming the three choices; each of the three succeeds
+- [ ] --project-wide with --scope is refused; prep finding is unchanged
+- [ ] Existing unlinked, unscoped decisions load, list and pass prep check as before
+- [ ] prep guide lists decisions linked to the issue's ancestors, marked with their source, in text and --json
+- [ ] The Stop question includes up to three --scope suggestions from the changed files' directories
+- [ ] rules.md, the skill (synced), prep help and README describe the rule
+- [ ] An eval case for a user-stated planning decision fails without the change; it is run live only with the user's OK
