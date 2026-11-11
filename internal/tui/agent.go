@@ -237,6 +237,7 @@ func (m *Model) agentView(key string) agentData {
 	current := ""
 	keys := activity.AgentKeys(m.agentS.events)
 	byTarget := map[string]int{}
+	var usage activity.Usage
 	for _, e := range m.agentS.events {
 		if keys[e.Agent()] != key {
 			continue
@@ -249,19 +250,7 @@ func (m *Model) agentView(key string) agentData {
 		d.last = e.At
 		switch e.Kind {
 		case activity.KindRequest:
-			// A turn's end reports context and cost without tokens; only
-			// events with tokens are model requests.
-			if e.Tokens != nil {
-				d.requests++
-				d.tokens.Input += e.Tokens.Input
-				d.tokens.Output += e.Tokens.Output
-				d.tokens.CacheRead += e.Tokens.CacheRead
-				d.tokens.CacheWrite += e.Tokens.CacheWrite
-			}
-			if e.Context != nil {
-				d.contextUsed, d.contextWindow = e.Context.Tokens, e.Context.Window
-			}
-			d.cost += e.CostUSD
+			usage.Add(e)
 		default:
 			if e.Chars > 0 {
 				area := e.Area
@@ -276,6 +265,8 @@ func (m *Model) agentView(key string) agentData {
 		}
 	}
 	d.focus = current
+	d.requests, d.tokens, d.cost = usage.Requests, usage.Tokens, usage.CostUSD
+	d.contextUsed, d.contextWindow = usage.ContextUsed, usage.ContextWindow
 	for t, c := range byTarget {
 		d.reads = append(d.reads, read{t, c})
 	}

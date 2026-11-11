@@ -223,6 +223,9 @@ func cmdActivity(a *app, args []string) error {
 	if len(args) > 0 && args[0] == "add" {
 		return activityAdd(a, args[1:])
 	}
+	if len(args) > 0 && args[0] == "report" {
+		return activityReport(a, args[1:])
+	}
 	fs := flag.NewFlagSet("activity", flag.ContinueOnError)
 	max := fs.Int("max", 20, "number of newest events")
 	actor := fs.String("actor", "", "only this actor's events")
@@ -232,7 +235,7 @@ func cmdActivity(a *app, args []string) error {
 		return err
 	}
 	if len(pos) > 0 {
-		return usageErr("usage: prep activity [--max N] [--actor a] [--all] | add")
+		return usageErr("usage: prep activity [--max N] [--actor a] [--all] | add | report [--since <date>]")
 	}
 	if _, err := a.load(); err != nil {
 		return err
