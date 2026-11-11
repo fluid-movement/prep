@@ -29,7 +29,7 @@ func TestKnowledgeRecords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	second := create("decide", "--title", "Replacement", "--description", "A better choice", "--supersedes", recordID[len(recordID)-8:])
+	second := create("decide", "--project-wide", "--title", "Replacement", "--description", "A better choice", "--supersedes", recordID[len(recordID)-8:])
 	after, _ := os.ReadFile(filepath.Join(h.dir, ".prep/knowledge", first))
 	if string(before) != string(after) {
 		t.Fatal("superseded record was edited")
@@ -59,12 +59,12 @@ func TestKnowledgeRecords(t *testing.T) {
 	if len(shown.Entries) != 1 || len(shown.Entries[0].Scope) != 2 || shown.Entries[0].Date != "2026-10-05" {
 		t.Fatalf("metadata: %+v", shown)
 	}
-	if out := h.ok("guide", issue); !strings.Contains(out, "First choice") {
-		t.Fatalf("guide omits record title: %s", out)
+	if out := h.ok("guide", issue); strings.Contains(out, "First choice") {
+		t.Fatalf("guide includes superseded decision: %s", out)
 	}
 	h.fails("G_OUTCOME", "complete", issue, "--json")
 	// A standalone outcome cannot satisfy an issue's completion gate.
-	create("decide", "--title", "Standalone outcome", "--description", "Unlinked", "--outcome")
+	create("decide", "--project-wide", "--title", "Standalone outcome", "--description", "Unlinked", "--outcome")
 	h.fails("G_OUTCOME", "complete", issue, "--json")
 	create("decide", issue, "--title", "Final choice", "--description", "Agreed", "--supersedes", strings.TrimSuffix(filepath.Base(second), ".md"), "--outcome")
 	h.ok("complete", issue)
@@ -112,9 +112,9 @@ func TestRemovedKnowledgeCommandsAndCompletionFlags(t *testing.T) {
 	}
 	h.fails("flag provided but not defined", "init", "--no-bootstrap")
 	h.fails("flag provided but not defined", "check", "--no-drift")
-	h.fails("one-line", "decide", "--title", "Missing description")
+	h.fails("one-line", "decide", "--project-wide", "--title", "Missing description")
 	h.fails("one-line", "finding", "--title", "Multiline", "--description", "one\ntwo")
-	h.fails("no knowledge record", "decide", "--title", "Bad supersedes", "--description", "Bad reference", "--supersedes", "D1")
+	h.fails("no knowledge record", "decide", "--project-wide", "--title", "Bad supersedes", "--description", "Bad reference", "--supersedes", "D1")
 	var out map[string]any
 	if err := json.Unmarshal([]byte(h.ok("prime", "--json")), &out); err != nil {
 		t.Fatal(err)
@@ -139,7 +139,7 @@ func TestKnowledgeShowByRecordID(t *testing.T) {
 		var out struct {
 			Entry string `json:"entry"`
 		}
-		h.jsonOf(&out, "decide", "--title", "Choice "+strings.Repeat("x", k+1), "--description", "d", "--body", "## Why\n\nBecause.")
+		h.jsonOf(&out, "decide", "--project-wide", "--title", "Choice "+strings.Repeat("x", k+1), "--description", "d", "--body", "## Why\n\nBecause.")
 		id := strings.TrimSuffix(filepath.Base(out.Entry), ".md")
 		ids = append(ids, id)
 		tail := id[len(id)-1:]

@@ -41,7 +41,7 @@ func TestKnowledgeListBoundAndNewestFirst(t *testing.T) {
 	h := newHarness(t)
 	for k := 0; k < 32; k++ {
 		h.now = h.now.Add(24 * time.Hour)
-		h.ok("decide", "--title", fmt.Sprintf("Choice %02d", k), "--description", "Choice")
+		h.ok("decide", "--project-wide", "--title", fmt.Sprintf("Choice %02d", k), "--description", "Choice")
 	}
 	out := h.ok("knowledge", "list", "--type", "decision")
 	if strings.Count(out, "/decisions/") != 30 || strings.Contains(out, "Choice 00") || !strings.HasSuffix(out, "2 more; --max 32 or --all\n") {
@@ -57,7 +57,7 @@ func TestKnowledgeListBoundAndNewestFirst(t *testing.T) {
 		}
 	}
 	// Superseded records sort behind active ones even when newer.
-	h.ok("decide", "--title", "Replacement", "--description", "Choice", "--supersedes", recordIDForTitle(h, "Choice 31"))
+	h.ok("decide", "--project-wide", "--title", "Replacement", "--description", "Choice", "--supersedes", recordIDForTitle(h, "Choice 31"))
 	out = h.ok("knowledge", "list", "--type", "decision", "--all")
 	if strings.Index(out, "Choice 31 [superseded]") < strings.Index(out, "Choice 00") {
 		t.Fatalf("superseded ordering: %s", out)

@@ -396,7 +396,11 @@ func (p *Project) buildKnowledge(run func(...string) (string, error)) error {
 			}
 			args = append(args, "--title", k.Title, "--description", desc, "--body", body)
 			for _, scope := range k.Scope {
-				args = append(args, "--scope", scope)
+				if typ == "decision" && scope == "**" {
+					args = append(args, "--project-wide")
+				} else {
+					args = append(args, "--scope", scope)
+				}
 			}
 			if k.Outcome {
 				args = append(args, "--outcome")

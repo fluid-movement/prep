@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -587,7 +588,11 @@ func cmdGuide(a *app, args []string) error {
 	if len(g.Decisions) > 0 {
 		a.printf("\nDecisions:\n")
 		for _, d := range g.Decisions {
-			a.printf("  %s — %s\n", d.Path, d.Title)
+			from := ""
+			if d.From != "" {
+				from = " [ancestor: " + d.From + "]"
+			}
+			a.printf("  %s — %s%s\n", d.Path, d.Title, from)
 		}
 	}
 	if len(g.DoD) > 0 {
@@ -684,20 +689,22 @@ func (s silentErr) Error() string { return s.err.Message }
 
 // primeBrief is the capped session-start briefing.
 type primeBrief struct {
-	DoD          []string       `json:"definition_of_done,omitempty"`
-	Issues       int            `json:"issues"`
-	Actionable   int            `json:"actionable"`
-	Parents      []summary      `json:"parents"`
-	Next         []summary      `json:"next"`
-	Blocked      []summary      `json:"blocked"`
-	BlockedCount int            `json:"blocked_count"`
-	Stale        []summary      `json:"stale"`
-	Claims       []claimSummary `json:"claims"`
-	Check        checkSummary   `json:"check"`
-	Plugin       string         `json:"plugin,omitempty"` // alert when the harness plugin and the binary differ
-	Focus        []focusSummary `json:"focus"`            // the newest current issues from the activity stream
-	Projects     []string       `json:"projects"`         // other prep projects on this machine, newest first
-	Rules        string         `json:"rules"`
+	ProjectDecisions     []domain.Record `json:"project_decisions"`
+	ProjectDecisionsMore int             `json:"project_decisions_more"`
+	DoD                  []string        `json:"definition_of_done,omitempty"`
+	Issues               int             `json:"issues"`
+	Actionable           int             `json:"actionable"`
+	Parents              []summary       `json:"parents"`
+	Next                 []summary       `json:"next"`
+	Blocked              []summary       `json:"blocked"`
+	BlockedCount         int             `json:"blocked_count"`
+	Stale                []summary       `json:"stale"`
+	Claims               []claimSummary  `json:"claims"`
+	Check                checkSummary    `json:"check"`
+	Plugin               string          `json:"plugin,omitempty"` // alert when the harness plugin and the binary differ
+	Focus                []focusSummary  `json:"focus"`            // the newest current issues from the activity stream
+	Projects             []string        `json:"projects"`         // other prep projects on this machine, newest first
+	Rules                string          `json:"rules"`
 }
 
 type claimSummary struct {
@@ -738,6 +745,26 @@ func cmdPrime(a *app, args []string) error {
 		return ss
 	}
 	b := primeBrief{DoD: t.Project.DoD, Issues: len(t.Issues), Parents: []summary{}, Next: []summary{}, Blocked: []summary{}, Stale: []summary{}, Claims: []claimSummary{}, Rules: rulesText}
+	var projectDecisions []*domain.Entry
+	for _, e := range t.Knowledge {
+		if e.Type == "decision" && !e.Superseded && slices.Contains(e.Scope, "**") {
+			projectDecisions = append(projectDecisions, e)
+		}
+	}
+	sort.Slice(projectDecisions, func(i, j int) bool {
+		if projectDecisions[i].Date != projectDecisions[j].Date {
+			return projectDecisions[i].Date > projectDecisions[j].Date
+		}
+		return projectDecisions[i].ID > projectDecisions[j].ID
+	})
+	b.ProjectDecisions = []domain.Record{}
+	for _, e := range projectDecisions {
+		if len(b.ProjectDecisions) == 10 {
+			b.ProjectDecisionsMore++
+			continue
+		}
+		b.ProjectDecisions = append(b.ProjectDecisions, domain.Record{ID: e.ID, Title: e.Title, Path: e.Path})
+	}
 	for _, id := range t.IDs() {
 		i := t.Issues[id]
 		s := t.State(id)
@@ -788,6 +815,16 @@ func cmdPrime(a *app, args []string) error {
 	}
 	if b.Plugin != "" {
 		a.printf("! %s\n\n", b.Plugin)
+	}
+	if len(b.ProjectDecisions) > 0 {
+		a.printf("Project-wide decisions:\n")
+		for _, d := range b.ProjectDecisions {
+			a.printf("  %s — %s\n", d.ID, d.Title)
+		}
+		if b.ProjectDecisionsMore > 0 {
+			a.printf("  %d more project-wide decisions\n", b.ProjectDecisionsMore)
+		}
+		a.printf("\n")
 	}
 	a.printf("prep: %d issues, %d actionable; check: %d errors, %d warnings\n", b.Issues, b.Actionable, b.Check.Errors, b.Check.Warnings)
 	section := func(title string, ss []summary) {

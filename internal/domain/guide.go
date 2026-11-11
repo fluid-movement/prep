@@ -136,6 +136,7 @@ type Record struct {
 	ID    string `json:"id"`
 	Path  string `json:"path"`
 	Title string `json:"title"`
+	From  string `json:"from,omitempty"` // ancestor issue, empty for the issue itself
 }
 
 // Guide is the step contract for an issue: where it is, what can happen
@@ -190,10 +191,11 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 	// they are not also listed as files to read.
 	brief := !stale && !parent && i.Kind == KindCode && (s == StateInProgress || (s == StateReady && len(t.UnresolvedDeps(id)) == 0))
 	g.Requirement, g.Criteria, g.Context = i.Body, i.Criteria, i.Context
+	for _, d := range t.LinkedDecisions(id) {
+		e := d.Entry
+		g.Decisions = append(g.Decisions, Record{ID: e.ID, Path: e.Path, Title: e.Title, From: d.From})
+	}
 	if brief {
-		for _, e := range t.IssueRecords(id) {
-			g.Decisions = append(g.Decisions, Record{e.ID, e.Path, e.Title})
-		}
 		g.DoD = append([]string(nil), t.Project.DoD...)
 	}
 
@@ -227,11 +229,6 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 		}
 
 		for _, e := range t.IssueRecords(d) {
-			g.Inputs = append(g.Inputs, Pointer{".prep/knowledge" + e.Path, e.Title, "prep knowledge show " + e.Path})
-		}
-	}
-	if !brief {
-		for _, e := range t.IssueRecords(id) {
 			g.Inputs = append(g.Inputs, Pointer{".prep/knowledge" + e.Path, e.Title, "prep knowledge show " + e.Path})
 		}
 	}

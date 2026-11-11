@@ -3,6 +3,8 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/fluid-movement/prep/internal/activity"
 	"github.com/fluid-movement/prep/internal/domain"
@@ -42,8 +44,10 @@ func knowledgeRecordCmd(typ string) func(*app, []string) error {
 		body := fs.String("body", "", "record body")
 		bodyFile := fs.String("body-file", "", "read body from a file (- for stdin)")
 		var scope, supersedes multi
-		fs.Var(&scope, "scope", "code path glob (repeatable; absent means project-wide)")
+		var projectWide bool
+		fs.Var(&scope, "scope", "code path glob (repeatable)")
 		if typ == "decision" {
+			fs.BoolVar(&projectWide, "project-wide", false, "decision applies to the whole project (scope **)")
 			fs.Var(&supersedes, "supersedes", "older knowledge record ID or unique suffix (repeatable)")
 			fs.BoolVar(&in.Outcome, "outcome", false, "answers the linked decision issue")
 		}
@@ -58,6 +62,19 @@ func knowledgeRecordCmd(typ string) func(*app, []string) error {
 		fs.Visit(func(f *flag.Flag) { set[f.Name] = true })
 		if set["body"] && set["body-file"] {
 			return usageErr("pass --body or --body-file, not both")
+		}
+		if typ == "decision" {
+			if projectWide && set["scope"] {
+				return usageErr("pass --project-wide or --scope, not both")
+			}
+			for _, s := range scope {
+				if strings.TrimSpace(s) == "**" {
+					return usageErr("use --project-wide instead of --scope '**'")
+				}
+			}
+			if projectWide {
+				scope = multi{"**"}
+			}
 		}
 		in.Body, err = a.readBody(*body, *bodyFile)
 		if err != nil {
@@ -77,6 +94,13 @@ func knowledgeRecordCmd(typ string) func(*app, []string) error {
 			if err != nil {
 				return err
 			}
+		}
+		if typ == "decision" && in.Issue == "" && strings.TrimSpace(strings.Join(scope, "")) == "" {
+			choice := "an issue (prep decide <id> --title T --description D)"
+			if id := a.decisionIssue(t); id != "" {
+				choice = fmt.Sprintf("issue %s (prep decide %s --title T --description D)", id, id)
+			}
+			return usageErr("decide needs %s, --scope <glob>, or --project-wide", choice)
 		}
 		in.At = a.now()
 		in.ID, err = domain.NewULID(in.At, a.entropy)
@@ -105,4 +129,27 @@ func knowledgeRecordCmd(typ string) func(*app, []string) error {
 		a.reportWrite(writeResult{OK: true, Op: op, ID: in.Issue, Entry: e.Path, Files: files})
 		return nil
 	}
+}
+
+// decisionIssue proposes this session's focus, else the single issue in progress.
+func (a *app) decisionIssue(t *domain.Tree) string {
+	if events, err := activity.Read(a.prepDir(), 0); err == nil {
+		key := (activity.Event{Actor: a.actor, Session: os.Getenv("PREP_SESSION")}).Agent()
+		if current := activity.AgentKeys(events)[key]; current != "" {
+			key = current
+		}
+		if f, ok := activity.Foci(events)[key]; ok && t.Issues[f.Issue] != nil && !t.State(f.Issue).Terminal() {
+			return f.Issue
+		}
+	}
+	id := ""
+	for _, candidate := range t.IDs() {
+		if t.State(candidate) == domain.StateInProgress {
+			if id != "" {
+				return ""
+			}
+			id = candidate
+		}
+	}
+	return id
 }
