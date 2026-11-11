@@ -1,0 +1,11 @@
+name: implement-guide-no-show
+description: A defined non-code issue is read through prep guide alone; no prep show follows it.
+prompt: >-
+  What does the Pick a queue issue ask for, and what step is it at? Answer from the issue itself.
+fixture: defined-decision
+limits: {max_turns: 10}
+expect:
+  tools:
+    - ran: {command: guide}
+    - not_ran: {command: show}
+    - no_prep_files: true
