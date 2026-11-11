@@ -185,6 +185,7 @@ func TestValidateHook(t *testing.T) {
 		{Op: "prompt", Verb: "sent"},
 		{Op: "prompt", Verb: "skipped"},
 		{Op: "finish", Verb: "asked"},
+		{Op: "finish", Verb: "skipped"},
 		{Op: "before-tool", Verb: "denied read"},
 		{Op: "before-tool", Verb: "denied write"},
 		{Op: "session-start", Verb: "primed"},

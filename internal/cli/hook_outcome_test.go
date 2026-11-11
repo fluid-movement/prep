@@ -42,8 +42,11 @@ func TestHookOutcomesAreRecorded(t *testing.T) {
 	runHook(t, "prompt", "claude-code", prompt)
 	runHook(t, "before-tool", "claude-code", hookEvent{Cwd: h.dir, Session: session, Tool: "Read", Input: map[string]any{"file_path": filepath.Join(h.dir, mdstore.Dir, "knowledge", "overview.md")}})
 	runHook(t, "before-tool", "claude-code", hookEvent{Cwd: h.dir, Session: session, Tool: "Write", Input: map[string]any{"file_path": filepath.Join(mdstore.Dir, "issues", id, "issue.md")}})
-	if err := os.WriteFile(filepath.Join(h.dir, "main.go"), []byte("package main\n"), 0o644); err != nil {
-		t.Fatal(err)
+	// Finish asks from three changed files on.
+	for _, p := range []string{"main.go", "a.go", "b.go"} {
+		if err := os.WriteFile(filepath.Join(h.dir, p), []byte("package main\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	runHook(t, "finish", "claude-code", hookEvent{Cwd: h.dir, Session: session})
 
@@ -199,8 +202,11 @@ func TestHookEventsCarryAgentAndInjectedSize(t *testing.T) {
 	denied := context(runHook(t, "before-tool", "claude-code", payload("Read", record, "agent-7")))
 	runHook(t, "after-tool", "claude-code", payload("Read", filepath.Join(h.dir, "main.go"), "agent-7"))
 	runHook(t, "after-tool", "claude-code", payload("Read", filepath.Join(h.dir, "main.go"), ""))
-	if err := os.WriteFile(filepath.Join(h.dir, "main.go"), []byte("package main\n"), 0o644); err != nil {
-		t.Fatal(err)
+	// Finish asks from three changed files on.
+	for _, p := range []string{"main.go", "a.go", "b.go"} {
+		if err := os.WriteFile(filepath.Join(h.dir, p), []byte("package main\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	asked := context(runHook(t, "finish", "claude-code", hookEvent{Cwd: h.dir, Session: session}))
 
