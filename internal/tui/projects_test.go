@@ -13,8 +13,9 @@ func switcherModel(t *testing.T) *Model {
 	t.Helper()
 	p, _ := sample(t)
 	list := []projects.Project{
-		{Root: "/code/web", Name: "web"},
+		{Root: "/code/web", Name: "web", Worktree: true},
 		{Root: "/code/api", Name: "api", Remote: "github.com/acme/api"},
+		{Root: "/code/api-wt", Name: "api-wt", Worktree: true},
 		{Root: "/code/tools", Name: "tools"},
 	}
 	m := NewModel(testTheme(), Options{Load: p.load, Project: "web", Root: "/code/web", Previous: "/code/old",
@@ -34,6 +35,9 @@ func TestHeaderShowsTheProjectAndPOpensTheSwitcher(t *testing.T) {
 	}
 	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "current · /code/web") || !strings.Contains(v, "api") {
 		t.Fatalf("view:\n%s", v)
+	}
+	if strings.Contains(ansi.Strip(m.View().Content), "api-wt") {
+		t.Fatal("worktree shown in switcher")
 	}
 	// Typing filters; enter switches and ends the program.
 	keys(m, "a", "p", "i")

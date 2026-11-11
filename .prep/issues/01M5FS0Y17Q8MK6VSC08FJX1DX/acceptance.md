@@ -1,5 +1,5 @@
-- [ ] The project switcher (p) in the TUI does not list a project whose root is a linked git worktree of another checkout
-- [ ] A normal checkout, a clone and a project in a plain directory without git are still listed
-- [ ] If the current project is itself a worktree, it is still shown in the switcher as current
-- [ ] prep projects still lists worktree checkouts and --project <name or path> still resolves them
-- [ ] gitx has a tested helper that tells a linked worktree from a main checkout, and go test ./... and just check pass
+- [x] The project switcher (p) in the TUI does not list a project whose root is a linked git worktree of another checkout
+- [x] A normal checkout, a clone and a project in a plain directory without git are still listed
+- [x] If the current project is itself a worktree, it is still shown in the switcher as current
+- [x] prep projects still lists worktree checkouts and --project <name or path> still resolves them
+- [x] gitx has a tested helper that tells a linked worktree from a main checkout, and go test ./... and just check pass
