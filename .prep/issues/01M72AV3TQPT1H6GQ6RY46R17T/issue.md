@@ -4,6 +4,7 @@ kind: code
 parent: 01M5FS7KX63E8KZARSXXAS44C4
 tags:
   - usage
+priority: high
 ---
 
 The activity stream gains what later analysis needs and cannot reconstruct:

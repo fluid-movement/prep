@@ -1,5 +1,5 @@
-- [ ] prep guide prints the requirement including open questions for an open issue, a defined research issue, a decision issue, a stale issue, a parent and a done issue
-- [ ] Existing acceptance criteria and context are printed at every step when they exist
-- [ ] The Read section no longer lists issue.md, acceptance.md or context.md when their content is printed
-- [ ] guide --json carries the same fields in those cases
-- [ ] An eval case asserts that an agent given a defined non-code issue runs no prep show for that issue after prep guide; it is run live only with the user's OK
+- [x] prep guide prints the requirement including open questions for an open issue, a defined research issue, a decision issue, a stale issue, a parent and a done issue
+- [x] Existing acceptance criteria and context are printed at every step when they exist
+- [x] The Read section no longer lists issue.md, acceptance.md or context.md when their content is printed
+- [x] guide --json carries the same fields in those cases
+- [x] An eval case asserts that an agent given a defined non-code issue runs no prep show for that issue after prep guide; it is run live only with the user's OK

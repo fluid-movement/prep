@@ -6,3 +6,5 @@
 - [ ] The cost section states how many sessions have request events and gives no figure for those that do not
 - [ ] --json carries the same numbers
 - [ ] prep help and README describe the command
+- [ ] The hand-off section counts briefs, accepted and refused hand-backs by reason, and failed checks
+- [ ] Rule-following figures are given per session and per issue as well as per turn

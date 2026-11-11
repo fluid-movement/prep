@@ -3,10 +3,13 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/fluid-movement/prep/internal/activity"
+	"github.com/fluid-movement/prep/internal/mdstore"
 )
 
 type activityOut struct {
@@ -154,5 +157,31 @@ func TestActivitySessionAndResumedPrime(t *testing.T) {
 		if code, _ := h.runStdin(bad, "activity", "add"); code == 0 {
 			t.Errorf("accepted %s", bad)
 		}
+	}
+}
+
+func TestActivityAllIncludesArchives(t *testing.T) {
+	h := newHarness(t)
+	h.ok("focus", h.newIssue("--title", "Current", "--kind", "code", "--by", "agent/1"), "--by", "agent/1")
+	local := filepath.Join(h.dir, mdstore.Dir, activity.Dir)
+	archived := `{"at":"2026-10-01T09:00:00Z","actor":"agent/0","kind":"tool","op":"Bash","verb":"bash"}` + "\n"
+	if err := os.WriteFile(filepath.Join(local, "activity-2026-10-02.jsonl"), []byte(archived), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	current := h.activity()
+	for _, e := range current.Events {
+		if e.Actor == "agent/0" {
+			t.Fatalf("an archived event without --all: %+v", e)
+		}
+	}
+	all := h.activity("--all")
+	if len(all.Events) != len(current.Events)+1 || all.Events[0].Actor != "agent/0" || all.Events[0].Op != "Bash" {
+		t.Fatalf("--all --json: %+v", all.Events)
+	}
+	if out := h.ok("activity", "--all", "--max", "0"); !strings.Contains(out, "agent/0") || !strings.Contains(out, "2026-10-01") {
+		t.Fatalf("--all: %s", out)
+	}
+	if out := h.ok("activity", "--max", "0"); strings.Contains(out, "agent/0") {
+		t.Fatalf("archives listed without --all: %s", out)
 	}
 }

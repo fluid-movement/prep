@@ -189,8 +189,8 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 	// An implementer's brief carries the issue's own records as content, so
 	// they are not also listed as files to read.
 	brief := !stale && !parent && i.Kind == KindCode && (s == StateInProgress || (s == StateReady && len(t.UnresolvedDeps(id)) == 0))
+	g.Requirement, g.Criteria, g.Context = i.Body, i.Criteria, i.Context
 	if brief {
-		g.Requirement, g.Criteria, g.Context = i.Body, i.Criteria, i.Context
 		for _, e := range t.IssueRecords(id) {
 			g.Decisions = append(g.Decisions, Record{e.ID, e.Path, e.Title})
 		}
@@ -198,14 +198,18 @@ func (t *Tree) BuildGuide(id string, issueDir func(string) string, touched []str
 	}
 
 	// Inputs: the issue's own records first, then upstream outputs.
-	if !brief {
+	if strings.TrimSpace(g.Requirement) == "" {
 		g.Inputs = append(g.Inputs, Pointer{f("issue.md"), "requirement and open questions", ""})
 	}
 	if s != StateOpen && !brief {
 		for _, p := range []Pointer{{f("acceptance.md"), "acceptance criteria", ""}, {f("context.md"), "implementation context", ""}, {".prep/knowledge/decisions/", "decision records", ""}} {
-			if i.HasFile(path.Base(p.Path)) {
-				g.Inputs = append(g.Inputs, p)
+			if !i.HasFile(path.Base(p.Path)) {
+				continue
 			}
+			if (path.Base(p.Path) == "acceptance.md" && len(g.Criteria) > 0) || (path.Base(p.Path) == "context.md" && strings.TrimSpace(g.Context) != "") {
+				continue
+			}
+			g.Inputs = append(g.Inputs, p)
 		}
 		if i.HasFile("history.md") && (s == StateInProgress || s.Terminal()) {
 			g.Inputs = append(g.Inputs, Pointer{f("history.md"), "work log", ""})

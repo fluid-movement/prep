@@ -1,9 +1,53 @@
 package cli
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestHookShellFromInsideRecords(t *testing.T) {
+	root := t.TempDir()
+	for _, cwd := range []string{".prep", ".prep/issues", ".prep/issues/x", ".prep/knowledge"} {
+		for _, tc := range []struct {
+			command string
+			hint    string
+		}{
+			{`cd ..`, ""},
+			{`pwd`, ""},
+			{`git status`, ""},
+			{`echo hi`, ""},
+			{`prep check`, ""},
+			{`cd .. && pwd`, ""},
+			{`cat {f}`, "prep "},
+			{`cat ./{f}`, "prep "},
+			{`ls .`, "prep "},
+			{`echo x > {f}`, "write commands"},
+			{`rm {f}`, "write commands"},
+		} {
+			dir := filepath.Join(root, cwd)
+			// A record file by a path relative to this directory.
+			file := map[string]string{".prep": "project.md", ".prep/issues": "x/issue.md", ".prep/issues/x": "issue.md", ".prep/knowledge": "x.md"}[cwd]
+			command := strings.ReplaceAll(tc.command, "{f}", file)
+			t.Run(cwd+" "+command, func(t *testing.T) {
+				got := hookRedirect(hookEvent{Cwd: dir, Tool: "Bash", Input: map[string]any{"command": command}}, root)
+				if tc.hint == "" && got != "" || tc.hint != "" && !strings.Contains(got, tc.hint) {
+					t.Fatalf("redirect = %q; want hint %q", got, tc.hint)
+				}
+			})
+		}
+	}
+}
+
+func TestHookRootRedirectUnchanged(t *testing.T) {
+	root := t.TempDir()
+	for _, command := range []string{`cat .prep/issues/x/issue.md`, `echo x > .prep/project.md`} {
+		got := hookRedirect(hookEvent{Cwd: root, Tool: "Bash", Input: map[string]any{"command": command}}, root)
+		if got == "" {
+			t.Fatalf("%q was allowed from the project root", command)
+		}
+	}
+}
 
 func TestHookShellRecordPaths(t *testing.T) {
 	root := t.TempDir()

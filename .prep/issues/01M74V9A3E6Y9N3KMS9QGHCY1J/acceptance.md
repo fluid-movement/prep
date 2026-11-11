@@ -1,0 +1,6 @@
+- [ ] A finding records the trial on at least three real issues with a small model: report written to the named file, parsed or refused and why, prep calls made by the implementer and checker
+- [ ] The trial's reports are fixtures in the handback tests and parse
+- [ ] rules.md, the skill (synced to the plugins), the guide's hand-off text and README describe hand-off by brief and handback, and no longer tell an orchestrator to pass the rules on to implementers
+- [ ] prep guide stays the described way for an agent that works alone
+- [ ] An eval case shows an orchestrator delegating with a brief and an implementer making no prep call; it is run live only with the user's OK
+- [ ] The resolution note says that the user's orchestrate skill needs the same change

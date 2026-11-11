@@ -51,6 +51,9 @@ type Event struct {
 	Kind     string    `json:"kind"`
 	Previous string    `json:"previous,omitempty"` // predecessor session, on started events
 	Session  string    `json:"session,omitempty"`  // the harness session, when one reports it
+	// AgentID is the harness's id for the subagent the event comes from;
+	// empty for the main session.
+	AgentID string `json:"agent_id,omitempty"`
 	// Op is the prep command (guide, criterion, knowledge find, ...) or the
 	// harness tool (Bash, Edit, read, ...).
 	Op     string `json:"op,omitempty"`
@@ -62,7 +65,7 @@ type Event struct {
 	// on the copy of its event in the stream of the project it was started
 	// from; such events never move focus.
 	Project string   `json:"project,omitempty"`
-	Chars   int      `json:"chars,omitempty"` // output read back, in characters
+	Chars   int      `json:"chars,omitempty"` // output read back, or text a hook added to the context, in characters
 	Failed  bool     `json:"failed,omitempty"`
 	Tokens  *Tokens  `json:"tokens,omitempty"`
 	Context *Context `json:"context,omitempty"`
@@ -145,7 +148,7 @@ func Path(prepDir string) string { return filepath.Join(prepDir, Dir, File) }
 
 // Append adds one event to the stream, creating .prep/local when needed.
 func Append(prepDir string, e Event) error {
-	for _, f := range []*string{&e.Actor, &e.Kind, &e.Session, &e.Previous, &e.Op, &e.Issue, &e.Verb, &e.Target, &e.Area, &e.Project} {
+	for _, f := range []*string{&e.Actor, &e.Kind, &e.Session, &e.AgentID, &e.Previous, &e.Op, &e.Issue, &e.Verb, &e.Target, &e.Area, &e.Project} {
 		*f = clip(*f)
 	}
 	line, err := json.Marshal(e)
@@ -194,7 +197,7 @@ func clip(s string) string {
 // Rename is atomic: two writers archiving at once leave one archive, and a
 // writer that finds the stream already moved does nothing. An append racing
 // the rename may land in the archive, which a UI stream tolerates. Archives
-// are never read or pruned by prep.
+// are never pruned by prep, and read only by ReadAll.
 func archive(path string, now time.Time) error {
 	info, err := os.Stat(path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -233,13 +236,17 @@ func (e Event) ValidateHook() error {
 	return nil
 }
 
-// hookVerbs are the outcomes each hook records.
+// hookVerbs are the outcomes each hook records. Error is a hook that failed
+// open, with the reason as its target.
 var hookVerbs = map[string][]string{
-	"prompt":        {"sent", "skipped"},
-	"finish":        {"asked"},
+	"prompt":        {"sent", "skipped", HookError},
+	"finish":        {"asked", "skipped", HookError},
 	"before-tool":   {"denied read", "denied write"},
-	"session-start": {"primed"},
+	"session-start": {"primed", HookError},
 }
+
+// HookError is the verb of a hook event for a hook that failed open.
+const HookError = "error"
 
 // Read returns the stream's events, oldest first, at most max of the
 // newest (0: all). A missing stream is empty; lines that do not parse are
@@ -254,6 +261,36 @@ func Read(prepDir string, max int) ([]Event, error) {
 	}
 	defer f.Close()
 	return Parse(f, max)
+}
+
+// ReadAll returns the events of the archived streams and the current one,
+// oldest first. Files are ordered by their first event, since an archive's
+// name carries only the day it was closed.
+func ReadAll(prepDir string) ([]Event, error) {
+	paths, err := filepath.Glob(filepath.Join(prepDir, Dir, "activity-*.jsonl"))
+	if err != nil {
+		return nil, err
+	}
+	var files [][]Event
+	for _, path := range append(paths, Path(prepDir)) {
+		f, err := os.Open(path)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		events, err := Parse(f, 0)
+		f.Close()
+		if err != nil {
+			return nil, err
+		}
+		if len(events) > 0 {
+			files = append(files, events)
+		}
+	}
+	slices.SortStableFunc(files, func(a, b []Event) int { return a[0].At.Compare(b[0].At) })
+	return slices.Concat(files...), nil
 }
 
 // Parse reads events from JSON lines; see Read.
