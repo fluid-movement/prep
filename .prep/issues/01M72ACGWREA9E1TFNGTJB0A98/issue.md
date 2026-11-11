@@ -7,11 +7,13 @@ tags:
 priority: high
 ---
 
-When an agent is about to edit a code file, the before-tool hook tells it which current decisions are scoped to that file: title and record ID, at most five, once per session for each decision. The edit is not blocked.
+When an agent is about to edit a code file, the before-tool hook tells it which current decisions are scoped to that file: title, a short description and record ID, at most five, once per session for each decision. The edit is not blocked.
+
+The description is there so that the notice is usually enough by itself: with title and ID only, every decision that looks relevant costs a `prep knowledge show`, which is the extra request this work is meant to remove. It is cut at about 150 characters.
 
 Why: the rule "before changing code, look for decisions about it" depends on the agent's judgment and is mostly skipped. A knowledge lookup preceded the work in 0% (daypack), 12% (fpa-events) and 29% (prep) of the turns that changed code (finding 01M72A9TBJ5JQXT2VGT15N2HW1). Prep already knows which decisions apply, because decisions carry scope globs, but it says so only in the Stop question, after the files have been changed (30 of 81 Stop questions listed scoped decisions). Moving that list to the moment of the first edit makes the lookup happen every time, costs about 30 tokens per decision and adds no request.
 
-The Stop question no longer lists scoped decisions, since the agent has seen them by then. The session rule about looking up decisions stays, because decisions without a scope are project-wide and are not surfaced by this hook.
+The Stop question no longer lists scoped decisions, since the agent has seen them by then. The session rule about looking up decisions stays, because this hook names only decisions with an explicit scope. Decisions marked project-wide (scope `**`) are left out here; the session briefing lists them (01M72CX0AH92JGYWED5YM5EMW6). Decisions that are linked to an issue and have no scope are added by the derived-scope issue that builds on this one (decision 01M74V5WFVS5PK8PGJ91TENV81).
 
 The hook covers the file-editing tools of the harness. Edits made through shell commands or by a separate process are out of scope.
 

@@ -7,3 +7,5 @@
 - Related: research 01M4J8784Q2JR9V8EWAH0C0A3F needs labelled real prompts and tool calls; the same session reader can produce them later.
 - A read command: document it in `prep help` (`internal/cli/cli.go`) and the README. No guidance or hook changes, so no eval case.
 - Checks: `go test ./...`, `just check`.
+- Hand-off section: `prep brief` and `prep handback` (01M72CVD0W8E28HQZVRA9FD92K, 01M72CWZ12ESB9D853ENN2NQ67) are recorded as prep events like any command; a refused hand-back is a failed prep event with its error code, a failed check is a handback event followed by no completion. If those commands do not exist yet when this is built, print the section with zero counts.
+- Per issue: group a session's prep events by `Issue`; an edit belongs to the issue most recently named in the session.

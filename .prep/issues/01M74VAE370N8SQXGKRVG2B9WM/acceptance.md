@@ -1,0 +1,7 @@
+- [ ] A finding gives, for this repository, the share of linked unscoped current decisions that gain a derived scope, the size of those scopes and the number of decisions matching a typical file; the resolution says whether the rest was built
+- [ ] Editing a file changed by a done issue's evidence commit or by the commit that added its resolution names that issue's current decisions, after explicitly scoped ones and marked as derived
+- [ ] Paths under .prep, superseded decisions, commits over the breadth limit and issues without a findable commit give no derived scope and no error
+- [ ] The before-tool hook reads the derived scopes from a cache under .prep/local and runs no history walk per call; the cache is brought up to date when HEAD has moved
+- [ ] prep brief includes decisions with a derived scope for the paths its context names, by title and description, if prep brief exists
+- [ ] README and a decision record describe the behaviour
+- [ ] An eval case with a decision linked to a done issue fails without the change; it is run live only with the user's OK

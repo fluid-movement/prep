@@ -1,16 +1,17 @@
 ---
-title: prep decide requires an issue, a scope or --project-wide; guide lists ancestors' decisions; the Stop question proposes scopes
+title: prep decide requires an issue, a scope or --project-wide; guide lists ancestors' decisions; prime lists project-wide ones
 kind: code
 parent: 01M5FS7KX63E8KZARSXXAS44C4
 tags:
   - knowledge
 ---
 
-Three changes that make decisions findable, from decision issue 01M72AV3NJCBCFD5KTB608VCGE:
+Four changes that make decisions findable, from decision issue 01M72AV3NJCBCFD5KTB608VCGE as revised by decision 01M74V5WFVS5PK8PGJ91TENV81:
 
-1. `prep decide` without an issue and without `--scope` fails unless `--project-wide` is given, and the error names the three choices. With `--project-wide` the record is written as today's unscoped record. Existing records are unaffected and `prep check` does not report them.
+1. `prep decide` without an issue and without `--scope` fails unless `--project-wide` is given, and the error names the three choices. When the session has a focused or in-progress issue the error proposes it as the first choice, with the command to run, so the retry succeeds at once: a failing gate costs a request each time, which is the cost this work is about. With `--project-wide` the record is written with the scope `**`, which keeps it apart from older records that have neither link nor scope. Existing records are unaffected and `prep check` does not report them.
 2. `prep guide <id>` lists the decisions linked to the issue's ancestors together with its own, marked with the ancestor they come from.
-3. The Stop question, when it asks, adds scope suggestions built from the directories of the changed files, in the form the agent can paste: `--scope <dir>/**`, at most three, most files first.
+3. `prep prime` lists the current project-wide decisions (scope `**`) by title and ID, newest first, at most ten, and says how many more there are. A decision marked project-wide is otherwise delivered to nobody.
+4. The Stop question, when it asks, says to link the decision to the issue in work or to give the narrowest `--scope` that covers the code it constrains. It proposes no globs: directory globs are the broad scopes that already crowd one another (21 prep decisions on `internal/tui`).
 
 Why: 18 of daypack's 30 decisions, 8 of 40 in fpa-events and 10 of 294 in prep have neither an issue nor a scope, so nothing can deliver them to the agent whose work they constrain. Scope and link can only be set when the record is written.
 

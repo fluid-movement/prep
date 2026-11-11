@@ -3,3 +3,5 @@
 - 2026-11-10T08:57:51Z edited by claude-code: depends_on
 
 - 2026-11-10T09:32:16Z edited by claude-code: requirement
+
+- 2026-11-11T08:25:02Z edited by cli/prep-v0.3.0-3-gb07f9b4: requirement

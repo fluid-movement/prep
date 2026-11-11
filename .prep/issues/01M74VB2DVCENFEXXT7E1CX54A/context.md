@@ -1,0 +1,7 @@
+- Today's source: `plugins/claude-code/hooks/register.ts` (about lines 78-105) pushes a `request` event per `turn.step` with the usage and one per `turn.complete` with the context fill and the cost delta; events are sent in batches by `send`. It runs in the main session.
+- Hooks installed for Claude Code: `plugins/claude-code/hooks/hooks.json` has SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure and Stop; there is no SubagentStop entry. `hookEvent` in `internal/cli/hook.go` reads `session_id`, `cwd`, `tool_name` and others but no transcript path. Check the current Claude Code hooks reference for the input fields of Stop and SubagentStop before relying on them.
+- Method used by the research: requests deduplicated by message ID, list-price weights (cache read 0.1, cache write 1.25, output 5); see [finding](/findings/01M72A9TBJ5JQXT2VGT15N2HW1.md).
+- Compare for one recorded session: request events in the stream against requests in its transcript, main session and subagents apart. The streams and archives are under `.prep/local`; `prep activity --json` reads the current one.
+- Reading a harness's transcript format ties prep to it; weigh that against the plugin module, which already depends on the harness's plugin interface.
+- Events: `activity.Event` has `Tokens` and `CostUSD` on request events; the stream issue adds the agent ID.
+- No code is changed here beyond throwaway measurement.
