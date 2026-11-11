@@ -1,0 +1,5 @@
+- Claude module: plugins/claude-code/hooks/register.ts, turn.step handler (about lines 78-105) builds request events and send batches them; add e.agentId there.
+- Event model and report: internal/activity/report.go (Event, Tokens, usage aggregation); input parsing: activityAdd in internal/cli/activity.go (about line 316). Add an agent field, tolerate old events without it.
+- Codex: plugins/codex/hooks/hooks.json and prep_hook.py forward events to internal/cli/hook*.go; add PostModelRequest there (fields: model, turn_id, agent_id, agent_type, status, token_usage). Per decision 01M553GD429AH2ST6GDNY1DY5X keep logic in the shared Go hook code, adapters only map events.
+- Evidence and rationale: findings 01M75GQ1HEVNX6MZ6M9SYZE4HQ and 01M75HAAS1DYCVPA0YNN8CF43K (native events matched transcripts 110/110; transcript parsing rejected).
+- Tests: go test ./... ; module changes need a unit check of the event payload if the plugin has a test setup, else cover the Go parsing and report.
