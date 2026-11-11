@@ -1,9 +1,9 @@
-- [ ] A checker's report with every criterion met and no problems checks the criteria and completes the issue, with --commit passed on
-- [ ] A checker's report with an unmet criterion or a problem logs Check failed with the details and leaves the issue in progress
-- [ ] A research report writes the findings and completes the issue
-- [ ] A report with an unknown criterion number, a missing section it needs or a decision without a reason writes nothing and names the fault
-- [ ] All records of one hand-back are written under one lock, the resolution last
-- [ ] An implementer's report produces the ready-for-check log line and one linked record per decision and finding, a decision with a Scope line carries that scope, and a ready issue is claimed
-- [ ] Without --report the report is read from the issue's place under .prep/local/handoff and moved aside after a successful hand-back; a missing report names the path and --report
-- [ ] Differences of form (heading case, blank lines, verdict punctuation, unknown extra sections) are accepted
-- [ ] prep help and README describe the command
+- [x] A checker's report with every criterion met and no problems checks the criteria and completes the issue, with --commit passed on
+- [x] A checker's report with an unmet criterion or a problem logs Check failed with the details and leaves the issue in progress
+- [x] A research report writes the findings and completes the issue
+- [x] A report with an unknown criterion number, a missing section it needs or a decision without a reason writes nothing and names the fault
+- [x] All records of one hand-back are written under one lock, the resolution last
+- [x] An implementer's report produces the ready-for-check log line and one linked record per decision and finding, a decision with a Scope line carries that scope, and a ready issue is claimed
+- [x] Without --report the report is read from the issue's place under .prep/local/handoff and moved aside after a successful hand-back; a missing report names the path and --report
+- [x] Differences of form (heading case, blank lines, verdict punctuation, unknown extra sections) are accepted
+- [x] prep help and README describe the command
