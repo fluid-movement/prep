@@ -130,3 +130,50 @@ func TestRemovedKnowledgeCommandsAndCompletionFlags(t *testing.T) {
 		t.Fatal("init created issues")
 	}
 }
+
+func TestKnowledgeShowByRecordID(t *testing.T) {
+	h := newHarness(t)
+	byTail := map[string][]string{}
+	var ids []string
+	for k := 0; k < 40 && len(ids) == len(byTail); k++ {
+		var out struct {
+			Entry string `json:"entry"`
+		}
+		h.jsonOf(&out, "decide", "--title", "Choice "+strings.Repeat("x", k+1), "--description", "d", "--body", "## Why\n\nBecause.")
+		id := strings.TrimSuffix(filepath.Base(out.Entry), ".md")
+		ids = append(ids, id)
+		tail := id[len(id)-1:]
+		byTail[tail] = append(byTail[tail], id)
+		if len(byTail[tail]) > 1 {
+			break
+		}
+	}
+	id := ids[0]
+	if out := h.ok("knowledge", "show", id); !strings.Contains(out, "Because.") || !strings.Contains(out, "/decisions/"+id+".md") {
+		t.Fatalf("bare id: %s", out)
+	}
+	if out := h.ok("knowledge", "show", strings.ToLower(id[len(id)-10:]+"#why")); !strings.Contains(out, "Because.") {
+		t.Fatalf("suffix with section: %s", out)
+	}
+	if out := h.ok("knowledge", "show", id, "--outline"); !strings.Contains(out, "#why") || strings.Contains(out, "Because.") {
+		t.Fatalf("outline: %s", out)
+	}
+	if out := h.ok("knowledge", "show", "/decisions/"+id+".md"); !strings.Contains(out, "Because.") {
+		t.Fatalf("path: %s", out)
+	}
+	for _, group := range byTail {
+		if len(group) > 1 {
+			_, out := h.run("knowledge", "show", group[0][len(group[0])-1:], "--json")
+			if !strings.Contains(out, "E_AMBIGUOUS") {
+				t.Fatalf("ambiguous suffix: %s", out)
+			}
+			for _, c := range group {
+				if !strings.Contains(out, c) {
+					t.Fatalf("ambiguity misses candidate %s: %s", c, out)
+				}
+			}
+			break
+		}
+	}
+	h.fails("E_NOT_FOUND", "knowledge", "show", "ZZZZZZZZZZZZ", "--json")
+}
