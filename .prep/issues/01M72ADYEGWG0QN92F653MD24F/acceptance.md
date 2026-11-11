@@ -1,10 +1,10 @@
-- [ ] prep activity report prints the hook, rule-following and command sections for the current stream, and --since includes archived events
-- [ ] Stop questions are counted as asked and skipped, with the share followed by a decision or finding, split at fewer than three, three to eight and more than eight changed files where the event records the count
-- [ ] Code edits in a session with no earlier prep event naming an issue are counted per session and per turn
-- [ ] Guide followed by show of the same issue in the same session is counted
-- [ ] Failures are listed by command and error code
-- [ ] The cost section states how many sessions have request events and gives no figure for those that do not
-- [ ] --json carries the same numbers
-- [ ] prep help and README describe the command
-- [ ] The hand-off section counts briefs, accepted and refused hand-backs by reason, and failed checks
-- [ ] Rule-following figures are given per session and per issue as well as per turn
+- [x] prep activity report prints the hook, rule-following and command sections for the current stream, and --since includes archived events
+- [x] Stop questions are counted as asked and skipped, with the share followed by a decision or finding, split at fewer than three, three to eight and more than eight changed files where the event records the count
+- [x] Code edits in a session with no earlier prep event naming an issue are counted per session and per turn
+- [x] Guide followed by show of the same issue in the same session is counted
+- [x] Failures are listed by command and error code
+- [x] The cost section states how many sessions have request events and gives no figure for those that do not
+- [x] --json carries the same numbers
+- [x] prep help and README describe the command
+- [x] The hand-off section counts briefs, accepted and refused hand-backs by reason, and failed checks
+- [x] Rule-following figures are given per session and per issue as well as per turn
