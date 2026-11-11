@@ -1,10 +1,10 @@
-- [ ] prep brief <id> on a ready code issue prints the requirement, context, numbered criteria, applicable decisions with their text, the Definition of Done, the implementer rules and the report format
-- [ ] --check prints the checker's rules and report format for the same issue
-- [ ] A research issue's brief asks for findings
-- [ ] An open, stale, blocked, parent, decision or manual issue is refused with the reason
-- [ ] The report format comes from one definition shared with the handback parser
-- [ ] README and prep help describe the command
-- [ ] The output names no prep command and no .prep path other than the absolute report path, and ends by telling the agent to write the report there and answer with one line
-- [ ] Decisions linked to an ancestor and current decisions scoped to a path named in the context are included by title and description, the issue's own in full; superseded ones are left out; the section keeps to its bound and says what was cut or dropped
-- [ ] --out without a value writes to the issue's place under .prep/local/handoff and prints only the path; --out <file> writes there; --json returns the parts and the report path
-- [ ] An implementer's brief for an issue whose last check failed includes that check's result
+- [x] prep brief <id> on a ready code issue prints the requirement, context, numbered criteria, applicable decisions with their text, the Definition of Done, the implementer rules and the report format
+- [x] --check prints the checker's rules and report format for the same issue
+- [x] A research issue's brief asks for findings
+- [x] An open, stale, blocked, parent, decision or manual issue is refused with the reason
+- [x] The report format comes from one definition shared with the handback parser
+- [x] README and prep help describe the command
+- [x] The output names no prep command and no .prep path other than the absolute report path, and ends by telling the agent to write the report there and answer with one line
+- [x] Decisions linked to an ancestor and current decisions scoped to a path named in the context are included by title and description, the issue's own in full; superseded ones are left out; the section keeps to its bound and says what was cut or dropped
+- [x] --out without a value writes to the issue's place under .prep/local/handoff and prints only the path; --out <file> writes there; --json returns the parts and the report path
+- [x] An implementer's brief for an issue whose last check failed includes that check's result
