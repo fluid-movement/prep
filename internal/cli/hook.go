@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -28,6 +29,9 @@ type hookEvent struct {
 	Error      json.RawMessage `json:"error"`
 	Event      string          `json:"hook_event_name"`
 	StopActive bool            `json:"stop_hook_active"`
+	// Claude Code sets these inside a subagent; Codex tool hooks carry neither.
+	AgentID   string `json:"agent_id"`
+	AgentType string `json:"agent_type"`
 }
 
 var hookIDs = regexp.MustCompile(`(?i)\b[0-7][0-9A-HJKMNP-TV-Z]{25}\b`)
@@ -54,19 +58,20 @@ func cmdHook(a *app, args []string) error {
 		return usageErr("unknown hook mode or harness")
 	}
 	level := "small"
+	// A bad user config fails open, but is recorded once the project is open.
+	var configErr error
 	if mode == "prompt" {
 		cfg, err := userconfig.Load()
 		if err != nil {
-			return nil
-		}
-		if cfg.Hooks.Prompt != "" {
+			configErr = err
+		} else if cfg.Hooks.Prompt != "" {
 			level = cfg.Hooks.Prompt
 		}
 		if level == "off" {
 			return nil
 		}
 		if level != "small" && level != "large" {
-			return nil
+			configErr = fmt.Errorf("unknown hooks.prompt level %q", level)
 		}
 	}
 	var e hookEvent
@@ -89,9 +94,13 @@ func cmdHook(a *app, args []string) error {
 	}
 	a.actor, a.named, a.json = *harness, true, false
 	a.errw = io.Discard
+	if configErr != nil {
+		hookFail(a, e, mode, "user config", configErr)
+		return nil
+	}
 	switch mode {
 	case "session-start":
-		hookMarkTurn(a, e)
+		hookMarkTurn(a, e, mode)
 		// The briefing is restored in full here (for example after compaction),
 		// so the next prompt must send its text again.
 		hookForgetSent(a, e)
@@ -102,9 +111,11 @@ func cmdHook(a *app, args []string) error {
 		if *harness == "codex" {
 			message += "\nFor prep CLI invocations only, set PREP_ACTOR=codex and PREP_SESSION=" + hookQuote(e.Session) + " so prep CLI events carry attribution. Leave other shell commands (such as go test, git and rg) unchanged; do not add these assignments to them. Hooks attribute ordinary tool activity from the event payload.\n"
 		}
-		hookContext(a, name, hookBound(message, 10000))
+		message = hookBound(message, 10000)
+		hookRecordChars(a, e, mode, "primed", "", "", utf8.RuneCountInString(message))
+		hookContext(a, name, message)
 	case "prompt":
-		hookMarkTurn(a, e)
+		hookMarkTurn(a, e, mode)
 		message := hookReminder
 		if level == "large" {
 			seen := map[string]bool{}
@@ -124,7 +135,7 @@ func cmdHook(a *app, args []string) error {
 		}
 		message = hookBound(message, 10000)
 		if hookSendPrompt(a, e, message) {
-			hookRecord(a, e, mode, "sent", "", "")
+			hookRecordChars(a, e, mode, "sent", "", "", utf8.RuneCountInString(message))
 			hookContext(a, name, message)
 		} else {
 			hookRecord(a, e, mode, "skipped", "", "")
@@ -136,7 +147,7 @@ func cmdHook(a *app, args []string) error {
 			if write {
 				verb = "denied write"
 			}
-			hookRecord(a, e, mode, verb, area, hookDeniedTarget(e))
+			hookRecordChars(a, e, mode, verb, area, hookDeniedTarget(e), utf8.RuneCountInString(reason))
 		}
 	case "after-tool":
 		hookActivity(a, e)
@@ -238,11 +249,23 @@ func hookRecordArea(p, cwd, root string) string {
 // it, never a harness; an invalid event or a failed append is dropped, since
 // hooks fail open.
 func hookRecord(a *app, e hookEvent, op, verb, area, target string) {
-	ev := activity.Event{At: a.now().UTC(), Actor: a.actor, Session: e.Session, Kind: activity.KindHook, Op: op, Verb: verb, Area: area, Target: target}
+	hookRecordChars(a, e, op, verb, area, target, 0)
+}
+
+// hookRecordChars is hookRecord for an outcome that added text to the
+// model's context: chars is that text's length in characters.
+func hookRecordChars(a *app, e hookEvent, op, verb, area, target string, chars int) {
+	ev := activity.Event{At: a.now().UTC(), Actor: a.actor, Session: e.Session, AgentID: e.AgentID, Kind: activity.KindHook, Op: op, Verb: verb, Area: area, Target: target, Chars: chars}
 	if ev.ValidateHook() != nil {
 		return
 	}
 	_ = activity.Append(filepath.Join(a.store.Root, mdstore.Dir), ev)
+}
+
+// hookFail records a hook that failed open: the step that failed and why, as
+// the event's target. The hook still prints nothing and exits 0.
+func hookFail(a *app, e hookEvent, op, step string, err error) {
+	hookRecord(a, e, op, activity.HookError, "", step+": "+err.Error())
 }
 
 // hookDeniedTarget is the first 200 characters of what a denied call named:
@@ -343,7 +366,7 @@ func hookActivity(a *app, e hookEvent) {
 	}
 	_ = json.Unmarshal(e.Response, &response)
 	failed = failed || response.IsError || response.ExitCode != 0
-	_ = activity.Append(filepath.Join(a.store.Root, mdstore.Dir), activity.Event{At: a.now().UTC(), Actor: a.actor, Session: e.Session, Kind: activity.KindTool, Op: e.Tool, Verb: strings.ToLower(e.Tool), Target: hookBound(target, 300), Area: area, Chars: len(e.Response), Failed: failed})
+	_ = activity.Append(filepath.Join(a.store.Root, mdstore.Dir), activity.Event{At: a.now().UTC(), Actor: a.actor, Session: e.Session, AgentID: e.AgentID, Kind: activity.KindTool, Op: e.Tool, Verb: strings.ToLower(e.Tool), Target: hookBound(target, 300), Area: area, Chars: len(e.Response), Failed: failed})
 }
 
 func hookOnlyPrep(command string) bool {

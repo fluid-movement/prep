@@ -126,6 +126,39 @@ func TestArchiveAtSizeLimit(t *testing.T) {
 	}
 }
 
+func TestReadAllIncludesArchives(t *testing.T) {
+	dir := t.TempDir()
+	if events, err := ReadAll(dir); err != nil || len(events) != 0 {
+		t.Fatalf("missing streams: %v %v", events, err)
+	}
+	// Archive names carry the day the stream was closed, so the second
+	// archive of a day ("-2") sorts by name before the first.
+	for k, name := range []string{"activity-2026-10-09.jsonl", "activity-2026-10-09-2.jsonl", File} {
+		for n := range 2 {
+			if err := Append(dir, ev("a", "guide", fmt.Sprint("I", 2*k+n), 2*k+n)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if name != File {
+			if err := os.Rename(Path(dir), filepath.Join(dir, Dir, name)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	all, err := ReadAll(dir)
+	if err != nil || len(all) != 6 {
+		t.Fatalf("all: %+v %v", all, err)
+	}
+	for k, e := range all {
+		if e.Issue != fmt.Sprint("I", k) {
+			t.Fatalf("event %d is %s: archives are out of order", k, e.Issue)
+		}
+	}
+	if current, _ := Read(dir, 0); len(current) != 2 || current[0].Issue != "I4" {
+		t.Fatalf("Read saw the archives: %+v", current)
+	}
+}
+
 func TestArchiveLosesRaceQuietly(t *testing.T) {
 	dir := t.TempDir()
 	// Another writer already archived the full stream: the stream is gone
@@ -154,6 +187,10 @@ func TestValidateHook(t *testing.T) {
 		{Op: "finish", Verb: "asked"},
 		{Op: "before-tool", Verb: "denied read"},
 		{Op: "before-tool", Verb: "denied write"},
+		{Op: "session-start", Verb: "primed"},
+		{Op: "prompt", Verb: HookError},
+		{Op: "finish", Verb: HookError},
+		{Op: "session-start", Verb: HookError},
 	} {
 		if err := e.ValidateHook(); err != nil {
 			t.Errorf("%+v: %v", e, err)

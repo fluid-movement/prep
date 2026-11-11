@@ -102,7 +102,7 @@ func init() {
 		{"next", false, "next [--under <id>]        actionable issues: ready, not stale, dependencies done, unclaimed", cmdNext},
 		{"show", false, "show <id>                  read one issue with its derived state", cmdShow},
 		{"check", false, "check                      validate the whole tree", cmdCheck},
-		{"activity", false, "activity [--max N] [--actor a]  what agents did with prep, newest last (local, per machine); activity add: harness events as JSON lines on stdin", cmdActivity},
+		{"activity", false, "activity [--max N] [--actor a] [--all]  what agents did with prep, newest last (local, per machine; --all includes the archived streams); activity add: harness events as JSON lines on stdin", cmdActivity},
 		{"flags", false, "flags                      every query flag with the values it accepts now and their issue counts", cmdFlags},
 		{"knowledge", false, "knowledge list|find|show  read knowledge entries", cmdKnowledge},
 		{"views", false, "views                      saved views from config.yaml (else config.yaml.dist)", cmdViews},

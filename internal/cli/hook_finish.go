@@ -5,14 +5,17 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/mdstore"
@@ -138,14 +141,20 @@ func hookSaveTurn(path string, state hookTurn) {
 	_ = os.Rename(f.Name(), path)
 }
 
-func hookMarkTurn(a *app, e hookEvent) {
+func hookMarkTurn(a *app, e hookEvent, mode string) {
 	if e.Session == "" || e.StopActive {
 		return
 	}
 	state, err := hookSnapshot(a.store.Root)
-	if err == nil {
-		hookSaveTurn(hookTurnPath(a, e), state)
+	if err != nil {
+		// A project outside a git repository has no turns to compare; that is
+		// its normal state, not a hook failure.
+		if _, gitErr := hookGit(a.store.Root, "rev-parse", "--git-dir"); gitErr == nil {
+			hookFail(a, e, mode, "turn snapshot", err)
+		}
+		return
 	}
+	hookSaveTurn(hookTurnPath(a, e), state)
 }
 
 func hookFinish(a *app, e hookEvent) {
@@ -155,14 +164,20 @@ func hookFinish(a *app, e hookEvent) {
 	path := hookTurnPath(a, e)
 	b, err := os.ReadFile(path)
 	if err != nil {
+		// No snapshot means no turn was marked, which is not a failure.
+		if !errors.Is(err, fs.ErrNotExist) {
+			hookFail(a, e, "finish", "turn state", err)
+		}
 		return
 	}
 	var before hookTurn
-	if json.Unmarshal(b, &before) != nil {
+	if err := json.Unmarshal(b, &before); err != nil {
+		hookFail(a, e, "finish", "turn state", err)
 		return
 	}
 	after, err := hookSnapshot(a.store.Root)
 	if err != nil {
+		hookFail(a, e, "finish", "turn snapshot", err)
 		return
 	}
 	changed := map[string]bool{}
@@ -179,6 +194,7 @@ func hookFinish(a *app, e hookEvent) {
 	if before.Head != "" && after.Head != "" && before.Head != after.Head {
 		delta, err := hookGit(a.store.Root, "diff", "--relative", "--name-only", "--no-renames", "-z", before.Head, after.Head)
 		if err != nil {
+			hookFail(a, e, "finish", "commit diff", err)
 			return
 		}
 		for _, p := range strings.Split(delta, "\x00") {
@@ -192,6 +208,7 @@ func hookFinish(a *app, e hookEvent) {
 		if baseline, ok := before.Dirty[p]; ok {
 			current, err := hookFingerprint(filepath.Join(a.store.Root, p))
 			if err != nil {
+				hookFail(a, e, "finish", "turn snapshot", err)
 				return
 			}
 			if current == baseline {
@@ -213,6 +230,7 @@ func hookFinish(a *app, e hookEvent) {
 	}
 	entries, _, err := a.kstore.Load()
 	if err != nil {
+		hookFail(a, e, "finish", "knowledge", err)
 		return
 	}
 	tree := &domain.Tree{Knowledge: map[string]*domain.Entry{}}
@@ -247,7 +265,7 @@ func hookFinish(a *app, e hookEvent) {
 	if len(decisions) > 0 {
 		message += " Decisions scoped to these files: " + strings.Join(decisions, ", ") + ". Superseding one needs prep decide --supersedes <id>."
 	}
-	hookRecord(a, e, "finish", "asked", "", fmt.Sprintf("%d scoped decisions", len(decisions)))
+	hookRecordChars(a, e, "finish", "asked", "", fmt.Sprintf("%d scoped decisions", len(decisions)), utf8.RuneCountInString(message))
 	if a.actor == "claude-code" {
 		hookContext(a, "Stop", message)
 	} else {

@@ -226,18 +226,24 @@ func cmdActivity(a *app, args []string) error {
 	fs := flag.NewFlagSet("activity", flag.ContinueOnError)
 	max := fs.Int("max", 20, "number of newest events")
 	actor := fs.String("actor", "", "only this actor's events")
+	all := fs.Bool("all", false, "include the archived streams")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) > 0 {
-		return usageErr("usage: prep activity [--max N] [--actor a] | add")
+		return usageErr("usage: prep activity [--max N] [--actor a] [--all] | add")
 	}
 	if _, err := a.load(); err != nil {
 		return err
 	}
 	dir := a.prepDir()
-	events, err := activity.Read(dir, 0)
+	var events []activity.Event
+	if *all {
+		events, err = activity.ReadAll(dir)
+	} else {
+		events, err = activity.Read(dir, 0)
+	}
 	if err != nil {
 		return err
 	}
@@ -265,8 +271,12 @@ func cmdActivity(a *app, args []string) error {
 		a.printf("no activity recorded yet\n")
 		return nil
 	}
+	stamp := "15:04:05"
+	if *all {
+		stamp = "2006-01-02 15:04:05" // archives span days
+	}
 	for _, e := range events {
-		line := fmt.Sprintf("%s  %-22s %-8s", e.At.Local().Format("15:04:05"), e.Actor, e.Kind)
+		line := fmt.Sprintf("%s  %-22s %-8s", e.At.Local().Format(stamp), e.Actor, e.Kind)
 		if e.Issue != "" {
 			line += " " + short(e.Issue)
 		}
