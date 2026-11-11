@@ -1,8 +1,8 @@
-- [ ] --project-wide with --scope is refused; prep finding is unchanged
-- [ ] Existing unlinked, unscoped decisions load, list and pass prep check as before
-- [ ] prep guide lists decisions linked to the issue's ancestors, marked with their source, in text and --json
-- [ ] rules.md, the skill (synced), prep help and README describe the rule
-- [ ] An eval case for a user-stated planning decision fails without the change; it is run live only with the user's OK
-- [ ] prep decide with no issue, no --scope and no --project-wide fails with an error naming the three choices, and names the focused or single in-progress issue with the command to run when there is one; each of the three choices succeeds
-- [ ] --project-wide stores the scope **, and prep prime lists current project-wide decisions by title and ID, newest first, at most ten, with the count of the rest
-- [ ] The Stop question tells the agent to link the decision to the issue or give the narrowest scope, and lists no globs
+- [x] --project-wide with --scope is refused; prep finding is unchanged
+- [x] Existing unlinked, unscoped decisions load, list and pass prep check as before
+- [x] prep guide lists decisions linked to the issue's ancestors, marked with their source, in text and --json
+- [x] rules.md, the skill (synced), prep help and README describe the rule
+- [x] An eval case for a user-stated planning decision fails without the change; it is run live only with the user's OK
+- [x] prep decide with no issue, no --scope and no --project-wide fails with an error naming the three choices, and names the focused or single in-progress issue with the command to run when there is one; each of the three choices succeeds
+- [x] --project-wide stores the scope **, and prep prime lists current project-wide decisions by title and ID, newest first, at most ten, with the count of the rest
+- [x] The Stop question tells the agent to link the decision to the issue or give the narrowest scope, and lists no globs

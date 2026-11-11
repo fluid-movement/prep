@@ -111,7 +111,7 @@ func init() {
 		{"new", true, "new --title T --kind K     create an issue [--parent id] [--depends-on id]... [--tag t]... [--priority p] [--body text | --body-file path|-]", cmdNew},
 		{"edit", true, "edit <id>                  change [--title T] [--kind K] [--parent id|''] [--depends-on id|'']... [--tag t|'']... [--priority p] [--body text | --body-file path|-]", cmdEdit},
 		{"context", true, "context <id>               replace the implementation context: --body text | --body-file path|-", recordCmd(domain.OpContext)},
-		{"decide", true, "decide [<id>] --title T --description D  write a decision record [--supersedes <record>] [--scope <glob>] [--outcome]", knowledgeRecordCmd("decision")},
+		{"decide", true, "decide [<id>] --title T --description D  requires an issue, --scope <glob> or --project-wide; [--supersedes <record>] [--outcome]", knowledgeRecordCmd("decision")},
 		{"criterion", true, "criterion <id>             acceptance criteria: --add text, --check n, --uncheck n, --remove n (repeatable)", recordCmd(domain.OpCriterion)},
 		{"dod", true, "dod --add|--remove <item>  edit the project Definition of Done guidance", cmdDoD},
 		{"finding", true, "finding [<id>] --title T --description D  write a finding record [--scope <glob>]", knowledgeRecordCmd("finding")},
