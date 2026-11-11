@@ -3,3 +3,5 @@
 - 2026-11-11T08:22:30Z edited by cli/prep-v0.3.0-3-gb07f9b4: requirement
 
 - 2026-11-11T13:54:57Z claude-code: Implemented, ready for check: before-tool hook names up to five scoped decisions per edit (once per session/agent), Stop question stops listing them, with tests, activity verb, README, decision, eval case. Remaining for user: criterion 5 (real Claude Code session; Codex delivery unconfirmed, README says Claude Code only) and criterion 8 live eval run (needs OK).
+
+- 2026-11-11T13:55:53Z claude-code: Check passed for criteria 1-4, 6, 7, 9-11 (go test ./..., prep check, prep fmt --check all clean). Open for the user: 5 (real Claude Code session) and 8 (live eval; case eval/cases/knowledge-read/scoped-decision-at-edit.yaml with fixture cart-discount-floor exists and is sound). Not completed.
