@@ -54,7 +54,7 @@ func TestHookOutcomesAreRecorded(t *testing.T) {
 		{"prompt", "skipped", "", ""},
 		{"before-tool", "denied read", activity.AreaKnowledge, filepath.Join(h.dir, mdstore.Dir, "knowledge", "overview.md")},
 		{"before-tool", "denied write", activity.AreaIssue, filepath.Join(mdstore.Dir, "issues", id, "issue.md")},
-		{"finish", "asked", "", "0 scoped decisions"},
+		{"finish", "asked", "", ""},
 	}
 	if len(got) != len(wants) {
 		t.Fatalf("hook events: %+v", got)

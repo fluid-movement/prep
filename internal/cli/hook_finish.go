@@ -17,7 +17,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/mdstore"
 )
 
@@ -228,44 +227,9 @@ func hookFinish(a *app, e hookEvent) {
 		hookSaveTurn(path, after)
 		return
 	}
-	entries, _, err := a.kstore.Load()
-	if err != nil {
-		hookFail(a, e, "finish", "knowledge", err)
-		return
-	}
-	tree := &domain.Tree{Knowledge: map[string]*domain.Entry{}}
-	for _, entry := range entries {
-		tree.Knowledge[entry.Path] = entry
-	}
-	tree.DeriveSuperseded()
-	var decisions []string
-	for _, entry := range entries {
-		if entry.Type != "decision" || entry.Superseded {
-			continue
-		}
-		matched := false
-		for _, scope := range entry.Scope {
-			for _, p := range code {
-				if domain.ScopeMatch(scope, p) {
-					matched = true
-					break
-				}
-			}
-		}
-		if matched {
-			decisions = append(decisions, fmt.Sprintf("%s (%s)", entry.Title, entry.ID))
-		}
-	}
-	sort.Strings(decisions)
-	if len(decisions) > 5 {
-		decisions = decisions[:5]
-	}
 	hookSaveTurn(path, after)
 	message := "Before finishing, did this turn make or receive a decision (a choice between options, with a reason, including one the user stated) that later sessions need? If so, record it with prep decide [<issue>] --title <title> --description <description> --body-file -; otherwise, say in one line that no decision needs recording. This check grants no additional permission: preserve the original request's scope and explicit no-tracking/no-record-write restrictions. If records cannot be changed within that scope, report the needed follow-up without writing them. Changed files: " + hookFinishList(code) + "."
-	if len(decisions) > 0 {
-		message += " Decisions scoped to these files: " + strings.Join(decisions, ", ") + ". Superseding one needs prep decide --supersedes <id>."
-	}
-	hookRecordChars(a, e, "finish", "asked", "", fmt.Sprintf("%d scoped decisions", len(decisions)), utf8.RuneCountInString(message))
+	hookRecordChars(a, e, "finish", "asked", "", "", utf8.RuneCountInString(message))
 	if a.actor == "claude-code" {
 		hookContext(a, "Stop", message)
 	} else {

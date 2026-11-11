@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -102,52 +101,33 @@ func TestHookFinishWithoutBaselineFailsOpen(t *testing.T) {
 	}
 }
 
-func TestHookFinishScopedDecisions(t *testing.T) {
+// The before-tool hook names scoped decisions at the first edit, so the Stop
+// question does not repeat them.
+func TestHookFinishDoesNotListScopedDecisions(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	h := newHarness(t)
-	create := func(command, title, scope string, extra ...string) string {
-		t.Helper()
-		var out struct{ Entry string }
-		args := []string{command, "--title", title, "--description", "Test record", "--scope", scope}
-		h.jsonOf(&out, append(args, extra...)...)
-		return strings.TrimSuffix(filepath.Base(out.Entry), ".md")
-	}
-	old := create("decide", "Old choice", "*.go")
-	ids := map[string]string{}
-	for i := 0; i < 6; i++ {
-		title := fmt.Sprintf("Choice %d", i)
-		var extra []string
-		if i == 0 {
-			extra = []string{"--supersedes", old}
-		}
-		ids[title] = create("decide", title, "*.go", extra...)
-	}
-	create("decide", "Unrelated", "docs/**")
-	create("finding", "A finding", "*.go")
-	h.entry("/component.md", "component", "A component", "Descriptive", "Body", "*.go")
+	var created struct{ Entry string }
+	h.jsonOf(&created, "decide", "--title", "Go choice", "--description", "Test record", "--scope", "*.go")
+	id := strings.TrimSuffix(filepath.Base(created.Entry), ".md")
 	cmd := exec.Command("git", "init", "-q")
 	cmd.Dir = h.dir
 	if b, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git: %v %s", err, b)
 	}
-	e := hookEvent{Cwd: h.dir, Session: "scoped-decisions"}
-	runHook(t, "prompt", "codex", e)
-	if err := os.WriteFile(filepath.Join(h.dir, "main.go"), []byte("new code"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	out := runHook(t, "finish", "codex", e)
-	for i := 0; i < 5; i++ {
-		title := fmt.Sprintf("Choice %d", i)
-		if !strings.Contains(out, title+" ("+ids[title]+")") {
-			t.Fatalf("missing decision %s: %s", title, out)
+	for _, harness := range []string{"claude-code", "codex"} {
+		e := hookEvent{Cwd: h.dir, Session: "scoped-decisions"}
+		runHook(t, "prompt", harness, e)
+		if err := os.WriteFile(filepath.Join(h.dir, "main.go"), []byte("new code "+harness), 0o644); err != nil {
+			t.Fatal(err)
 		}
-	}
-	for _, unwanted := range []string{"Old choice", old, "Choice 5", "Unrelated", "A finding", "A component"} {
-		if strings.Contains(out, unwanted) {
-			t.Fatalf("unexpected decision %q: %s", unwanted, out)
+		out := runHook(t, "finish", harness, e)
+		if !strings.Contains(out, "Changed files: main.go.") {
+			t.Fatalf("%s: no Stop question: %s", harness, out)
 		}
-	}
-	if !strings.Contains(out, "prep decide --supersedes") {
-		t.Fatalf("missing supersede guidance: %s", out)
+		for _, unwanted := range []string{"Go choice", id, "Decisions scoped", "--supersedes"} {
+			if strings.Contains(out, unwanted) {
+				t.Fatalf("%s: Stop question lists %q: %s", harness, unwanted, out)
+			}
+		}
 	}
 }

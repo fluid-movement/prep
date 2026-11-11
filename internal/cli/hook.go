@@ -104,6 +104,7 @@ func cmdHook(a *app, args []string) error {
 		// The briefing is restored in full here (for example after compaction),
 		// so the next prompt must send its text again.
 		hookForgetSent(a, e)
+		hookForgetShown(a, e)
 		message := hookCapture(a, func(c *app) error { return cmdPrime(c, []string{"--hook", "--max", "5", "--plugin", *plugin}) })
 		if message == "" {
 			return nil
@@ -148,6 +149,8 @@ func cmdHook(a *app, args []string) error {
 				verb = "denied write"
 			}
 			hookRecordChars(a, e, mode, verb, area, hookDeniedTarget(e), utf8.RuneCountInString(reason))
+		} else {
+			hookScopedContext(a, e, name)
 		}
 	case "after-tool":
 		hookActivity(a, e)
