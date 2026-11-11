@@ -1,1 +1,9 @@
 - 2026-11-11T08:23:51Z edited by cli/prep-v0.3.0-3-gb07f9b4: title, requirement
+
+- 2026-11-11T14:38:35Z cli/prep-v0.3.0-3-gb07f9b4: Blocked: research handback requirements conflict with existing gates and brief format. ReportSectionsFor(KindResearch, false, ...) omits Criteria; OpReady requires criteria, while OpComplete rejects unchecked criteria for research too. A normal research report therefore cannot complete without inventing criterion verdicts or changing the gates/report guidance, which this issue says to preserve. Please clarify how research criteria become checked. Partial parser, command, documentation and parser tests are in the worktree; checks have not run. Stopping without completing or checking criteria.
+
+- 2026-11-11T14:55:19Z cli/prep-dev: Implemented, ready for check: Finished handback parsing and atomic record planning, aligned implementer and checker guidance including research, and added parser and end-to-end coverage with all required checks passing.
+
+- 2026-11-11T19:14:59Z cli/prep-v0.3.0-3-gb07f9b4: Check failed: criterion 3 requires a research report to write findings and complete the issue, but handback.go only completes with --check and the implementer report leaves research in progress (decision 01M75H9X76QTXSF3P8CXXXB9AS conflicts with the unchanged requirement). Definition of Done also requires updated knowledge: decision 01M75C2YSMW2Y8P3Z5YZBVZKAT still says empty Criteria may be omitted, whereas checker reports now require it even with no criteria.
+
+- 2026-11-11T19:25:42Z cli/prep-v0.3.0-3-gb07f9b4: Implemented, ready for check: Restored research report findings, criterion verdicts and gated completion with unmet/problem coverage, aligned brief/help/README, superseded stale decisions, and passed go test ./..., prep check and prep fmt --check without changing lifecycle gates.

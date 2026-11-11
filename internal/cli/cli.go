@@ -116,6 +116,7 @@ func init() {
 		{"dod", true, "dod --add|--remove <item>  edit the project Definition of Done guidance", cmdDoD},
 		{"finding", true, "finding [<id>] --title T --description D  write a finding record [--scope <glob>]", knowledgeRecordCmd("finding")},
 		{"log", true, "log <id> <text>            append a line to the work log", recordCmd(domain.OpLog)},
+		{"handback", true, "handback <id> [--check] [--report file|-] [--commit hash]  write a brief's report into linked knowledge and logs; checker and research reports require Criteria verdicts, check met criteria and complete when all are met and Problems is empty, otherwise log failures and leave in progress; research reports write findings without --check; default .prep/local/handoff/<id>/report.md (check-report.md with --check); successful reports move to *.done.md", cmdHandback},
 		{"focus", true, "focus <id> | --clear        set or clear the issue you work on, for prep tui's Agent view (local; writes no records)", cmdFocus},
 		{"define", true, "define <id> [--trivial]    write a requirement baseline (open questions must be empty); --trivial re-baselines a stale issue's trivial change, enrichment stays valid", opCmd(domain.OpDefine)},
 		{"ready", true, "ready <id> [--note]        sign off enrichment against the newest baseline", opCmd(domain.OpReady)},

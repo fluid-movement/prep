@@ -356,6 +356,7 @@ func implementerRules(kind Kind) []string {
 		return []string{
 			"Answer exactly the question asked, within the scope the context gives, nothing beyond.",
 			"State each finding with how you know it: the file, command, measurement or source. Say what you could not establish. The report must hold your findings.",
+			"Report a met or not met verdict for every criterion with evidence in a Criteria section; keep the section even if there are no criteria. The findings and verdicts complete the research when all criteria are met and there are no problems; otherwise it stays in progress.",
 			"Change no code unless the context asks for it. Never run git commit or git push.",
 			"If the question cannot be answered as asked, or the context conflicts with what you find, stop and report it as a problem.",
 			"Do not read or change anything in the `.prep` directory, except to write your report to the file named below.",
@@ -367,7 +368,7 @@ func implementerRules(kind Kind) []string {
 		"Never run git commit or git push; leave the change in the working tree.",
 		"If the context conflicts with the code or tests, or a criterion cannot be met as written, stop and report the conflict as a problem. Do not bend tests or the requirement to fit.",
 		"Do not read or change anything in the `.prep` directory, except to write your report to the file named below.",
-		"State per criterion whether it is met, with the evidence. Report the decisions you made while implementing, with the reason.",
+		"Report what you changed and the checks you ran, and the decisions you made while implementing, with the reason. Do not report criterion verdicts; those belong to the checker.",
 	}
 }
 
@@ -376,7 +377,7 @@ func implementerRules(kind Kind) []string {
 func checkerRules(kind Kind) []string {
 	verdict := "State per criterion whether it is met, with the evidence you saw yourself. A criterion you could not verify is not met."
 	if kind == KindResearch {
-		verdict = "Say whether the findings answer the question and rest on evidence you could confirm; state per criterion, where there are any, whether it is met."
+		verdict = "Say whether the findings answer the question and rest on evidence you could confirm. " + verdict
 	}
 	return []string{
 		"You are the checker, not the implementer: verify each criterion and the Definition of Done yourself, not from the implementer's account.",

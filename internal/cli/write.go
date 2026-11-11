@@ -158,7 +158,13 @@ func (a *app) applyAll(t *domain.Tree, cs []*domain.Change) ([]string, error) {
 		if err := t.CheckWrite(c); err != nil {
 			return files, err
 		}
-		fs, err := a.store.Apply(c)
+		var fs []string
+		var err error
+		if c.Knowledge != nil {
+			fs, err = a.kstore.Apply(c.Knowledge)
+		} else {
+			fs, err = a.store.Apply(c)
+		}
 		if err != nil {
 			return files, err
 		}

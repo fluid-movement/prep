@@ -78,7 +78,7 @@ func TestBriefImplementer(t *testing.T) {
 			"- Exports stream: No export buffers the whole table", "- Export errors wrap: Errors carry the table name", "- Wide rule: Applies to all of internal",
 			"## Definition of Done", "- the tests pass",
 			"## Rules", "Implement exactly", "Never run git commit or git push", "Do not bend tests", "`.prep` directory",
-			"## Report", "## Summary", "## Criteria", "## Decisions", "## Findings", "## Problems",
+			"## Report", "## Summary", "## Decisions", "## Findings", "## Problems",
 			"Write the report to this file: " + report,
 		}
 		at := 0
@@ -92,7 +92,7 @@ func TestBriefImplementer(t *testing.T) {
 		if !strings.HasSuffix(out, "Then answer with one line saying the report is written. Do not repeat the report in your answer.\n") {
 			t.Fatalf("%s: brief does not end with the one-line answer:\n%s", state, out)
 		}
-		for _, not := range []string{"Comma delimiter", "TUI colors", "prep check passes", "PARENT-BODY", "SCOPED-BODY", "Open questions", "Last failed check", f.child + " "} {
+		for _, not := range []string{"## Criteria", "Comma delimiter", "TUI colors", "prep check passes", "PARENT-BODY", "SCOPED-BODY", "Open questions", "Last failed check", f.child + " "} {
 			if strings.Contains(out, not) {
 				t.Fatalf("%s: brief contains %q:\n%s", state, not, out)
 			}
@@ -137,10 +137,37 @@ func TestBriefResearchAsksForFindings(t *testing.T) {
 			t.Fatalf("research brief lacks %q:\n%s", want, out)
 		}
 	}
-	if strings.Contains(out, "## Criteria") {
-		t.Fatalf("research brief asks for a criteria verdict:\n%s", out)
+	if !strings.Contains(out, "## Criteria") || !strings.Contains(out, "verdict for every criterion") {
+		t.Fatalf("research brief lacks criteria verdict guidance:\n%s", out)
 	}
 	assertPrepFree(t, out, mdstore.Open(h.dir).HandoffPath(r, mdstore.HandoffReport))
+}
+
+func TestBriefResearchAlwaysAsksForCriteria(t *testing.T) {
+	for _, hasCriteria := range []bool{false, true} {
+		t.Run(map[bool]string{false: "no criteria", true: "with criteria"}[hasCriteria], func(t *testing.T) {
+			h := newHarness(t)
+			id := h.newIssue("--title", "Research", "--kind", "research", "--body", "Investigate quoting.")
+			h.ok("define", id)
+			h.enrich(id)
+			h.ok("ready", id)
+			if !hasCriteria {
+				// Exercise an existing ready record without criteria; new
+				// ready transitions require them, but briefs can read it.
+				h.write(id, "acceptance.md", "")
+			}
+			for _, check := range []bool{false, true} {
+				args := []string{"brief", id}
+				if check {
+					args = append(args, "--check")
+				}
+				out := h.ok(args...)
+				if !strings.Contains(out, "\n## Criteria\n") || !strings.Contains(out, "except ## Summary and ## Criteria") {
+					t.Fatalf("research report missing mandatory Criteria (check=%v): %s", check, out)
+				}
+			}
+		})
+	}
 }
 
 func TestBriefFailedCheck(t *testing.T) {
@@ -319,7 +346,7 @@ func TestBriefReportFormatIsShared(t *testing.T) {
 				t.Fatalf("section %q is not from the shared definition", s)
 			}
 		}
-		if !strings.Contains(b.ReportFormat, domain.ReportMet+domain.ReportVerdictSep) || !strings.Contains(b.ReportFormat, domain.ReportNotMet+domain.ReportVerdictSep) {
+		if check && (!strings.Contains(b.ReportFormat, domain.ReportMet+domain.ReportVerdictSep) || !strings.Contains(b.ReportFormat, domain.ReportNotMet+domain.ReportVerdictSep)) {
 			t.Fatalf("criteria line format missing:\n%s", b.ReportFormat)
 		}
 	}
