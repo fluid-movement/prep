@@ -35,6 +35,13 @@ func (m *Model) openProjects() tea.Cmd {
 	if err != nil {
 		return m.flash("projects: " + err.Error())
 	}
+	visible := ps[:0]
+	for _, p := range ps {
+		if !p.Worktree || p.Root == m.opts.Root {
+			visible = append(visible, p)
+		}
+	}
+	ps = visible
 	m.modal = &modal{kind: modalProjects, inputs: []textinput.Model{m.newInput("type to filter", "")}, projects: ps}
 	m.modal.picks = m.projectCandidates("")
 	for k, root := range m.modal.picks {

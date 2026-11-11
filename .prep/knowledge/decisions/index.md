@@ -327,3 +327,6 @@
 * [Research handback carries criteria and completes when met](/decisions/01M760ZN0CTXGPD1VE5KF9TR73.md) - Research reports without --check write findings, apply criterion verdicts and complete only when all are met and Problems is empty.
 * [Hand-off report format: role-specific required criteria and research completion](/decisions/01M760ZYZFXKNEC5B7JM6FDEAA.md) - Summary is required; checker and research reports also require Criteria, with every criterion verdict, even when the section is empty.
 * [Restrict title-stack escapes to terminal files](/decisions/01M763KYT9T8ZM9JSYDB5MZF75.md) - Only push/pop the xterm title stack when the output is an `*os.File` attached to a terminal.
+* [Detect linked worktrees with git metadata](/decisions/01M763KYFVYRK4BV6DH363S0AV.md) - Compared `git rev-parse --git-dir` and `--git-common-dir`, resolving relative paths against the checkout.
+* [Derive worktree state without storing it](/decisions/01M763KYFX2SJCS6N1FN73TDV1.md) - Added `Project.Worktree` as a JSON-ignored derived field.
+* [Filter only when opening the TUI switcher](/decisions/01M763KYFZCXZZEA896T4H7845.md) - Filtered the project list used by both switcher candidates and rows, retaining the current root even when it is a linked worktree.

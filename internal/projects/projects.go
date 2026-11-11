@@ -41,6 +41,8 @@ type Project struct {
 	// Collision marks a name that projects with different IDs share; it is
 	// derived when listing, never stored.
 	Collision bool `json:"collision,omitempty"`
+	// Worktree is derived from git and never stored in the registry.
+	Worktree bool `json:"-"`
 }
 
 // key identifies the project a root belongs to: clones share their ID.
@@ -219,7 +221,7 @@ func List() ([]Project, error) {
 // project.md, remote from git. It never fails; what it cannot read stays
 // empty, and the name falls back to DefaultName.
 func Describe(root string) Project {
-	p := Project{Root: root, Remote: NormalizeRemote(gitx.Remote(root))}
+	p := Project{Root: root, Remote: NormalizeRemote(gitx.Remote(root)), Worktree: gitx.IsLinkedWorktree(root)}
 	if pr, err := mdstore.ReadProject(root); err == nil {
 		p.ID, p.Name = pr.ID, pr.Name
 	}
