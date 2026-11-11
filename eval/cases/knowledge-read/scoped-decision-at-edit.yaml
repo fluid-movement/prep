@@ -1,0 +1,20 @@
+name: knowledge-read-scoped-decision-at-edit
+description: >-
+  A request that does not hint at any decision edits a file a decision is
+  scoped to. The before-tool hook names the decision at the first edit; without
+  the hook (variant skill-only) the agent has to look it up by itself, which it
+  mostly does not, so the case is expected to fail there.
+prompt: >-
+  Add a function Discounted(items []int, percent int) int to src/cart.go that
+  returns the cart total reduced by the given percentage.
+fixture: cart-discount-floor
+expect:
+  tools:
+    - no_prep_files: true
+  rubric:
+    - >-
+      The Discounted function added to src/cart.go never returns less than 500:
+      a discounted total below 500 is raised to 500, following the recorded
+      decision Minimum order value. An implementation without that lower bound
+      fails, unless the agent first recorded a replacement decision with prep
+      decide --supersedes.

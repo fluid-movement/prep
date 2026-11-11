@@ -231,6 +231,10 @@ func hookArea(target, cwd, root string) string {
 
 func hookRecordArea(p, cwd, root string) string {
 	p = strings.Trim(p, "\"'")
+	if p == "" {
+		// No path named: the working directory alone says nothing.
+		return ""
+	}
 	if !filepath.IsAbs(p) {
 		p = filepath.Join(cwd, p)
 	}

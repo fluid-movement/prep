@@ -1,0 +1,33 @@
+name: implement-finish-asks-after-three-files
+description: A turn that changes three files reaches the Stop question, and the choice the user stated in passing is recorded as a decision.
+prompt: >-
+  Implement the ready issue Round money to cents. Round half up rather than
+  half to even: the invoices have to match what the accounting export prints,
+  and that export rounds half up.
+spec:
+  issues:
+    - alias: round
+      title: Round money to cents
+      state: ready
+      body: Order totals, tax and shipping are returned unrounded. Each of them must be rounded to cents.
+      context: Update totals.py, tax.py and shipping.py; each has one function that returns an unrounded float.
+  repo:
+    files:
+      totals.py: |
+        def total(rows):
+            return sum(row["amount"] for row in rows)
+      tax.py: |
+        def tax(amount, rate):
+            return amount * rate
+      shipping.py: |
+        def shipping(weight_kg, rate_per_kg):
+            return weight_kg * rate_per_kg
+expect:
+  tools:
+    - ran: decide
+    - no_prep_files: true
+  outcome:
+    - repo: {changed: ['totals.py', 'tax.py', 'shipping.py']}
+  rubric:
+    - totals.py, tax.py and shipping.py each round their result to cents, half up.
+    - A decision record captures the choice of rounding half up over half to even and the reason that invoices must match the accounting export.

@@ -35,7 +35,7 @@ func TestHookBeforeToolNamesScopedDecisions(t *testing.T) {
 	for _, harness := range []string{"claude-code", "codex"} {
 		session := "s-" + harness
 		out := runHook(t, "before-tool", harness, hookEdit(h.dir, session, "Edit", filepath.Join(h.dir, "src", "cart.go")))
-		if !strings.Contains(out, "Decisions scoped to src/cart.go: Cart choice ("+cart+").") || !strings.Contains(out, `"hookEventName": "PreToolUse"`) || !strings.Contains(out, `"additionalContext"`) {
+		if !strings.Contains(out, `Decisions scoped to src/cart.go:\n- Cart choice (`+cart+`): Test record\nRead one`) || !strings.Contains(out, `"hookEventName": "PreToolUse"`) || !strings.Contains(out, `"additionalContext"`) {
 			t.Fatalf("%s: decision not named: %s", harness, out)
 		}
 		if !strings.Contains(out, "prep knowledge show <id>") || !strings.Contains(out, "prep decide --supersedes <id>") {
@@ -69,8 +69,17 @@ func TestHookBeforeToolNamesScopedDecisions(t *testing.T) {
 
 	// apply_patch names its files in the patch.
 	patch := hookEvent{Cwd: h.dir, Session: "s-patch", Tool: "apply_patch", Input: map[string]any{"command": "*** Begin Patch\n*** Update File: src/cart.go\n@@\n-a\n+b\n*** End Patch\n"}}
-	if out := runHook(t, "before-tool", "codex", patch); !strings.Contains(out, "Decisions scoped to src/cart.go: Cart choice ("+cart+")") {
+	if out := runHook(t, "before-tool", "codex", patch); !strings.Contains(out, `Decisions scoped to src/cart.go:\n- Cart choice (`+cart+`)`) {
 		t.Fatalf("apply_patch: %s", out)
+	}
+
+	// A long description is cut at 150 characters.
+	long := strings.Repeat("word ", 60)
+	var created struct{ Entry string }
+	h.jsonOf(&created, "decide", "--title", "Pay choice", "--description", long, "--scope", "src/pay.go")
+	out := runHook(t, "before-tool", "claude-code", hookEdit(h.dir, "s-long", "Edit", "src/pay.go"))
+	if want := "): " + strings.TrimSpace(long[:149]) + `…\nRead one`; !strings.Contains(out, want) {
+		t.Fatalf("description not cut: %s", out)
 	}
 
 	// Nothing for other tools, unmatched paths and paths outside the project.
@@ -78,7 +87,7 @@ func TestHookBeforeToolNamesScopedDecisions(t *testing.T) {
 	for name, e := range map[string]hookEvent{
 		"read":      hookEdit(h.dir, "s-none", "Read", "src/cart.go"),
 		"bash":      {Cwd: h.dir, Session: "s-none", Tool: "Bash", Input: map[string]any{"command": "gofmt -w src/cart.go"}},
-		"unmatched": hookEdit(h.dir, "s-none", "Edit", "src/pay.go"),
+		"unmatched": hookEdit(h.dir, "s-none", "Edit", "src/tax.go"),
 		"outside":   hookEdit(h.dir, "s-none", "Edit", outside),
 		"dotdot":    hookEdit(h.dir, "s-none", "Edit", "../src/cart.go"),
 	} {
@@ -87,7 +96,7 @@ func TestHookBeforeToolNamesScopedDecisions(t *testing.T) {
 		}
 	}
 	// An edit under .prep is denied as before and names no decisions.
-	out := runHook(t, "before-tool", "claude-code", hookEdit(h.dir, "s-none", "Write", filepath.Join(mdstore.Dir, "knowledge", "decisions", cart+".md")))
+	out = runHook(t, "before-tool", "claude-code", hookEdit(h.dir, "s-none", "Write", filepath.Join(mdstore.Dir, "knowledge", "decisions", cart+".md")))
 	if !strings.Contains(out, `"permissionDecision": "deny"`) || strings.Contains(out, "Decisions scoped") {
 		t.Fatalf(".prep edit: %s", out)
 	}
@@ -99,7 +108,7 @@ func TestHookBeforeToolNamesScopedDecisions(t *testing.T) {
 			context = append(context, e)
 		}
 	}
-	if len(context) != 7 {
+	if len(context) != 8 {
 		t.Fatalf("context events: %+v", context)
 	}
 	if e := context[0]; e.Op != "before-tool" || e.Area != activity.AreaCode || e.Target != "src/cart.go" || e.Chars == 0 || e.Session != "s-claude-code" || e.Actor != "claude-code" || e.AgentID != "" {
@@ -140,17 +149,18 @@ func TestHookBeforeToolNamesFiveMostSpecificThenNewest(t *testing.T) {
 			t.Fatalf("more than five named (%s): %s", id, out)
 		}
 	}
-	if !strings.Contains(out, "; 3 more match (prep knowledge list --type decision --scope src/cart.go).") {
+	if !strings.Contains(out, `\n- 2 more match: prep knowledge list --type decision --scope src/cart.go\n`) {
 		t.Fatalf("remaining count missing: %s", out)
 	}
-	// The rest follow at the next edit, then nothing.
+	// The rest follow at the next edit, then nothing. A project-wide decision
+	// (scope **) is never named here.
 	out = runHook(t, "before-tool", "claude-code", e)
-	for _, id := range append(same[4:], wide) {
+	for _, id := range same[4:] {
 		if !strings.Contains(out, id) {
 			t.Fatalf("remaining decision %s not named: %s", id, out)
 		}
 	}
-	if strings.Contains(out, exact) || strings.Contains(out, "more match") {
+	if strings.Contains(out, exact) || strings.Contains(out, wide) || strings.Contains(out, "more match") {
 		t.Fatalf("second call: %s", out)
 	}
 	if out := runHook(t, "before-tool", "claude-code", e); out != "" {

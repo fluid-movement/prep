@@ -79,7 +79,12 @@ func (t *Tree) ResolveRecord(ref string) (*Entry, error) {
 		return matches[0], nil
 	}
 	if len(matches) > 1 {
-		return nil, &Error{Code: ErrAmbiguous, Message: fmt.Sprintf("record %q is ambiguous", ref)}
+		sort.Slice(matches, func(i, j int) bool { return matches[i].Path < matches[j].Path })
+		var paths []string
+		for _, e := range matches {
+			paths = append(paths, e.Path)
+		}
+		return nil, &Error{Code: ErrAmbiguous, Message: fmt.Sprintf("record %q is ambiguous: %s", ref, strings.Join(paths, ", "))}
 	}
 	return nil, &Error{Code: ErrNotFound, Message: fmt.Sprintf("no knowledge record %q", ref)}
 }

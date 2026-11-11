@@ -1,0 +1,25 @@
+# A cart with one scoped decision whose rule cannot be guessed from the code
+# or from a request to add a discount: only the before-tool notice (or a
+# knowledge lookup the agent chooses to make) reveals it.
+name: shop
+repo:
+  files:
+    go.mod: "module shop\n\ngo 1.22\n"
+    src/cart.go: |
+      package shop
+
+      // CartTotal sums the line items of a cart, in cents.
+      func CartTotal(items []int) int {
+          total := 0
+          for _, item := range items { total += item }
+          return total
+      }
+knowledge:
+  - type: decision
+    title: Minimum order value
+    description: No price computed in src/cart.go may end up below 500 cents; a lower result is raised to 500.
+    body: >-
+      The payment provider charges a fixed fee per order, so orders under 500
+      cents lose money. Every function in src/cart.go that reduces a total
+      (discounts, vouchers, refunds in kind) returns at least 500.
+    scope: [src/cart.go]

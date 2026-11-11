@@ -17,6 +17,9 @@ import (
 // hookScopedMax is how many decisions one before-tool call names.
 const hookScopedMax = 5
 
+// hookScopedDescription is the length a decision's description is cut at.
+const hookScopedDescription = 150
+
 var hookPatchFiles = regexp.MustCompile(`(?m)^\*\*\* (?:Add|Update|Delete) File: (.+)$|^\*\*\* Move to: (.+)$`)
 
 // hookScopedContext names, before a file edit, the current decisions scoped
@@ -47,16 +50,19 @@ func hookScopedContext(a *app, e hookEvent, event string) {
 		more = len(fresh) - hookScopedMax
 		fresh = fresh[:hookScopedMax]
 	}
-	var names, ids []string
+	message := "Decisions scoped to " + hookFinishList(paths) + ":"
+	var ids []string
 	for _, d := range fresh {
-		names = append(names, fmt.Sprintf("%s (%s)", d.Title, d.ID))
+		message += fmt.Sprintf("\n- %s (%s)", d.Title, d.ID)
+		if description := hookCut(d.Description, hookScopedDescription); description != "" {
+			message += ": " + description
+		}
 		ids = append(ids, d.ID)
 	}
-	message := "Decisions scoped to " + hookFinishList(paths) + ": " + strings.Join(names, "; ")
 	if more > 0 {
-		message += fmt.Sprintf("; %d more match (prep knowledge list --type decision --scope %s)", more, paths[0])
+		message += fmt.Sprintf("\n- %d more match: prep knowledge list --type decision --scope %s", more, paths[0])
 	}
-	message = hookBound(message+". Read one with prep knowledge show <id> before changing what it covers; replacing one needs prep decide --supersedes <id>.", 2000)
+	message = hookBound(message+"\nRead one with prep knowledge show <id> before changing what it covers; replacing one needs prep decide --supersedes <id>.", 2000)
 	hookMarkShown(a, e, ids)
 	hookRecordChars(a, e, "before-tool", "context", activity.AreaCode, hookFinishList(paths), utf8.RuneCountInString(message))
 	hookContext(a, event, message)
@@ -124,6 +130,10 @@ func hookScopedDecisions(a *app, paths []string) ([]*domain.Entry, error) {
 		}
 		best := -1
 		for _, scope := range entry.Scope {
+			// Project-wide decisions are in the session briefing, not here.
+			if strings.TrimSpace(scope) == "**" {
+				continue
+			}
 			for _, p := range paths {
 				if n := hookScopeSpecificity(scope); n > best && domain.ScopeMatch(scope, p) {
 					best = n
@@ -147,10 +157,19 @@ func hookScopedDecisions(a *app, paths []string) ([]*domain.Entry, error) {
 }
 
 // hookScopeSpecificity is the number of literal characters in a scope
-// pattern: src/cart.go is more specific than src/*.go, and ** the least.
+// pattern: src/cart.go is more specific than src/*.go.
 func hookScopeSpecificity(scope string) int {
 	scope = strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(scope), "./"), "/")
 	return len(scope) - strings.Count(scope, "*") - strings.Count(scope, "?") - strings.Count(scope, "[") - strings.Count(scope, "]")
+}
+
+// hookCut shortens a text to one line of at most max characters.
+func hookCut(s string, max int) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if r := []rune(s); len(r) > max {
+		return strings.TrimSpace(string(r[:max-1])) + "…"
+	}
+	return s
 }
 
 // hookShownPath names the file listing the decisions this context has been
