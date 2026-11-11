@@ -31,6 +31,7 @@ function fakePrep(on: On, failing = false) {
   on('session.start', async (_$, e) => ({ cwd: e.cwd }))
   let session = 'sess-1'
   on('session.id', async () => ({ value: session }))
+  on('session.root', async () => ({ value: '/repo' }))
   on('session.usage', async () => ({ value: { context: { tokens: 50_000, window: 200_000 }, cost: { usd: 0.3 } } as never }))
   return { sent, env, calls: () => calls, setSession: (id: string) => { session = id } }
 }
@@ -82,5 +83,61 @@ describe('bridge', () => {
     await $.tool.call({ tool: 'Edit', tool_use_id: 't2', file_path: '/b.go', old_string: 'a', new_string: 'b' } as never)
     await settle()
     expect(prep.calls()).toBe(after)
+  })
+
+  test('request payloads distinguish main and subagents; turn totals are summaries', async ($, on) => {
+    const prep = fakePrep(on)
+    on('turn.step', async function* (_$, e) {
+      return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], usage: { input_tokens: 2, output_tokens: 3, model: 'model' } } as never
+    })
+    on('turn.complete', async () => ({ text: '' }))
+    on('session.end', async () => ({ sessionId: 'sess-1' }))
+    await $.session.start(START)
+    for await (const _ of $.turn.step({ turnId: 't', index: 0, model: 'model' } as never)) {}
+    for await (const _ of $.turn.step({ turnId: 't', index: 1, model: 'model', agentId: 'child' } as never)) {}
+    await $.turn.complete({ turnId: 't', answer: '' } as never)
+    await $.session.end({} as never)
+    const requests = prep.sent.filter(e => e.kind === 'request')
+    expect(requests.length).toBe(2)
+    expect(requests[0].agent_id).toBe(undefined)
+    expect(requests[1].agent_id).toBe('child')
+    expect(requests[1].turn_id).toBe('t')
+    expect(prep.sent.filter(e => e.kind === 'summary').length).toBe(1)
+  })
+
+  test('a failed send writes a durable gap independently and stops sending', async ($, on) => {
+    const prep = fakePrep(on, true)
+    const gaps: Record<string, unknown>[] = []
+    on('turn.start', async () => ({ turnId: 't' } as never))
+    on('fs.exists', async () => ({ value: true }))
+    on('fs.write', async (_$, e) => {
+      gaps.push(e as unknown as Record<string, unknown>)
+      return { value: undefined }
+    })
+    await $.session.start(START)
+    await settle()
+    expect(gaps.length).toBe(1)
+    expect(JSON.stringify(gaps[0])).toContain('bridge-disabled')
+    expect(JSON.stringify(gaps[0])).toContain('request-gap-sess-1.json')
+    const calls = prep.calls()
+    await $.turn.start({ turnId: 't' } as never)
+    await settle()
+    expect(prep.calls()).toBe(calls)
+  })
+
+  test('a request without usage is a gap rather than zero tokens', async ($, on) => {
+    const prep = fakePrep(on)
+    on('turn.step', async function* (_$, e) {
+      return { turnId: e.turnId, index: e.index, answer: '', toolUses: [] } as never
+    })
+    on('session.end', async () => ({ sessionId: 'sess-1' }))
+    await $.session.start(START)
+    for await (const _ of $.turn.step({ turnId: 't', index: 0, model: 'model', agentId: 'child' } as never)) {}
+    await $.session.end({} as never)
+    const gaps = prep.sent.filter(e => e.kind === 'gap')
+    expect(gaps.length).toBe(1)
+    expect(gaps[0].agent_id).toBe('child')
+    expect(gaps[0].tokens).toBe(undefined)
+    expect(prep.sent.filter(e => e.kind === 'request').length).toBe(0)
   })
 })

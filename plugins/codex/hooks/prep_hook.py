@@ -15,6 +15,7 @@ def main():
         "prompt": "prompt",
         "before-tool": "before-tool",
         "after-tool": "after-tool",
+        "post-model-request": "post-model-request",
     }
     mode = modes.get(sys.argv[1] if len(sys.argv) > 1 else "")
     if not mode:

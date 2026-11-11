@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "PostModelRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v prep >/dev/null 2>&1 && prep hook post-model-request --harness codex || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [

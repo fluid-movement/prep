@@ -23,10 +23,10 @@ type Usage struct {
 // reports context and cost without tokens, so only events with tokens
 // count as model requests.
 func (u *Usage) Add(e Event) {
-	if e.Kind != KindRequest {
+	if e.Kind != KindRequest && e.Kind != KindSummary {
 		return
 	}
-	if e.Tokens != nil {
+	if e.Kind == KindRequest && e.Tokens != nil {
 		u.Requests++
 		u.Tokens.Input += e.Tokens.Input
 		u.Tokens.Output += e.Tokens.Output
@@ -51,7 +51,7 @@ type Report struct {
 	Sessions int        `json:"sessions"`
 	Turns    int        `json:"turns"`
 	// Unattributed are events with no session: commands run outside a
-	// harness. They count under Commands and Handoff only.
+	// harness. Gap markers also count toward coverage, without attribution.
 	Unattributed int            `json:"events_without_session"`
 	Hooks        HookReport     `json:"hooks"`
 	Rules        RuleReport     `json:"rules"`
@@ -180,13 +180,26 @@ type FailureCount struct {
 // request events get no figure: nothing is estimated for them.
 type CostReport struct {
 	Usage
-	Sessions             int `json:"sessions"`
-	SessionsWithRequests int `json:"sessions_with_requests"`
+	Gaps                 int          `json:"gaps"`
+	Coverage             string       `json:"coverage"`
+	ByAgent              []AgentUsage `json:"by_agent"`
+	Sessions             int          `json:"sessions"`
+	SessionsWithRequests int          `json:"sessions_with_requests"`
 	// Subagents are the subagents seen in the sessions (events with an
 	// agent id), and how many of them have request events.
 	Subagents             int          `json:"subagents"`
 	SubagentsWithRequests int          `json:"subagents_with_requests"`
 	ByActor               []ActorCover `json:"by_actor"`
+}
+
+// AgentUsage is scoped to a session; summary costs are never allocated here.
+type AgentUsage struct {
+	Session   string `json:"session"`
+	AgentID   string `json:"agent_id,omitempty"`
+	AgentType string `json:"agent_type,omitempty"`
+	Role      string `json:"role"`
+	Usage
+	Gaps int `json:"gaps"`
 }
 
 // ActorCover is the request coverage of one actor's sessions.
@@ -242,7 +255,8 @@ type sessionState struct {
 
 // BuildReport summarizes events (oldest first). With a non-zero since only
 // events from then on are counted, while earlier ones still tell what a
-// session had read before.
+// session had read before. Bridge-disable markers remain relevant for any
+// session with events in the reporting period.
 func BuildReport(events []Event, since time.Time) Report {
 	r := Report{Commands: []CommandCount{}, Failures: []FailureCount{}}
 	if !since.IsZero() {
@@ -262,6 +276,15 @@ func BuildReport(events []Event, since time.Time) Report {
 	failures := map[[2]string]int{}
 	hookErrors, refused := map[string]int{}, map[string]int{}
 	handbacks := map[string]int{} // issue: accepted hand-backs not yet followed by a completion
+	agents := map[[2]string]*AgentUsage{}
+	activeSessions := map[string]bool{}
+	if !since.IsZero() {
+		for _, e := range events {
+			if e.Session != "" && !e.At.Before(since) {
+				activeSessions[e.Session] = true
+			}
+		}
+	}
 
 	closeTurn := func(s *sessionState) {
 		if s.turn {
@@ -280,6 +303,11 @@ func BuildReport(events []Event, since time.Time) Report {
 
 	for _, e := range events {
 		in := !e.At.Before(since)
+		gapIn := e.Kind == KindGap && (in || e.Op == "bridge-disabled" && activeSessions[e.Session])
+		missingUsage := in && e.Kind == KindRequest && e.Tokens == nil && e.Context == nil && e.CostUSD == 0
+		if gapIn || missingUsage {
+			r.Cost.Gaps++
+		}
 		if in {
 			r.Events++
 			at := e.At
@@ -333,13 +361,33 @@ func BuildReport(events []Event, since time.Time) Report {
 			s.actor = e.Actor
 		}
 		if e.AgentID != "" && in {
-			s.subagents[e.AgentID] = s.subagents[e.AgentID] || e.Kind == KindRequest
+			s.subagents[e.AgentID] = s.subagents[e.AgentID] || (e.Kind == KindRequest && e.Tokens != nil)
+		}
+		if in && e.Kind == KindRequest && e.Tokens != nil || gapIn || missingUsage {
+			key := [2]string{e.Session, e.AgentID}
+			a := agents[key]
+			if a == nil {
+				role := "main"
+				if e.AgentID != "" {
+					role = "subagent"
+				}
+				a = &AgentUsage{Session: e.Session, AgentID: e.AgentID, Role: role}
+				agents[key] = a
+			}
+			if e.AgentType != "" {
+				a.AgentType = e.AgentType
+			}
+			if e.Tokens == nil {
+				a.Gaps++
+			} else {
+				a.Usage.Add(e)
+			}
 		}
 		switch e.Kind {
-		case KindRequest:
+		case KindRequest, KindSummary:
 			if in {
 				r.Cost.Usage.Add(e)
-				s.requests = true
+				s.requests = s.requests || e.Kind == KindRequest && e.Tokens != nil
 			}
 		case KindHook:
 			if in {
@@ -469,6 +517,21 @@ func BuildReport(events []Event, since time.Time) Report {
 		}
 	}
 	r.Cost.Sessions = r.Sessions
+	r.Cost.Coverage = "unknown"
+	if r.Cost.Requests > 0 || r.Cost.Gaps > 0 {
+		r.Cost.Coverage = "partial"
+	}
+	r.Cost.ByAgent = []AgentUsage{}
+	for _, a := range agents {
+		r.Cost.ByAgent = append(r.Cost.ByAgent, *a)
+	}
+	sort.Slice(r.Cost.ByAgent, func(i, j int) bool {
+		a, b := r.Cost.ByAgent[i], r.Cost.ByAgent[j]
+		if a.Session != b.Session {
+			return a.Session < b.Session
+		}
+		return a.AgentID < b.AgentID
+	})
 	r.Cost.ByActor = []ActorCover{}
 	for _, a := range actors {
 		r.Cost.ByActor = append(r.Cost.ByActor, *a)

@@ -4,7 +4,7 @@
 // PREP_ACTOR names the agent where it gives no --by.
 
 import type { EngineInterface, Register } from 'claude-code'
-type Event = Record<string, unknown> & { kind: 'tool' | 'request' | 'session' }
+type Event = Record<string, unknown> & { kind: 'tool' | 'request' | 'session' | 'gap' | 'summary' }
 
 // Events wait here until the next send; a send is one prep call.
 let pending: Event[] = []
@@ -16,6 +16,26 @@ let session: string | undefined
 let lastCost = 0
 
 const ACTOR = 'claude-code'
+
+// Independent of the prep process: a broken/missing binary must not hide loss.
+// One durable marker means coverage remains unknown after the bridge turns off.
+async function disable($: EngineInterface, reason: string, id = session): Promise<void> {
+  enabled = false
+  pending = []
+  $.ui.log(`prep activity bridge off: ${reason}`, { to: 'debug' })
+  try {
+    const root = await $.session.root()
+    if (!await $.fs.exists(`${root}/.prep`)) return
+    if (!await $.fs.exists(`${root}/.prep/local`)) {
+      const made = await $.process.run(['mkdir', '-p', `${root}/.prep/local`], { timeoutMs: 1000 })
+      if (made.exitCode !== 0) throw new Error(made.stderr)
+    }
+    await $.fs.write(`${root}/.prep/local/request-gap-${encodeURIComponent(id ?? 'unknown')}.json`,
+      JSON.stringify({ at: new Date().toISOString(), actor: ACTOR, session: id, kind: 'gap', op: 'bridge-disabled' }) + '\n')
+  } catch (err) {
+    $.ui.log(`prep activity gap could not be recorded: ${String(err)}`, { to: 'debug' })
+  }
+}
 
 /**
  * Exports the session and the actor for the agent's shell, so its prep calls
@@ -45,16 +65,15 @@ function send($: EngineInterface): Promise<void> {
   pending = []
   sending = sending
     .then(async () => {
+      if (!enabled) return
       const stdin = events.map(e => JSON.stringify(e)).join('\n') + '\n'
       const { exitCode, stderr } = await $.process.run(['prep', 'activity', 'add'], { stdin, timeoutMs: 5000 })
       if (exitCode !== 0) {
-        enabled = false
-        $.ui.log(`prep activity bridge off: ${stderr.trim() || `exit ${exitCode}`}`, { to: 'debug' })
+        await disable($, stderr.trim() || `exit ${exitCode}`, events[0].session as string | undefined)
       }
     })
-    .catch(err => {
-      enabled = false
-      $.ui.log(`prep activity bridge off: ${String(err)}`, { to: 'debug' })
+    .catch(async err => {
+      await disable($, String(err), events[0].session as string | undefined)
     })
   return sending
 }
@@ -77,20 +96,35 @@ export const register: Register = on => {
   // This module retains session attribution and request/token/cost reporting.
 
   on('turn.step', async function* ($, e, next) {
-    const r = yield* next(e)
-    if (r.usage && enabled) {
-      pending.push({
-        kind: 'request',
-        op: r.usage.model ?? e.model,
-        tokens: {
-          input: r.usage.input_tokens ?? 0,
-          output: r.usage.output_tokens ?? 0,
-          cache_read: r.usage.cache_read_input_tokens ?? 0,
-          cache_write: r.usage.cache_creation_input_tokens ?? 0,
-        },
-      })
+    // Optional fields vary by engine version. Never invent request identity.
+    const extra = e as typeof e & { agentType?: string, requestId?: string, messageId?: string }
+    const attribution = { agent_id: e.agentId, agent_type: extra.agentType, turn_id: e.turnId,
+      request_id: extra.requestId ?? extra.messageId }
+    let recorded = false
+    try {
+      const r = yield* next(e)
+      if (enabled) {
+        pending.push({
+          kind: r.usage ? 'request' : 'gap',
+          ...attribution,
+          op: r.usage?.model ?? e.model,
+          tokens: r.usage ? {
+            input: r.usage.input_tokens ?? 0,
+            output: r.usage.output_tokens ?? 0,
+            cache_read: r.usage.cache_read_input_tokens ?? 0,
+            cache_write: r.usage.cache_creation_input_tokens ?? 0,
+          } : undefined,
+        })
+        recorded = true
+        void send($)
+      }
+      return r
+    } finally {
+      if (!recorded && enabled) {
+        pending.push({ kind: 'gap', ...attribution, op: 'request-interrupted' })
+        void send($)
+      }
     }
-    return r
   })
 
   // The turn's end carries the context fill and what the turn cost.
@@ -99,7 +133,7 @@ export const register: Register = on => {
     if (enabled) {
       const { context, cost } = await $.session.usage()
       const total = cost?.usd ?? 0
-      pending.push({ kind: 'request', context: { tokens: context.tokens, window: context.window }, cost_usd: Math.max(0, total - lastCost) || undefined })
+      pending.push({ kind: 'summary', context: { tokens: context.tokens, window: context.window }, cost_usd: Math.max(0, total - lastCost) || undefined })
       lastCost = total
       void send($)
     }

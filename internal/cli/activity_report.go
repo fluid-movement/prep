@@ -116,6 +116,7 @@ func activityReport(a *app, args []string) error {
 
 	c := r.Cost
 	a.printf("\nCost\n")
+	a.printf("  coverage: %s (%d gap markers or attempts without usage); unobserved requests are unknown\n", c.Coverage, c.Gaps)
 	a.printf("  request events in %d of %d sessions", c.SessionsWithRequests, c.Sessions)
 	if c.Subagents > 0 {
 		a.printf(" and %d of %d subagents", c.SubagentsWithRequests, c.Subagents)
@@ -126,7 +127,11 @@ func activityReport(a *app, args []string) error {
 		a.printf("  reported: $%.2f, %d requests, tokens in %d, out %d, cache read %d, cache write %d\n", c.CostUSD, c.Requests, tk.Input, tk.Output, tk.CacheRead, tk.CacheWrite)
 	}
 	if missing := c.Sessions - c.SessionsWithRequests; missing > 0 || c.Subagents > c.SubagentsWithRequests {
-		a.printf("  no figure for sessions and subagents without request events (%d and %d): only the Claude Code main session reports requests, and nothing is estimated\n", missing, c.Subagents-c.SubagentsWithRequests)
+		a.printf("  no figure for sessions and subagents without request events (%d and %d): usage unknown, nothing is estimated\n", missing, c.Subagents-c.SubagentsWithRequests)
+	}
+	for _, ag := range c.ByAgent {
+		tk := ag.Tokens
+		a.printf("    %s %s %s: %d requests, tokens in %d, out %d, cache read %d, cache write %d; gaps %d\n", ag.Session, ag.Role, ag.AgentID, ag.Requests, tk.Input, tk.Output, tk.CacheRead, tk.CacheWrite, ag.Gaps)
 	}
 	for _, ac := range c.ByActor {
 		a.printf("    %-22s request events in %d of %d sessions\n", ac.Actor, ac.SessionsWithRequests, ac.Sessions)

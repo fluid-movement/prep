@@ -33,6 +33,8 @@ const (
 	KindRequest = "request" // a harness model request
 	KindSession = "session" // a harness session started or ended
 	KindHook    = "hook"    // a prep hook's outcome, written by the binary
+	KindGap     = "gap"     // request usage or delivery is missing
+	KindSummary = "summary" // context/cost summary, not a model request
 )
 
 // Areas group what was read or changed.
@@ -53,7 +55,11 @@ type Event struct {
 	Session  string    `json:"session,omitempty"`  // the harness session, when one reports it
 	// AgentID is the harness's id for the subagent the event comes from;
 	// empty for the main session.
-	AgentID string `json:"agent_id,omitempty"`
+	AgentID   string `json:"agent_id,omitempty"`
+	AgentType string `json:"agent_type,omitempty"`
+	RequestID string `json:"request_id,omitempty"`
+	TurnID    string `json:"turn_id,omitempty"`
+	Status    string `json:"status,omitempty"`
 	// Op is the prep command (guide, criterion, knowledge find, ...) or the
 	// harness tool (Bash, Edit, read, ...).
 	Op     string `json:"op,omitempty"`
@@ -105,13 +111,13 @@ func (e Event) MovesFocus() bool {
 // Validate checks an event a harness adds.
 func (e Event) Validate() error {
 	var why []string
-	if e.Kind != KindTool && e.Kind != KindRequest && e.Kind != KindSession {
-		why = append(why, fmt.Sprintf("kind must be %s, %s or %s, not %q", KindTool, KindRequest, KindSession, e.Kind))
+	if e.Kind != KindTool && e.Kind != KindRequest && e.Kind != KindSession && e.Kind != KindGap && e.Kind != KindSummary {
+		why = append(why, fmt.Sprintf("kind must be %s, %s, %s, %s or %s, not %q", KindTool, KindRequest, KindSession, KindGap, KindSummary, e.Kind))
 	}
 	if e.Kind == KindTool && e.Op == "" {
 		why = append(why, "a tool event needs op (the tool's name)")
 	}
-	if e.Kind == KindRequest && e.Tokens == nil && e.Context == nil && e.CostUSD == 0 {
+	if (e.Kind == KindRequest || e.Kind == KindSummary) && e.Tokens == nil && e.Context == nil && e.CostUSD == 0 && e.Status == "" {
 		why = append(why, "a request event needs tokens, context or cost_usd")
 	}
 	if e.Kind == KindSession {
@@ -148,7 +154,7 @@ func Path(prepDir string) string { return filepath.Join(prepDir, Dir, File) }
 
 // Append adds one event to the stream, creating .prep/local when needed.
 func Append(prepDir string, e Event) error {
-	for _, f := range []*string{&e.Actor, &e.Kind, &e.Session, &e.AgentID, &e.Previous, &e.Op, &e.Issue, &e.Verb, &e.Target, &e.Area, &e.Project} {
+	for _, f := range []*string{&e.Actor, &e.Kind, &e.Session, &e.AgentID, &e.AgentType, &e.RequestID, &e.TurnID, &e.Status, &e.Previous, &e.Op, &e.Issue, &e.Verb, &e.Target, &e.Area, &e.Project} {
 		*f = clip(*f)
 	}
 	line, err := json.Marshal(e)
@@ -252,15 +258,31 @@ const HookError = "error"
 // newest (0: all). A missing stream is empty; lines that do not parse are
 // skipped, so a torn or foreign line never hides the rest.
 func Read(prepDir string, max int) ([]Event, error) {
-	f, err := os.Open(Path(prepDir))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
+	paths, err := filepath.Glob(filepath.Join(prepDir, Dir, "request-gap-*.json"))
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-	return Parse(f, max)
+	var events []Event
+	for _, path := range append(paths, Path(prepDir)) {
+		f, err := os.Open(path)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		es, err := Parse(f, 0)
+		f.Close()
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, es...)
+	}
+	slices.SortStableFunc(events, func(a, b Event) int { return a.At.Compare(b.At) })
+	if max > 0 && len(events) > max {
+		events = events[len(events)-max:]
+	}
+	return events, nil
 }
 
 // ReadAll returns the events of the archived streams and the current one,
@@ -272,7 +294,7 @@ func ReadAll(prepDir string) ([]Event, error) {
 		return nil, err
 	}
 	var files [][]Event
-	for _, path := range append(paths, Path(prepDir)) {
+	for _, path := range paths {
 		f, err := os.Open(path)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
@@ -289,8 +311,15 @@ func ReadAll(prepDir string) ([]Event, error) {
 			files = append(files, events)
 		}
 	}
-	slices.SortStableFunc(files, func(a, b []Event) int { return a[0].At.Compare(b[0].At) })
-	return slices.Concat(files...), nil
+	current, err := Read(prepDir, 0)
+	if err != nil {
+		return nil, err
+	}
+	files = append(files, current)
+	// Gap markers can predate an archive; sort events rather than files.
+	events := slices.Concat(files...)
+	slices.SortStableFunc(events, func(a, b Event) int { return a.At.Compare(b.At) })
+	return events, nil
 }
 
 // Parse reads events from JSON lines; see Read.

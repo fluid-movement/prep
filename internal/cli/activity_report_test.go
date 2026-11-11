@@ -106,3 +106,21 @@ func TestActivityReport(t *testing.T) {
 		}
 	}
 }
+
+func TestActivityRequestCoverage(t *testing.T) {
+	h := newHarness(t)
+	lines := `{"kind":"request","session":"s","actor":"claude-code","tokens":{"input":2}}
+{"kind":"request","session":"s","actor":"claude-code","agent_id":"child","agent_type":"worker","request_id":"r","tokens":{"input":3}}
+{"kind":"gap","session":"s","actor":"claude-code","op":"bridge-disabled"}
+{"kind":"summary","session":"s","actor":"claude-code","cost_usd":10}
+`
+	if code, out := h.runStdin(lines, "activity", "add"); code != 0 {
+		t.Fatalf("add: %s", out)
+	}
+	out := h.ok("activity", "report")
+	for _, want := range []string{"coverage: partial (1 gap", "2 requests, tokens in 5", "s main", "s subagent child: 1 requests, tokens in 3"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q: %s", want, out)
+		}
+	}
+}

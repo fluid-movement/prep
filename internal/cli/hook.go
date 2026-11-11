@@ -30,8 +30,16 @@ type hookEvent struct {
 	Event      string          `json:"hook_event_name"`
 	StopActive bool            `json:"stop_hook_active"`
 	// Claude Code sets these inside a subagent; Codex tool hooks carry neither.
-	AgentID   string `json:"agent_id"`
-	AgentType string `json:"agent_type"`
+	AgentID    string `json:"agent_id"`
+	AgentType  string `json:"agent_type"`
+	Model      string `json:"model"`
+	TurnID     string `json:"turn_id"`
+	Status     string `json:"status"`
+	TokenUsage *struct {
+		Input  int `json:"input_tokens"`
+		Output int `json:"output_tokens"`
+		Cached int `json:"cached_input_tokens"`
+	} `json:"token_usage"`
 }
 
 var hookIDs = regexp.MustCompile(`(?i)\b[0-7][0-9A-HJKMNP-TV-Z]{25}\b`)
@@ -49,10 +57,10 @@ func cmdHook(a *app, args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("usage: prep hook session-start|prompt|finish|before-tool|after-tool --harness claude-code|codex")
+		return usageErr("usage: prep hook session-start|prompt|finish|before-tool|after-tool|post-model-request --harness claude-code|codex")
 	}
 	mode := pos[0]
-	names := map[string]string{"session-start": "SessionStart", "prompt": "UserPromptSubmit", "finish": "Stop", "before-tool": "PreToolUse", "after-tool": "PostToolUse"}
+	names := map[string]string{"session-start": "SessionStart", "prompt": "UserPromptSubmit", "finish": "Stop", "before-tool": "PreToolUse", "after-tool": "PostToolUse", "post-model-request": "PostModelRequest"}
 	name, ok := names[mode]
 	if !ok || (*harness != "claude-code" && *harness != "codex") {
 		return usageErr("unknown hook mode or harness")
@@ -99,6 +107,8 @@ func cmdHook(a *app, args []string) error {
 		return nil
 	}
 	switch mode {
+	case "post-model-request":
+		hookRequest(a, e)
 	case "session-start":
 		hookMarkTurn(a, e, mode)
 		// The briefing is restored in full here (for example after compaction),
@@ -158,6 +168,18 @@ func cmdHook(a *app, args []string) error {
 		hookFinish(a, e)
 	}
 	return nil
+}
+
+// Native per-attempt usage only; a missing usage object is not a zero request.
+func hookRequest(a *app, e hookEvent) {
+	ev := activity.Event{At: a.now().UTC(), Actor: a.actor, Session: e.Session, AgentID: e.AgentID, AgentType: e.AgentType, TurnID: e.TurnID, Status: e.Status, Kind: activity.KindGap, Op: e.Model}
+	if u := e.TokenUsage; u != nil {
+		ev.Kind = activity.KindRequest
+		// Codex input includes cached input; the shared model keeps it separate.
+		input := max(0, u.Input-u.Cached)
+		ev.Tokens = &activity.Tokens{Input: input, Output: u.Output, CacheRead: u.Cached}
+	}
+	_ = activity.Append(filepath.Join(a.store.Root, mdstore.Dir), ev)
 }
 
 func hookCapture(a *app, run func(*app) error) string {
