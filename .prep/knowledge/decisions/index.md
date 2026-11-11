@@ -326,12 +326,12 @@
 * [Request usage is native, agent-scoped and explicitly partial](/decisions/01M75HSAMADHX34RQX9QPZ1P4X.md) - Claude and Codex request events carry agent identity; missing usage and bridge delivery failures are gaps, while turn summaries stay separate.
 * [Research handback carries criteria and completes when met](/decisions/01M760ZN0CTXGPD1VE5KF9TR73.md) - Research reports without --check write findings, apply criterion verdicts and complete only when all are met and Problems is empty.
 * [Hand-off report format: role-specific required criteria and research completion](/decisions/01M760ZYZFXKNEC5B7JM6FDEAA.md) - Summary is required; checker and research reports also require Criteria, with every criterion verdict, even when the section is empty.
+* [Detect linked worktrees with git metadata](/decisions/01M763KYFVYRK4BV6DH363S0AV.md) - Compared `git rev-parse --git-dir` and `--git-common-dir`, resolving relative paths against the checkout.
+* [Derive worktree state without storing it](/decisions/01M763KYFX2SJCS6N1FN73TDV1.md) - Added `Project.Worktree` as a JSON-ignored derived field.
+* [Filter only when opening the TUI switcher](/decisions/01M763KYFZCXZZEA896T4H7845.md) - Filtered the project list used by both switcher candidates and rows, retaining the current root even when it is a linked worktree.
+* [Restrict title-stack escapes to terminal files](/decisions/01M763KYT9T8ZM9JSYDB5MZF75.md) - Only push/pop the xterm title stack when the output is an `*os.File` attached to a terminal.
 * [Show total hidden descendants](/decisions/01M763KZ3GQGVEKVYQ8P5XM19M.md) - The folded count uses all descendants, matching the hidden rows rather than only immediate children.
 * [Children view ignores fold state](/decisions/01M763KZ3JDAPRN3D0KXY12ZHN.md) - The transient children view is built without fold state so scoping into a folded parent still shows its subtree.
 * [No action on leaf rows](/decisions/01M763KZ3N9GNW62MEAA32NGFT.md) - Both keys do nothing when the selected issue has no children; this avoids unexpectedly acting on a different issue.
 * [Fold state is keyed by issue ID](/decisions/01M763KZ3QAEE9K6N8KR7CWY0C.md) - This preserves folding across rebuilds/reloads and removes IDs absent from the current tree.
 * [Regenerated affected snapshots](/decisions/01M763TWG45FFYY9S20MZH5AJJ.md) - The failing tests explicitly identified snapshot mismatches and recommended `go test ./internal/tui/...
-* [Restrict title-stack escapes to terminal files](/decisions/01M763KYT9T8ZM9JSYDB5MZF75.md) - Only push/pop the xterm title stack when the output is an `*os.File` attached to a terminal.
-* [Detect linked worktrees with git metadata](/decisions/01M763KYFVYRK4BV6DH363S0AV.md) - Compared `git rev-parse --git-dir` and `--git-common-dir`, resolving relative paths against the checkout.
-* [Derive worktree state without storing it](/decisions/01M763KYFX2SJCS6N1FN73TDV1.md) - Added `Project.Worktree` as a JSON-ignored derived field.
-* [Filter only when opening the TUI switcher](/decisions/01M763KYFZCXZZEA896T4H7845.md) - Filtered the project list used by both switcher candidates and rows, retaining the current root even when it is a linked worktree.
