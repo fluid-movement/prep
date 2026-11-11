@@ -1,0 +1,23 @@
+name: implement-handoff-by-brief
+description: The orchestrator delegates by a brief and imports a report; the implementer makes no prep call.
+prompt: Delegate implementation of Order emails to a subagent, import its report, and stop before the separate checker pass. Use the project's normal hand-off workflow.
+fixture: order-emails-ready
+expect:
+  tools:
+    - ran: {command: brief, args: '{{emails}}.*--out', subagent: false}
+    - ran: {subagent: true, shell: '\bgo\s+test\s+\./\.\.\.'}
+    - not_ran: {subagent: true, shell: '\bprep\s+[a-z]'}
+    - ran: {command: handback, args: '{{emails}}', subagent: false}
+    - before:
+        first: {command: brief, subagent: false}
+        then: {subagent: true}
+    - before:
+        first: {subagent: true}
+        then: {command: handback, subagent: false}
+    - not_ran: {command: complete}
+    - not_ran: {command: criterion, args: '--check'}
+  outcome:
+    - issue: {ref: '{{emails}}', state: in-progress}
+  rubric:
+    - The orchestrator gives the implementer only the one-line prompt to read .prep/local/handoff/<id>/brief.md and follow it exactly, including where to write the report; it does not pass the workflow rules or ask it to run prep guide.
+    - The implementer reads the brief, implements OrderPlaced invoking send exactly once with the order ID and returning its error, runs tests, and writes the report to the named file without any prep call or reading other tracker records. The orchestrator imports it with handback and leaves checking to a separate pass.

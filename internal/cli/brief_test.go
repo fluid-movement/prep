@@ -103,6 +103,7 @@ func TestBriefImplementer(t *testing.T) {
 
 func TestBriefChecker(t *testing.T) {
 	f := newBriefFixture(t)
+	f.ok("dod", "--add", "knowledge entries describing changed behavior are updated")
 	f.ok("claim", f.child)
 	f.ok("log", f.child, "Check failed: no header row")
 	out := f.ok("brief", f.child, "--check")
@@ -112,17 +113,23 @@ func TestBriefChecker(t *testing.T) {
 		"You are the checker, not the implementer", "Run the checks yourself", "from the worktree or branch", "Change nothing",
 		"## Summary", "## Criteria", "## Problems",
 		"Write the report to this file: " + report,
+		"The orchestrator checks knowledge-entry updates and other tracker-only Definition of Done items",
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("checker brief lacks %q:\n%s", want, out)
 		}
 	}
-	for _, not := range []string{"## Findings", "## Decisions\n", "Implement exactly", "Last failed check"} {
+	for _, not := range []string{"## Findings", "## Decisions\n", "Implement exactly", "Last failed check", "- knowledge entries describing changed behavior are updated"} {
 		if strings.Contains(out, not) {
 			t.Fatalf("checker brief contains %q:\n%s", not, out)
 		}
 	}
 	assertPrepFree(t, out, report)
+	var b domain.Brief
+	f.jsonOf(&b, "brief", f.child, "--check")
+	if len(b.DoD) != 1 || b.DoD[0] != "the tests pass" {
+		t.Fatalf("checker DoD = %v", b.DoD)
+	}
 }
 
 func TestBriefResearchAsksForFindings(t *testing.T) {

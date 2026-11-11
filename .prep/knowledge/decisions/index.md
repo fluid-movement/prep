@@ -335,3 +335,5 @@
 * [No action on leaf rows](/decisions/01M763KZ3N9GNW62MEAA32NGFT.md) - Both keys do nothing when the selected issue has no children; this avoids unexpectedly acting on a different issue.
 * [Fold state is keyed by issue ID](/decisions/01M763KZ3QAEE9K6N8KR7CWY0C.md) - This preserves folding across rebuilds/reloads and removes IDs absent from the current tree.
 * [Regenerated affected snapshots](/decisions/01M763TWG45FFYY9S20MZH5AJJ.md) - The failing tests explicitly identified snapshot mismatches and recommended `go test ./internal/tui/...
+* [Guide is for solo work; delegate implementer and checker passes by brief and handback](/decisions/01M7649PGBDJ1APBCF86D516VP.md) - After the approved three-issue trial, hand-offs use brief files and prep-free reports; guide remains the complete workflow for an agent working alone.
+* [Brief leaves tracker checks with the orchestrator, including checker knowledge verification](/decisions/01M7649PNC4ZFD05P5K0RHDN4V.md) - Checker briefs omit knowledge-entry DoD items and explicitly assign them to the orchestrator; prep-command filtering, decision bounds and optional --out behavior stay unchanged.

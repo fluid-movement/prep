@@ -361,12 +361,12 @@ func TestSkillContainsRules(t *testing.T) {
 	if !strings.HasSuffix(skillText, "\nWorkflow rules:\n"+rulesText) {
 		t.Fatal("internal/cli/skill.md must end with 'Workflow rules:' and the text of internal/cli/rules.md")
 	}
-	for _, want := range []string{"Implementer and checker are passes", "working alone, check in a separate pass", `"run prep guide <id>, implement it, log ready for check and stop"`, `"run prep guide <id> and follow its checker section"`} {
+	for _, want := range []string{"Implementer and checker are passes", "working alone, check in a separate pass", "prep brief <id> --out", "Read .prep/local/handoff/<id>/brief.md and follow it exactly.", "prep handback <id>", "prep brief <id> --check --out", "prep handback <id> --check", "Working alone, use `prep guide <id>`", "Implementers and checkers follow their brief instead"} {
 		if !strings.Contains(rulesText, want) {
 			t.Fatalf("rules lack %q", want)
 		}
 	}
-	if strings.Contains(rulesText, "Implementers claim") || strings.Contains(rulesText, "Checkers verify") {
+	if strings.Contains(rulesText, "Implementers claim") || strings.Contains(rulesText, "Checkers verify") || strings.Contains(rulesText, "pass these rules on to every subagent") || strings.Contains(rulesText, "run prep guide <id>") {
 		t.Fatal("rules keep the old role rules")
 	}
 	if strings.Contains(skillText, "`prep edit") || len(skillText) > 2500 {

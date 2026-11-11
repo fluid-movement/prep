@@ -200,7 +200,7 @@ func (t *Tree) BuildBrief(id string, check bool, reportPath string) (*Brief, err
 		Context:     strings.TrimSpace(i.Context),
 		Criteria:    append([]Criterion{}, i.Criteria...),
 		Decisions:   []BriefDecision{},
-		DoD:         briefDoD(t.Project.DoD),
+		DoD:         briefDoD(t.Project.DoD, check),
 		ReportPath:  reportPath,
 	}
 	b.Decisions, b.DecisionsDropped = boundDecisions(t.ApplicableDecisions(id), BriefDecisionsBound)
@@ -226,12 +226,13 @@ func (t *Tree) BuildBrief(id string, check bool, reportPath string) (*Brief, err
 var prepCommandRe = regexp.MustCompile(`(^|[^.\w])prep [a-z]`)
 
 // briefDoD is the Definition of Done without the items that name a prep
-// command (the default "prep check passes"): the agent has no prep and does
-// not touch the records, so those stay with the orchestrator.
-func briefDoD(dod []string) []string {
+// command (the default "prep check passes"). Checkers also leave knowledge
+// entry updates to the orchestrator: they cannot inspect the records.
+func briefDoD(dod []string, check bool) []string {
 	out := []string{}
 	for _, d := range dod {
-		if !prepCommandRe.MatchString(d) {
+		knowledgeCheck := check && strings.Contains(strings.ToLower(d), "knowledge entr")
+		if !prepCommandRe.MatchString(d) && !knowledgeCheck {
 			out = append(out, d)
 		}
 	}
@@ -383,6 +384,7 @@ func checkerRules(kind Kind) []string {
 		"You are the checker, not the implementer: verify each criterion and the Definition of Done yourself, not from the implementer's account.",
 		"Read the change from the worktree or branch you were pointed to, else from the uncommitted diff of this repository.",
 		"Run the checks yourself and say which commands you ran.",
+		"The orchestrator checks knowledge-entry updates and other tracker-only Definition of Done items; do not report those as unverifiable problems.",
 		verdict,
 		"Change nothing: do not fix what you find, report it as a problem. Never run git commit or git push.",
 		"Do not read or change anything in the `.prep` directory, except to write your report to the file named below.",

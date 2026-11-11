@@ -20,3 +20,4 @@
 * [Project title source](/findings/01M763KYTBAJ31457XAA7N3SEE.md) - `Model.projectName()` is the same source used by the header and falls back to `prep`; the view title uses it directly.
 * [Existing screen goldens require updates](/findings/01M763KZ3TK5VXJS5NJSBDQA6W.md) - The full test run reports snapshot differences in existing TUI screens after open-parent markers were introduced.
 * [Snapshot tests now match](/findings/01M763TWG6EYWRC75WES71BDAH.md) - `go test ./...` passes after regenerating the goldens.
+* [Brief-only hand-offs held on three real issues; knowledge checks belong to the orchestrator](/findings/01M7648TW8B9QK8M953A8BC85P.md) - Small-model implementers and checkers wrote parseable file reports with zero prep calls; the trial exposed a checker knowledge-DoD conflict and caught failing TUI goldens.

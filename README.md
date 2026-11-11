@@ -44,6 +44,8 @@ When prep was installed with Homebrew or `go install`, `prep update` names the c
 
 ## Quick start
 
+Working alone, follow `prep guide <id>` through implementation and a separate check pass. To delegate, run `prep brief <id> --out` and give the implementer only this one-line prompt: "Read .prep/local/handoff/<id>/brief.md and follow it exactly. It tells you where to write your report." Run `prep handback <id>` to import its report. Then run `prep brief <id> --check --out` for a separate checker, pointing the same prompt at `check-brief.md`. Check knowledge updates and other tracker-only Definition of Done items yourself before `prep handback <id> --check`. Implementers and checkers follow their brief, not the workflow rules, and make no prep calls; the orchestrator keeps the records.
+
 ```sh
 prep init                                    # create .prep/
 prep new --title "CSV export" --kind code --body "Users can export their data as CSV."

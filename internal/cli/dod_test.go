@@ -123,17 +123,22 @@ func TestGuideIsImplementerBrief(t *testing.T) {
 		if strings.Contains(out, "Checker (a different agent") || strings.Contains(out, "Never run prep complete") {
 			t.Fatalf("%s guide keeps the old role wording:\n%s", step, out)
 		}
-		hint := "run prep guide " + id + " and follow it"
-		if got := strings.Contains(out, hint); got != (step == "ready") {
-			t.Fatalf("%s guide handoff hint present = %v:\n%s", step, got, out)
+		hint := "prep brief " + id + " --out"
+		for _, want := range []string{hint, "Read .prep/local/handoff/" + id + "/brief.md and follow it exactly.", "prep handback " + id, "prep brief " + id + " --check --out", "Working alone, follow prep guide " + id, "make no prep calls"} {
+			if !strings.Contains(out, want) {
+				t.Fatalf("%s guide lacks %q:\n%s", step, want, out)
+			}
+		}
+		if strings.Contains(out, "run prep guide "+id+" and follow it") {
+			t.Fatalf("%s guide keeps the old hand-off prompt:\n%s", step, out)
 		}
 		var g domain.Guide
 		h.jsonOf(&g, "guide", id)
 		if g.Requirement == "" || len(g.Criteria) != 1 || g.Context == "" || len(g.Decisions) != 1 || len(g.DoD) == 0 || g.Step == "check" {
 			t.Fatalf("%s json guide = %+v", step, g)
 		}
-		if got := strings.Contains(strings.Join(g.Instructions, "\n"), hint); got != (step == "ready") {
-			t.Fatalf("%s json handoff hint present = %v: %v", step, got, g.Instructions)
+		if !strings.Contains(strings.Join(g.Instructions, "\n"), hint) {
+			t.Fatalf("%s json lacks handoff hint: %v", step, g.Instructions)
 		}
 	}
 }
@@ -150,7 +155,7 @@ func TestGuideCheckBriefAfterReadyForCheck(t *testing.T) {
 	h.ok("claim", id)
 	h.ok("log", id, "Implemented, ready for check: done in worktree x")
 	out := h.ok("guide", id)
-	for _, want := range []string{"step: check", "Unique requirement prose.", "1. [ ] Unique criterion", "Unique context text.", "Unique decision", "Run the full suite", "You are the checker", "branch or worktree the work log names", "say which commands you ran", "prep criterion " + id + " --check <n>", "prep complete " + id + " [--commit <hash>]", "stop without completing"} {
+	for _, want := range []string{"step: check", "Unique requirement prose.", "1. [ ] Unique criterion", "Unique context text.", "Unique decision", "Run the full suite", "You are the checker", "branch or worktree the work log names", "say which commands you ran", "prep criterion " + id + " --check <n>", "prep complete " + id + " [--commit <hash>]", "stop without completing", "prep brief " + id + " --check --out", "Read .prep/local/handoff/" + id + "/check-brief.md and follow it exactly.", "prep handback " + id + " --check", "Working alone, follow prep guide " + id, "checking knowledge updates"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("check guide lacks %q:\n%s", want, out)
 		}

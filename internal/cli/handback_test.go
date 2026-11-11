@@ -90,6 +90,57 @@ func TestHandbackImplementer(t *testing.T) {
 	h.ok("fmt", "--check")
 }
 
+// These are the unedited reports written by the small model in the real
+// hand-off trial. Parse every pass in its original role, including failures.
+func TestHandbackTrialReports(t *testing.T) {
+	counts := map[string]int{"worktrees": 5, "title": 5, "fold": 6}
+	files, err := filepath.Glob("testdata/handoff-trial/*.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 8 {
+		t.Fatalf("want all 8 trial reports, got %d", len(files))
+	}
+	for _, file := range files {
+		t.Run(filepath.Base(file), func(t *testing.T) {
+			name := filepath.Base(file)
+			count, ok := counts[strings.SplitN(name, "-", 2)[0]]
+			if !ok {
+				t.Fatalf("unknown trial issue: %s", name)
+			}
+			issue := &domain.Issue{Kind: domain.KindCode, Criteria: make([]domain.Criterion, count)}
+			text, err := os.ReadFile(file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			check := strings.Contains(name, "-check-report")
+			report, err := domain.ParseReport(string(text), issue, check)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if report.Summary == "" || (check && len(report.Criteria) != count) || (!check && len(report.Criteria) != 0) {
+				t.Fatalf("unexpected report: %+v", report)
+			}
+			if check {
+				for _, c := range report.Criteria {
+					wantMet := name != "fold-check-report.md" || c.Number != 6
+					if c.Met != wantMet {
+						t.Errorf("criterion %d met = %v, want %v", c.Number, c.Met, wantMet)
+					}
+				}
+			}
+			if name == "worktrees-check-report.md" {
+				if !strings.Contains(report.Problems, "knowledge") {
+					t.Fatal("lost the trial's knowledge-check problem")
+				}
+			}
+			if name == "title-check-report.md" && !strings.Contains(report.Problems, "terminal integration was not independently exercised") {
+				t.Fatal("lost the preserved title report's test limitations")
+			}
+		})
+	}
+}
+
 func TestHandbackCheckerPass(t *testing.T) {
 	h, id := handbackIssue(t, "code")
 	path := filepath.Join(t.TempDir(), "external.md")

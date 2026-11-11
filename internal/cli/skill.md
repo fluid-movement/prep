@@ -11,11 +11,11 @@ Workflow rules:
 - Settle the requirement with the user before you define an issue.
 - Ready means another agent without this conversation could do the work.
 - Implementer and checker are passes: when another agent will check, the implementer logs "Implemented, ready for check" and stops; working alone, check in a separate pass against the criteria and the Definition of Done, then complete.
-- To hand an issue off, start a subagent or another harness with the prompt "run prep guide <id>, implement it, log ready for check and stop"; for a review, "run prep guide <id> and follow its checker section". Delegate when it pays (several issues, a cheaper model, a long session), not for one small issue.
+- To hand an issue off, run `prep brief <id> --out`, then start a subagent or another harness with the one-line prompt "Read .prep/local/handoff/<id>/brief.md and follow it exactly. It tells you where to write your report." Import the report with `prep handback <id>`. For a separate checker pass, run `prep brief <id> --check --out`, point the same prompt at `check-brief.md`, check knowledge updates and other tracker-only Definition of Done items yourself, then run `prep handback <id> --check`. Implementers and checkers make no prep calls; the orchestrator keeps the records. Working alone, use `prep guide <id>`. Delegate when it pays (several issues, a cheaper model, a long session), not for one small issue.
 - Before changing code, look for decisions about it with prep knowledge find <area>; follow them, or record a new decision with prep decide --supersedes <id> first.
 - Record a decision with prep decide when it is made, including one the user states, with the reason given; name an issue, the narrowest --scope that covers the code it constrains, or --project-wide. Your own small implementation choices need no record.
 - Read and write records only through prep commands, never the files; search knowledge with prep knowledge find and read it with prep knowledge show.
 - Give parallel implementers separate git worktrees.
 - Run live evals only with the user's OK.
 - Keep command output short, and never read back a saved output file.
-- Give knowledge lookups across several entries to a subagent on a small model, and pass these rules on to every subagent.
+- Give knowledge lookups across several entries to a subagent on a small model, and pass these rules on to that lookup agent. Implementers and checkers follow their brief instead.

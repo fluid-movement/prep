@@ -316,7 +316,6 @@ func stepContract(t *Tree, i *Issue, s State, stale, parent bool, f func(string)
 		ins := []string{"Claim the issue before implementing: prep claim " + i.ID + "."}
 		if i.Kind == KindCode {
 			ins = append(ins, implementerRole(i.ID)...)
-			ins = append(ins, "To hand this issue off, start a subagent or another harness with the prompt \"run prep guide "+i.ID+", implement it, log ready for check and stop\"; for a review, \"run prep guide "+i.ID+" and follow its checker section\". Delegate when it pays (several issues, a cheaper model, a long session), not for one small issue.")
 		}
 		return "claim", ins, []Pointer{{f("claim.md"), "written by prep claim", ""}}
 	case StateInProgress:
@@ -381,6 +380,7 @@ func implementerRole(id string) []string {
 		"When the checks pass and another agent will check, run prep log " + id + " 'Implemented, ready for check: <one sentence>' and stop. Working alone, check in a separate pass against the criteria and the Definition of Done (prep criterion " + id + " --check <n>), then run prep complete " + id + " [--commit <hash>].",
 		"Never run git commit or git push, and never run live evals (prep eval run).",
 		"If the context conflicts with the code or tests, log the conflict with prep log and stop; do not bend tests to fit.",
+		handoffInstruction(id, false),
 	}
 }
 
@@ -393,5 +393,14 @@ func checkerBrief(id string) []string {
 		"Run the checks yourself and say which commands you ran.",
 		"Check each met criterion with prep criterion " + id + " --check <n>, then complete with prep complete " + id + " [--commit <hash>].",
 		"If something fails, send it back with prep log " + id + " 'Check failed: <what fails>' and stop without completing.",
+		handoffInstruction(id, true),
 	}
+}
+
+func handoffInstruction(id string, check bool) string {
+	flags, file := "", "brief.md"
+	if check {
+		flags, file = " --check", "check-brief.md"
+	}
+	return "Working alone, follow prep guide " + id + ". To hand this pass off, run prep brief " + id + flags + " --out, then start a subagent or another harness with the one-line prompt \"Read .prep/local/handoff/" + id + "/" + file + " and follow it exactly. It tells you where to write your report.\" Import its report with prep handback " + id + flags + ". Keep implementer and checker passes separate: use prep brief " + id + " --check --out for the checker and prep handback " + id + " --check after checking knowledge updates and other tracker-only Definition of Done items yourself. Implementers and checkers follow the brief, not the workflow rules, and make no prep calls. Delegate when it pays (several issues, a cheaper model, a long session), not for one small issue."
 }
