@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -145,6 +146,7 @@ type Model struct {
 	tabs     []tab
 	active   int
 	treeMode bool
+	folded   map[string]bool
 	scope    map[string][]string // per tab name: stack of focused parents
 	cursor   map[string]int      // per tab name
 	offset   map[string]int      // first visible row per tab name
@@ -206,7 +208,7 @@ func NewModel(th *theme.Theme, opts Options) *Model {
 	in.Placeholder = "--kind code --state open or words in titles"
 	in.SetStyles(inputStyles(th))
 	m := &Model{th: th, opts: opts, treeMode: true, scope: map[string][]string{}, cursor: map[string]int{}, offset: map[string]int{},
-		vp: newViewport(), page: newViewport(), know: knowState{vp: newViewport()}, filters: map[string]string{}, input: in,
+		vp: newViewport(), page: newViewport(), know: knowState{vp: newViewport()}, filters: map[string]string{}, folded: map[string]bool{}, input: in,
 		pending: map[string]string{}, mouse: !opts.NoMouse, single: opts.Single, runEditor: execEditor, after: tea.Tick, clock: opts.Now}
 	if m.clock == nil {
 		m.clock = time.Now
@@ -330,6 +332,11 @@ func (m *Model) apply(t *domain.Tree, err error) {
 // rebuild recomputes every tab from the tree, keeping each tab's selection
 // by issue ID and dropping focused parents that no longer exist.
 func (m *Model) rebuild() {
+	for id := range m.folded {
+		if m.tree.Issues[id] == nil {
+			delete(m.folded, id)
+		}
+	}
 	selected := map[string]string{}
 	for _, tb := range m.tabs {
 		if c := m.cursor[tb.name]; c < len(tb.rows) {
@@ -349,7 +356,7 @@ func (m *Model) rebuild() {
 			}
 		}
 		m.scope[n] = sc
-		tb := buildTab(m.tree, n, m.tree.Project.Config.Views[n], m.filters[n], sc, m.treeMode, false)
+		tb := buildTab(m.tree, n, m.tree.Project.Config.Views[n], m.filters[n], sc, m.treeMode, false, m.folded)
 		c := m.cursor[n]
 		if id, ok := selected[n]; ok {
 			if k := tb.index(id); k >= 0 {
@@ -369,7 +376,7 @@ func (m *Model) rebuild() {
 				sc = append(sc, id)
 			}
 		}
-		tb := buildTab(m.tree, n, "", m.filters[n], sc, m.treeMode, true)
+		tb := buildTab(m.tree, n, "", m.filters[n], sc, m.treeMode, true, nil)
 		tb.transient = true
 		tb.count = len(m.tree.Descendants(m.childView)) // its subtree, not the whole project
 		c := m.cursor[n]
@@ -422,7 +429,7 @@ func byState(t *domain.Tree, root string, list []string) []string {
 // buildTab queries a view, narrows it to the focused parent's subtree, and
 // lays it out flat or as a tree with context ancestors; byStateOrder orders
 // the focused parent's children by state, open first.
-func buildTab(t *domain.Tree, name, flags, filter string, scope []string, treeMode, byStateOrder bool) tab {
+func buildTab(t *domain.Tree, name, flags, filter string, scope []string, treeMode, byStateOrder bool, folded map[string]bool) tab {
 	tb := tab{name: name, flags: flags}
 	f, err := domain.ParseFilter(strings.Fields(flags))
 	var ids []string
@@ -507,6 +514,22 @@ func buildTab(t *domain.Tree, name, flags, filter string, scope []string, treeMo
 		} else {
 			list = byState(t, root, list)
 		}
+	}
+	if treeMode && len(folded) > 0 {
+		var visible []string
+		for _, id := range list {
+			hidden := false
+			for _, a := range t.Ancestors(id) {
+				if folded[a] {
+					hidden = true
+					break
+				}
+			}
+			if !hidden {
+				visible = append(visible, id)
+			}
+		}
+		list = visible
 	}
 
 	inList := map[string]bool{}
@@ -796,6 +819,39 @@ func (m *Model) listKey(s string) tea.Cmd {
 			m.refreshCompletion()
 			return m.input.Focus()
 		}
+		return nil
+	}
+	if s == " " || s == "x" {
+		if !m.treeMode {
+			m.notice = "fold works in tree view"
+			return nil
+		}
+		id := m.selected()
+		if id == "" || len(m.tree.Children(id)) == 0 {
+			return nil
+		}
+		ids := []string{id}
+		if s == "x" {
+			parent := m.tree.Issues[id].Parent
+			ids = ids[:0]
+			for _, candidate := range m.tree.Issues {
+				if candidate.Parent == parent && len(m.tree.Children(candidate.ID)) > 0 {
+					ids = append(ids, candidate.ID)
+				}
+			}
+		}
+		fold := false
+		for _, candidate := range ids {
+			if !m.folded[candidate] {
+				fold = true
+				break
+			}
+		}
+		for _, candidate := range ids {
+			m.folded[candidate] = fold
+		}
+		m.rebuild()
+		m.selectInCurrent(id)
 		return nil
 	}
 	if tb == nil {
@@ -1282,6 +1338,8 @@ var (
 	}
 	listBindings = concat([]binding{
 		bind("Move", "↑↓ j k", "move", false),
+		bind("Move", "space", "fold or unfold children", false),
+		bind("Move", "x", "fold or unfold parents on this level", false),
 		bind("Move", "g G pgup pgdn", "top, bottom, page", false),
 		bind("Move", "enter → l", "details, or into a parent", false),
 		bind("Move", "← h esc", "out of a parent; esc clears a filter", false),
@@ -1501,7 +1559,15 @@ func (m *Model) row(r row) ui.Row {
 func (m *Model) issueRow(id string) ui.Row {
 	t := m.tree
 	i := t.Issues[id]
-	r := ui.Row{ID: shortID(id), State: t.State(id), Kind: i.Kind, Title: i.Title, Tags: i.Tags, Priority: i.Priority}
+	title := i.Title
+	if children := t.Children(id); len(children) > 0 {
+		if m.folded[id] {
+			title = "▸ " + title + " (" + strconv.Itoa(len(t.Descendants(id))) + ")"
+		} else {
+			title = "▾ " + title
+		}
+	}
+	r := ui.Row{ID: shortID(id), State: t.State(id), Kind: i.Kind, Title: title, Tags: i.Tags, Priority: i.Priority}
 	switch {
 	case len(t.Children(id)) > 0:
 		p := t.ChildProgress(id)
