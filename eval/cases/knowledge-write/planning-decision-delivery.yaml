@@ -1,0 +1,21 @@
+name: knowledge-write-planning-decision-delivery
+description: A user-stated planning decision is recorded with an issue, a narrow scope or the explicit project-wide mark, even before code paths exist.
+prompt: >-
+  For the planned report exports, let's use CSV rather than JSON because our
+  customers open the files in spreadsheets. Keep this choice for later sessions.
+  We are only planning: don't implement anything or mark the work ready.
+fixture: report-exports-planning
+expect:
+  tools:
+    - ran: decide
+    - no_prep_files: true
+    - ran:
+        command: decide
+        args: '(^| )({{exports}}( |$)|--scope( |=)|--project-wide( |$|=))'
+  outcome:
+    - created: {entries: {min: 1}}
+    - check: clean
+  rubric:
+    - A new decision record captures CSV rather than JSON because customers use spreadsheets.
+    - The recorded decision carries an issue link, a nonempty scope, or the explicit project-wide scope **; an unlinked and unscoped record does not pass.
+    - No implementation was done and the issue was not marked ready or completed.

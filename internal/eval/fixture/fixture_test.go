@@ -259,6 +259,7 @@ knowledge:
   - type: decision
     title: Standalone choice
     description: A project-wide decision.
+    scope: ['**']
 `
 	p, q := build(t, load(t, src)), build(t, load(t, src))
 	if treeHash(t, p.Dir) != treeHash(t, q.Dir) {
@@ -300,7 +301,7 @@ knowledge:
 				t.Errorf("finding metadata: %+v", e)
 			}
 		case "Standalone choice":
-			if e.Issue != "" || len(e.Scope) != 0 {
+			if e.Issue != "" || len(e.Scope) != 1 || e.Scope[0] != "**" {
 				t.Errorf("standalone metadata: %+v", e)
 			}
 		}

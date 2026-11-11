@@ -3,6 +3,7 @@ package eval
 import (
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/fluid-movement/prep/internal/eval/assert"
@@ -120,5 +121,53 @@ func TestRespectDecisionTools(t *testing.T) {
 		if result := a.Check(&assert.Input{Transcript: tr}); !result.Pass {
 			t.Errorf("unchanged code failed: %+v", result)
 		}
+	}
+}
+
+// The planning case must reject the old, bare decide invocation even when
+// it successfully wrote a record. No live agent is needed to test the gate.
+func TestPlanningDecisionDeliveryTools(t *testing.T) {
+	cases, err := evalcase.Load("../../eval")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var c *evalcase.Compiled
+	for _, candidate := range cases {
+		if candidate.Name == "knowledge-write-planning-decision-delivery" {
+			c, err = candidate.Compile(func(s string) (string, error) {
+				return strings.ReplaceAll(s, "{{exports}}", "01EXPORTS"), nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if c == nil {
+		t.Fatal("missing planning decision case")
+	}
+	for _, tc := range []struct {
+		args string
+		want bool
+	}{
+		{"", false},
+		{"01EXPORTS", true},
+		{"--scope src/export.go", true},
+		{"--scope=src/export.go", true},
+		{"--project-wide", true},
+	} {
+		t.Run(tc.args, func(t *testing.T) {
+			step := transcript.Step{Tool: "Bash", Shell: "prep decide --title CSV --description Spreadsheets " + tc.args}
+			step.Commands = transcript.ParseShell(step.Shell)
+			tr := &transcript.Transcript{Steps: []transcript.Step{step}}
+			passed := true
+			for _, a := range c.Tools {
+				if !a.Check(&assert.Input{Transcript: tr}).Pass {
+					passed = false
+				}
+			}
+			if passed != tc.want {
+				t.Errorf("tools pass = %v, want %v", passed, tc.want)
+			}
+		})
 	}
 }

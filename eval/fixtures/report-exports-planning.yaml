@@ -1,0 +1,5 @@
+issues:
+  - alias: exports
+    title: Report exports
+    state: open
+    body: Let customers export report data. The format is not yet settled.

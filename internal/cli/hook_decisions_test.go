@@ -122,7 +122,7 @@ func TestHookBeforeToolNamesScopedDecisions(t *testing.T) {
 func TestHookBeforeToolNamesFiveMostSpecificThenNewest(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	h := newHarness(t)
-	wide := hookDecide(t, h, "Wide choice", "--scope", "**")
+	wide := hookDecide(t, h, "Wide choice", "--project-wide")
 	var same []string
 	for i := 0; i < 6; i++ {
 		same = append(same, hookDecide(t, h, fmt.Sprintf("Go choice %d", i), "--scope", "src/*.go"))
