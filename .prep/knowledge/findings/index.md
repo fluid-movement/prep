@@ -18,3 +18,5 @@
 * [Stop/SubagentStop inputs verified against the reference; cost comes from native request events](/findings/01M75HAAS1DYCVPA0YNN8CF43K.md) - Hook inputs carry transcript paths per the current reference; route chosen: native request events with agent and request IDs, Codex PostModelRequest, no transcript parsing
 * [Existing screen goldens require updates](/findings/01M763KZ3TK5VXJS5NJSBDQA6W.md) - The full test run reports snapshot differences in existing TUI screens after open-parent markers were introduced.
 * [Snapshot tests now match](/findings/01M763TWG6EYWRC75WES71BDAH.md) - `go test ./...` passes after regenerating the goldens.
+* [Project title source](/findings/01M763KYTBAJ31457XAA7N3SEE.md) - `Model.projectName()` is the same source used by the header and falls back to `prep`; the view title uses it directly.
+* [Git reports worktree metadata relative to the checkout](/findings/01M763KYG2RBDMCE9YZ3C28RF1.md) - The `rev-parse` paths are resolved relative to the project root before comparison, allowing correct detection regardless of whether the paths are absolute or relative.

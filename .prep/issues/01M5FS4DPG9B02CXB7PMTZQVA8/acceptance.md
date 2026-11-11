@@ -1,5 +1,5 @@
-- [ ] While the TUI runs, the view's WindowTitle is "prep: <project>" using the same name the header shows
-- [ ] Without a project name the title is "prep: prep" (the header's fallback)
-- [ ] On start the TUI pushes the terminal title (CSI 22;2 t) and on exit, including after an error or a project switch, pops it (CSI 23;2 t)
-- [ ] Writing to a non-terminal output emits no push or pop escapes
-- [ ] go test ./... and just check pass
+- [x] While the TUI runs, the view's WindowTitle is "prep: <project>" using the same name the header shows
+- [x] Without a project name the title is "prep: prep" (the header's fallback)
+- [x] On start the TUI pushes the terminal title (CSI 22;2 t) and on exit, including after an error or a project switch, pops it (CSI 23;2 t)
+- [x] Writing to a non-terminal output emits no push or pop escapes
+- [x] go test ./... and just check pass

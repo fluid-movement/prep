@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -39,6 +40,29 @@ func run(dir, stdin string, args ...string) (string, error) {
 func IsRepo(dir string) bool {
 	out, err := Run(dir, "rev-parse", "--is-inside-work-tree")
 	return err == nil && out == "true"
+}
+
+// IsLinkedWorktree reports whether dir belongs to a linked git worktree.
+func IsLinkedWorktree(dir string) bool {
+	gitDir, err := Run(dir, "rev-parse", "--git-dir")
+	if err != nil {
+		return false
+	}
+	commonDir, err := Run(dir, "rev-parse", "--git-common-dir")
+	if err != nil {
+		return false
+	}
+	resolve := func(p string) string {
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(dir, p)
+		}
+		p, err := filepath.Abs(p)
+		if err != nil {
+			return ""
+		}
+		return filepath.Clean(p)
+	}
+	return resolve(gitDir) != "" && resolve(gitDir) != resolve(commonDir)
 }
 
 // CommitExists reports whether ref resolves to a commit.

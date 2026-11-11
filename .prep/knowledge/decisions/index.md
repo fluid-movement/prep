@@ -331,3 +331,7 @@
 * [No action on leaf rows](/decisions/01M763KZ3N9GNW62MEAA32NGFT.md) - Both keys do nothing when the selected issue has no children; this avoids unexpectedly acting on a different issue.
 * [Fold state is keyed by issue ID](/decisions/01M763KZ3QAEE9K6N8KR7CWY0C.md) - This preserves folding across rebuilds/reloads and removes IDs absent from the current tree.
 * [Regenerated affected snapshots](/decisions/01M763TWG45FFYY9S20MZH5AJJ.md) - The failing tests explicitly identified snapshot mismatches and recommended `go test ./internal/tui/...
+* [Restrict title-stack escapes to terminal files](/decisions/01M763KYT9T8ZM9JSYDB5MZF75.md) - Only push/pop the xterm title stack when the output is an `*os.File` attached to a terminal.
+* [Detect linked worktrees with git metadata](/decisions/01M763KYFVYRK4BV6DH363S0AV.md) - Compared `git rev-parse --git-dir` and `--git-common-dir`, resolving relative paths against the checkout.
+* [Derive worktree state without storing it](/decisions/01M763KYFX2SJCS6N1FN73TDV1.md) - Added `Project.Worktree` as a JSON-ignored derived field.
+* [Filter only when opening the TUI switcher](/decisions/01M763KYFZCXZZEA896T4H7845.md) - Filtered the project list used by both switcher candidates and rows, retaining the current root even when it is a linked worktree.

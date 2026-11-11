@@ -51,3 +51,20 @@ func TestPathsKeepNonASCIINames(t *testing.T) {
 		t.Fatalf("Tracked = %q", keep)
 	}
 }
+
+func TestIsLinkedWorktree(t *testing.T) {
+	main := repo(t, "file")
+	if IsLinkedWorktree(main) {
+		t.Fatal("main checkout reported as worktree")
+	}
+	worktree := filepath.Join(t.TempDir(), "linked")
+	if _, err := Run(main, "worktree", "add", "-q", "-b", "linked", worktree); err != nil {
+		t.Skip("git worktree unavailable:", err)
+	}
+	if !IsLinkedWorktree(worktree) {
+		t.Fatal("linked checkout not reported as worktree")
+	}
+	if IsLinkedWorktree(t.TempDir()) {
+		t.Fatal("plain directory reported as worktree")
+	}
+}
