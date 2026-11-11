@@ -47,7 +47,7 @@ When prep was installed with Homebrew or `go install`, `prep update` names the c
 ```sh
 prep init                                    # create .prep/
 prep new --title "CSV export" --kind code --body "Users can export their data as CSV."
-prep guide <id>                              # what to do next, what blocks it, where outputs go
+prep guide <id>                              # what to do next, what blocks it, where outputs go; carries the requirement, criteria and context
 prep define <id>                             # requirement settled: write a baseline
 # enrich: context.md, knowledge decision records, acceptance.md
 prep ready <id>
