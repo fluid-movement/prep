@@ -240,7 +240,7 @@ func (e Event) ValidateHook() error {
 // open, with the reason as its target.
 var hookVerbs = map[string][]string{
 	"prompt":        {"sent", "skipped", HookError},
-	"finish":        {"asked", HookError},
+	"finish":        {"asked", "skipped", HookError},
 	"before-tool":   {"denied read", "denied write"},
 	"session-start": {"primed", HookError},
 }

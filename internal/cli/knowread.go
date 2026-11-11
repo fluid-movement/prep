@@ -237,7 +237,7 @@ func knowledgeShow(a *app, args []string) error {
 		return err
 	}
 	if len(pos) == 0 {
-		return usageErr("usage: prep knowledge show <entry>[#section]... [--outline]")
+		return usageErr("usage: prep knowledge show <entry-or-record-id>[#section]... [--outline]")
 	}
 	t, err := a.load()
 	if err != nil {
@@ -249,6 +249,14 @@ func knowledgeShow(a *app, args []string) error {
 		raw, anchor, _ := strings.Cut(ref, "#")
 		path := domain.NormalizeEntryPath(raw)
 		e := t.Knowledge[path]
+		if e == nil && !strings.Contains(raw, "/") && !strings.HasSuffix(raw, ".md") {
+			// A bare record ID or unique suffix, as prep decide --supersedes takes.
+			r, err := t.ResolveRecord(raw)
+			if err != nil {
+				return err
+			}
+			e, path = r, r.Path
+		}
 		if e == nil {
 			return &domain.Error{Code: domain.ErrNotFound, Message: fmt.Sprintf("no knowledge entry %s; prep knowledge list shows every entry", path)}
 		}

@@ -26,7 +26,15 @@ import (
 type hookTurn struct {
 	Head  string            `json:"head"`
 	Dirty map[string]string `json:"dirty"`
+	// Pending marks a snapshot that finish kept because fewer than
+	// hookFinishThreshold files had changed since it: the next prompt leaves it
+	// in place, so those files carry over to the next finish.
+	Pending bool `json:"pending,omitempty"`
 }
+
+// hookFinishThreshold is the number of changed files outside .prep, counted
+// since the last ask, from which finish asks its decision question.
+const hookFinishThreshold = 3
 
 func hookGit(root string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -154,7 +162,15 @@ func hookMarkTurn(a *app, e hookEvent, mode string) {
 		}
 		return
 	}
-	hookSaveTurn(hookTurnPath(a, e), state)
+	path := hookTurnPath(a, e)
+	if mode == "prompt" {
+		// A snapshot kept by a skipped finish stays, so the count carries over.
+		var stored hookTurn
+		if b, err := os.ReadFile(path); err == nil && json.Unmarshal(b, &stored) == nil && stored.Pending {
+			return
+		}
+	}
+	hookSaveTurn(path, state)
 }
 
 func hookFinish(a *app, e hookEvent) {
@@ -226,6 +242,16 @@ func hookFinish(a *app, e hookEvent) {
 	sort.Strings(code)
 	if len(code) == 0 {
 		hookSaveTurn(path, after)
+		return
+	}
+	if len(code) < hookFinishThreshold {
+		// Too few files to ask about: keep the stored snapshot, so the files
+		// of this turn count toward the next finish.
+		if !before.Pending {
+			before.Pending = true
+			hookSaveTurn(path, before)
+		}
+		hookRecord(a, e, "finish", "skipped", "", fmt.Sprintf("%d files", len(code)))
 		return
 	}
 	entries, _, err := a.kstore.Load()
