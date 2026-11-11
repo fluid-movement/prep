@@ -98,6 +98,7 @@ func init() {
 		{"prime", false, "prime [--max N]            session-start briefing: parents, actionable count, alerts", cmdPrime},
 		{"hook", false, "hook session-start|prompt|finish|before-tool|after-tool [--harness claude-code|codex] [--plugin path]  shared lifecycle hooks (event JSON on stdin)", cmdHook},
 		{"guide", false, "guide <id>                 step contract: state, transitions, unmet gates, inputs, outputs", cmdGuide},
+		{"brief", false, "brief <id> [--check] [--out [file]]  hand-off text for an implementer (--check: a checker) that needs no prep: requirement, context, criteria, decisions, rules, report format; --out writes it to a file (default .prep/local/handoff/<id>/) and prints the path", cmdBrief},
 		{"list", false, "list [query flags]         query issues: --state --kind --tag --priority --under --stale --actionable --blocked --parent --leaf --top --text --tree --view --max N; not-<value> negates (--state not-open)", cmdList},
 		{"next", false, "next [--under <id>]        actionable issues: ready, not stale, dependencies done, unclaimed", cmdNext},
 		{"show", false, "show <id>                  read one issue with its derived state", cmdShow},
