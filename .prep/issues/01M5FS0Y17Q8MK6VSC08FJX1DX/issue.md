@@ -3,6 +3,10 @@ title: hide worktrees from project view
 kind: code
 ---
 
-currently when an orchestrator starts work in git worktrees, these show up in the project list, we need to decide if we want this. either we keep it, and just hide worktree projects in the tui, or we hide them in prep projects completely
+The TUI project view does not list git worktree checkouts of a registered project, so an orchestrator that starts work in worktrees does not crowd the list.
+
+prep projects still lists the worktrees and `--project <name>` still resolves them; only the TUI project view hides them.
+
+Why: when an orchestrator works in git worktrees they show up in the project list and bury the real projects (decision by the user: keep them registered, hide them in the TUI only).
 
 ## Open questions

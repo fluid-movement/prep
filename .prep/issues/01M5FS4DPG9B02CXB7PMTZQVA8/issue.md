@@ -3,6 +3,8 @@ title: Nicer terminal title for open prep tuis
 kind: code
 ---
 
-currently in ghostty when prep tui is open, the title is just "prep tui". We can do better. Is this a common api? Then we can set the title for all terminals
+While the prep TUI is open it sets the terminal title to `prep: <project>` (the project name shown in the TUI), using the standard OSC 2 title escape that Ghostty and most terminals support, and restores the previous title when the TUI exits.
+
+Why: in Ghostty the title is just "prep tui", which says nothing about which project a tab holds when several are open.
 
 ## Open questions

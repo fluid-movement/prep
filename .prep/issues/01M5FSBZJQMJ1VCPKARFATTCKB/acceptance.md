@@ -1,0 +1,6 @@
+- [ ] In tree view, the fold key on a selected parent hides all its descendant rows and pressing it again shows them; the cursor stays on that parent
+- [ ] A folded parent's row shows a fold marker and the number of hidden children; an unfolded parent shows the open marker; leaf rows show none
+- [ ] The level key folds all parents on the selected issue's level when any is open, and unfolds them all when all are folded; parents on other levels are unchanged
+- [ ] Folds survive a reload of the tree and are dropped for issues that no longer exist
+- [ ] Both keys are listed in the ? key help, do not clash with existing list keys, and do nothing harmful in flat view or on a leaf
+- [ ] go test ./... and just check pass
