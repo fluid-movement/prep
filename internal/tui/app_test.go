@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -232,6 +233,27 @@ func TestKnowledgeScreen(t *testing.T) {
 	run(m, "1")
 	if m.screen != screenIssues || m.selected() != ids["doc"] {
 		t.Fatalf("o 1 went to %s on screen %d", m.selected(), m.screen)
+	}
+}
+
+func TestProjectWindowTitle(t *testing.T) {
+	p := newProject(t)
+	m := NewModel(testTheme(), Options{Load: p.load, Project: "sample-project"})
+	if got := m.View().WindowTitle; got != "prep: sample-project" {
+		t.Fatalf("title = %q", got)
+	}
+	m.opts.Project = ""
+	if got := m.View().WindowTitle; got != "prep: prep" {
+		t.Fatalf("fallback title = %q", got)
+	}
+}
+
+func TestTitleStackSequences(t *testing.T) {
+	var out bytes.Buffer
+	writeTitleStack(&out, "\x1b[22;2t")
+	writeTitleStack(&out, "\x1b[23;2t")
+	if got, want := out.String(), "\x1b[22;2t\x1b[23;2t"; got != want {
+		t.Fatalf("title stack = %q, want %q", got, want)
 	}
 }
 

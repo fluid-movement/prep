@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/term"
+
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
@@ -79,8 +81,29 @@ func Run(opts Options, in io.Reader, out io.Writer) (*Switch, error) {
 			m.changes = ch
 		}
 	}
+	popTitle := pushTerminalTitle(out)
+	if popTitle {
+		defer popTerminalTitle(out)
+	}
 	_, err := tea.NewProgram(m, tea.WithInput(in), tea.WithOutput(out)).Run()
 	return m.switchTo, err
+}
+
+func pushTerminalTitle(out io.Writer) bool {
+	f, ok := out.(*os.File)
+	if !ok || !term.IsTerminal(int(f.Fd())) {
+		return false
+	}
+	writeTitleStack(out, "\x1b[22;2t")
+	return true
+}
+
+func popTerminalTitle(out io.Writer) {
+	writeTitleStack(out, "\x1b[23;2t")
+}
+
+func writeTitleStack(out io.Writer, sequence string) {
+	_, _ = io.WriteString(out, sequence)
 }
 
 // Layout constants, in cells.
@@ -1154,6 +1177,7 @@ func (m *Model) listHeight() int { return max(1, m.bodyHeight()-2) }
 func (m *Model) View() tea.View {
 	v := tea.NewView(m.render())
 	v.AltScreen = true
+	v.WindowTitle = "prep: " + m.projectName()
 	if m.mouse {
 		v.MouseMode = tea.MouseModeCellMotion
 	}

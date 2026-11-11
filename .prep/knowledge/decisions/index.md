@@ -326,3 +326,4 @@
 * [Request usage is native, agent-scoped and explicitly partial](/decisions/01M75HSAMADHX34RQX9QPZ1P4X.md) - Claude and Codex request events carry agent identity; missing usage and bridge delivery failures are gaps, while turn summaries stay separate.
 * [Research handback carries criteria and completes when met](/decisions/01M760ZN0CTXGPD1VE5KF9TR73.md) - Research reports without --check write findings, apply criterion verdicts and complete only when all are met and Problems is empty.
 * [Hand-off report format: role-specific required criteria and research completion](/decisions/01M760ZYZFXKNEC5B7JM6FDEAA.md) - Summary is required; checker and research reports also require Criteria, with every criterion verdict, even when the section is empty.
+* [Restrict title-stack escapes to terminal files](/decisions/01M763KYT9T8ZM9JSYDB5MZF75.md) - Only push/pop the xterm title stack when the output is an `*os.File` attached to a terminal.
