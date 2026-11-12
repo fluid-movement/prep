@@ -1,3 +1,3 @@
 - [x] A finding gives, for at least one recorded session, the requests in the transcript against the request events in the stream, main session and subagents apart, and names what the plugin module misses
-- [ ] The finding states whether the Stop and SubagentStop hook inputs give the transcript paths, checked against the current hooks reference and a real session
+- [x] The finding states whether the Stop and SubagentStop hook inputs give the transcript paths, checked against the current hooks reference and a real session
 - [x] A code issue exists for the chosen route, or a decision records that cost stays with transcripts

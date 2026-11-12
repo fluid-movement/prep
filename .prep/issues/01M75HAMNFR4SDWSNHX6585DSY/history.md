@@ -5,3 +5,5 @@
 - 2026-11-11T19:23:35Z cli/prep-v0.3.0-3-gb07f9b4: Implemented, ready for check: Sessionless delivery gaps now count without session attribution, earlier bridge-disable markers remain visible for sessions continuing after --since, regression tests cover both, and all Go tests, go vet, six plugin tests, prep check and prep fmt --check pass.
 
 - 2026-11-11T19:48:45Z cli/prep-v0.3.0-3-gb07f9b4: Re-check: prior sessionless and pre-cutoff ongoing-session gap regressions covered by passing tests. go test ./..., claude plugin test plugins/claude-code (6 pass), go run ./cmd/prep check, go run ./cmd/prep fmt --check, and git diff --check HEAD pass. Criterion 4 checked; criteria 1-3 have passing simulated tests but actual Claude/Codex harness delivery is left for the user to verify. No live eval or harness session run; issue remains in progress because completion requires all criteria checked.
+
+- 2026-11-12T07:00:43Z claude-code: Live verification: module loads headless; subagent agent_id on requests; bridge-disabled gap marker on forced failure; agent_type absent

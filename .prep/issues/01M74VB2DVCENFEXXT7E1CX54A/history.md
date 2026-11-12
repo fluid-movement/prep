@@ -3,3 +3,5 @@
 - 2026-11-11T14:49:09Z claude-code: Implemented, ready for check: finding verifies Stop/SubagentStop inputs against the current reference, decision chooses native request events, code issue 01M75HAMNFR4SDWSNHX6585DSY filed and ready
 
 - 2026-11-11T14:50:25Z claude-code: Check: criteria 1 and 3 verified (110/110 per-source table; decision plus ready code issue 01M75HAMNFR4SDWSNHX6585DSY with matching source locations). Criterion 2 NOT met: the path fields are verified only against the hooks reference and transcript file layout, not a real Stop/SubagentStop stdin; the criterion requires a real session. Capture raw hook input once (temporary tee of stdin in a live session, with the user's OK) and add it to a finding, then check 2 and complete.
+
+- 2026-11-12T07:00:43Z claude-code: Live verification: Stop/SubagentStop stdin captured, agent_id and agent_transcript_path present
