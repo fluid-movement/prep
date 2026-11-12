@@ -1,0 +1,1 @@
+- [x] Findings state what prep costs in tokens and why (01M6V6R1BBWFSACRAAZX1GPAGP, 01M72A9TBJ5JQXT2VGT15N2HW1, and the request-coverage findings), and every change the findings called for is done, dropped with a reason, or decided against
