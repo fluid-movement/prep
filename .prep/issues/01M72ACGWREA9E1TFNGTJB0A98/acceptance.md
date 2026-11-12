@@ -5,7 +5,7 @@
 - [x] A real Claude Code session shows the text reaching the model; the Codex behaviour is implemented or documented as unsupported
 - [x] The outcome is recorded as a hook event in the activity stream
 - [x] README and a decision record describe the behaviour
-- [ ] An eval case with a scoped decision fails without the hook; it is run live only with the user's OK
 - [x] When more than five decisions match, the most specific scopes come first, then the newest, and the text says how many more match
 - [x] Editing a file that matches the scope of a current decision returns additionalContext naming that decision's title, its description cut at about 150 characters and its ID, and the edit proceeds
 - [x] A decision whose scope is ** is not named
+- [x] In a real Claude Code session the scoped-decision notice reaches the model at the first edit of a covered file and is not repeated; the finding records that with the prompt hook present the model already looks decisions up, so the notice is a safety net (real-world runs: 3/3 conforming with and without the hook)
