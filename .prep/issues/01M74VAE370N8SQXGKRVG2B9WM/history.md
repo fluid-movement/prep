@@ -1,0 +1,1 @@
+- 2026-11-12T07:23:41Z claude-code: Measurement verdict STOP: 72 of 171 (42%) gain a derived scope, but typical cli/tui files match 16-25 explicit decisions, so the five-decision cap already hides explicit ones and derived scopes would never be shown; the rest is not built.
