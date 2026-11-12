@@ -518,8 +518,10 @@ func BuildReport(events []Event, since time.Time) Report {
 	}
 	r.Cost.Sessions = r.Sessions
 	r.Cost.Coverage = "unknown"
-	if r.Cost.Requests > 0 || r.Cost.Gaps > 0 {
+	if r.Cost.Gaps > 0 || r.Cost.SessionsWithRequests < r.Cost.Sessions {
 		r.Cost.Coverage = "partial"
+	} else if r.Cost.Requests > 0 {
+		r.Cost.Coverage = "full"
 	}
 	r.Cost.ByAgent = []AgentUsage{}
 	for _, a := range agents {

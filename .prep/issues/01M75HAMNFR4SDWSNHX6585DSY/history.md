@@ -7,3 +7,5 @@
 - 2026-11-11T19:48:45Z cli/prep-v0.3.0-3-gb07f9b4: Re-check: prior sessionless and pre-cutoff ongoing-session gap regressions covered by passing tests. go test ./..., claude plugin test plugins/claude-code (6 pass), go run ./cmd/prep check, go run ./cmd/prep fmt --check, and git diff --check HEAD pass. Criterion 4 checked; criteria 1-3 have passing simulated tests but actual Claude/Codex harness delivery is left for the user to verify. No live eval or harness session run; issue remains in progress because completion requires all criteria checked.
 
 - 2026-11-12T07:00:43Z claude-code: Live verification: module loads headless; subagent agent_id on requests; bridge-disabled gap marker on forced failure; agent_type absent
+
+- 2026-11-12T07:04:50Z cli/prep-dev: Implemented, ready for check: Healthy main/subagent request streams now report full coverage, gaps and missing session/request usage report partial, regression tests cover mixed events and request-interrupted delivery, and go test ./..., go vet ./..., all 7 plugin tests and just check pass.

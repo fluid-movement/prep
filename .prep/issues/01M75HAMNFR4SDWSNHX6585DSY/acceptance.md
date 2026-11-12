@@ -1,4 +1,4 @@
-- [ ] Claude request events carry the agent ID, and a test shows main and subagent requests are distinguishable in the stream
-- [ ] A failed send or disabled bridge leaves a gap marker that prep activity report reads and states as partial coverage
-- [ ] Codex PostModelRequest events are written as request events with agent ID, and attempts without usage count as gaps
+- [x] Claude request events carry the agent ID, and a test shows main and subagent requests are distinguishable in the stream
+- [x] A failed send or disabled bridge leaves a gap marker that prep activity report reads and states as partial coverage
+- [x] Codex PostModelRequest events are written as request events with agent ID, and attempts without usage count as gaps
 - [x] prep activity report groups request tokens by agent and never adds transcript totals

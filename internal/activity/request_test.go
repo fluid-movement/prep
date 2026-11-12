@@ -69,6 +69,96 @@ func TestReadDurableBridgeGap(t *testing.T) {
 	}
 }
 
+func TestReportHealthyRequestCoverage(t *testing.T) {
+	dir := t.TempDir()
+	events := []Event{
+		{Kind: KindSession, Op: "started"},
+		{Kind: KindHook, Op: "prompt", Verb: "sent"},
+		{Kind: KindRequest, Tokens: &Tokens{Input: 2}},
+		{Kind: KindTool, Op: "Read"},
+		{Kind: KindRequest, AgentID: "child", Tokens: &Tokens{Input: 3}},
+		{Kind: KindSummary, Context: &Context{Tokens: 100}, CostUSD: 0.5},
+		{Kind: KindRequest, Tokens: &Tokens{Input: 2}},
+		{Kind: KindRequest, AgentID: "child", Tokens: &Tokens{Input: 3}},
+		{Kind: KindHook, Op: "finish", Verb: "skipped"},
+		{Kind: KindRequest, Tokens: &Tokens{Input: 2}},
+		{Kind: KindSession, Op: "ended"},
+	}
+	for _, e := range events {
+		e.Session, e.Actor, e.At = "s", "claude-code", reportDay
+		if err := Append(dir, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, read := range []func(string) ([]Event, error){
+		func(dir string) ([]Event, error) { return Read(dir, 0) }, ReadAll,
+	} {
+		stream, err := read(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c := BuildReport(stream, time.Time{}).Cost
+		if c.Coverage != "full" || c.Gaps != 0 || c.Requests != 5 || c.Tokens.Input != 12 || c.SessionsWithRequests != 1 || c.SubagentsWithRequests != 1 {
+			t.Fatalf("healthy coverage: %+v", c)
+		}
+		if len(c.ByAgent) != 2 || c.ByAgent[0].Requests != 3 || c.ByAgent[1].Requests != 2 || c.ByAgent[1].AgentID != "child" {
+			t.Fatalf("agent requests: %+v", c.ByAgent)
+		}
+	}
+}
+
+func TestReadInterruptedRequestGap(t *testing.T) {
+	dir := t.TempDir()
+	// This is the per-request failure payload sent by the Claude bridge,
+	// unlike the separate durable file used when the whole bridge disables.
+	stream := `{"at":"2026-11-10T09:00:00Z","actor":"claude-code","session":"s","kind":"request","tokens":{"input":2}}
+{"at":"2026-11-10T09:01:00Z","actor":"claude-code","session":"s","kind":"gap","op":"request-interrupted","agent_id":"child","turn_id":"t"}
+`
+	if err := os.MkdirAll(filepath.Join(dir, Dir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(Path(dir), []byte(stream), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, read := range []func(string) ([]Event, error){
+		func(dir string) ([]Event, error) { return Read(dir, 0) }, ReadAll,
+	} {
+		events, err := read(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c := BuildReport(events, time.Time{}).Cost
+		if c.Coverage != "partial" || c.Gaps != 1 || c.Requests != 1 || len(c.ByAgent) != 2 || c.ByAgent[1].AgentID != "child" || c.ByAgent[1].Gaps != 1 {
+			t.Fatalf("interrupted request: %+v", c)
+		}
+	}
+}
+
+func TestReportMissingRequestCoverage(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		events []Event
+		gaps   int
+	}{
+		{"session without requests", []Event{{Kind: KindHook, Session: "s", Op: "prompt"}}, 0},
+		{"another session without requests", []Event{
+			{Kind: KindRequest, Session: "s", Tokens: &Tokens{Input: 1}},
+			{Kind: KindSummary, Session: "other", CostUSD: 0.5},
+		}, 0},
+		{"request without usage", []Event{
+			{Kind: KindRequest, Session: "s", Tokens: &Tokens{Input: 1}},
+			{Kind: KindRequest, Session: "s"},
+		}, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := BuildReport(tc.events, time.Time{}).Cost
+			if c.Coverage != "partial" || c.Gaps != tc.gaps {
+				t.Fatalf("missing coverage: %+v", c)
+			}
+		})
+	}
+}
+
 func TestReportSessionlessBridgeGap(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, Dir), 0o755); err != nil {

@@ -140,4 +140,25 @@ describe('bridge', () => {
     expect(gaps[0].tokens).toBe(undefined)
     expect(prep.sent.filter(e => e.kind === 'request').length).toBe(0)
   })
+
+  test('a failed request sends an attributed request-interrupted gap', async ($, on) => {
+    const prep = fakePrep(on)
+    on('turn.step', async function* () {
+      throw new Error('request failed')
+    })
+    on('session.end', async () => ({ sessionId: 'sess-1' }))
+    await $.session.start(START)
+    let failed = false
+    try {
+      for await (const _ of $.turn.step({ turnId: 't', index: 0, model: 'model', agentId: 'child' } as never)) {}
+    } catch {
+      failed = true
+    }
+    await $.session.end({} as never)
+    expect(failed).toBe(true)
+    expect(prep.sent.filter(e => e.kind === 'gap')).toEqual([
+      { kind: 'gap', actor: 'claude-code', session: 'sess-1', agent_id: 'child', turn_id: 't', op: 'request-interrupted' },
+    ])
+    expect(prep.sent.filter(e => e.kind === 'request').length).toBe(0)
+  })
 })
