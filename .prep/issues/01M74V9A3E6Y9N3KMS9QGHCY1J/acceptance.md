@@ -2,5 +2,5 @@
 - [x] The trial's reports are fixtures in the handback tests and parse
 - [x] rules.md, the skill (synced to the plugins), the guide's hand-off text and README describe hand-off by brief and handback, and no longer tell an orchestrator to pass the rules on to implementers
 - [x] prep guide stays the described way for an agent that works alone
-- [ ] An eval case shows an orchestrator delegating with a brief and an implementer making no prep call; it is run live only with the user's OK
+- [x] An eval case shows an orchestrator delegating with a brief and an implementer making no prep call; it is run live only with the user's OK
 - [x] The resolution note says that the user's orchestrate skill needs the same change

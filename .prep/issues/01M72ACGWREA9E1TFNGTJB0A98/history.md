@@ -7,3 +7,7 @@
 - 2026-11-11T13:55:53Z claude-code: Check passed for criteria 1-4, 6, 7, 9-11 (go test ./..., prep check, prep fmt --check all clean). Open for the user: 5 (real Claude Code session) and 8 (live eval; case eval/cases/knowledge-read/scoped-decision-at-edit.yaml with fixture cart-discount-floor exists and is sound). Not completed.
 
 - 2026-11-12T07:00:43Z claude-code: Live verification: decision context reached model once, 2nd edit silent
+
+- 2026-11-12T07:15:18Z claude-code: Real-world verification: with before-tool hook 3/3 satisfy the decision, without 3/3 also satisfy it (model looked up knowledge itself, prompted by the prompt hook); criterion 8 not demonstrated in real setup. /tmp/liveA
+
+- 2026-11-12T07:15:27Z claude-code: Real-world verification: with before-tool hook 3/3 satisfy the decision, without 3/3 also satisfy it (model looked up knowledge itself, prompted by the prompt hook); criterion 8 not demonstrated in real setup. /tmp/liveA
