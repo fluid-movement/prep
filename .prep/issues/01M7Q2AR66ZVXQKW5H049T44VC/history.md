@@ -11,3 +11,5 @@
 - 2026-11-18T11:29:27Z cli/prep-v0.3.0-3-gb07f9b4: Added github.com/creack/pty v1.1.24 because go.mod had no pseudo-terminal dependency; claude --cloud requires a PTY.
 
 - 2026-11-18T11:33:57Z cli/prep-v0.3.0-3-gb07f9b4: Implemented, ready for check: added cloud handoff start and sequential fetch/merge commands with PTY sessions, readiness and upstream validation, versioned handback reports, integration tests and command documentation; go test ./..., prep check and prep fmt --check pass.
+
+- 2026-11-18T12:01:14Z cli/prep-v0.3.0-3-gb07f9b4: Check failed: acceptance criterion 6 is not met. docs/commands.md lists handoff start and fetch, but README.md lists neither command (it only links to the Cloud sessions documentation). Add the commands to README. Reviewed git diff main and git status --short (no untracked files); prep check, prep fmt --check and just lint passed. go test ./... was launched independently and is still running. Issue left incomplete; no criteria checked.
