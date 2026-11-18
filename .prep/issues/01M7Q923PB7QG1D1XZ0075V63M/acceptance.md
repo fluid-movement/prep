@@ -1,0 +1,5 @@
+- [ ] A usage object with no non-zero counts is recorded as a gap event with the model as op, not as a request
+- [ ] Event.Validate rejects a request whose tokens, context and cost are all zero, with a test
+- [ ] The bridge records a marker the first time turn.step runs in a session and once on turn.complete, and an event for any error it catches in turn.complete and session.start
+- [ ] Existing events (session started, tool, hook) are unchanged; the existing plugin tests pass
+- [ ] Tests for the new behaviour run through the plugin's existing test setup (plugins/claude-code/tests)

@@ -1,0 +1,17 @@
+---
+title: 'Activity bridge: zero-usage requests become gaps, and failures leave a visible event'
+kind: code
+parent: 01M7Q2A5H8TN2QGQD97YFVX5FA
+tags:
+  - cloud
+  - hooks
+---
+
+Make the Claude Code activity bridge (`plugins/claude-code/hooks/register.ts`) tell the truth about what it records, from the findings of the cloud research ("Cloud handback 01M7Q68DK55FJW50A8HZBVR2KH", `prep knowledge find cloud handback`).
+
+1. A model request whose usage object has no non-zero counts is recorded as a `gap` event (`op` = the model), not as a `request` with all-zero tokens, so the activity view never shows a request row with no value. `Event.Validate` (`internal/activity/activity.go`) rejects a `request` whose tokens, context and cost are all zero.
+2. The bridge records one marker event the first time `turn.step` runs in a session, once when `turn.complete` runs, and an event for any error it catches (today `turn.complete` and `session.start` swallow errors with only a debug log), so a cloud session where requests go unrecorded shows why in `prep activity`.
+
+A session that records nothing must now leave a visible reason. No change to the events that already work (`session started`, tool events, hook events).
+
+## Open questions
