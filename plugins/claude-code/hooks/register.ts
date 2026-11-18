@@ -14,6 +14,7 @@ let sending: Promise<void> = Promise.resolve()
 let enabled = true
 let session: string | undefined
 let lastCost = 0
+let stepped = false
 
 const ACTOR = 'claude-code'
 
@@ -51,6 +52,7 @@ async function joinSession($: EngineInterface): Promise<void> {
     void send($)
   }
   session = id
+  stepped = false
   pending.push({ kind: 'session', op: 'started', session: id, previous })
   void send($)
   lastCost = 0
@@ -78,24 +80,50 @@ function send($: EngineInterface): Promise<void> {
   return sending
 }
 
+function marker($: EngineInterface, op: string): void {
+  if (!enabled) return
+  pending.push({ kind: 'summary', op, status: 'entered' })
+  void send($)
+}
+
+async function reportError($: EngineInterface, op: string, error: unknown): Promise<void> {
+  if (!enabled) return
+  pending.push({ kind: 'gap', op, status: 'error', verb: 'error', target: String(error) })
+  await send($)
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    const started = await next(e)
-    enabled = true
-    await joinSession($)
-    return started
+    try {
+      const started = await next(e)
+      enabled = true
+      await joinSession($)
+      return started
+    } catch (error) {
+      await reportError($, 'session.start', error)
+      throw error
+    }
   }).catch(($, e, next) => next(e))
 
   // Claude Code can move to a new session ID without session.start.
   on('turn.start', async ($, e, next) => {
-    await joinSession($)
-    return next(e)
+    try {
+      await joinSession($)
+      return await next(e)
+    } catch (error) {
+      await reportError($, 'turn.start', error)
+      throw error
+    }
   }).catch(($, e, next) => next(e))
 
   // Tool activity is reported by the shared after-tool command in hooks.json.
   // This module retains session attribution and request/token/cost reporting.
 
   on('turn.step', async function* ($, e, next) {
+    if (!stepped && enabled) {
+      stepped = true
+      marker($, 'turn.step')
+    }
     // Optional fields vary by engine version. Never invent request identity.
     const extra = e as typeof e & { agentType?: string, requestId?: string, messageId?: string }
     const attribution = { agent_id: e.agentId, agent_type: extra.agentType, turn_id: e.turnId,
@@ -104,16 +132,18 @@ export const register: Register = on => {
     try {
       const r = yield* next(e)
       if (enabled) {
+        const tokens = {
+          input: r.usage?.input_tokens ?? 0,
+          output: r.usage?.output_tokens ?? 0,
+          cache_read: r.usage?.cache_read_input_tokens ?? 0,
+          cache_write: r.usage?.cache_creation_input_tokens ?? 0,
+        }
+        const hasUsage = Object.values(tokens).some(count => count !== 0)
         pending.push({
-          kind: r.usage ? 'request' : 'gap',
+          kind: hasUsage ? 'request' : 'gap',
           ...attribution,
           op: r.usage?.model ?? e.model,
-          tokens: r.usage ? {
-            input: r.usage.input_tokens ?? 0,
-            output: r.usage.output_tokens ?? 0,
-            cache_read: r.usage.cache_read_input_tokens ?? 0,
-            cache_write: r.usage.cache_creation_input_tokens ?? 0,
-          } : undefined,
+          tokens: hasUsage ? tokens : undefined,
         })
         recorded = true
         void send($)
@@ -129,22 +159,33 @@ export const register: Register = on => {
 
   // The turn's end carries the context fill and what the turn cost.
   on('turn.complete', async ($, e, next) => {
-    const done = await next(e)
-    if (enabled) {
-      const { context, cost } = await $.session.usage()
-      const total = cost?.usd ?? 0
-      pending.push({ kind: 'summary', context: { tokens: context.tokens, window: context.window }, cost_usd: Math.max(0, total - lastCost) || undefined })
-      lastCost = total
-      void send($)
+    marker($, 'turn.complete')
+    try {
+      const done = await next(e)
+      if (enabled) {
+        const { context, cost } = await $.session.usage()
+        const total = cost?.usd ?? 0
+        pending.push({ kind: 'summary', context: { tokens: context.tokens, window: context.window }, cost_usd: Math.max(0, total - lastCost) || undefined })
+        lastCost = total
+        void send($)
+      }
+      return done
+    } catch (error) {
+      await reportError($, 'turn.complete', error)
+      throw error
     }
-    return done
   }).catch(($, e, next) => next(e))
 
   on('session.end', async ($, e, next) => {
-    if (session) pending.push({ kind: 'session', op: 'ended', session })
-    // Awaited so the queue, including ended, is flushed before the session exits.
-    await send($)
-    session = undefined
-    return next(e)
+    try {
+      if (session) pending.push({ kind: 'session', op: 'ended', session })
+      // Awaited so the queue, including ended, is flushed before the session exits.
+      await send($)
+      session = undefined
+      return await next(e)
+    } catch (error) {
+      await reportError($, 'session.end', error)
+      throw error
+    }
   }).catch(($, e, next) => next(e))
 }

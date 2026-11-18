@@ -5,7 +5,7 @@ import { describe, expect, test } from 'claude-code/testing'
 const START = { cwd: '/repo', surface: 'terminal', isInteractive: true } as const
 
 /** Records prep activity add calls; failing makes prep exit 1 like outside a project. */
-function fakePrep(on: On, failing = false) {
+function fakePrep(on: On, failing = false, errorAt?: 'session.id' | 'session.usage') {
   const sent: Record<string, unknown>[] = []
   let calls = 0
   on('process.run', async (_$, e) => {
@@ -30,9 +30,15 @@ function fakePrep(on: On, failing = false) {
   })
   on('session.start', async (_$, e) => ({ cwd: e.cwd }))
   let session = 'sess-1'
-  on('session.id', async () => ({ value: session }))
+  on('session.id', async () => {
+    if (errorAt === 'session.id') throw new Error('session id unavailable')
+    return { value: session }
+  })
   on('session.root', async () => ({ value: '/repo' }))
-  on('session.usage', async () => ({ value: { context: { tokens: 50_000, window: 200_000 }, cost: { usd: 0.3 } } as never }))
+  on('session.usage', async () => {
+    if (errorAt === 'session.usage') throw new Error('usage unavailable')
+    return { value: { context: { tokens: 50_000, window: 200_000 }, cost: { usd: 0.3 } } as never }
+  })
   return { sent, env, calls: () => calls, setSession: (id: string) => { session = id } }
 }
 
@@ -102,7 +108,7 @@ describe('bridge', () => {
     expect(requests[0].agent_id).toBe(undefined)
     expect(requests[1].agent_id).toBe('child')
     expect(requests[1].turn_id).toBe('t')
-    expect(prep.sent.filter(e => e.kind === 'summary').length).toBe(1)
+    expect(prep.sent.filter(e => e.kind === 'summary' && e.context).length).toBe(1)
   })
 
   test('a failed send writes a durable gap independently and stops sending', async ($, on) => {
@@ -139,6 +145,90 @@ describe('bridge', () => {
     expect(gaps[0].agent_id).toBe('child')
     expect(gaps[0].tokens).toBe(undefined)
     expect(prep.sent.filter(e => e.kind === 'request').length).toBe(0)
+  })
+
+  test('empty and zero usage become model gaps; each non-zero counter is a request', async ($, on) => {
+    const prep = fakePrep(on)
+    const usages = [
+      {},
+      { model: 'usage-model' },
+      { model: 'usage-model', input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+      { input_tokens: 1 },
+      { output_tokens: 1 },
+      { cache_read_input_tokens: 1 },
+      { cache_creation_input_tokens: 1 },
+    ]
+    on('turn.step', async function* (_$, e) {
+      return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], usage: usages[e.index] } as never
+    })
+    on('session.end', async () => ({ sessionId: 'sess-1' }))
+    await $.session.start(START)
+    for (let index = 0; index < usages.length; index++) {
+      for await (const _ of $.turn.step({ turnId: 't', index, model: 'event-model', agentId: 'child' } as never)) {}
+    }
+    await $.session.end({} as never)
+    expect(prep.sent.filter(e => e.kind === 'gap')).toEqual([
+      { kind: 'gap', actor: 'claude-code', session: 'sess-1', agent_id: 'child', turn_id: 't', op: 'event-model' },
+      { kind: 'gap', actor: 'claude-code', session: 'sess-1', agent_id: 'child', turn_id: 't', op: 'usage-model' },
+      { kind: 'gap', actor: 'claude-code', session: 'sess-1', agent_id: 'child', turn_id: 't', op: 'usage-model' },
+    ])
+    expect(prep.sent.filter(e => e.kind === 'request').length).toBe(4)
+  })
+
+  test('entry markers precede work, step once per session and complete once per turn', async ($, on) => {
+    const prep = fakePrep(on)
+    on('turn.start', async () => ({ turnId: 't' } as never))
+    on('turn.step', async function* (_$, e) {
+      await settle()
+      expect(prep.sent.filter(e => e.op === 'turn.step').length).toBe(e.index === 2 ? 2 : 1)
+      return { turnId: e.turnId, index: e.index, answer: '', toolUses: [] } as never
+    })
+    on('turn.complete', async () => {
+      await settle()
+      expect(prep.sent.filter(e => e.op === 'turn.complete').length).toBe(completed + 1)
+      return { text: '' }
+    })
+    on('session.end', async () => ({ sessionId: 'sess-2' }))
+    let completed = 0
+    await $.session.start(START)
+    for (let index = 0; index < 3; index++) {
+      if (index === 2) {
+        prep.setSession('sess-2')
+        await $.turn.start({ turnId: 't' } as never)
+      }
+      for await (const _ of $.turn.step({ turnId: 't', index, model: 'model' } as never)) {}
+      await $.turn.complete({ turnId: 't', answer: '' } as never)
+      completed++
+    }
+    await $.session.end({} as never)
+    expect(prep.sent.filter(e => e.status === 'entered')).toEqual([
+      { kind: 'summary', actor: 'claude-code', session: 'sess-1', op: 'turn.step', status: 'entered' },
+      { kind: 'summary', actor: 'claude-code', session: 'sess-1', op: 'turn.complete', status: 'entered' },
+      { kind: 'summary', actor: 'claude-code', session: 'sess-1', op: 'turn.complete', status: 'entered' },
+      { kind: 'summary', actor: 'claude-code', session: 'sess-2', op: 'turn.step', status: 'entered' },
+      { kind: 'summary', actor: 'claude-code', session: 'sess-2', op: 'turn.complete', status: 'entered' },
+    ])
+  })
+
+  test('a turn usage failure leaves its entry marker and a visible error', async ($, on) => {
+    const prep = fakePrep(on, false, 'session.usage')
+    on('turn.complete', async () => ({ text: '' }))
+    await $.session.start(START)
+    await $.turn.complete({ turnId: 't', answer: '' } as never)
+    await settle()
+    expect(prep.sent.filter(e => e.op === 'turn.complete')).toEqual([
+      { kind: 'summary', actor: 'claude-code', session: 'sess-1', op: 'turn.complete', status: 'entered' },
+      { kind: 'gap', actor: 'claude-code', session: 'sess-1', op: 'turn.complete', status: 'error', verb: 'error', target: 'HooksError: no implementation for session.usage' },
+    ])
+  })
+
+  test('a session start failure leaves a visible error even before session attribution', async ($, on) => {
+    const prep = fakePrep(on, false, 'session.id')
+    await $.session.start(START)
+    await settle()
+    expect(prep.sent).toEqual([
+      { kind: 'gap', actor: 'claude-code', op: 'session.start', status: 'error', verb: 'error', target: 'HooksError: no implementation for session.id' },
+    ])
   })
 
   test('a failed request sends an attributed request-interrupted gap', async ($, on) => {

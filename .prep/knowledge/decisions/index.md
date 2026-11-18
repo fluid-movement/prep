@@ -344,3 +344,4 @@
 * [User docs are Markdown pages in docs/, command reference generated](/decisions/01M7Q2Z6RZJXQ8BJTVGAKAXBZ9.md) - docs/ pages, README as overview, command reference generated from prep help and checked in CI; no site yet.
 * [User docs are Markdown pages in docs/, command reference generated](/decisions/01M7Q2ZE5J5TRNEC9V395YQ52C.md) - docs/ pages, README as overview, command reference generated from prep help and checked in CI; no site yet.
 * [Cloud handback reports are versioned findings, not work-log text](/decisions/01M7Q6TBGRHP7533Q1XBFVGR62.md) - Store the full Markdown report with prep finding under the title Cloud handback <issue-id>; logs flatten Markdown and research handback imports complete issues.
+* [Failed requests stay valid without usage; zero-usage requests are rejected](/decisions/01M7Q9D52R94WYSPCS8N1GX361.md) - Event.Validate rejects an all-zero request unless its status is failed.

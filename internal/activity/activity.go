@@ -117,7 +117,12 @@ func (e Event) Validate() error {
 	if e.Kind == KindTool && e.Op == "" {
 		why = append(why, "a tool event needs op (the tool's name)")
 	}
-	if (e.Kind == KindRequest || e.Kind == KindSummary) && e.Tokens == nil && e.Context == nil && e.CostUSD == 0 && e.Status == "" {
+	hasTokens := e.Tokens != nil && *e.Tokens != (Tokens{})
+	hasContext := e.Context != nil && *e.Context != (Context{})
+	if e.Kind == KindRequest && e.Status != "failed" && !hasTokens && !hasContext && e.CostUSD == 0 {
+		why = append(why, "a request event needs non-zero tokens, context or cost_usd unless status is failed")
+	}
+	if e.Kind == KindSummary && e.Tokens == nil && e.Context == nil && e.CostUSD == 0 && e.Status == "" {
 		why = append(why, "a request event needs tokens, context or cost_usd")
 	}
 	if e.Kind == KindSession {

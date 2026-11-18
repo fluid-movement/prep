@@ -268,6 +268,15 @@ func TestValidate(t *testing.T) {
 	ok := []Event{
 		{Kind: KindTool, Op: "Edit", Area: AreaCode, Chars: 10},
 		{Kind: KindRequest, Tokens: &Tokens{Input: 1}},
+		{Kind: KindRequest, Tokens: &Tokens{Output: 1}},
+		{Kind: KindRequest, Tokens: &Tokens{CacheRead: 1}},
+		{Kind: KindRequest, Tokens: &Tokens{CacheWrite: 1}},
+		{Kind: KindRequest, Context: &Context{Tokens: 1}},
+		{Kind: KindRequest, Context: &Context{Window: 1}},
+		{Kind: KindRequest, CostUSD: 0.01},
+		{Kind: KindRequest, Status: "failed"},
+		{Kind: KindRequest, Status: "failed", Tokens: &Tokens{}, Context: &Context{}},
+		{Kind: KindSummary, Status: "entered", Op: "turn.step"},
 	}
 	for _, e := range ok {
 		if err := e.Validate(); err != nil {
@@ -275,6 +284,11 @@ func TestValidate(t *testing.T) {
 		}
 	}
 	bad := []Event{{Kind: KindPrep}, {Kind: KindTool}, {Kind: KindRequest}, {Kind: KindTool, Op: "x", Chars: -1}}
+	bad = append(bad,
+		Event{Kind: KindRequest, Tokens: &Tokens{}},
+		Event{Kind: KindRequest, Context: &Context{}},
+		Event{Kind: KindRequest, Tokens: &Tokens{}, Context: &Context{}, Status: "ok"},
+	)
 	for _, e := range bad {
 		if e.Validate() == nil {
 			t.Fatalf("%+v should fail", e)
