@@ -38,6 +38,7 @@ Write commands:
   finding [<id>] --title T --description D  write a finding record [--scope <glob>]
   log <id> <text>            append a line to the work log
   handback <id> [--check] [--report file|-] [--commit hash]  write a brief's report into linked knowledge and logs; checker and research reports require Criteria verdicts, check met criteria and complete when all are met and Problems is empty, otherwise log failures and leave in progress; research reports write findings without --check; default .prep/local/handoff/<id>/report.md (check-report.md with --check); successful reports move to *.done.md
+  handoff start <id>... [--yes] | fetch [--merge]  start Claude Code cloud sessions or fetch their branches; never pushes
   focus <id> | --clear        set or clear the issue you work on, for prep tui's Agent view (local; writes no records)
   define <id> [--trivial]    write a requirement baseline (open questions must be empty); --trivial re-baselines a stale issue's trivial change, enrichment stays valid
   ready <id> [--note]        sign off enrichment against the newest baseline

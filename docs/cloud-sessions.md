@@ -9,11 +9,12 @@ The cloud VM needs the same prep installation you have locally. Give it that wit
 1. Print the script for your version: `prep cloud script`. It pins the release you run, installs it with `install.sh`, and runs `prep setup --harness claude-code`, the non-interactive form of the setup above, so the session gets the same binary, plugin, hooks, skill and activity bridge as a local install.
 2. At claude.ai/code, add an environment (network access **Limited** with package managers allowed covers the GitHub download) and paste the script into its setup script box.
 3. In your terminal run `/remote-env` in Claude Code and choose that environment as the default for `claude --cloud`.
-4. Push your branch, then start a session from an interactive terminal (the command refuses to run without one):
+4. Push your branch, then hand ready, unclaimed issues off from an interactive terminal:
    ```sh
-   claude --cloud "Run prep guide <id>, implement it following the guide, log 'Implemented, ready for check' and stop."
+   prep handoff start <id>...       # confirms the session count; add --yes to skip
    ```
-   The session pushes a branch named `claude/<words from the prompt>-<suffix>`; list them with `git ls-remote --heads origin 'claude/*'`, check the result, then merge it. One session handles one issue.
+   prep checks every issue and that `HEAD` is pushed before it starts anything, then starts one `claude --cloud` session per issue on a pseudo-terminal and logs each session's ID and link on its issue. Without a terminal it prints the exact commands to run and exits non-zero. Each session implements its issue, leaves it ready for a separate check, writes its report in handback format into the records on its branch, commits and pushes. One session handles one issue.
+5. Run `prep handoff fetch` to list unmerged `claude/*` branches on origin, the issue each touches and whether its report is present. `prep handoff fetch --merge` merges them one at a time, runs `prep fmt` then `prep check` after each merge, and stops at the first failure. Run the checker pass separately. Neither command pushes your local branch.
 
 Limits to know:
 
