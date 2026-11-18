@@ -1,0 +1,1 @@
+- [x] A decision record states the docs layout, the generated command reference and what stays in the knowledge base

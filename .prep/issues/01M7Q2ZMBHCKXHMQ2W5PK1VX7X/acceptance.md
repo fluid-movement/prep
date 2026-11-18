@@ -1,0 +1,6 @@
+- [ ] docs/ holds getting-started, workflow, commands, harness-integrations, cloud-sessions, knowledge-base and tui pages, and the README links to each
+- [ ] The README keeps only the pitch, install, quick start and links; no content is lost, it moved to a page
+- [ ] docs/commands.md is generated from the command table and just ci fails when the committed file is out of date
+- [ ] Relative links between pages are checked in just ci
+- [ ] The cloud page refers to prep cloud script instead of copying the script
+- [ ] just ci passes

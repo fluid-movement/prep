@@ -1,0 +1,1 @@
+Decision only; no code. The restructuring (docs/ pages, generated command reference, README shrink) is filed as a separate code issue. Sources: README.md as it stands, AGENTS.md (decisions live in the knowledge base), the command table in internal/cli/cli.go that `prep help` prints.

@@ -6,10 +6,10 @@ tags:
   - cloud
 ---
 
-Decide how prep's user documentation is organised, then create its skeleton. The README carries install, workflow, harness setup and soon cloud use; it should shrink to an overview with links.
+Decide how prep's user documentation is organised. The README carries install, workflow, harness setup and now cloud use; it should shrink to an overview with links.
 
-Settle: a `docs/` folder of Markdown pages (getting started, the workflow, commands, harness integrations, cloud sessions, the knowledge base) versus a generated site, and what stays in the README. User-facing docs say how to use prep; decisions and findings stay in the knowledge base, as AGENTS.md requires. Decide how the command reference stays in step with `prep --help`, so it is generated or checked rather than written twice, and how `just ci` keeps links and examples valid.
+Settled: user docs are Markdown pages in `docs/` in the repository, readable on GitHub and by agents, with no generated site for now. The README keeps the pitch, install, a quick start and links. Pages: getting started, the workflow (lifecycle), commands, harness integrations, cloud sessions, the knowledge base, the TUI. The command reference is generated from `prep help` by a command and checked in `just ci`, so it cannot drift. User docs say how to use prep; decisions and findings stay in the knowledge base as AGENTS.md requires. A site can be added later over the same pages.
 
-Deliver the decision as a knowledge entry and a skeleton of pages with the existing README content moved into them.
+Deliverable of this issue: the decision recorded in the knowledge base. The restructuring is a separate code issue.
 
 ## Open questions
