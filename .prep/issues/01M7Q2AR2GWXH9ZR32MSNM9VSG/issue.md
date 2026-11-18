@@ -6,8 +6,10 @@ tags:
   - cloud
 ---
 
-The cloud environment setup script lives in the user's claude.ai environment, outside any repository, so it can silently fall behind the prep version the user runs. Let prep print the script for its own version: `prep cloud script` (name open) prints the script with `PREP_VERSION` set to the running binary's release, ready to paste into the environment dialog. Development builds that have no release say so and print the script with the latest release.
+The cloud environment setup script lives in the user's claude.ai environment, outside any repository, so it can silently fall behind the prep version the user runs. `prep cloud script` prints the script for the running binary's version, ready to paste into the environment dialog. It takes no flags and writes only to stdout.
 
-The script printed is the one verified in the finding on the environment setup script: install.sh pinned, `prep setup --harness claude-code`, diagnostics, every step ending in `|| true`. There must be exactly one definition of it in the code, which the README and docs quote, so they cannot drift from what prep prints.
+The script printed is the one verified in the finding on the environment setup script: `PREP_VERSION` set to the running binary's release tag, the install.sh download, a line reporting whether `claude` is on the PATH, `prep setup --harness claude-code` with the absolute binary path, and a line printing the installed version. Every step that can fail ends in `|| true` so a failure never blocks session start. A development build (no release tag) omits the `PREP_VERSION` line, so the latest release is installed, and says so on stderr.
+
+There is exactly one definition of the script in the code. The README and docs quote it by running or copying `prep cloud script`, never by retyping it, and a test fails if the printed script no longer runs `prep setup --harness claude-code` or loses a `|| true`.
 
 ## Open questions

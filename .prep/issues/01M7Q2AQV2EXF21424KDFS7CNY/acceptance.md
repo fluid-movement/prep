@@ -1,0 +1,4 @@
+- [ ] A ready code issue was implemented by a cloud session started with claude --cloud, and its session link is recorded
+- [ ] The result was brought back to main (branch fetched and merged) and what arrived in .prep is described
+- [ ] Findings answer: which branch the session pushes, whether .prep records merge cleanly, whether brief/handback or guide fits better, parallel-session conflicts, PreToolUse, the blank request and hook skipped events, and usage cost
+- [ ] Each remaining gap becomes a change to an existing follow-up issue or a new issue

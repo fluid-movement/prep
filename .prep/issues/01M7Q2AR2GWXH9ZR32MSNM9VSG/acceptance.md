@@ -1,0 +1,5 @@
+- [ ] prep cloud script prints the script with PREP_VERSION set to the binary's release tag and exits 0
+- [ ] A development build prints the script without a PREP_VERSION line and says so on stderr
+- [ ] Every command in the script that can fail ends in || true and the setup step uses prep setup --harness claude-code
+- [ ] The script text is defined once in Go and a test covers the release and development cases
+- [ ] prep help and the README command list mention the command
