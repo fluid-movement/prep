@@ -20,51 +20,6 @@ go install github.com/fluid-movement/prep/cmd/prep@latest
 just install
 ```
 
-## Harness integrations
-
-The binary is half of prep; the other half teaches your agent to use it. After installing, the script runs `prep setup`, which detects your agent harnesses and installs their integration per user. You can choose Codex explicitly with `prep setup --harness codex`. For Claude Code and Codex CLI, prep installs a plugin with the shared prep skill and lifecycle hooks. Session start identifies the prep project and supplies its general briefing; each prompt steers the agent to search existing issues and use prep tools; turn finish checks whether issue progress and knowledge need updating after the turn's changes. Supporting tool hooks redirect direct record access and report activity. Claude also reports request token usage and cost. Codex asks you to review and trust plugin hooks before they run; open `/hooks`, review the updated definitions, then start a new session. Hooks cover supported local tools and fail open on integration errors. These integrations act only in repositories initialized with `.prep/`; projects do not need an `AGENTS.md` file. Run `prep tui --agent` next to your agent, beside it or in a strip above or below, to watch what it does: its current issue in full, a live feed of its actions, and its usage. Run `prep setup` again at any time to add or remove harnesses; your choices live in `~/.config/prep/config.yaml`.
-
-Prompt context is a global choice in `~/.config/prep/config.yaml`:
-
-```yaml
-hooks:
-  prompt: small
-```
-
-`small` is the default concise workflow reminder; `large` also includes bounded guides for up to two full issue IDs; `off` skips prompt input and project lookup. Session context, record redirects, activity and finish remain enabled. Turn finish uses Git snapshots of dirty files and commits, ignoring unchanged pre-existing work; once three or more files outside `.prep` have changed since it last asked (or since the session started), it asks once whether a decision needs recording, and respects the stop-loop flag. A turn that leaves the count at one or two is not asked and its files carry over to the next turn. Git/snapshot failures leave the turn alone. With prompt context off, its boundary is session start or the previous finish. Before an agent edits a file with a file tool (Edit, Write, NotebookEdit, `apply_patch`), the before-tool hook adds a note naming the current decisions whose scope matches that file: title, record ID and the description cut at 150 characters, the most specific scope first, then the newest. It names at most five per edit and says how many more match, names each decision once per session (again after a session start or compaction, and separately inside a Claude Code subagent), and never blocks the edit. Decisions with scope `**` are left out because the session briefing lists them; edits made through shell commands are not covered, and the finish question no longer lists scoped decisions. The note uses the `additionalContext` field of the pre-tool hook output, which Claude Code documents for adding context without a permission decision. Codex gets the same output; whether its pre-tool hook passes that text to the model depends on the Codex version and has not been confirmed, so treat the note as Claude Code only until it is. Codex session context tells the agent to set `PREP_ACTOR` and `PREP_SESSION` only on prep CLI invocations. Other shell commands keep their usual form so approved command prefixes can still match; hooks attribute their activity directly from event payloads and do not auto-approve or rewrite them. Keep plugin and binary versions in sync (`prep setup --refresh`).
-
-## Update
-
-```sh
-prep update          # replace prep with the latest release, checksum verified
-prep update --check  # only report whether a newer release exists
-prep cloud script    # print the cloud environment setup script for this version
-```
-
-When prep was installed with Homebrew or `go install`, `prep update` names the command that updates it instead. Releases are cut with `just release vX.Y.Z` (it sets the plugin version, runs the tests, commits and tags) and published by pushing the tag; the release workflow builds and publishes them with GoReleaser.
-
-## Cloud sessions
-
-Define issues on your machine, hand them to Claude Code cloud sessions, and merge what comes back. A cloud session clones the repository from GitHub, so its `.prep/` records arrive with the code, and its own records (claims, work log) come back through the branch it pushes.
-
-The cloud VM needs the same prep installation you have locally. Give it that with a custom cloud environment whose setup script installs prep and runs `prep setup`:
-
-1. Print the script for your version: `prep cloud script`. It pins the release you run, installs it with `install.sh`, and runs `prep setup --harness claude-code`, the non-interactive form of the setup above, so the session gets the same binary, plugin, hooks, skill and activity bridge as a local install.
-2. At claude.ai/code, add an environment (network access **Limited** with package managers allowed covers the GitHub download) and paste the script into its setup script box.
-3. In your terminal run `/remote-env` in Claude Code and choose that environment as the default for `claude --cloud`.
-4. Push your branch, then start a session from an interactive terminal (the command refuses to run without one):
-   ```sh
-   claude --cloud "Run prep guide <id>, implement it following the guide, log 'Implemented, ready for check' and stop."
-   ```
-   The session pushes a branch named `claude/<words from the prompt>-<suffix>`; list them with `git ls-remote --heads origin 'claude/*'`, check the result, then merge it. One session handles one issue.
-
-Limits to know:
-
-- The setup script lives in your claude.ai environment, not in the repository, and is per account. Collaborators need their own environment.
-- The script pins the version it was printed for; print it again and paste it after updating prep so the cloud binary and plugin move with yours. A cloud binary older than the repository's schema fails with a message that names the fix.
-- The environment caches the result of the script, rebuilds when you change the script or its allowed hosts, and again after about seven days.
-- A cloud session uses your plan's usage like any other session; one small issue took about two points of the five-hour window.
-
 ## Quick start
 
 Working alone, follow `prep guide <id>` through implementation and a separate check pass. To delegate, run `prep brief <id> --out` and give the implementer only this one-line prompt: "Read .prep/local/handoff/<id>/brief.md and follow it exactly. It tells you where to write your report." Run `prep handback <id>` to import its report. Then run `prep brief <id> --check --out` for a separate checker, pointing the same prompt at `check-brief.md`. Check knowledge updates and other tracker-only Definition of Done items yourself before `prep handback <id> --check`. Implementers and checkers follow their brief, not the workflow rules, and make no prep calls; the orchestrator keeps the records. To read the state of several issues at once, `prep list --under <parent>` prints one line each (state, kind, title); `prep show` prints a whole issue.
@@ -82,78 +37,14 @@ prep complete <id>
 git commit                                   # code and the staged .prep records together
 ```
 
-prep stages the files it writes and never commits; you (or your agent) commit them with the code they describe. A code issue completed without `--commit` takes as its evidence the commit that adds its `resolution.md`, so code, records and knowledge updates land in one commit; `--commit <hash>` names work committed earlier. Knowledge records are immutable: `prep decide [<id>] --title T --description D [--body text] [--outcome]` and `prep finding [<id>] --title T --description D [--body text]` create one ULID-named OKF file in `knowledge/decisions/` or `knowledge/findings/`. A decision requires an issue, repeatable `--scope <glob>` naming the narrowest code paths it constrains, or `--project-wide` (stored as scope `**`, not combined with `--scope`). `prep guide` and `prep brief` include current decisions linked to the issue and its ancestors; `prep prime` lists the ten newest current project-wide decisions and counts the rest. Older unlinked, unscoped records remain valid and searchable; findings still need neither a link nor a scope. Decisions can replace older records with repeatable `--supersedes <record-id-or-suffix>`; list, find and show derive and display superseded status. Read with `prep knowledge list|find|show`. Existing descriptive entries remain readable; knowledge starts empty with no bootstrap prerequisite.
+## Documentation
 
-The project Definition of Done is guidance shown by `prep prime` and `prep guide` at the check step. Edit it with `prep dod --add "<item>"` or `prep dod --remove "<item>"`. Completion checks the issue’s state, requirement freshness, checked criteria, kind-specific result: decision issues need a linked decision record with `outcome: true`, and research issues need a linked finding record. Completion has no documentation flags or gate.
-
-`prep brief <id>` prints a hand-off text for an agent that has no prep: the requirement, the implementation context, the numbered acceptance criteria, the decisions that apply, the Definition of Done, the rules of the role and the format of the report to return. `--check` gives the checker's version. The text names no prep command; it ends with the absolute path of the file the agent writes its report to, `.prep/local/handoff/<id>/report.md` (`check-report.md` for a checker), and asks for a one-line answer. `--out` writes the brief to `brief.md` (`check-brief.md`) in the same directory and prints only that path, so an orchestrator hands over a path, not the text; `--out <file>` writes elsewhere. The directory is local to the machine and not versioned. Decisions linked to the issue are given in full; those linked to an ancestor, or whose scope matches a path the context names, by title and description; superseded ones are left out, and the section is bounded and says what it cut or left out. Definition of Done items that name a prep command stay with the orchestrator. An implementer's brief after a failed check carries the newest "Check failed" line of the work log. A brief is given for a code or research issue that is ready or in progress, not stale, not a parent, with its dependencies done. Code implementers report their work, decisions and findings without criterion verdicts. Research implementers must report findings and a verdict per criterion in a Criteria section. Every checker also reports Criteria. Keep that required section even if there are no criteria.
-
-`prep handback <id>` imports that report in one command. It reads `.prep/local/handoff/<id>/report.md` by default, or `check-report.md` with `--check`; `--report <file>` reads elsewhere and `--report -` reads stdin. A code implementer's summary becomes an "Implemented, ready for check" log line, decisions and findings become linked knowledge records, problems are logged, and a ready issue is claimed. Code implementers report no criterion verdicts and never complete the issue. A decision's optional `Scope: <glob>[, <glob>]` line directly under its `###` title sets its scope. Checker and research reports require a Criteria section with numbered `met`/`not met` verdicts for every criterion, even if the section is empty. Research reports without `--check` write their findings and update criteria directly. These reports and checker reports check met criteria and uncheck unmet ones: all met with Problems empty completes the issue under the usual gates (`--commit <hash>` supplies evidence); otherwise a "Check failed" log records the unmet criteria and problems and the issue stays in progress. The whole report is validated before any records are written, under one lock with the resolution last. Heading case, blank lines, verdict punctuation and extra sections are tolerated; missing required content, unknown criterion numbers and decisions without reasons are refused. Successful file reports are renamed to `*.done.md` so they are not imported twice; stdin has no file to move. Output is one short line per record written, or a single JSON result with `--json`.
-
-Every read command (`prime`, `guide`, `brief`, `list`, `next`, `show`, `check`, `views`) accepts `--json`; errors are JSON with stable codes under `--json`. Write commands (`new`, `define` (with `--trivial` for a trivial change), `ready`, `claim`, `release`, `complete`, `drop`, `fmt`, `fix`) perform one transition each; `handback` batches the records of one report. Harness permission rules can allow reads and ask before writes. IDs accept any unique suffix. Name the actor with `--by` or `PREP_ACTOR` (`<producer>/<version>` for agents, `human:<id>` for people).
-
-## Lifecycle
-
-Lifecycle JSON responses preserve their existing fields and add success markers and actionable next commands where applicable.
-
-State is derived from which records exist in `.prep/issues/<id>/`, never stored:
-
-| State | Record | Written by |
-| --- | --- | --- |
-| open | `issue.md` | `prep new`, `prep edit` |
-| defined | `baselines/<timestamp>.md` | `prep define`, `prep define --trivial` |
-| ready | `ready.md` referencing the newest baseline | `prep ready` |
-| in progress | `claim.md` | `prep claim` (`prep release` removes it and logs to `history.md`) |
-| done / dropped | `resolution.md` | `prep complete`, `prep drop` (`prep reopen` removes a done resolution and logs it to `history.md`) |
-
-An issue is **stale** when its requirement or kind differs from the newest baseline: `prep define --trivial` for a trivial change, `prep define` and re-enrichment for a real one. **Actionable** = ready, not stale, dependencies done, unclaimed, not a parent.
-
-Dependencies refer to issues in the same project. `prep projects` lists projects registered on this machine; `--project <name>` runs a command in another registered project.
-
-Prep serializes cooperating record writers within one checkout: each write command holds a lock from load to its last write, so a second writer waits and plans on the first one's result. Files are written one at a time through a temporary file and rename, the file that defines an issue's state last. Claims and activity remain local to each branch/worktree, so assigning parallel agents is the orchestrator's responsibility. This storage guarantee covers process interruption, with per-file atomic renames and no rollback; it does not coordinate other worktrees or promise power-loss atomicity.
-
-## Activity report
-
-`prep activity report` sums up the sessions recorded in the project's activity stream, so you can judge what prep costs and whether its rules are followed without reading transcripts. It prints five sections: hooks (prompt texts sent and skipped, Stop questions asked and skipped and how many were followed by a decision or finding before the next prompt, split at fewer than three, three to eight and more than eight changed files where the event records the count, before-tool denials, edit-time decision notices, hook errors); rule following, per turn, per session and per issue (code edits with no issue named earlier in the session, knowledge lookups before the first code edit, guides followed by a show of the same issue); hand-off (briefs, accepted and refused hand-backs by reason, failed checks); commands with their failures by error code; and cost. The cost section totals the request events the stream holds and says how many sessions and subagents have them. Only the Claude Code main session reports requests, so sessions and subagents without them get no figure and nothing is estimated. A session is one harness session; a turn runs from one prompt to the next. Without flags the report covers the current stream; `--since <date>` (`YYYY-MM-DD` or RFC 3339) counts events from that date on and includes the archived streams. `--json` carries the same numbers.
-
-## The TUI
-
-`prep tui` has two rows of navigation. The top row is the screens: Issues (`i`), Agent (`w`) and Knowledge (`b`), with the check's counts and a gear for the settings at its right end. Below it are the views of the screen you are on: your saved issue lists on Issues; Issue, Activity and Usage on Agent. `tab` and `1`–`9` move between views, and backspace (or the mouse's back button) returns to where you were, across screens. Everything can be clicked. On the issue list, `a` opens the actions that apply to the selected issue, `e` edits it, `p` sets its priority and `n` creates one; `?` lists every key. In a terminal under 16 rows both navigation rows share one line.
-
-## Views
-
-The tabs of `prep tui` are the saved views in the project configuration, in the order the file lists them. A view is a name and a query, with the same flags as `prep list`. `prep init` writes two to `.prep/config.yaml.dist`: all unresolved work first, where each row's state glyph tells the states apart, then every issue.
-
-The configuration is personal. The project commits `.prep/config.yaml.dist` as the shared default; your own `.prep/config.yaml` is gitignored and, when it exists, replaces the dist file as a whole (nothing is merged). Copy the dist file to start your own, or change a setting in the TUI, which creates it for you.
-
-```yaml
-views:
-  Unresolved: --state open,defined,ready,in-progress
-  All: ""
-```
-
-A query takes any number of flags, and an issue must match all of them; a comma-separated list within one flag matches any of its values (`--state ready --tag tui,cli --priority high,critical`). The flags are `--state`, `--kind`, `--tag`, `--priority`, `--under <id>` (descendants of an issue), `--text` (title or requirement), `--stale`, `--blocked`, `--actionable`, `--parent`, `--leaf` and `--top`; the boolean ones accept `=false`. A leading `not-` negates a value: `--state not-open` lists every issue that is not open, `--tag not-cli` the ones without the tag; within one flag, plain values include and negated ones exclude (`--state ready,in-progress,not-dropped`). `!` works the same and is quicker to type in the TUI filter bar and in views (`--state !open`); in a shell it needs quotes, since shells expand an unquoted `!`. Tags cannot start with `not-`. Values use hyphens throughout, such as the state `in-progress`. An empty query lists every issue. `prep flags` prints every flag with the values it accepts in your project right now (states, kinds, priorities, the tags in use, the parents for `--under`, the saved views) and how many issues each matches. In `prep tui`, the filter bar (`f`) offers the same values while you type: after `--` the flags, after a flag its values, after a finished value and a space the flags not used yet; ↑/↓ choose, enter or tab (or a click) inserts one, and enter with nothing left to pick applies the filter. The list follows the query as you type whenever it is complete; esc goes back to the filter the tab had before.
-
-Change the views freely. In the TUI, `s` opens the settings screen, where views are added, edited, deleted and reordered. `prep views` lists them, and `prep list --view <name>` runs one on the command line.
-
-## Themes
-
-`prep tui` has two themes: `default` for dark terminals and `light` for light terminals. Without a configured theme, prep chooses from the terminal background. In settings (`s`), press enter or space on the Theme row, or `t`/`T`, to switch directly between them. `prep tui --gallery` shows every component; `t` and `T` switch between the two themes. You can also select a theme in `.prep/config.yaml`:
-
-```yaml
-theme: light
-```
-
-A theme has eight colors: the gray ramp `text`, `muted` and `subtle`, the `accent`, the `selection` background, and `success`, `warning` and `error`. Borders, states and kinds draw from them: states have their own glyphs, so only ready (`success`) and in progress (`accent`) stand out, and finished work fades to `subtle`. Terminals with 256 or 16 colors get the nearest colors, and `NO_COLOR` turns colors off.
-
-## Development
-
-```sh
-just test      # go test ./...
-just check     # prep check and prep fmt --check on this repository's .prep
-just ci        # lint, test and check: everything CI runs
-```
-
-Run `just` to list all recipes.
-
-The agent skill lives in `.claude/skills/prep/SKILL.md` (also served by `prep skill`); a test keeps it identical to the copy embedded in the binary.
+| Page | Contents |
+| --- | --- |
+| [Getting started](docs/getting-started.md) | Installation, updates and development |
+| [Workflow](docs/workflow.md) | Define, ready, claim, complete and checks |
+| [Commands](docs/commands.md) | Generated command reference |
+| [Harness integrations](docs/harness-integrations.md) | Claude Code, Codex, setup and activity |
+| [Cloud sessions](docs/cloud-sessions.md) | Set up and run Claude Code cloud sessions |
+| [Knowledge base](docs/knowledge-base.md) | Decisions and findings |
+| [TUI](docs/tui.md) | Navigation, views and themes |

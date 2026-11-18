@@ -49,8 +49,16 @@ check:
     go run ./cmd/prep check
     go run ./cmd/prep fmt --check
 
+# Regenerate the command reference from prep help
+docs-commands:
+    go run ./cmd/prep-docs
+
+# Check generated command documentation and relative documentation links
+docs-check:
+    go test ./internal/docgen
+
 # Everything CI runs
-ci: lint test check
+ci: lint test check docs-check
 
 # One-time login for the agent behavior tests: runs `claude setup-token` (opens a browser), then keeps the token it prints in ~/.config/prep/eval-token (mode 600)
 eval-login:
