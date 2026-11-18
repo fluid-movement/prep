@@ -1,0 +1,1 @@
+- 2026-11-18T13:02:32Z claude-code: v0.4.0 tagged and published 2026-11-18 (release workflow success, 7 assets); install.sh installs it and prep cloud script prints the pinned script. Remaining: the user pastes the script into the cloud environment, then one cloud session confirms prep version and the primed event.
