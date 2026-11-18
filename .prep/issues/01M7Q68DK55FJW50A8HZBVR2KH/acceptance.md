@@ -1,0 +1,3 @@
+- [ ] A finding states whether a cloud session records session-start, request and after-tool events, with the evidence from the session itself
+- [ ] The blank request event is explained or shown not reproducible, with the payload that produced it
+- [ ] If events are missing, the finding names the cause in the code and proposes a fix; the fix is a follow-up issue
