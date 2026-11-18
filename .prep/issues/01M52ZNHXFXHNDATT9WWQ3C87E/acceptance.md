@@ -1,0 +1,1 @@
+- [x] v0.3.0 is published as a GitHub release (tag v0.3.0, published 2026-10-18) and every child issue is resolved
