@@ -43,6 +43,28 @@ prep cloud script    # print the cloud environment setup script for this version
 
 When prep was installed with Homebrew or `go install`, `prep update` names the command that updates it instead. Releases are cut with `just release vX.Y.Z` (it sets the plugin version, runs the tests, commits and tags) and published by pushing the tag; the release workflow builds and publishes them with GoReleaser.
 
+## Cloud sessions
+
+Define issues on your machine, hand them to Claude Code cloud sessions, and merge what comes back. A cloud session clones the repository from GitHub, so its `.prep/` records arrive with the code, and its own records (claims, work log) come back through the branch it pushes.
+
+The cloud VM needs the same prep installation you have locally. Give it that with a custom cloud environment whose setup script installs prep and runs `prep setup`:
+
+1. Print the script for your version: `prep cloud script`. It pins the release you run, installs it with `install.sh`, and runs `prep setup --harness claude-code`, the non-interactive form of the setup above, so the session gets the same binary, plugin, hooks, skill and activity bridge as a local install.
+2. At claude.ai/code, add an environment (network access **Limited** with package managers allowed covers the GitHub download) and paste the script into its setup script box.
+3. In your terminal run `/remote-env` in Claude Code and choose that environment as the default for `claude --cloud`.
+4. Push your branch, then start a session from an interactive terminal (the command refuses to run without one):
+   ```sh
+   claude --cloud "Run prep guide <id>, implement it following the guide, log 'Implemented, ready for check' and stop."
+   ```
+   The session pushes a branch named `claude/<words from the prompt>-<suffix>`; list them with `git ls-remote --heads origin 'claude/*'`, check the result, then merge it. One session handles one issue.
+
+Limits to know:
+
+- The setup script lives in your claude.ai environment, not in the repository, and is per account. Collaborators need their own environment.
+- The script pins the version it was printed for; print it again and paste it after updating prep so the cloud binary and plugin move with yours. A cloud binary older than the repository's schema fails with a message that names the fix.
+- The environment caches the result of the script, rebuilds when you change the script or its allowed hosts, and again after about seven days.
+- A cloud session uses your plan's usage like any other session; one small issue took about two points of the five-hour window.
+
 ## Quick start
 
 Working alone, follow `prep guide <id>` through implementation and a separate check pass. To delegate, run `prep brief <id> --out` and give the implementer only this one-line prompt: "Read .prep/local/handoff/<id>/brief.md and follow it exactly. It tells you where to write your report." Run `prep handback <id>` to import its report. Then run `prep brief <id> --check --out` for a separate checker, pointing the same prompt at `check-brief.md`. Check knowledge updates and other tracker-only Definition of Done items yourself before `prep handback <id> --check`. Implementers and checkers follow their brief, not the workflow rules, and make no prep calls; the orchestrator keeps the records. To read the state of several issues at once, `prep list --under <parent>` prints one line each (state, kind, title); `prep show` prints a whole issue.

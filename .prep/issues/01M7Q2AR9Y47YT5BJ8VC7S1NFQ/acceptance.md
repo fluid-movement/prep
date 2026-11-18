@@ -1,0 +1,3 @@
+- [x] README has a Cloud sessions section: purpose, creating the environment, pasting the output of prep cloud script, /remote-env, handing off with claude --cloud, the interactive terminal requirement, and the limits from the findings
+- [x] The script is not retyped in the README; it points at prep cloud script
+- [x] just ci passes
