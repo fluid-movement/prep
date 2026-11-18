@@ -96,6 +96,9 @@ func (a *app) recordFailure(name string, args []string, err error) {
 	case errors.As(err, &de):
 		code = de.Code
 	}
+	if code == domain.ErrSchema {
+		return // an incompatible project must remain untouched
+	}
 	issue := strings.ToUpper(hookIDs.FindString(strings.Join(args, " ")))
 	_ = activity.Append(dir, activity.Event{At: a.now().UTC(), Actor: a.actor, Session: os.Getenv("PREP_SESSION"), Kind: activity.KindPrep, Op: name, Issue: issue, Verb: string(code), Failed: true})
 }

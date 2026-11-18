@@ -1,0 +1,1 @@
+- 2026-11-18T10:28:47Z cli/prep-v0.3.0-3-gb07f9b4: Implemented, ready for check: Moved README content into seven linked documentation pages, generated the command reference from CLI help, and added freshness and relative-link checks to CI; all required checks pass.

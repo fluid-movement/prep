@@ -1,0 +1,7 @@
+# Knowledge base
+
+[Documentation](../README.md#documentation)
+
+prep stages the files it writes and never commits; you (or your agent) commit them with the code they describe. A code issue completed without `--commit` takes as its evidence the commit that adds its `resolution.md`, so code, records and knowledge updates land in one commit; `--commit <hash>` names work committed earlier. Knowledge records are immutable: `prep decide [<id>] --title T --description D [--body text] [--outcome]` and `prep finding [<id>] --title T --description D [--body text]` create one ULID-named OKF file in `knowledge/decisions/` or `knowledge/findings/`. A decision requires an issue, repeatable `--scope <glob>` naming the narrowest code paths it constrains, or `--project-wide` (stored as scope `**`, not combined with `--scope`). `prep guide` and `prep brief` include current decisions linked to the issue and its ancestors; `prep prime` lists the ten newest current project-wide decisions and counts the rest. Older unlinked, unscoped records remain valid and searchable; findings still need neither a link nor a scope. Decisions can replace older records with repeatable `--supersedes <record-id-or-suffix>`; list, find and show derive and display superseded status. Read with `prep knowledge list|find|show`. Existing descriptive entries remain readable; knowledge starts empty with no bootstrap prerequisite.
+
+See the [workflow](workflow.md) for completion and the [command reference](commands.md) for knowledge commands.
