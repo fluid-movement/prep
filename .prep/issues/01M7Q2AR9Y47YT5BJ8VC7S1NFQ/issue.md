@@ -1,0 +1,15 @@
+---
+title: 'README: running prep in cloud sessions'
+kind: code
+parent: 01M7Q2A5H8TN2QGQD97YFVX5FA
+depends_on:
+  - 01M7Q2AR2GWXH9ZR32MSNM9VSG
+tags:
+  - cloud
+---
+
+Document cloud use in the README: what it is for, the environment setup script (quote the single definition that `prep cloud script` prints once it exists), creating the environment in claude.ai, choosing it with `/remote-env`, handing off an issue with `claude --cloud`, and what to check afterwards. State the limits from the finding: the script is per account and environment, the version pin must move with releases, network access must allow GitHub and the package registries, and the environment cache rebuilds after the script changes or about seven days.
+
+Also record in the README where a cloud session differs from a local one so nobody is surprised.
+
+## Open questions
