@@ -31,3 +31,4 @@
 * [Cloud environment setup script gives a 1:1 prep install](/findings/01M7Q268QCTF5XCPFXQPWVP2Q5.md) - Verified in a cloud session: install.sh plus prep setup --harness claude-code gives binary, plugin, hooks, skill and activity bridge.
 * [Cloud spike: one issue from push to merge](/findings/01M7Q2S8DN7X43BQPTXW5P9G1E.md) - A cloud session implemented a ready issue in two minutes; branch claude/<slug>, records merged clean, claude --cloud needs a terminal.
 * [Cloud probe C: hooks and activity](/findings/01M7Q67CRR5GZQQW324M9T2591.md) - PreToolUse fires in the cloud session and denies direct record reads; activity verbs explained from source.
+* [Cloud probe D: hooks and activity](/findings/01M7Q67905JPD9393YSH01ZYP0.md) - PreToolUse fires in a cloud session and denied the direct read; no blank request event or hook skipped appeared this round.
