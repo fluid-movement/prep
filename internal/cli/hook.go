@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/fluid-movement/prep/internal/activity"
+	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/mdstore"
 	"github.com/fluid-movement/prep/internal/userconfig"
 )
@@ -110,6 +112,13 @@ func cmdHook(a *app, args []string) error {
 	case "post-model-request":
 		hookRequest(a, e)
 	case "session-start":
+		if _, err := a.load(); err != nil {
+			var de *domain.Error
+			if errors.As(err, &de) && de.Code == domain.ErrSchema {
+				hookContext(a, name, "Prep briefing unavailable: "+err.Error())
+				return nil
+			}
+		}
 		hookMarkTurn(a, e, mode)
 		// The briefing is restored in full here (for example after compaction),
 		// so the next prompt must send its text again.
