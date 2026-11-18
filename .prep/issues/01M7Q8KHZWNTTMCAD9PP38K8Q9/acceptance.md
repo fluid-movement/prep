@@ -1,4 +1,4 @@
-- [ ] mkdocs build --strict succeeds locally and in the docs workflow, so every link and anchor resolves
-- [ ] The docs workflow deploys on a push to main that changes docs and the site answers 200 at https://fluid-movement.github.io/prep/
-- [ ] mkdocs.yml navigation lists every page in docs/ and docs/index.md exists
-- [ ] The README links to the published site and just ci still passes
+- [x] mkdocs build --strict succeeds locally and in the docs workflow, so every link and anchor resolves
+- [x] The docs workflow deploys on a push to main that changes docs and the site answers 200 at https://fluid-movement.github.io/prep/
+- [x] mkdocs.yml navigation lists every page in docs/ and docs/index.md exists
+- [x] The README links to the published site and just ci still passes
