@@ -7,3 +7,7 @@
 - 2026-11-18T11:21:47Z claude-code: Spike part 2: merge branches one at a time then run prep fmt and prep check (octopus merge conflicts on generated indexes); a session's report must be committed on its branch as a finding or handback, not only given as chat. See the finding 'Cloud spike, part 2'.
 
 - 2026-11-18T11:22:46Z edited by claude-code: requirement
+
+- 2026-11-18T11:29:27Z cli/prep-v0.3.0-3-gb07f9b4: Added github.com/creack/pty v1.1.24 because go.mod had no pseudo-terminal dependency; claude --cloud requires a PTY.
+
+- 2026-11-18T11:33:57Z cli/prep-v0.3.0-3-gb07f9b4: Implemented, ready for check: added cloud handoff start and sequential fetch/merge commands with PTY sessions, readiness and upstream validation, versioned handback reports, integration tests and command documentation; go test ./..., prep check and prep fmt --check pass.

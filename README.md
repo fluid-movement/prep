@@ -52,11 +52,12 @@ The cloud VM needs the same prep installation you have locally. Give it that wit
 1. Print the script for your version: `prep cloud script`. It pins the release you run, installs it with `install.sh`, and runs `prep setup --harness claude-code`, the non-interactive form of the setup above, so the session gets the same binary, plugin, hooks, skill and activity bridge as a local install.
 2. At claude.ai/code, add an environment (network access **Limited** with package managers allowed covers the GitHub download) and paste the script into its setup script box.
 3. In your terminal run `/remote-env` in Claude Code and choose that environment as the default for `claude --cloud`.
-4. Push your branch, then start a session from an interactive terminal (the command refuses to run without one):
+4. Push your branch, then hand ready, unclaimed issues off from an interactive terminal:
    ```sh
-   claude --cloud "Run prep guide <id>, implement it following the guide, log 'Implemented, ready for check' and stop."
+   prep handoff start <id>...       # confirm the session count, or add --yes
    ```
-   The session pushes a branch named `claude/<words from the prompt>-<suffix>`; list them with `git ls-remote --heads origin 'claude/*'`, check the result, then merge it. One session handles one issue.
+   prep checks every issue and that HEAD is pushed before starting anything, then starts one `claude --cloud` session per issue on a pseudo-terminal and logs its ID and link. Without a terminal it prints the exact commands to run instead and exits non-zero. The prompt asks each session to implement, leave the issue ready for a separate check, store its handback-format report in a versioned finding, and commit and push its branch.
+5. Run `prep handoff fetch` to fetch and list unmerged `claude/*` branches on origin, their issues and whether reports are present. `prep handoff fetch --merge` merges them one at a time, runs `prep fmt` then `prep check` after each, and stops at the first failure. Run the checker pass separately. Neither handoff command pushes your local branch.
 
 Limits to know:
 

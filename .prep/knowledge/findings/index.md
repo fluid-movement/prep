@@ -33,3 +33,4 @@
 * [Cloud probe D: hooks and activity](/findings/01M7Q67905JPD9393YSH01ZYP0.md) - PreToolUse fires in a cloud session and denied the direct read; no blank request event or hook skipped appeared this round.
 * [Cloud probe C: hooks and activity](/findings/01M7Q67CRR5GZQQW324M9T2591.md) - PreToolUse fires in the cloud session and denies direct record reads; activity verbs explained from source.
 * [Cloud spike, part 2: parallel sessions, hooks and the odd events](/findings/01M7Q68DB97KAQ3WB5Q9G21W8G.md) - Parallel sessions merge cleanly one at a time (octopus conflicts on indexes); PreToolUse fires; hook skipped is benign; reports must be committed.
+* [Cloud handoff commands carry reports in versioned work logs](/findings/01M7Q6PEKE42FCKQTHC761FN6R.md) - handoff start validates all issues and pushed HEAD, starts PTY sessions and logs links; fetch merges sequentially and formats/checks after each.
