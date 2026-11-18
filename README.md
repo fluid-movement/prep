@@ -39,6 +39,8 @@ git commit                                   # code and the staged .prep records
 
 ## Documentation
 
+Browse the docs at **[fluid-movement.github.io/prep](https://fluid-movement.github.io/prep/)**, or read the pages in [`docs/`](docs/index.md) directly:
+
 | Page | Contents |
 | --- | --- |
 | [Getting started](docs/getting-started.md) | Installation, updates and development |

@@ -1,0 +1,43 @@
+site_name: prep
+site_description: A workflow engine and memory for coding agents, with a human supervising.
+site_url: https://fluid-movement.github.io/prep/
+repo_url: https://github.com/fluid-movement/prep
+repo_name: fluid-movement/prep
+edit_uri: edit/main/docs/
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.sections
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Workflow: workflow.md
+  - Commands: commands.md
+  - Harness integrations: harness-integrations.md
+  - Cloud sessions: cloud-sessions.md
+  - Knowledge base: knowledge-base.md
+  - TUI: tui.md
+
+# Every page links back to the README's documentation section, which sits
+# outside docs/. The repository's own link check (just ci) covers those.
+validation:
+  links:
+    not_found: info
+    anchors: info

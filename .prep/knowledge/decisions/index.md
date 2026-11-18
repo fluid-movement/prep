@@ -345,3 +345,4 @@
 * [User docs are Markdown pages in docs/, command reference generated](/decisions/01M7Q2ZE5J5TRNEC9V395YQ52C.md) - docs/ pages, README as overview, command reference generated from prep help and checked in CI; no site yet.
 * [Cloud handback reports are versioned findings, not work-log text](/decisions/01M7Q6TBGRHP7533Q1XBFVGR62.md) - Store the full Markdown report with prep finding under the title Cloud handback <issue-id>; logs flatten Markdown and research handback imports complete issues.
 * [Failed requests stay valid without usage; zero-usage requests are rejected](/decisions/01M7Q9D52R94WYSPCS8N1GX361.md) - Event.Validate rejects an all-zero request unless its status is failed.
+* [Docs site: MkDocs Material on GitHub Pages, built by Actions](/decisions/01M7QBBZSZ58STYV8Y1PZ92T7P.md) - Public site at fluid-movement.github.io/prep from docs/, MkDocs Material, deployed by a workflow; no wiki copy.
