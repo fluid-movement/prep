@@ -38,3 +38,4 @@
 * [Cloud handback 01M7Q68DK55FJW50A8HZBVR2KH](/findings/01M7Q90VEB8J1NZ9FSRGS1A7X2.md) - Cloud implementation report
 * [Activity bridge: zero usage and lifecycle diagnostics](/findings/01M7Q992KPJ95Y714F2Z5NJHSZ.md) - Follow-up to cloud handback 01M7Q68DK55FJW50A8HZBVR2KH: missing usage and bridge failures are visible.
 * [Correction: zero-usage requests are rejected unless status is failed](/findings/01M7Q9N1536A0ZRGN6RZ5XVJ7Q.md) - Corrects the earlier bridge finding: Validate accepts a failed request with no usage.
+* [Free opencode models on a handed-off small issue](/findings/01M7QB27RRRQZQ86M89M9E3JXW.md) - Four free models matched GPT on tests and message text; three missed the write-nothing behaviour that GPT caught.
