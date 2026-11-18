@@ -1,0 +1,4 @@
+- [ ] With a project schema newer than the binary, prep hook session-start prints one line naming both schema numbers and the update fix, and exits 0
+- [ ] The schema error names prep update for local use and the PREP_VERSION pin for cloud environments
+- [ ] Other commands still fail with the schema error and write nothing
+- [ ] Tests cover the hook line and the error text through the real command path

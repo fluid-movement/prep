@@ -340,3 +340,4 @@
 * [Native request coverage is full when no recorded gaps exist](/decisions/01M7791RDV1J71AEYZBES15NGD.md) - Keep native agent-scoped request accounting and durable bridge gaps; report full coverage for healthy observed sessions.
 * [Derived scope is not built: broad directory scopes already fill the notice cap](/decisions/01M77A8SW6G7GSR12TST25AV9Z.md) - Measured on prep's history: 42% of linked unscoped decisions gain a derived scope, but explicit scopes already match 16-25 decisions per typical file, so a five-decision cap hides derived ones
 * [Cloud sessions get prep through the environment setup script](/decisions/01M7Q268VAXER6WJ27N4N5MM2A.md) - Custom cloud environment setup script installs the pinned release and runs prep setup --harness claude-code.
+* [Schema number is the only compatibility contract](/decisions/01M7Q2XRJJ9XJHET1JK1JQ2XRR.md) - No separate minimum prep version field; the schema number and clear errors carry compatibility.
