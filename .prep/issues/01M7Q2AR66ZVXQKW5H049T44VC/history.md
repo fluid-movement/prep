@@ -5,3 +5,5 @@
 - 2026-11-18T10:25:13Z claude-code: Cloud probe B: parallel session check
 
 - 2026-11-18T11:21:47Z claude-code: Spike part 2: merge branches one at a time then run prep fmt and prep check (octopus merge conflicts on generated indexes); a session's report must be committed on its branch as a finding or handback, not only given as chat. See the finding 'Cloud spike, part 2'.
+
+- 2026-11-18T11:22:46Z edited by claude-code: requirement

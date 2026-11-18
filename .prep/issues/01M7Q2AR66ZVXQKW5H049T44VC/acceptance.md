@@ -1,0 +1,6 @@
+- [ ] prep handoff start refuses, naming the cause, and starts nothing when an issue is not ready, stale, blocked, already claimed, or when HEAD is not pushed
+- [ ] prep handoff start runs claude --cloud on a pseudo-terminal for each issue, logs the session id and link on the issue, and prints one line per issue; without a terminal it prints the exact command and exits non-zero
+- [ ] The prompt tells the session to commit the work and records, push the branch and write its report as a handback on the branch
+- [ ] prep handoff fetch lists unmerged claude/* branches with the issue each touches; --merge merges them one at a time, runs prep fmt then prep check after each, stops at the first failure and never pushes
+- [ ] Tests use a fake claude on the PATH and a bare git remote, through the real command path
+- [ ] README and docs/commands list the commands
