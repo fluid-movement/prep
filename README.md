@@ -38,6 +38,7 @@ hooks:
 ```sh
 prep update          # replace prep with the latest release, checksum verified
 prep update --check  # only report whether a newer release exists
+prep cloud script    # print the cloud environment setup script for this version
 ```
 
 When prep was installed with Homebrew or `go install`, `prep update` names the command that updates it instead. Releases are cut with `just release vX.Y.Z` (it sets the plugin version, runs the tests, commits and tags) and published by pushing the tag; the release workflow builds and publishes them with GoReleaser.

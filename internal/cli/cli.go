@@ -129,6 +129,7 @@ func init() {
 		{"fix", true, "fix                        safe auto-fixes from check", cmdFix},
 		{"tui", false, "tui [--agent|--gallery]    terminal UI next to the harness (--agent: open on what the agent is doing; --gallery: every component, t/T switch themes)", cmdTUI},
 		{"setup", true, "setup [--harness h,...|--remove h|--refresh]  install harness integrations (skill, hooks, commands)", cmdSetup},
+		{"cloud", false, "cloud script              print the cloud environment setup script for this version (paste it into the environment dialog)", cmdCloud},
 		{"update", true, "update [--check]           replace this binary with the latest release (verifies its checksum)", cmdUpdate},
 		{"eval", false, evalUsage, cmdEval},
 		{"skill", false, "skill                      print the agent skill (static copy for environments without the binary)", cmdSkill},
