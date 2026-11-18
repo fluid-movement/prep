@@ -33,7 +33,7 @@ func Load(is IssueStore, ks KnowledgeStore) (*Tree, error) {
 		return nil, err
 	}
 	if p.Schema > SchemaVersion {
-		return nil, &Error{Code: ErrSchema, Message: fmt.Sprintf("project uses schema %d; this prep supports %d — update prep", p.Schema, SchemaVersion)}
+		return nil, &Error{Code: ErrSchema, Message: fmt.Sprintf("project uses schema %d; this prep supports %d — update prep: run `prep update` locally; in cloud sessions, update the PREP_VERSION pin in the environment setup script (print the current script with `prep cloud script`)", p.Schema, SchemaVersion)}
 	}
 	entries, kd, err := ks.Load()
 	if err != nil {

@@ -3,12 +3,15 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/fluid-movement/prep/internal/domain"
 	"github.com/fluid-movement/prep/internal/mdstore"
 )
 
@@ -239,6 +242,72 @@ func TestHookSessionAndActivity(t *testing.T) {
 		if e.Session != "session-1" || !e.Failed || e.Kind != "tool" {
 			t.Fatalf("attribution: %+v", e)
 		}
+	}
+}
+
+func TestNewerSchemaHookAndCommands(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	h := newHarness(t)
+	id := h.newIssue("--title", "Preserve records", "--kind", "code")
+	pm := filepath.Join(h.dir, mdstore.Dir, "project.md")
+	raw, err := os.ReadFile(pm)
+	if err != nil {
+		t.Fatal(err)
+	}
+	current := fmt.Sprintf("schema: %d", domain.SchemaVersion)
+	newer := fmt.Sprintf("schema: %d", domain.SchemaVersion+1)
+	if !strings.Contains(string(raw), current) {
+		t.Fatalf("project lacks %q", current)
+	}
+	if err := os.WriteFile(pm, []byte(strings.Replace(string(raw), current, newer, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	snapshot := func() map[string]string {
+		t.Helper()
+		files := map[string]string{}
+		err := filepath.WalkDir(h.dir, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if !d.IsDir() {
+				b, err := os.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				files[path] = string(b)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return files
+	}
+	before := snapshot()
+	want := fmt.Sprintf("project uses schema %d; this prep supports %d — update prep: run `prep update` locally; in cloud sessions, update the PREP_VERSION pin in the environment setup script (print the current script with `prep cloud script`)", domain.SchemaVersion+1, domain.SchemaVersion)
+	for _, harness := range []string{"claude-code", "codex"} {
+		out := runHook(t, "session-start", harness, hookEvent{Cwd: h.dir, Session: "newer-schema"})
+		var output struct {
+			Hook struct {
+				Event   string `json:"hookEventName"`
+				Context string `json:"additionalContext"`
+			} `json:"hookSpecificOutput"`
+		}
+		if err := json.Unmarshal([]byte(out), &output); err != nil {
+			t.Fatal(err)
+		}
+		if output.Hook.Event != "SessionStart" || output.Hook.Context != "Prep briefing unavailable: "+want || strings.Contains(output.Hook.Context, "\n") {
+			t.Fatalf("schema hook: %s", out)
+		}
+	}
+	for _, args := range [][]string{
+		{"list"}, {"prime"}, {"show", id}, {"edit", id, "--title", "Must not write"},
+		{"new", "--title", "Must not create", "--kind", "code"},
+	} {
+		h.fails(want+" [E_SCHEMA]", args...)
+	}
+	if after := snapshot(); !reflect.DeepEqual(before, after) {
+		t.Fatal("newer-schema hooks or commands changed project files")
 	}
 }
 
